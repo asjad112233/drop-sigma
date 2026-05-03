@@ -1,5 +1,22 @@
+import os
 from urllib.parse import urlparse
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
+
+# On Railway, Chromium is installed via apt or playwright install
+_CHROMIUM_PATHS = [
+    "/app/.playwright/chromium-*/chrome-linux/chrome",
+    "/usr/bin/chromium-browser",
+    "/usr/bin/chromium",
+    "/usr/local/bin/chromium",
+]
+
+def _find_chromium():
+    import glob
+    for pattern in _CHROMIUM_PATHS:
+        matches = glob.glob(pattern)
+        if matches:
+            return matches[0]
+    return None
 
 STATUS_KEYWORDS = [
     "delivered", "out for delivery", "in transit", "picked up",
@@ -107,7 +124,11 @@ def scrape_tracking_status(url: str, tracking_number: str = "", timeout_ms: int 
     """
     try:
         with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
+            launch_kwargs = {"headless": True, "args": ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]}
+            chromium_path = _find_chromium()
+            if chromium_path:
+                launch_kwargs["executable_path"] = chromium_path
+            browser = p.chromium.launch(**launch_kwargs)
             context = browser.new_context(
                 user_agent=(
                     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
