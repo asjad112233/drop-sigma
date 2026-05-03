@@ -19,7 +19,7 @@ def _register_webhook_for_store(store, request):
     """Silently register webhook for WooCommerce or Shopify. Never raises."""
     try:
         from stores.tunnel import get_base_url
-        base = get_base_url(request=request, wait_secs=5)
+        base = get_base_url(request=request, wait_secs=0)
 
         if store.platform == "woocommerce":
             from orders.services import setup_woocommerce_webhook
@@ -124,7 +124,7 @@ def auto_connect_store(request):
         name = store_url.replace("https://", "").replace("http://", "").replace("www.", "").split("/")[0]
 
     from stores.tunnel import get_base_url
-    base_url = get_base_url(request=request, wait_secs=5)
+    base_url = get_base_url(request=request, wait_secs=0)
 
     user_id_data = {
         "name": name,
