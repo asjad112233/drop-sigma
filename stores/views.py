@@ -282,7 +282,7 @@ def _diagnose_store(store):
     try:
         r = _req.get(url, **kwargs)
 
-        if r.status_code == 200:
+        if r.status_code in range(200, 300):
             return {"online": True, "issue": None, "title": "Store Online",
                     "message": "Store API is reachable and responding correctly.", "fix": ""}
 
