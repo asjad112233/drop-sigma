@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Order Detail Sample</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f3f6fb;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;}
+
+  /* Modal overlay */
+  .modal-bg{background:rgba(15,23,42,.45);backdrop-filter:blur(4px);position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:999;padding:16px;}
+  .od-modal{background:#fff;border-radius:24px;width:100%;max-width:900px;max-height:92vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 32px 80px rgba(15,23,42,.18);}
+
+  /* Header */
+  .od-header{padding:20px 24px 0;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-shrink:0;}
+  .od-header-left{display:flex;align-items:center;gap:14px;}
+  .od-order-badge{background:linear-gradient(135deg,#1e40af,#2563eb);color:#fff;border-radius:14px;padding:10px 16px;text-align:center;flex-shrink:0;}
+  .od-order-badge .num{font-size:18px;font-weight:900;line-height:1;}
+  .od-order-badge .lbl{font-size:10px;opacity:.75;margin-top:2px;}
+  .od-title-block h2{font-size:18px;font-weight:900;color:#0f172a;line-height:1.2;}
+  .od-title-block p{font-size:12px;color:#64748b;margin-top:3px;}
+  .od-status-row{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
+  .od-close{width:36px;height:36px;border:1px solid #e2e8f0;border-radius:10px;background:#f8fafc;color:#475569;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:.15s;}
+  .od-close:hover{background:#fee2e2;border-color:#fca5a5;color:#dc2626;}
+
+  /* Tabs */
+  .od-tabs{display:flex;gap:2px;padding:16px 24px 0;border-bottom:1px solid #f1f5f9;flex-shrink:0;}
+  .od-tab{padding:8px 16px;border-radius:10px 10px 0 0;font-size:12px;font-weight:700;color:#64748b;cursor:pointer;border:none;background:none;transition:.15s;}
+  .od-tab.active{background:#2563eb;color:#fff;}
+  .od-tab:hover:not(.active){background:#f1f5f9;color:#0f172a;}
+
+  /* Body */
+  .od-body{flex:1;overflow-y:auto;padding:20px 24px;}
+  .od-layout{display:grid;grid-template-columns:1fr 300px;gap:16px;}
+
+  /* Section card */
+  .od-card{background:#fff;border:1px solid #e8eef6;border-radius:16px;padding:16px;box-shadow:0 4px 14px rgba(15,23,42,.04);}
+  .od-card+.od-card{margin-top:12px;}
+  .od-card-title{font-size:11px;font-weight:900;color:#94a3b8;letter-spacing:.06em;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:6px;}
+
+  /* Product list */
+  .od-product-item{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid #f1f5f9;}
+  .od-product-item:last-child{border-bottom:none;padding-bottom:0;}
+  .od-product-img{width:56px;height:56px;border-radius:10px;object-fit:cover;border:1px solid #e2e8f0;background:#f8fafc;flex-shrink:0;}
+  .od-product-name{font-size:13px;font-weight:700;color:#0f172a;line-height:1.3;}
+  .od-product-meta{font-size:11px;color:#64748b;margin-top:3px;}
+  .od-product-price{margin-left:auto;font-size:13px;font-weight:800;color:#0f172a;white-space:nowrap;padding-left:10px;}
+
+  /* Info grid */
+  .od-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .od-info-item label{display:block;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;}
+  .od-info-item span{font-size:13px;font-weight:600;color:#0f172a;}
+
+  /* Timeline */
+  .od-timeline{display:flex;flex-direction:column;gap:0;}
+  .od-tl-item{display:flex;gap:12px;align-items:flex-start;padding-bottom:14px;position:relative;}
+  .od-tl-item:not(:last-child)::before{content:"";position:absolute;left:11px;top:22px;bottom:0;width:2px;background:#e2e8f0;}
+  .od-tl-dot{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;z-index:1;}
+  .od-tl-dot.done{background:#dcfce7;color:#16a34a;}
+  .od-tl-dot.pending{background:#fef3c7;color:#d97706;}
+  .od-tl-dot.fail{background:#fee2e2;color:#dc2626;}
+  .od-tl-text b{font-size:12px;font-weight:700;color:#0f172a;display:block;}
+  .od-tl-text span{font-size:11px;color:#94a3b8;}
+
+  /* Pills */
+  .pill{display:inline-flex;align-items:center;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700;}
+  .pill.green{background:#dcfce7;color:#166534;}
+  .pill.yellow{background:#fef9c3;color:#854d0e;}
+  .pill.red{background:#fee2e2;color:#991b1b;}
+  .pill.blue{background:#dbeafe;color:#1e40af;}
+  .pill.gray{background:#f1f5f9;color:#475569;}
+
+  /* Sidebar */
+  .od-sidebar{display:flex;flex-direction:column;gap:12px;}
+  .od-metric{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f1f5f9;}
+  .od-metric:last-child{border-bottom:none;}
+  .od-metric label{font-size:11px;color:#64748b;font-weight:600;}
+  .od-metric span{font-size:13px;font-weight:800;color:#0f172a;}
+
+  /* Assign */
+  .od-assign-select{width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:10px;font-size:13px;font-weight:600;color:#0f172a;background:#f8fafc;margin:10px 0;}
+  .od-btn{width:100%;padding:11px;border:none;border-radius:11px;font-size:13px;font-weight:800;cursor:pointer;transition:.15s;}
+  .od-btn.green{background:#16a34a;color:#fff;}
+  .od-btn.green:hover{background:#15803d;}
+  .od-btn.blue{background:#2563eb;color:#fff;}
+  .od-btn.blue:hover{background:#1d4ed8;}
+  .od-btn.light{background:#f1f5f9;color:#334155;margin-top:8px;}
+  .od-btn.light:hover{background:#e2e8f0;}
+
+  /* Tracking input */
+  .od-track-input{display:flex;gap:8px;margin-top:10px;}
+  .od-track-input input{flex:1;padding:9px 12px;border:1px solid #e2e8f0;border-radius:10px;font-size:12px;font-weight:600;}
+  .od-track-input button{padding:9px 14px;border:none;border-radius:10px;background:#2563eb;color:#fff;font-size:12px;font-weight:800;cursor:pointer;}
+
+  /* Footer */
+  .od-footer{padding:14px 24px;border-top:1px solid #f1f5f9;display:flex;gap:10px;justify-content:flex-end;flex-shrink:0;background:#fafbfc;}
+</style>
+</head>
+<body>
+
+<div class="modal-bg">
+<div class="od-modal">
+
+  <!-- Header -->
+  <div class="od-header">
+    <div class="od-header-left">
+      <div class="od-order-badge">
+        <div class="num">#11509</div>
+        <div class="lbl">ORDER</div>
+      </div>
+      <div class="od-title-block">
+        <h2>Maya Riffe</h2>
+        <p>kayaliofficial.shop &nbsp;•&nbsp; WooCommerce &nbsp;•&nbsp; 29 Apr 2026, 14:22</p>
+        <div class="od-status-row">
+          <span class="pill yellow">processing</span>
+          <span class="pill yellow">unfulfilled</span>
+          <span class="pill gray">No Tracking</span>
+          <span class="pill blue">Unassigned</span>
+        </div>
+      </div>
+    </div>
+    <button class="od-close" onclick="document.querySelector('.modal-bg').style.display='none'">×</button>
+  </div>
+
+  <!-- Tabs -->
+  <div class="od-tabs">
+    <button class="od-tab active">Overview</button>
+    <button class="od-tab">Timeline</button>
+    <button class="od-tab">Raw Data</button>
+  </div>
+
+  <!-- Body -->
+  <div class="od-body">
+    <div class="od-layout">
+
+      <!-- Left column -->
+      <div>
+
+        <!-- Products -->
+        <div class="od-card">
+          <div class="od-card-title">📦 Products Ordered</div>
+
+          <div class="od-product-item">
+            <img class="od-product-img" src="https://kayaliofficial.shop/wp-content/uploads/2025/07/Maui-Duo-100ml.webp" onerror="this.src=''" alt="product">
+            <div>
+              <div class="od-product-name">Maldives in a Bottle Ylang Coco | 20 - 100ml</div>
+              <div class="od-product-meta">Qty: 1 &nbsp;|&nbsp; Size: 100ml</div>
+            </div>
+            <div class="od-product-price">USD 130.00</div>
+          </div>
+
+          <div class="od-product-item">
+            <img class="od-product-img" src="https://kayaliofficial.shop/wp-content/uploads/2025/07/Maui-Duo-100ml.webp" onerror="this.src=''" alt="product">
+            <div>
+              <div class="od-product-name">Kayali Vanilla 28 | 50ml</div>
+              <div class="od-product-meta">Qty: 1 &nbsp;|&nbsp; Size: 50ml</div>
+            </div>
+            <div class="od-product-price">USD 75.00</div>
+          </div>
+
+          <div class="od-product-item">
+            <div style="background:#f1f5f9;width:56px;height:56px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">📦</div>
+            <div>
+              <div class="od-product-name">Sample Product (no image)</div>
+              <div class="od-product-meta">Qty: 2 &nbsp;|&nbsp; Color: Black</div>
+            </div>
+            <div class="od-product-price">USD 55.00</div>
+          </div>
+
+          <!-- Total -->
+          <div style="display:flex;justify-content:flex-end;padding-top:12px;border-top:1px solid #f1f5f9;margin-top:4px;">
+            <div style="text-align:right;">
+              <div style="font-size:11px;color:#94a3b8;font-weight:700;">ORDER TOTAL</div>
+              <div style="font-size:20px;font-weight:900;color:#0f172a;">USD 260.00</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Customer + Address -->
+        <div class="od-card">
+          <div class="od-card-title">👤 Customer Info</div>
+          <div class="od-info-grid">
+            <div class="od-info-item"><label>Full Name</label><span>Maya Riffe</span></div>
+            <div class="od-info-item"><label>Email</label><span>tokyogoth88@yahoo.co.jp</span></div>
+            <div class="od-info-item"><label>Phone</label><span>+1 555 000 1234</span></div>
+            <div class="od-info-item"><label>Country</label><span>🇯🇵 Japan</span></div>
+            <div class="od-info-item"><label>City</label><span>Tokyo</span></div>
+            <div class="od-info-item"><label>Address</label><span>3-12 Shibuya, Tokyo 150-0002</span></div>
+          </div>
+        </div>
+
+        <!-- Tracking -->
+        <div class="od-card">
+          <div class="od-card-title">🚚 Tracking</div>
+          <p style="font-size:12px;color:#94a3b8;margin-bottom:8px;">No tracking number added yet.</p>
+          <div class="od-track-input">
+            <input placeholder="Enter tracking number...">
+            <button>Save</button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Right sidebar -->
+      <div class="od-sidebar">
+
+        <!-- Payment summary -->
+        <div class="od-card">
+          <div class="od-card-title">💳 Payment</div>
+          <div class="od-metric"><label>Status</label><span class="pill yellow">processing</span></div>
+          <div class="od-metric"><label>Method</label><span>PayPal</span></div>
+          <div class="od-metric"><label>Currency</label><span>USD</span></div>
+          <div class="od-metric"><label>Total</label><span style="color:#2563eb;">USD 260.00</span></div>
+        </div>
+
+        <!-- Fulfillment -->
+        <div class="od-card">
+          <div class="od-card-title">📬 Fulfillment</div>
+          <div class="od-metric"><label>Status</label><span class="pill yellow">unfulfilled</span></div>
+          <div class="od-metric"><label>Tracking</label><span class="pill gray">No Tracking</span></div>
+        </div>
+
+        <!-- Assignment -->
+        <div class="od-card">
+          <div class="od-card-title">👥 Assign Order</div>
+          <p style="font-size:11px;color:#94a3b8;margin-bottom:6px;">Assign this order to a team member.</p>
+          <select class="od-assign-select">
+            <option>Select team member...</option>
+            <option>Ali — Vendor Manager</option>
+            <option>Sara — Support</option>
+          </select>
+          <button class="od-btn green">Assign Now</button>
+          <button class="od-btn light">Send Email to Customer</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="od-footer">
+    <button class="od-btn light" style="width:auto;padding:9px 20px;" onclick="document.querySelector('.modal-bg').style.display='none'">Close</button>
+    <button class="od-btn blue" style="width:auto;padding:9px 20px;">Open in Email</button>
+  </div>
+
+</div>
+</div>
+
+</body>
+</html>

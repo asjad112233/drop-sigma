@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inbox Assignment — Mockup</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Inter','Segoe UI',sans-serif;background:#f4f7fb;color:#0f172a;font-size:14px;-webkit-font-smoothing:antialiased;}
+
+/* ── Layout ── */
+.layout{display:grid;grid-template-columns:240px 320px 1fr;height:100vh;overflow:hidden;}
+
+/* ── Left Sidebar: Stores ── */
+.sidebar{background:#fff;border-right:1px solid #e8eaf2;display:flex;flex-direction:column;overflow:hidden;}
+.sidebar-head{padding:18px 16px 12px;border-bottom:1px solid #e8eaf2;}
+.sidebar-head h3{font-size:13px;font-weight:800;color:#0f172a;margin-bottom:2px;}
+.sidebar-head p{font-size:11px;color:#94a3b8;}
+
+.store-card{padding:12px 14px;border-bottom:1px solid #f1f5f9;cursor:pointer;transition:.15s;position:relative;}
+.store-card:hover{background:#f8fafc;}
+.store-card.active{background:linear-gradient(135deg,rgba(99,102,241,.08),rgba(6,182,212,.05));border-left:3px solid #6366f1;}
+.store-name{font-size:13px;font-weight:700;color:#0f172a;margin-bottom:3px;}
+.store-email{font-size:11px;color:#64748b;margin-bottom:8px;}
+.store-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.inbox-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;}
+.inbox-badge.managed{background:#dcfce7;color:#15803d;}
+.inbox-badge.shared{background:#ede9fe;color:#6d28d9;}
+.inbox-badge.unmanaged{background:#fef9c3;color:#a16207;}
+.manage-btn{position:absolute;top:12px;right:12px;padding:5px 10px;border-radius:8px;font-size:11px;font-weight:700;border:1.5px solid #e2e8f0;background:#fff;color:#64748b;cursor:pointer;transition:.15s;}
+.manage-btn:hover{border-color:#6366f1;color:#6366f1;background:#f0f4ff;}
+
+/* ── Middle: Thread List ── */
+.thread-panel{background:#fff;border-right:1px solid #e8eaf2;display:flex;flex-direction:column;overflow:hidden;}
+.thread-panel-head{padding:16px;border-bottom:1px solid #e8eaf2;flex-shrink:0;}
+.inbox-manager-bar{display:flex;align-items:center;gap:8px;padding:10px 12px;background:linear-gradient(135deg,rgba(99,102,241,.07),rgba(6,182,212,.05));border-radius:12px;margin-bottom:10px;border:1px solid rgba(99,102,241,.15);}
+.im-avatar{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#6366f1,#06b6d4);display:grid;place-items:center;color:#fff;font-size:11px;font-weight:800;flex-shrink:0;}
+.im-info{flex:1;min-width:0;}
+.im-label{font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.06em;}
+.im-name{font-size:12px;font-weight:800;color:#0f172a;}
+.shared-avatars{display:flex;margin-left:auto;}
+.shared-av{width:22px;height:22px;border-radius:6px;border:2px solid #fff;display:grid;place-items:center;font-size:9px;font-weight:800;color:#fff;margin-left:-6px;flex-shrink:0;}
+
+.search-box{width:100%;padding:9px 12px;border:1.5px solid #e8eaf2;border-radius:10px;font-family:inherit;font-size:13px;color:#0f172a;outline:none;transition:.15s;}
+.search-box:focus{border-color:#6366f1;}
+
+.thread-list{flex:1;overflow-y:auto;}
+.thread-item{padding:13px 16px;border-bottom:1px solid #f1f5f9;cursor:pointer;transition:.15s;position:relative;}
+.thread-item:hover{background:#f8fafc;}
+.thread-item.active{background:linear-gradient(135deg,rgba(99,102,241,.07),rgba(6,182,212,.04));border-left:3px solid #6366f1;}
+.ti-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
+.ti-contact{font-size:13px;font-weight:700;color:#0f172a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px;}
+.ti-time{font-size:11px;color:#94a3b8;flex-shrink:0;}
+.ti-subject{font-size:12px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:6px;}
+.ti-pills{display:flex;gap:5px;flex-wrap:wrap;align-items:center;}
+.pill{display:inline-flex;align-items:center;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700;}
+.pill-new{background:#fee2e2;color:#dc2626;}
+.pill-replied{background:#dcfce7;color:#15803d;}
+.pill-drafted{background:#dbeafe;color:#1d4ed8;}
+.pill-msgs{background:#f1f5f9;color:#475569;}
+.assigned-chip{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700;background:#ede9fe;color:#6d28d9;}
+
+/* ── Right: Chat Window ── */
+.chat-window{display:flex;flex-direction:column;overflow:hidden;background:#f8fafc;}
+.chat-header{padding:16px 20px;background:#fff;border-bottom:1px solid #e8eaf2;flex-shrink:0;}
+.ch-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;}
+.ch-subject{font-size:18px;font-weight:800;color:#0f172a;line-height:1.3;}
+.ch-meta{font-size:12px;color:#94a3b8;margin-top:3px;}
+.ch-actions{display:flex;gap:7px;flex-shrink:0;}
+.ch-btn{display:inline-flex;align-items:center;gap:5px;padding:8px 13px;border-radius:10px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;border:1.5px solid #e2e8f0;background:#fff;color:#334155;transition:.15s;}
+.ch-btn:hover{border-color:#c7d2e8;background:#f8fafc;}
+.ch-btn.green{background:#059669;color:#fff;border:none;}
+.ch-btn.green:hover{background:#047857;}
+.ch-btn.indigo{background:#6366f1;color:#fff;border:none;}
+
+/* assign strip */
+.assign-strip{display:flex;align-items:center;gap:8px;padding:10px 0 0;flex-wrap:wrap;}
+.as-label{font-size:11px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;}
+.as-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:20px;background:#ede9fe;color:#6d28d9;font-size:12px;font-weight:700;}
+.as-chip-avatar{width:20px;height:20px;border-radius:6px;background:#6366f1;display:grid;place-items:center;color:#fff;font-size:9px;font-weight:800;}
+.as-unset{font-size:12px;font-weight:600;color:#94a3b8;font-style:italic;}
+.as-sep{color:#e2e8f0;font-size:16px;}
+
+.chat-body{flex:1;overflow-y:auto;padding:20px 22px;background:#f8fafc;}
+.chat-thread{display:flex;flex-direction:column;gap:14px;}
+.chat-row{display:flex;width:100%;}
+.chat-row.customer{justify-content:flex-start;}
+.chat-row.support{justify-content:flex-end;}
+.msg-stack{display:flex;flex-direction:column;max-width:75%;}
+.chat-row.support .msg-stack{align-items:flex-end;}
+.sender-name{font-size:11px;font-weight:800;color:#64748b;margin-bottom:5px;opacity:.75;}
+.chat-row.support .sender-name{color:#047857;}
+.bubble{padding:13px 16px;border-radius:20px;line-height:1.55;font-size:14px;box-shadow:0 4px 14px rgba(15,23,42,.06);}
+.chat-row.customer .bubble{background:#fff;border:1px solid #e5e7eb;color:#111827;border-top-left-radius:5px;}
+.chat-row.support .bubble{background:linear-gradient(135deg,#2563eb,#4f46e5);color:#fff;border-top-right-radius:5px;}
+.msg-time{font-size:11px;color:#94a3b8;margin-top:5px;}
+
+.reply-area{padding:14px 18px;background:#fff;border-top:1px solid #e8eaf2;flex-shrink:0;}
+.reply-textarea{width:100%;min-height:72px;border:1.5px solid #e2e8f0;border-radius:14px;padding:12px 14px;font-family:inherit;font-size:13px;resize:none;outline:none;color:#0f172a;}
+.reply-actions{display:flex;align-items:center;gap:7px;margin-top:10px;flex-wrap:wrap;}
+
+/* ══════════════════════════════════════════════
+   INBOX ASSIGNMENT MODAL
+══════════════════════════════════════════════ */
+.modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.55);backdrop-filter:blur(10px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;}
+.modal{background:#fff;border-radius:24px;width:100%;max-width:560px;box-shadow:0 40px 100px rgba(15,23,42,.2);overflow:hidden;}
+.modal-header{padding:22px 24px 0;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;}
+.modal-title{font-size:18px;font-weight:900;color:#0f172a;margin-bottom:4px;}
+.modal-sub{font-size:13px;color:#64748b;}
+.modal-store-badge{display:inline-flex;align-items:center;gap:7px;padding:6px 12px;background:#f1f5f9;border-radius:10px;font-size:12px;font-weight:700;color:#334155;margin-top:12px;}
+.modal-close{width:34px;height:34px;border-radius:10px;border:none;background:#f1f5f9;color:#64748b;font-size:18px;cursor:pointer;display:grid;place-items:center;flex-shrink:0;}
+.modal-close:hover{background:#e2e8f0;}
+.modal-body{padding:20px 24px 24px;}
+
+/* Primary Manager section */
+.section-label{font-size:11px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px;margin-top:20px;display:flex;align-items:center;gap:8px;}
+.section-label:first-child{margin-top:0;}
+.section-label span{background:#6366f1;color:#fff;border-radius:6px;padding:2px 7px;font-size:10px;}
+.section-label span.green{background:#059669;}
+.section-label span.purple{background:#7c3aed;}
+
+.manager-select-wrap{position:relative;}
+.manager-select-wrap select{width:100%;padding:12px 14px;border:1.5px solid #e2e8f0;border-radius:12px;font-family:inherit;font-size:13px;color:#0f172a;background:#fff;appearance:none;cursor:pointer;outline:none;transition:.15s;}
+.manager-select-wrap select:focus{border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.1);}
+.manager-select-wrap::after{content:"▾";position:absolute;right:14px;top:50%;transform:translateY(-50%);color:#94a3b8;pointer-events:none;font-size:14px;}
+
+.primary-preview{display:flex;align-items:center;gap:10px;padding:12px 14px;background:#f0f4ff;border:1.5px solid rgba(99,102,241,.2);border-radius:12px;margin-top:10px;}
+.pp-avatar{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#6366f1,#06b6d4);display:grid;place-items:center;color:#fff;font-size:14px;font-weight:800;flex-shrink:0;}
+.pp-info{flex:1;}
+.pp-name{font-size:13px;font-weight:800;color:#0f172a;}
+.pp-role{font-size:11px;color:#64748b;margin-top:2px;}
+.pp-badge{padding:3px 9px;border-radius:20px;font-size:10px;font-weight:800;background:#dcfce7;color:#15803d;}
+
+/* Shared Members */
+.shared-list{display:flex;flex-direction:column;gap:8px;margin-bottom:10px;}
+.shared-member-row{display:flex;align-items:center;gap:10px;padding:10px 12px;background:#fafbfd;border:1.5px solid #e8eaf2;border-radius:12px;transition:.15s;}
+.shared-member-row:hover{border-color:#c7d2e8;background:#f1f5f9;}
+.sm-avatar{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;color:#fff;font-size:12px;font-weight:800;flex-shrink:0;}
+.sm-info{flex:1;}
+.sm-name{font-size:13px;font-weight:700;color:#0f172a;}
+.sm-role{font-size:11px;color:#94a3b8;}
+.sm-remove{width:26px;height:26px;border-radius:7px;border:none;background:#fee2e2;color:#dc2626;font-size:14px;cursor:pointer;display:grid;place-items:center;flex-shrink:0;font-weight:800;transition:.15s;}
+.sm-remove:hover{background:#fecaca;}
+
+.add-member-row{display:flex;gap:8px;align-items:center;}
+.add-member-row select{flex:1;padding:10px 12px;border:1.5px dashed #d1d5db;border-radius:12px;font-family:inherit;font-size:13px;color:#64748b;background:#f9fafb;cursor:pointer;outline:none;}
+.add-member-row select:focus{border-color:#6366f1;border-style:solid;}
+.add-btn{padding:10px 16px;border-radius:10px;background:#6366f1;color:#fff;border:none;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;transition:.15s;}
+.add-btn:hover{background:#4f46e5;}
+
+/* footer */
+.modal-footer{padding:16px 24px;border-top:1px solid #e8eaf2;display:flex;align-items:center;justify-content:space-between;gap:10px;background:#fafbfd;}
+.footer-info{font-size:12px;color:#94a3b8;}
+.footer-actions{display:flex;gap:8px;}
+.btn-cancel{padding:9px 18px;border-radius:10px;border:1.5px solid #e2e8f0;background:#fff;color:#64748b;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;transition:.15s;}
+.btn-cancel:hover{border-color:#c7d2e8;}
+.btn-save{padding:9px 22px;border-radius:10px;background:linear-gradient(135deg,#6366f1,#06b6d4);color:#fff;border:none;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(99,102,241,.25);transition:.15s;}
+.btn-save:hover{opacity:.9;transform:translateY(-1px);}
+
+/* notification toast */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:#0f172a;color:#fff;padding:12px 22px;border-radius:14px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px;box-shadow:0 8px 30px rgba(15,23,42,.25);transition:.3s;z-index:99999;opacity:0;}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+</style>
+</head>
+<body>
+
+<!-- ══ Toast ══ -->
+<div class="toast" id="toast">✅ Inbox assignment saved successfully!</div>
+
+<!-- ══ Main Layout ══ -->
+<div class="layout">
+
+  <!-- LEFT: Store list -->
+  <div class="sidebar">
+    <div class="sidebar-head">
+      <h3>Connected Inboxes</h3>
+      <p>Manage inbox assignment per store</p>
+    </div>
+
+    <!-- Store 1 — managed -->
+    <div class="store-card active" onclick="selectStore(this)">
+      <div class="store-name">Maisons De Monaco</div>
+      <div class="store-email">info@maisonsdemonaco.com</div>
+      <div class="store-meta">
+        <span class="inbox-badge managed">✓ Primary: Ahmad</span>
+        <span class="inbox-badge shared">+2 shared</span>
+      </div>
+      <button class="manage-btn" onclick="event.stopPropagation();openModal('Maisons De Monaco','info@maisonsdemonaco.com')">⚙ Manage</button>
+    </div>
+
+    <!-- Store 2 — only primary -->
+    <div class="store-card" onclick="selectStore(this)">
+      <div class="store-name">LuxeHome Paris</div>
+      <div class="store-email">hello@luxehomeparis.com</div>
+      <div class="store-meta">
+        <span class="inbox-badge managed">✓ Primary: Sara</span>
+      </div>
+      <button class="manage-btn" onclick="event.stopPropagation();openModal('LuxeHome Paris','hello@luxehomeparis.com')">⚙ Manage</button>
+    </div>
+
+    <!-- Store 3 — unmanaged -->
+    <div class="store-card" onclick="selectStore(this)">
+      <div class="store-name">Urban Threads</div>
+      <div class="store-email">support@urbanthreads.co</div>
+      <div class="store-meta">
+        <span class="inbox-badge unmanaged">⚠ Not assigned</span>
+      </div>
+      <button class="manage-btn" onclick="event.stopPropagation();openModal('Urban Threads','support@urbanthreads.co')">⚙ Manage</button>
+    </div>
+  </div>
+
+  <!-- MIDDLE: Thread list -->
+  <div class="thread-panel">
+    <div class="thread-panel-head">
+
+      <!-- Inbox Manager Bar -->
+      <div class="inbox-manager-bar">
+        <div class="im-avatar">AH</div>
+        <div class="im-info">
+          <div class="im-label">Primary Manager</div>
+          <div class="im-name">Ahmad Hassan</div>
+        </div>
+        <div class="shared-avatars" title="Sara, Ali also have access">
+          <div class="shared-av" style="background:#7c3aed;">SR</div>
+          <div class="shared-av" style="background:#059669;">AL</div>
+        </div>
+      </div>
+
+      <input class="search-box" placeholder="Search threads…" type="text">
+    </div>
+
+    <div class="thread-list">
+
+      <div class="thread-item active">
+        <div class="ti-top">
+          <span class="ti-contact">audrey@gmail.com</span>
+          <span class="ti-time">10:32</span>
+        </div>
+        <div class="ti-subject">COMMANDE — Order inquiry</div>
+        <div class="ti-pills">
+          <span class="pill pill-msgs">2 msgs</span>
+          <span class="pill pill-drafted">AI Draft</span>
+          <span class="assigned-chip">👤 Ahmad</span>
+        </div>
+      </div>
+
+      <div class="thread-item">
+        <div class="ti-top">
+          <span class="ti-contact">asjadsahilpk@gmail.com</span>
+          <span class="ti-time">09:15</span>
+        </div>
+        <div class="ti-subject">Re: Re: Order Confirmation</div>
+        <div class="ti-pills">
+          <span class="pill pill-msgs">5 msgs</span>
+          <span class="pill pill-replied">Replied</span>
+          <span class="assigned-chip">👤 Sara</span>
+        </div>
+      </div>
+
+      <div class="thread-item">
+        <div class="ti-top">
+          <span class="ti-contact">client@boutique.fr</span>
+          <span class="ti-time">Yesterday</span>
+        </div>
+        <div class="ti-subject">Retour produit / Return request</div>
+        <div class="ti-pills">
+          <span class="pill pill-msgs">3 msgs</span>
+          <span class="pill pill-new">New</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- RIGHT: Chat -->
+  <div class="chat-window">
+    <div class="chat-header">
+      <div class="ch-top">
+        <div>
+          <div class="ch-subject">COMMANDE — Order inquiry</div>
+          <div class="ch-meta">audrey@gmail.com · Maisons De Monaco · 2 messages</div>
+        </div>
+        <div class="ch-actions">
+          <button class="ch-btn">Open Order</button>
+          <button class="ch-btn indigo">🤖 AI Draft</button>
+        </div>
+      </div>
+
+      <!-- Thread assign strip (existing feature) -->
+      <div class="assign-strip">
+        <span class="as-label">Thread assign:</span>
+        <div class="as-chip">
+          <div class="as-chip-avatar">AH</div>
+          Ahmad Hassan
+        </div>
+        <span class="as-sep">|</span>
+        <span class="as-label">Inbox manager:</span>
+        <div class="as-chip" style="background:#dcfce7;color:#15803d;">
+          <div class="as-chip-avatar" style="background:#059669;">AH</div>
+          Ahmad (Primary)
+        </div>
+        <div class="as-chip" style="background:#f1f5f9;color:#475569;font-size:11px;">
+          +2 shared access
+        </div>
+      </div>
+    </div>
+
+    <!-- Messages -->
+    <div class="chat-body">
+      <div class="chat-thread">
+        <div class="chat-row customer">
+          <div class="msg-stack">
+            <div class="sender-name">Audrey Chadoutaud</div>
+            <div class="bubble">Bonjour, je voudrais savoir où en est ma commande ? Je n'ai pas reçu de confirmation.</div>
+            <div class="msg-time">30 Apr · 09:10</div>
+          </div>
+        </div>
+        <div class="chat-row support">
+          <div class="msg-stack">
+            <div class="sender-name">Support Team</div>
+            <div class="bubble">Bonjour Audrey, merci pour votre message. Votre commande est en cours de traitement. Vous recevrez un email de confirmation sous 24h.</div>
+            <div class="msg-time">30 Apr · 10:32</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="reply-area">
+      <textarea class="reply-textarea" placeholder="Write your reply or generate AI draft…"></textarea>
+      <div class="reply-actions">
+        <button class="ch-btn">🤖 AI Draft</button>
+        <button class="ch-btn">✨ Improve</button>
+        <button class="ch-btn">📎 Attach</button>
+        <button class="ch-btn green" style="margin-left:auto;">📨 Send Reply</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     INBOX ASSIGNMENT MODAL
+══════════════════════════════════════════ -->
+<div class="modal-overlay" id="modalOverlay" style="display:none;" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">Inbox Assignment</div>
+        <div class="modal-sub">Assign who manages this inbox and who has shared access.</div>
+        <div class="modal-store-badge">
+          <span>📧</span>
+          <span id="modalStoreName">Maisons De Monaco</span>
+          <span style="color:#94a3b8;">·</span>
+          <span id="modalStoreEmail" style="color:#6366f1;font-weight:600;">info@maisonsdemonaco.com</span>
+        </div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+
+    <div class="modal-body">
+
+      <!-- Primary Manager -->
+      <div class="section-label">
+        Primary Manager
+        <span>1 person only</span>
+      </div>
+      <div class="manager-select-wrap">
+        <select id="primarySelect" onchange="updatePrimaryPreview()">
+          <option value="">— Select primary manager —</option>
+          <option value="1" selected>Ahmad Hassan · Support</option>
+          <option value="2">Sara Khan · Email Manager</option>
+          <option value="3">Ali Raza · Order Manager</option>
+          <option value="4">Fatima Malik · Support</option>
+        </select>
+      </div>
+      <!-- Preview card -->
+      <div class="primary-preview" id="primaryPreview">
+        <div class="pp-avatar">AH</div>
+        <div class="pp-info">
+          <div class="pp-name">Ahmad Hassan</div>
+          <div class="pp-role">Support · Available</div>
+        </div>
+        <span class="pp-badge">Primary</span>
+      </div>
+      <div style="font-size:11px;color:#94a3b8;margin-top:8px;">
+        ℹ Primary manager is fully responsible. All unassigned threads from this inbox will show in their portal.
+      </div>
+
+      <!-- Shared Members -->
+      <div class="section-label" style="margin-top:22px;">
+        Shared Access
+        <span class="purple">Can view + reply</span>
+      </div>
+
+      <div class="shared-list" id="sharedList">
+        <div class="shared-member-row" data-id="2">
+          <div class="sm-avatar" style="background:#7c3aed;">SR</div>
+          <div class="sm-info">
+            <div class="sm-name">Sara Khan</div>
+            <div class="sm-role">Email Manager</div>
+          </div>
+          <button class="sm-remove" onclick="removeShared(this)" title="Remove">×</button>
+        </div>
+        <div class="shared-member-row" data-id="3">
+          <div class="sm-avatar" style="background:#059669;">AL</div>
+          <div class="sm-info">
+            <div class="sm-name">Ali Raza</div>
+            <div class="sm-role">Order Manager</div>
+          </div>
+          <button class="sm-remove" onclick="removeShared(this)" title="Remove">×</button>
+        </div>
+      </div>
+
+      <div class="add-member-row">
+        <select id="addMemberSelect">
+          <option value="">Add team member…</option>
+          <option value="4">Fatima Malik · Support</option>
+          <option value="5">Usman Tariq · Refund Manager</option>
+        </select>
+        <button class="add-btn" onclick="addSharedMember()">+ Add</button>
+      </div>
+
+      <div style="font-size:11px;color:#94a3b8;margin-top:10px;">
+        ℹ Shared members can view all threads and send replies, but are not the primary responsible person.
+      </div>
+
+    </div>
+
+    <div class="modal-footer">
+      <div class="footer-info" id="footerInfo">1 primary + 2 shared members</div>
+      <div class="footer-actions">
+        <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+        <button class="btn-save" onclick="saveAssignment()">Save Assignment</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<script>
+const avatarColors = ["#6366f1","#7c3aed","#059669","#dc2626","#d97706","#0284c7","#0f172a"];
+const employees = {
+  1:{name:"Ahmad Hassan", role:"Support",       initials:"AH", color:"#6366f1"},
+  2:{name:"Sara Khan",    role:"Email Manager", initials:"SR", color:"#7c3aed"},
+  3:{name:"Ali Raza",     role:"Order Manager", initials:"AL", color:"#059669"},
+  4:{name:"Fatima Malik", role:"Support",       initials:"FM", color:"#dc2626"},
+  5:{name:"Usman Tariq",  role:"Refund Manager",initials:"UT", color:"#d97706"},
+};
+
+function openModal(storeName, storeEmail){
+  document.getElementById("modalStoreName").textContent = storeName;
+  document.getElementById("modalStoreEmail").textContent = storeEmail;
+  document.getElementById("modalOverlay").style.display = "flex";
+  document.body.style.overflow = "hidden";
+  updateFooterInfo();
+}
+function closeModal(){
+  document.getElementById("modalOverlay").style.display = "none";
+  document.body.style.overflow = "";
+}
+
+function updatePrimaryPreview(){
+  const sel = document.getElementById("primarySelect");
+  const val = parseInt(sel.value);
+  const preview = document.getElementById("primaryPreview");
+  if(!val){ preview.style.display="none"; return; }
+  const emp = employees[val];
+  preview.style.display = "flex";
+  preview.querySelector(".pp-avatar").textContent = emp.initials;
+  preview.querySelector(".pp-avatar").style.background = `linear-gradient(135deg,${emp.color},#06b6d4)`;
+  preview.querySelector(".pp-name").textContent = emp.name;
+  preview.querySelector(".pp-role").textContent = emp.role + " · Available";
+}
+
+function removeShared(btn){
+  btn.closest(".shared-member-row").remove();
+  updateFooterInfo();
+}
+
+function addSharedMember(){
+  const sel = document.getElementById("addMemberSelect");
+  const val = parseInt(sel.value);
+  if(!val) return;
+  const emp = employees[val];
+  const list = document.getElementById("sharedList");
+
+  // check duplicate
+  if(list.querySelector(`[data-id="${val}"]`)) return;
+
+  const row = document.createElement("div");
+  row.className = "shared-member-row";
+  row.dataset.id = val;
+  row.innerHTML = `
+    <div class="sm-avatar" style="background:${emp.color};">${emp.initials}</div>
+    <div class="sm-info">
+      <div class="sm-name">${emp.name}</div>
+      <div class="sm-role">${emp.role}</div>
+    </div>
+    <button class="sm-remove" onclick="removeShared(this)" title="Remove">×</button>`;
+  list.appendChild(row);
+
+  // remove from dropdown
+  sel.querySelector(`option[value="${val}"]`)?.remove();
+  sel.value = "";
+  updateFooterInfo();
+}
+
+function updateFooterInfo(){
+  const sharedCount = document.getElementById("sharedList").children.length;
+  const hasPrimary = !!document.getElementById("primarySelect").value;
+  let text = "";
+  if(hasPrimary) text += "1 primary";
+  if(sharedCount > 0) text += (text ? " + " : "") + sharedCount + " shared member" + (sharedCount>1?"s":"");
+  if(!text) text = "No assignment yet";
+  document.getElementById("footerInfo").textContent = text;
+}
+
+function saveAssignment(){
+  const toast = document.getElementById("toast");
+  closeModal();
+  toast.classList.add("show");
+  setTimeout(()=>toast.classList.remove("show"), 3000);
+}
+
+function selectStore(el){
+  document.querySelectorAll(".store-card").forEach(c=>c.classList.remove("active"));
+  el.classList.add("active");
+}
+</script>
+</body>
+</html>

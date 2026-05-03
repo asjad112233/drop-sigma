@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Employee Portal — VendorFlow AI</title>
+<style>
+:root{
+  --bg:#f4f7fb;
+  --surface:#fff;
+  --border:#e8eaf2;
+  --text:#0f172a;
+  --muted:#64748b;
+  --soft:#94a3b8;
+  --accent:#6366f1;
+  --accent2:#06b6d4;
+  --green:#10b981;
+  --red:#ef4444;
+  --amber:#f59e0b;
+  --shadow:0 4px 20px rgba(15,23,42,.07);
+  --shadow-lg:0 12px 40px rgba(15,23,42,.12);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Inter','Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;-webkit-font-smoothing:antialiased;}
+
+/* ── Top Loader ── */
+#gLoader{position:fixed;top:0;left:0;height:3px;width:0%;z-index:99999;background:linear-gradient(90deg,var(--accent),var(--accent2));pointer-events:none;transition:width .3s ease;}
+
+/* ── Layout ── */
+.layout{display:grid;grid-template-columns:240px 1fr;min-height:100vh;}
+
+/* ── Sidebar ── */
+.sidebar{
+  background:var(--surface);border-right:1px solid var(--border);
+  padding:24px 14px;display:flex;flex-direction:column;
+  position:sticky;top:0;height:100vh;overflow-y:auto;
+}
+.brand{display:flex;align-items:center;gap:11px;padding:6px 10px 22px;border-bottom:1px solid var(--border);margin-bottom:16px;}
+.brand-logo{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:grid;place-items:center;color:#fff;font-weight:800;font-size:13px;box-shadow:0 4px 12px rgba(99,102,241,.3);}
+.brand-name{font-weight:700;font-size:14px;color:var(--text);}
+.brand-tag{font-size:11px;color:var(--soft);}
+
+.nav{display:flex;flex-direction:column;gap:2px;flex:1;}
+.nav-item{
+  display:flex;align-items:center;gap:10px;padding:10px 12px;
+  border-radius:10px;color:var(--muted);cursor:pointer;
+  font-weight:600;font-size:13px;border:none;background:transparent;
+  transition:.15s;text-align:left;width:100%;
+}
+.nav-item:hover{background:#f1f5f9;color:var(--text);}
+.nav-item.active{background:linear-gradient(135deg,rgba(99,102,241,.12),rgba(6,182,212,.08));color:var(--accent);font-weight:700;}
+.nav-icon{font-size:16px;width:20px;text-align:center;flex-shrink:0;}
+
+.sidebar-profile{
+  margin-top:auto;padding:14px;
+  background:linear-gradient(135deg,rgba(99,102,241,.08),rgba(6,182,212,.06));
+  border:1px solid var(--border);border-radius:14px;
+}
+.sp-name{font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px;}
+.sp-role{font-size:11px;color:var(--muted);}
+.sp-logout{display:block;margin-top:10px;padding:7px 12px;background:var(--text);color:#fff;border-radius:8px;font-size:12px;font-weight:700;text-align:center;text-decoration:none;transition:.15s;}
+.sp-logout:hover{background:#1e293b;}
+
+/* ── Main ── */
+.main{padding:32px 36px;overflow-y:auto;}
+
+/* ── Section ── */
+.section{display:none;}
+.section.active{display:block;}
+
+/* ── Page Header ── */
+.page-head{margin-bottom:28px;}
+.page-head h1{font-size:28px;font-weight:800;color:var(--text);letter-spacing:-.03em;margin-bottom:4px;}
+.page-head p{font-size:14px;color:var(--muted);}
+
+/* ── KPI Grid ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:24px;}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px 20px;}
+.kpi-label{font-size:10px;font-weight:700;color:var(--soft);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px;}
+.kpi-val{font-size:26px;font-weight:800;color:var(--text);letter-spacing:-.02em;line-height:1;margin-bottom:4px;}
+.kpi-sub{font-size:12px;font-weight:600;}
+.kpi-sub.green{color:var(--green);} .kpi-sub.amber{color:var(--amber);} .kpi-sub.red{color:var(--red);} .kpi-sub.blue{color:#3b82f6;} .kpi-sub.muted{color:var(--muted);}
+
+/* ── Panel ── */
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:18px;overflow:hidden;margin-bottom:20px;}
+.panel-head{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.panel-title{font-size:15px;font-weight:800;color:var(--text);}
+.panel-sub{font-size:12px;color:var(--muted);margin-top:2px;}
+
+/* ── Table ── */
+.tbl-wrap{overflow-x:auto;}
+.tbl{width:100%;border-collapse:collapse;min-width:800px;}
+.tbl th{padding:12px 16px;font-size:11px;font-weight:700;color:var(--soft);text-transform:uppercase;letter-spacing:.06em;background:#fafbfd;text-align:left;border-bottom:1px solid var(--border);}
+.tbl td{padding:14px 16px;font-size:13px;color:var(--text);border-bottom:1px solid var(--border);}
+.tbl tr:last-child td{border-bottom:none;}
+.tbl tr:hover td{background:#fafbfd;}
+
+/* ── Badges ── */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:700;}
+.badge-pending{background:#fef9c3;color:#a16207;}
+.badge-processing{background:#dbeafe;color:#1d4ed8;}
+.badge-completed{background:#dcfce7;color:#166534;}
+.badge-fulfilled{background:#dcfce7;color:#166534;}
+.badge-cancelled{background:#fee2e2;color:#991b1b;}
+.badge-default{background:#f1f5f9;color:#475569;}
+.badge-track{background:#ede9fe;color:#5b21b6;}
+.badge-notrack{background:#ffedd5;color:#9a3412;}
+
+/* ── Profile Card ── */
+.profile-grid{display:grid;grid-template-columns:280px 1fr;gap:20px;margin-bottom:24px;}
+.profile-card{background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:18px;padding:28px;color:#fff;}
+.pc-avatar{width:64px;height:64px;border-radius:18px;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;margin-bottom:16px;border:2px solid rgba(255,255,255,.3);}
+.pc-name{font-size:20px;font-weight:800;margin-bottom:4px;}
+.pc-role{font-size:13px;opacity:.8;margin-bottom:16px;}
+.pc-stat-row{display:flex;gap:14px;}
+.pc-stat{background:rgba(255,255,255,.15);border-radius:10px;padding:10px 14px;flex:1;}
+.pc-stat-val{font-size:20px;font-weight:800;}
+.pc-stat-lbl{font-size:10px;opacity:.7;font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-top:2px;}
+
+.perms-panel{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:22px;}
+.perms-title{font-size:14px;font-weight:800;color:var(--text);margin-bottom:14px;}
+.perms-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.perm-chip{
+  display:flex;align-items:center;gap:8px;
+  padding:9px 12px;border-radius:10px;font-size:12px;font-weight:700;
+}
+.perm-chip.on{background:#dcfce7;color:#166534;}
+.perm-chip.off{background:#f1f5f9;color:#94a3b8;text-decoration:line-through;}
+.perm-chip-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.perm-chip.on .perm-chip-dot{background:#22c55e;}
+.perm-chip.off .perm-chip-dot{background:#cbd5e1;}
+
+/* ── Order Detail Overlay ── */
+.od-overlay{
+  position:fixed;inset:0;background:rgba(15,23,42,.65);
+  backdrop-filter:blur(8px);z-index:9000;
+  display:none;align-items:center;justify-content:center;padding:20px;
+}
+.od-card{
+  background:#fff;border-radius:22px;width:100%;max-width:680px;
+  max-height:90vh;overflow-y:auto;
+  box-shadow:0 32px 80px rgba(15,23,42,.22);
+}
+.od-card::-webkit-scrollbar{width:4px;}
+.od-card::-webkit-scrollbar-thumb{background:#e2e8f0;border-radius:4px;}
+.od-header{padding:22px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.od-header h2{font-size:17px;font-weight:800;color:var(--text);}
+.od-close{width:32px;height:32px;border-radius:8px;border:none;background:#f1f5f9;color:var(--muted);font-size:18px;cursor:pointer;display:grid;place-items:center;}
+.od-close:hover{background:#e2e8f0;color:var(--text);}
+.od-body{padding:24px;}
+.od-section-lbl{font-size:10px;font-weight:800;color:var(--soft);text-transform:uppercase;letter-spacing:.08em;margin:20px 0 10px;}
+.od-section-lbl:first-child{margin-top:0;}
+.od-row{display:flex;justify-content:space-between;align-items:flex-start;padding:8px 0;border-bottom:1px solid #f8fafc;}
+.od-row:last-child{border-bottom:none;}
+.od-key{font-size:12px;color:var(--muted);font-weight:600;}
+.od-val{font-size:13px;color:var(--text);font-weight:700;text-align:right;max-width:60%;}
+.od-items-list{display:flex;flex-direction:column;gap:8px;margin-top:8px;}
+.od-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:#fafbfd;border:1px solid var(--border);border-radius:10px;}
+.od-item-img{width:36px;height:36px;border-radius:8px;object-fit:cover;background:#f1f5f9;flex-shrink:0;}
+.od-item-name{font-size:13px;font-weight:700;color:var(--text);}
+.od-item-qty{font-size:11px;color:var(--muted);}
+
+/* ── Email Thread Modal ── */
+.et-overlay{position:fixed;inset:0;background:rgba(15,23,42,.6);backdrop-filter:blur(10px);z-index:9100;display:none;align-items:center;justify-content:center;padding:16px;}
+.et-modal{background:#fff;border-radius:24px;width:100%;max-width:780px;height:92vh;display:flex;flex-direction:column;box-shadow:0 40px 100px rgba(15,23,42,.24);overflow:hidden;}
+/* header */
+.et-header{padding:16px 20px;border-bottom:1px solid #e8eaf2;display:flex;align-items:center;gap:12px;flex-shrink:0;background:#fff;}
+.et-avatar{width:44px;height:44px;border-radius:14px;background:linear-gradient(135deg,#6366f1,#06b6d4);display:grid;place-items:center;color:#fff;font-size:17px;font-weight:800;flex-shrink:0;}
+.et-contact{flex:1;min-width:0;}
+.et-contact-email{font-size:14px;font-weight:800;color:#0f172a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.et-contact-meta{font-size:11px;color:#64748b;margin-top:2px;}
+.et-close{width:36px;height:36px;border-radius:10px;border:none;background:#f1f5f9;color:#64748b;font-size:18px;cursor:pointer;display:grid;place-items:center;flex-shrink:0;transition:.15s;}
+.et-close:hover{background:#e2e8f0;color:#0f172a;}
+/* chat body */
+.et-body{flex:1;overflow-y:auto;padding:20px 22px;background:#f8fafc;min-height:0;}
+.et-body::-webkit-scrollbar{width:5px;}
+.et-body::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:5px;}
+.et-thread{display:flex;flex-direction:column;gap:14px;}
+.et-row{display:flex;width:100%;}
+.et-row.customer{justify-content:flex-start;}
+.et-row.support{justify-content:flex-end;}
+.et-msg-stack{display:flex;flex-direction:column;max-width:78%;}
+.et-row.support .et-msg-stack{align-items:flex-end;}
+.et-sender-name{font-size:11px;font-weight:800;color:#64748b;margin-bottom:5px;opacity:.75;}
+.et-row.support .et-sender-name{color:#047857;}
+.et-bubble{padding:13px 16px;border-radius:20px;line-height:1.55;white-space:pre-wrap;font-size:14px;box-shadow:0 6px 18px rgba(15,23,42,.06);word-break:break-word;}
+.et-row.customer .et-bubble{background:#fff;border:1px solid #e5e7eb;color:#111827;border-top-left-radius:5px;}
+.et-row.support .et-bubble{background:linear-gradient(135deg,#2563eb,#4f46e5);color:#fff;border-top-right-radius:5px;}
+.et-msg-time{font-size:11px;color:#94a3b8;margin-top:5px;padding:0 2px;}
+.et-row.support .et-msg-time{color:#047857;}
+.et-quoted-toggle{font-size:12px;color:#2563eb;cursor:pointer;margin-top:7px;display:inline-flex;padding:5px 10px;border-radius:999px;background:#eef4ff;font-weight:700;}
+.et-quoted-text{display:none;margin-top:8px;padding:10px;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:12px;color:#475569;font-size:12px;white-space:pre-wrap;max-height:200px;overflow:auto;}
+.et-quoted-text.open{display:block;}
+/* attachments in bubble */
+.et-att-list{display:flex;flex-direction:column;gap:6px;margin-top:10px;}
+.et-att-img{max-width:240px;max-height:160px;border-radius:10px;object-fit:cover;cursor:pointer;display:block;}
+.et-att-file{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;background:#eef4ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:999px;font-size:12px;font-weight:600;text-decoration:none;}
+/* reply area */
+.et-reply-area{flex-shrink:0;border-top:1px solid #e8eaf2;background:#fff;padding:12px 16px;display:flex;flex-direction:column;gap:7px;}
+.et-reply-textarea{width:100%;min-height:72px;max-height:160px;border:1.5px solid #e2e8f0;border-radius:14px;padding:12px 14px;font-family:inherit;font-size:13.5px;color:#0f172a;resize:vertical;outline:none;line-height:1.5;transition:.15s;box-sizing:border-box;}
+.et-reply-textarea:focus{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.1);}
+.et-att-preview{display:flex;flex-wrap:wrap;gap:5px;}
+.et-att-pill{display:inline-flex;align-items:center;gap:5px;background:#eef4ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:999px;padding:4px 10px;font-size:12px;font-weight:600;max-width:200px;}
+.et-att-pill span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.et-att-pill button{background:none;border:none;color:#1d4ed8;font-size:14px;cursor:pointer;padding:0;line-height:1;}
+/* AI suggestion */
+.et-ai-box{display:none;border:1.5px solid #bfdbfe;border-radius:14px;background:#f0f7ff;padding:14px;}
+.et-ai-box.show{display:block;}
+.et-ai-box-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+.et-ai-box-title{font-size:13px;font-weight:900;color:#1d4ed8;}
+.et-ai-box-close{border:0;background:transparent;color:#64748b;cursor:pointer;font-size:18px;font-weight:900;line-height:1;}
+.et-ai-box-text{background:#fff;border:1px solid #dbeafe;border-radius:12px;padding:12px;color:#0f172a;font-size:13.5px;line-height:1.55;white-space:pre-wrap;max-height:150px;overflow:auto;}
+.et-ai-box-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:10px;}
+/* action buttons bar */
+.et-actions{display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
+.et-btn{display:inline-flex;align-items:center;gap:5px;padding:8px 13px;border-radius:10px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;border:1.5px solid #e2e8f0;background:#fff;color:#334155;transition:.15s;}
+.et-btn:hover{border-color:#c7d2e8;background:#f8fafc;}
+.et-btn:disabled{opacity:.5;cursor:not-allowed;}
+.et-btn-ai{background:#1d4ed8;color:#fff;border-color:#1d4ed8;}
+.et-btn-ai:hover{background:#1e40af;border-color:#1e40af;}
+.et-btn-improve{background:#7c3aed;color:#fff;border-color:#7c3aed;}
+.et-btn-improve:hover{background:#6d28d9;border-color:#6d28d9;}
+.et-btn-send{background:linear-gradient(135deg,#059669,#0d9488);color:#fff;border:none;box-shadow:0 4px 14px rgba(5,150,105,.22);}
+.et-btn-send:hover{opacity:.9;transform:translateY(-1px);}
+.et-btn-send:disabled{opacity:.5;transform:none;}
+.et-status-msg{font-size:12px;color:#64748b;}
+.et-btn-resolve{background:#dcfce7;color:#15803d;border-color:#86efac;}
+.et-btn-resolve:hover{background:#bbf7d0;border-color:#4ade80;}
+.et-btn-resolve.resolved{background:#f1f5f9;color:#94a3b8;border-color:#e2e8f0;}
+/* resolved banner in thread header */
+.et-resolved-banner{display:none;align-items:center;gap:8px;padding:8px 14px;background:#dcfce7;border-radius:10px;font-size:12px;font-weight:700;color:#15803d;}
+.et-resolved-banner.show{display:flex;}
+.et-resolved-banner button{background:none;border:none;color:#15803d;font-size:12px;font-weight:700;cursor:pointer;text-decoration:underline;padding:0;}
+
+/* ── Empty state ── */
+.empty-state{text-align:center;padding:60px 20px;color:var(--muted);}
+.empty-icon{font-size:40px;margin-bottom:12px;}
+.empty-title{font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px;}
+.empty-sub{font-size:13px;}
+
+/* ── Buttons ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;border:1px solid transparent;transition:.15s;}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border:none;box-shadow:0 4px 14px rgba(99,102,241,.25);}
+.btn-primary:hover{opacity:.9;transform:translateY(-1px);}
+.btn-ghost{background:var(--surface);color:var(--text);border-color:var(--border);}
+.btn-ghost:hover{border-color:#d4d7e3;}
+
+@media(max-width:900px){
+  .layout{grid-template-columns:1fr;}
+  .sidebar{display:none;}
+  .main{padding:20px;}
+  .kpi-grid{grid-template-columns:repeat(2,1fr);}
+  .profile-grid{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<div id="gLoader"></div>
+
+<div class="layout">
+
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar" id="sidebar"></aside>
+
+  <!-- ── Main ── -->
+  <main class="main">
+
+    <!-- Overview -->
+    <section class="section active" id="secOverview">
+      <div class="page-head">
+        <h1 id="overviewTitle">My Dashboard</h1>
+        <p>Your personal workspace — orders, tasks, and access summary.</p>
+      </div>
+      <div class="kpi-grid" id="overviewKpis"></div>
+      <div class="profile-grid">
+        <div class="profile-card" id="profileCard"></div>
+        <div class="perms-panel">
+          <div class="perms-title">Your Access Permissions</div>
+          <div class="perms-grid" id="permsGrid"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- My Orders -->
+    <section class="section" id="secOrders">
+      <div class="page-head">
+        <h1>My Orders</h1>
+        <p>Orders assigned to you from the admin team.</p>
+      </div>
+      <div class="kpi-grid" id="ordersKpis"></div>
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title">Assigned Orders</div>
+            <div class="panel-sub" id="ordersCount">Loading...</div>
+          </div>
+          <button class="btn btn-ghost" onclick="loadMyOrders()">↻ Refresh</button>
+        </div>
+        <div class="tbl-wrap">
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Customer</th>
+                <th>Product</th>
+                <th>Payment</th>
+                <th>Fulfillment</th>
+                <th>Tracking</th>
+                <th>Date</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="ordersTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- My Emails -->
+    <section class="section" id="secEmails">
+      <div class="page-head">
+        <h1>My Emails</h1>
+        <p>Email threads assigned to you by the admin.</p>
+      </div>
+      <div class="kpi-grid" id="emailsKpis"></div>
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title">Assigned Threads</div>
+            <div class="panel-sub" id="emailsCount">Loading...</div>
+          </div>
+          <button class="btn btn-ghost" onclick="loadMyEmails()">↻ Refresh</button>
+        </div>
+        <div class="tbl-wrap">
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th>Contact</th>
+                <th>Store</th>
+                <th>Subject</th>
+                <th>Status</th>
+                <th>Messages</th>
+                <th>Assigned At</th>
+              </tr>
+            </thead>
+            <tbody id="emailsTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- Email Thread Overlay -->
+<div class="et-overlay" id="etOverlay">
+  <div class="et-modal">
+
+    <!-- Header -->
+    <div class="et-header">
+      <div class="et-avatar" id="etAvatar">?</div>
+      <div class="et-contact">
+        <div class="et-contact-email" id="etContactEmail"></div>
+        <div class="et-contact-meta" id="etContactMeta"></div>
+      </div>
+      <button class="et-close" onclick="closeEmailThread()">✕</button>
+    </div>
+
+    <!-- Resolved banner -->
+    <div class="et-resolved-banner" id="etResolvedBanner">
+      <span>✅ This thread is marked as resolved.</span>
+      <span id="etResolvedAt" style="opacity:.7;font-weight:600;"></span>
+    </div>
+
+    <!-- Chat body -->
+    <div class="et-body" id="etBody">
+      <div style="text-align:center;color:#94a3b8;padding:48px 20px;">Loading conversation…</div>
+    </div>
+
+    <!-- Reply area -->
+    <div class="et-reply-area">
+      <textarea id="etReplyBox" class="et-reply-textarea" placeholder="Write your reply or generate an AI draft…" onpaste="etHandleReplyPaste(event)"></textarea>
+
+      <input type="file" id="etFileInput" multiple style="display:none" onchange="etHandleAttachment()">
+      <div id="etAttPreview" class="et-att-preview"></div>
+
+      <div id="etAiBox" class="et-ai-box">
+        <div class="et-ai-box-head">
+          <span class="et-ai-box-title">✨ AI Suggestion</span>
+          <button class="et-ai-box-close" onclick="etCloseAi()">×</button>
+        </div>
+        <div id="etAiText" class="et-ai-box-text"></div>
+        <div class="et-ai-box-actions">
+          <button class="et-btn" onclick="etCopyAi()">Copy</button>
+          <button class="et-btn et-btn-improve" onclick="etInsertAi()">Insert</button>
+        </div>
+      </div>
+
+      <div class="et-actions">
+        <button class="et-btn et-btn-ai" onclick="etGenerateDraft()">🤖 AI Draft</button>
+        <button class="et-btn et-btn-improve" onclick="etImproveReply()">✨ Improve</button>
+        <button class="et-btn" onclick="document.getElementById('etFileInput').click()">📎 Attach</button>
+        <button class="et-btn et-btn-send" id="etSendBtn" onclick="etSendReply()">📨 Send Reply</button>
+        <button class="et-btn et-btn-resolve" id="etResolveBtn" onclick="etToggleResolve()" style="margin-left:auto;">✓ Mark Resolved</button>
+        <span class="et-status-msg" id="etStatusMsg"></span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Order Detail Overlay -->
+<div class="od-overlay" id="odOverlay">
+  <div class="od-card">
+    <div class="od-header">
+      <h2 id="odTitle">Order Detail</h2>
+      <button class="od-close" onclick="closeOrderDetail()">✕</button>
+    </div>
+    <div class="od-body" id="odBody"></div>
+  </div>
+</div>
+
+<script>
+// ── State ──
+let empMember = null;
+let empPerms  = {};
+let myOrders  = [];
+
+// ── Loader ──
+function runLoader(cb, delay=480){
+  const bar = document.getElementById("gLoader");
+  if(!bar){cb&&cb();return;}
+  bar.style.transition="none"; bar.style.width="0%";
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    bar.style.transition="width .25s ease"; bar.style.width="40%";
+    setTimeout(()=>bar.style.width="78%",200);
+    setTimeout(()=>bar.style.width="100%",380);
+    setTimeout(()=>{
+      cb&&cb();
+      setTimeout(()=>{bar.style.transition="width .3s ease";bar.style.width="0%";},180);
+    },delay);
+  }));
+}
+function fireLoader(){runLoader(null,400);}
+
+// ── Utils ──
+function esc(s){const d=document.createElement("div");d.textContent=String(s||"");return d.innerHTML;}
+function perm(key){return !!empPerms[key];}
+function fmtDate(iso){
+  if(!iso)return"-";
+  const d=new Date(iso);
+  return d.toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"});
+}
+function payBadge(status){
+  const map={
+    pending:"badge-pending",processing:"badge-processing",
+    completed:"badge-completed",cancelled:"badge-cancelled",
+    "on-hold":"badge-default",refunded:"badge-default"
+  };
+  return `<span class="badge ${map[status]||"badge-default"}">${esc(status)}</span>`;
+}
+function fulfillBadge(status){
+  const map={fulfilled:"badge-fulfilled",unfulfilled:"badge-notrack","not_fulfilled":"badge-notrack"};
+  return `<span class="badge ${map[status]||"badge-default"}">${esc(status||"-")}</span>`;
+}
+
+// ── Permission labels ──
+const PERM_LABELS = {
+  view_orders:"View Orders", view_stores:"View Stores",
+  view_team:"View Team", view_rules:"View Rules",
+  view_emails:"View Emails", view_vendors:"View Vendors",
+  assign_orders:"Assign Orders", sync_orders:"Sync Orders",
+  delete_orders:"Delete Orders", export_orders:"Export Orders",
+  manage_vendors:"Manage Vendors", approve_tracking:"Approve Tracking",
+  invite_members:"Invite Members", manage_rules:"Manage Rules",
+  send_emails:"Send Emails", view_all_threads:"All Threads",
+};
+
+const ROLE_LABELS = {
+  support:"Support", order_manager:"Order Manager",
+  refund_manager:"Refund Manager", vendor_manager:"Vendor Manager",
+  email_manager:"Email Manager"
+};
+
+// ── Boot ──
+async function boot(){
+  try{
+    const r = await fetch("/employee/api/me/");
+    const d = await r.json();
+    if(!d.success){ window.location="/employee/login/"; return; }
+    empMember = d.member;
+    empPerms  = empMember.permissions || {};
+    buildSidebar();
+    renderOverview();
+    if(perm("view_orders")) loadMyOrders();
+    if(perm("view_emails")) loadMyEmails();
+  }catch(e){
+    document.body.innerHTML = `<div style="text-align:center;padding:80px;color:#ef4444;font-family:sans-serif;">Failed to load. <a href="/employee/login/">Login again</a></div>`;
+  }
+}
+
+// ── Sidebar ──
+function buildSidebar(){
+  const m = empMember;
+  const initials = m.name.split(" ").map(p=>p[0]).join("").slice(0,2).toUpperCase();
+  const roleLabel = ROLE_LABELS[m.role] || m.role;
+  const statusColors = {available:"#10b981",busy:"#ef4444",limited:"#f59e0b",offline:"#94a3b8"};
+
+  const navItems = [
+    {id:"secOverview", icon:"🏠", label:"Overview",  always:true},
+    {id:"secOrders",   icon:"🛒", label:"My Orders", perm:"view_orders"},
+    {id:"secEmails",   icon:"📧", label:"My Emails", perm:"view_emails"},
+  ];
+
+  const navHTML = navItems.filter(n=>n.always||perm(n.perm)).map(n=>`
+    <button class="nav-item ${n.id==="secOverview"?"active":""}"
+      id="nav_${n.id}" onclick="switchSection('${n.id}')">
+      <span class="nav-icon">${n.icon}</span>${n.label}
+    </button>`).join("");
+
+  document.getElementById("sidebar").innerHTML = `
+    <div class="brand">
+      <div class="brand-logo">VF</div>
+      <div>
+        <div class="brand-name">VendorFlow AI</div>
+        <div class="brand-tag">Employee Portal</div>
+      </div>
+    </div>
+    <nav class="nav">${navHTML}</nav>
+    <div class="sidebar-profile">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#6366f1,#06b6d4);display:grid;place-items:center;font-weight:800;font-size:13px;color:#fff;">${esc(initials)}</div>
+        <div>
+          <div class="sp-name">${esc(m.name)}</div>
+          <div class="sp-role" style="display:flex;align-items:center;gap:5px;">
+            <span style="width:6px;height:6px;border-radius:50%;background:${statusColors[m.status]||"#94a3b8"};display:inline-block;"></span>
+            ${esc(roleLabel)}
+          </div>
+        </div>
+      </div>
+      <a href="/employee/logout/" class="sp-logout">Sign Out</a>
+    </div>`;
+}
+
+// ── Section Switch ──
+function switchSection(id){
+  fireLoader();
+  document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
+  document.querySelectorAll(".nav-item").forEach(b=>b.classList.remove("active"));
+  document.getElementById(id)?.classList.add("active");
+  document.getElementById("nav_"+id)?.classList.add("active");
+}
+
+// ── Overview ──
+function renderOverview(){
+  const m = empMember;
+  const initials = m.name.split(" ").map(p=>p[0]).join("").slice(0,2).toUpperCase();
+  const roleLabel = ROLE_LABELS[m.role] || m.role;
+  const statusColors = {available:"#10b981",busy:"#ef4444",limited:"#f59e0b",offline:"#94a3b8"};
+  const statusLabels = {available:"Available",busy:"Busy",limited:"Limited",offline:"Offline"};
+
+  document.getElementById("overviewTitle").innerText = "Welcome, " + m.name.split(" ")[0] + " 👋";
+
+  // Profile card
+  document.getElementById("profileCard").innerHTML = `
+    <div class="pc-avatar">${esc(initials)}</div>
+    <div class="pc-name">${esc(m.name)}</div>
+    <div class="pc-role">${esc(roleLabel)} &nbsp;·&nbsp; <span style="color:${statusColors[m.status]||"#fff"}">${statusLabels[m.status]||m.status}</span></div>
+    <div class="pc-stat-row">
+      <div class="pc-stat"><div class="pc-stat-val">${m.workload||0}%</div><div class="pc-stat-lbl">Workload</div></div>
+      <div class="pc-stat"><div class="pc-stat-val" id="pcOrderCount">–</div><div class="pc-stat-lbl">My Orders</div></div>
+    </div>`;
+
+  // Permissions grid
+  const allPerms = Object.keys(PERM_LABELS);
+  document.getElementById("permsGrid").innerHTML = allPerms.map(key=>{
+    const on = !!empPerms[key];
+    return `<div class="perm-chip ${on?"on":"off"}">
+      <span class="perm-chip-dot"></span>
+      ${esc(PERM_LABELS[key])}
+    </div>`;
+  }).join("");
+
+  // KPIs (will update when orders load)
+  document.getElementById("overviewKpis").innerHTML = `
+    <div class="kpi"><div class="kpi-label">My Orders</div><div class="kpi-val" id="okpiTotal">–</div><div class="kpi-sub muted">Assigned to me</div></div>
+    <div class="kpi"><div class="kpi-label">Pending</div><div class="kpi-val" id="okpiPending">–</div><div class="kpi-sub amber">Need action</div></div>
+    <div class="kpi"><div class="kpi-label">Processing</div><div class="kpi-val" id="okpiProcessing">–</div><div class="kpi-sub blue">In progress</div></div>
+    <div class="kpi"><div class="kpi-label">Fulfilled</div><div class="kpi-val" id="okpiFulfilled">–</div><div class="kpi-sub green">Completed</div></div>
+    <div class="kpi"><div class="kpi-label">No Tracking</div><div class="kpi-val" id="okpiNoTrack">–</div><div class="kpi-sub red">Follow up</div></div>`;
+}
+
+// ── My Orders ──
+async function loadMyOrders(){
+  document.getElementById("ordersTableBody").innerHTML =
+    `<tr><td colspan="8" style="text-align:center;padding:40px;color:#94a3b8;">Loading...</td></tr>`;
+
+  try{
+    const r = await fetch("/employee/api/orders/");
+    const d = await r.json();
+    if(!d.success){
+      document.getElementById("ordersTableBody").innerHTML =
+        `<tr><td colspan="8" style="text-align:center;padding:40px;color:#ef4444;">${esc(d.message)}</td></tr>`;
+      return;
+    }
+    myOrders = d.orders || [];
+    const st = d.stats || {};
+
+    // Update KPIs everywhere
+    const setKpi = (id, val) => { const el=document.getElementById(id); if(el)el.innerText=val; };
+    setKpi("okpiTotal",     st.total||0);
+    setKpi("okpiPending",   st.pending||0);
+    setKpi("okpiProcessing",st.processing||0);
+    setKpi("okpiFulfilled", st.fulfilled||0);
+    setKpi("okpiNoTrack",   st.no_tracking||0);
+    setKpi("pcOrderCount",  st.total||0);
+
+    // Orders KPI row
+    document.getElementById("ordersKpis").innerHTML = `
+      <div class="kpi"><div class="kpi-label">Total Assigned</div><div class="kpi-val">${st.total||0}</div><div class="kpi-sub muted">All orders</div></div>
+      <div class="kpi"><div class="kpi-label">Pending</div><div class="kpi-val">${st.pending||0}</div><div class="kpi-sub amber">Need action</div></div>
+      <div class="kpi"><div class="kpi-label">Processing</div><div class="kpi-val">${st.processing||0}</div><div class="kpi-sub blue">Active</div></div>
+      <div class="kpi"><div class="kpi-label">Fulfilled</div><div class="kpi-val">${st.fulfilled||0}</div><div class="kpi-sub green">Done</div></div>
+      <div class="kpi"><div class="kpi-label">No Tracking</div><div class="kpi-val">${st.no_tracking||0}</div><div class="kpi-sub red">Follow up</div></div>`;
+
+    document.getElementById("ordersCount").innerText = `${myOrders.length} order${myOrders.length!==1?"s":""} assigned to you`;
+
+    if(!myOrders.length){
+      document.getElementById("ordersTableBody").innerHTML =
+        `<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">📭</div><div class="empty-title">No orders yet</div><div class="empty-sub">Orders assigned to you will appear here.</div></div></td></tr>`;
+      return;
+    }
+
+    document.getElementById("ordersTableBody").innerHTML = myOrders.map(o=>`
+      <tr style="cursor:pointer;" onclick="openOrderDetail(${o.id})">
+        <td><b style="color:#6366f1;">#${esc(o.order_number)}</b></td>
+        <td>
+          <div style="font-weight:700;">${esc(o.customer_name)}</div>
+          <div style="font-size:11px;color:#94a3b8;">${esc(o.customer_city)}</div>
+        </td>
+        <td style="max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(o.product_name)}</td>
+        <td>${payBadge(o.payment_status)}</td>
+        <td>${fulfillBadge(o.fulfillment_status)}</td>
+        <td>${o.tracking_number
+          ? `<span class="badge badge-track">✓ ${esc(o.tracking_number)}</span>`
+          : `<span class="badge badge-notrack">No Tracking</span>`}</td>
+        <td style="color:#94a3b8;font-size:12px;">${fmtDate(o.created_at)}</td>
+        <td><button class="btn btn-ghost" style="font-size:11px;padding:5px 10px;" onclick="event.stopPropagation();openOrderDetail(${o.id})">View</button></td>
+      </tr>`).join("");
+
+  }catch(e){
+    document.getElementById("ordersTableBody").innerHTML =
+      `<tr><td colspan="8" style="text-align:center;padding:40px;color:#ef4444;">Error: ${esc(e.message)}</td></tr>`;
+  }
+}
+
+// ── Order Detail ──
+function openOrderDetail(orderId){
+  fireLoader();
+  const o = myOrders.find(x=>x.id===orderId);
+  if(!o) return;
+
+  document.getElementById("odTitle").innerText = "Order #" + o.order_number;
+
+  const itemsHTML = o.line_items.length
+    ? o.line_items.map(i=>`
+      <div class="od-item">
+        ${i.image?`<img class="od-item-img" src="${esc(i.image)}" onerror="this.style.display='none'">`:""}
+        <div>
+          <div class="od-item-name">${esc(i.name)}</div>
+          <div class="od-item-qty">Qty: ${i.quantity}${i.sku?` &nbsp;·&nbsp; SKU: ${esc(i.sku)}`:""}</div>
+        </div>
+      </div>`).join("")
+    : `<div style="color:#94a3b8;font-size:13px;">No line items available.</div>`;
+
+  document.getElementById("odBody").innerHTML = `
+    <div class="od-section-lbl">Order Info</div>
+    <div class="od-row"><span class="od-key">Order Number</span><span class="od-val">#${esc(o.order_number)}</span></div>
+    <div class="od-row"><span class="od-key">Payment Status</span><span class="od-val">${payBadge(o.payment_status)}</span></div>
+    <div class="od-row"><span class="od-key">Fulfillment</span><span class="od-val">${fulfillBadge(o.fulfillment_status)}</span></div>
+    <div class="od-row"><span class="od-key">Total Price</span><span class="od-val">${esc(o.currency)} ${esc(o.total_price)}</span></div>
+    <div class="od-row"><span class="od-key">Date</span><span class="od-val">${fmtDate(o.created_at)}</span></div>
+
+    <div class="od-section-lbl">Customer</div>
+    <div class="od-row"><span class="od-key">Name</span><span class="od-val">${esc(o.customer_name)}</span></div>
+    <div class="od-row"><span class="od-key">Phone</span><span class="od-val">${esc(o.customer_phone)}</span></div>
+    <div class="od-row"><span class="od-key">Email</span><span class="od-val">${esc(o.customer_email)}</span></div>
+    <div class="od-row"><span class="od-key">City / Country</span><span class="od-val">${esc(o.customer_city)}, ${esc(o.customer_country)}</span></div>
+    <div class="od-row"><span class="od-key">Address</span><span class="od-val">${esc(o.customer_address)}</span></div>
+
+    <div class="od-section-lbl">Tracking</div>
+    <div class="od-row"><span class="od-key">Tracking Number</span><span class="od-val">${o.tracking_number||"Not submitted yet"}</span></div>
+    <div class="od-row"><span class="od-key">Vendor Status</span><span class="od-val">${esc(o.vendor_status)}</span></div>
+
+    <div class="od-section-lbl">Products</div>
+    <div class="od-items-list">${itemsHTML}</div>`;
+
+  document.getElementById("odOverlay").style.display = "flex";
+  document.body.style.overflow = "hidden";
+}
+
+function closeOrderDetail(){
+  fireLoader();
+  document.getElementById("odOverlay").style.display = "none";
+  document.body.style.overflow = "";
+}
+
+// ── My Emails ──
+let myEmailThreads = [];
+
+async function loadMyEmails(){
+  fireLoader();
+  try{
+    const r = await fetch("/employee/api/emails/");
+    const d = await r.json();
+    if(!d.success) return;
+    myEmailThreads = d.threads || [];
+    const stats = d.stats || {};
+
+    document.getElementById("emailsKpis").innerHTML = `
+      <div class="kpi"><div class="kpi-label">Total</div><div class="kpi-val">${stats.total||0}</div><div class="kpi-sub muted">Assigned threads</div></div>
+      <div class="kpi"><div class="kpi-label">New</div><div class="kpi-val">${stats.new||0}</div><div class="kpi-sub amber">Awaiting reply</div></div>
+      <div class="kpi"><div class="kpi-label">Replied</div><div class="kpi-val">${stats.replied||0}</div><div class="kpi-sub blue">Responded</div></div>
+      <div class="kpi"><div class="kpi-label">Resolved</div><div class="kpi-val">${stats.resolved||0}</div><div class="kpi-sub green">Completed</div></div>
+      <div class="kpi"><div class="kpi-label">Other</div><div class="kpi-val">${stats.other||0}</div><div class="kpi-sub muted">In progress</div></div>
+    `;
+
+    document.getElementById("emailsCount").innerText = `${myEmailThreads.length} thread${myEmailThreads.length!==1?"s":""} assigned`;
+
+    const statusColors = {new:"#ef4444",assigned:"#6366f1",drafted:"#f59e0b",replied:"#10b981",closed:"#94a3b8"};
+
+    document.getElementById("emailsTableBody").innerHTML = myEmailThreads.length ? myEmailThreads.map((t,i)=>`
+      <tr style="cursor:pointer;${t.is_resolved?"opacity:.7;":""}" onclick="openEmailThread(${i})">
+        <td>
+          <div style="font-weight:700;color:#6366f1;">${esc(t.contact)}</div>
+          <div style="font-size:11px;color:#94a3b8;margin-top:2px;">${t.total_messages} message${t.total_messages!==1?"s":""}</div>
+        </td>
+        <td>${esc(t.store_name)}</td>
+        <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(t.latest_subject)}</td>
+        <td>
+          ${t.is_resolved
+            ? `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:#dcfce7;color:#15803d;">✅ Resolved</span>`
+            : `<span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:${statusColors[t.latest_status]||"#e2e8f0"}20;color:${statusColors[t.latest_status]||"#64748b"};">${esc(t.latest_status)}</span>`
+          }
+        </td>
+        <td>${t.total_messages}</td>
+        <td>${fmtDate(t.assigned_at)}</td>
+      </tr>`).join("") : `<tr><td colspan="6" style="text-align:center;padding:32px;color:#94a3b8;">No email threads assigned to you yet.</td></tr>`;
+  }catch(e){
+    document.getElementById("emailsTableBody").innerHTML = `<tr><td colspan="6" style="text-align:center;color:#ef4444;">Failed to load emails.</td></tr>`;
+  }
+}
+
+// ── Email Thread Modal ──
+let currentThread = null;
+let etAiSuggestion = "";
+
+// helpers
+function etExtractEmail(val){
+  const m=(val||"").match(/[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,}/i);
+  return m?m[0]:(val||"");
+}
+function etIsSupport(val){
+  const addr=etExtractEmail(val).toLowerCase();
+  if(!addr) return true;
+  const storeAddr=(currentThread&&currentThread.storeEmail||"").toLowerCase();
+  return storeAddr && addr===storeAddr;
+}
+function etSenderName(val){
+  let t=(val||"Customer").trim();
+  const m=t.match(/^(.*?)\s*<[^>]+>$/);
+  if(m&&m[1].trim()) t=m[1].trim();
+  if(t.includes("@")&&!t.includes(" ")) t=t.split("@")[0];
+  return t.replaceAll('"','').trim()||"Customer";
+}
+function etFmtDate(val){
+  if(!val) return "";
+  try{const d=new Date(val);return isNaN(d)?"":`${d.toLocaleString([],{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"})}`;}catch(e){return "";}
+}
+function etCleanBody(body){
+  let text=(body||"").replace(/\r/g,"").trim();
+  const patterns=[/\nOn .+ wrote:\s*/i,/\nFrom:\s.+/i,/\nSent:\s.+/i,/\n-{2,}\s*Original Message\s*-{2,}/i,/\n_{10,}\s*/i];
+  let cut=-1;
+  patterns.forEach(p=>{const m=text.search(p);if(m!==-1&&(cut===-1||m<cut))cut=m;});
+  let main=cut!==-1?text.slice(0,cut).trim():text.trim();
+  let quoted=cut!==-1?text.slice(cut).trim():"";
+  main=main.split("\n").filter(l=>!l.trim().startsWith(">")).join("\n").replace(/\n{3,}/g,"\n\n").trim();
+  return{main:main||"(no message body)",quoted};
+}
+function etRenderAtts(atts,id){
+  if(!atts||!atts.length) return "";
+  let h=`<div class="et-att-list">`;
+  atts.forEach(a=>{
+    if(a.content_type&&a.content_type.startsWith("image/")){
+      h+=`<img class="et-att-img" src="/emails/api/attachment/${a.id}/" alt="${esc(a.filename)}" loading="lazy" onclick="window.open('/emails/api/attachment/${a.id}/','_blank')">`;
+    }else{
+      h+=`<a class="et-att-file" href="/emails/api/attachment/${a.id}/" download="${esc(a.filename)}" target="_blank">📎 ${esc(a.filename)}</a>`;
+    }
+  });
+  h+=`</div>`;
+  return h;
+}
+
+function etRenderThread(emails){
+  if(!emails||!emails.length){
+    return `<div style="text-align:center;color:#94a3b8;padding:48px;">No messages yet.</div>`;
+  }
+  let html=`<div class="et-thread">`;
+  emails.forEach((msg,i)=>{
+    const isSupp=etIsSupport(msg.sender);
+    const cls=isSupp?"support":"customer";
+    const name=isSupp?"Support Team":etSenderName(msg.sender_name||msg.sender||"Customer");
+    const time=etFmtDate(msg.created_at||msg.date);
+    const {main,quoted}=etCleanBody(msg.body);
+    const qid=`etq_${i}`;
+    const atts=etRenderAtts(msg.attachments||"",i);
+    html+=`<div class="et-row ${cls}">
+      <div class="et-msg-stack">
+        <div class="et-sender-name">${esc(name)}</div>
+        <div class="et-bubble">
+          <div style="white-space:pre-wrap;word-break:break-word;">${esc(main)}</div>
+          ${quoted?`<span class="et-quoted-toggle" onclick="document.getElementById('${qid}').classList.toggle('open')">View previous conversation</span><div id="${qid}" class="et-quoted-text">${esc(quoted)}</div>`:""}
+          ${atts}
+        </div>
+        ${time?`<div class="et-msg-time">${esc(time)}</div>`:""}
+      </div>
+    </div>`;
+  });
+  html+=`</div>`;
+  return html;
+}
+
+async function openEmailThread(idxOrContact, storeId, storeName){
+  fireLoader();
+  let contact, storeIdVal, storeNameVal;
+  if(typeof idxOrContact==="number"){
+    const t=myEmailThreads[idxOrContact];
+    if(!t) return;
+    contact=t.contact; storeIdVal=t.store_id; storeNameVal=t.store_name;
+  }else{
+    contact=idxOrContact; storeIdVal=storeId; storeNameVal=storeName;
+  }
+  document.getElementById("etContactEmail").textContent=contact;
+  document.getElementById("etContactMeta").textContent=storeNameVal;
+  document.getElementById("etAvatar").textContent=(contact[0]||"?").toUpperCase();
+  document.getElementById("etBody").innerHTML=`<div style="text-align:center;color:#94a3b8;padding:48px;">Loading conversation…</div>`;
+  document.getElementById("etReplyBox").value="";
+  document.getElementById("etAttPreview").innerHTML="";
+  document.getElementById("etFileInput").value="";
+  document.getElementById("etStatusMsg").textContent="";
+  etUpdateResolvedUI(false, null);
+  etCloseAi();
+  document.getElementById("etOverlay").style.display="flex";
+  document.body.style.overflow="hidden";
+
+  try{
+    const r=await fetch(`/employee/api/thread/?store_id=${storeIdVal}&contact=${encodeURIComponent(contact)}`);
+    const d=await r.json();
+    if(!d.success){
+      document.getElementById("etBody").innerHTML=`<div style="text-align:center;color:#ef4444;padding:48px;">${esc(d.message)}</div>`;
+      return;
+    }
+    currentThread={contact, storeId:storeIdVal, storeName:storeNameVal, storeEmail:d.store_email, emails:d.emails, isResolved:d.is_resolved, resolvedAt:d.resolved_at};
+    document.getElementById("etBody").innerHTML=etRenderThread(d.emails);
+    const body=document.getElementById("etBody");
+    body.scrollTop=body.scrollHeight;
+    document.getElementById("etContactMeta").textContent=`${storeNameVal} · ${d.count} message${d.count!==1?"s":""}`;
+    etUpdateResolvedUI(d.is_resolved, d.resolved_at);
+  }catch(e){
+    document.getElementById("etBody").innerHTML=`<div style="text-align:center;color:#ef4444;padding:48px;">Failed to load thread.</div>`;
+  }
+}
+
+function etUpdateResolvedUI(isResolved, resolvedAt){
+  const banner=document.getElementById("etResolvedBanner");
+  const btn=document.getElementById("etResolveBtn");
+  const sendBtn=document.getElementById("etSendBtn");
+  const resolvedAtEl=document.getElementById("etResolvedAt");
+  if(isResolved){
+    banner.classList.add("show");
+    if(resolvedAt) resolvedAtEl.textContent="· "+etFmtDate(resolvedAt);
+    btn.textContent="↩ Re-open Thread";
+    btn.classList.add("resolved");
+    sendBtn.disabled=true;
+    sendBtn.title="Re-open thread to send replies.";
+    document.getElementById("etReplyBox").disabled=true;
+  }else{
+    banner.classList.remove("show");
+    resolvedAtEl.textContent="";
+    btn.textContent="✓ Mark Resolved";
+    btn.classList.remove("resolved");
+    sendBtn.disabled=false;
+    sendBtn.title="";
+    document.getElementById("etReplyBox").disabled=false;
+  }
+}
+
+async function etToggleResolve(){
+  if(!currentThread) return;
+  const statusEl=document.getElementById("etStatusMsg");
+  const isResolved=currentThread.isResolved;
+  const url=isResolved?"/employee/api/thread/reopen/":"/employee/api/thread/resolve/";
+  statusEl.textContent=isResolved?"Re-opening…":"Marking resolved…";
+  statusEl.style.color="#64748b";
+  try{
+    const r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json","X-CSRFToken":getCsrfToken()},body:JSON.stringify({store_id:currentThread.storeId,contact:currentThread.contact})});
+    const d=await r.json();
+    if(d.success){
+      currentThread.isResolved=!isResolved;
+      currentThread.resolvedAt=isResolved?null:new Date().toISOString();
+      etUpdateResolvedUI(currentThread.isResolved, currentThread.resolvedAt);
+      statusEl.textContent=isResolved?"Thread re-opened.":"✅ Marked as resolved!";
+      statusEl.style.color=isResolved?"#64748b":"#059669";
+      loadMyEmails();
+    }else{
+      statusEl.textContent=d.message||"Error.";
+      statusEl.style.color="#ef4444";
+    }
+  }catch(e){statusEl.textContent="Error: "+e.message;statusEl.style.color="#ef4444";}
+}
+
+function getCsrfToken(){
+  const el=document.cookie.split(";").find(c=>c.trim().startsWith("csrftoken="));
+  return el?el.split("=")[1].trim():"";
+}
+
+function closeEmailThread(){
+  document.getElementById("etOverlay").style.display="none";
+  document.body.style.overflow="";
+  currentThread=null;
+  etCloseAi();
+}
+
+// attachment handling
+function etHandleAttachment(){
+  const input=document.getElementById("etFileInput");
+  const preview=document.getElementById("etAttPreview");
+  preview.innerHTML="";
+  Array.from(input.files).forEach((f,i)=>{
+    const pill=document.createElement("div");
+    pill.className="et-att-pill";
+    pill.innerHTML=`<span title="${esc(f.name)}">📎 ${esc(f.name)}</span><button type="button" onclick="etRemoveAttachment(${i})">×</button>`;
+    preview.appendChild(pill);
+  });
+}
+function etRemoveAttachment(i){
+  const input=document.getElementById("etFileInput");
+  const dt=new DataTransfer();
+  Array.from(input.files).forEach((f,idx)=>{if(idx!==i)dt.items.add(f);});
+  input.files=dt.files;
+  etHandleAttachment();
+}
+function etHandleReplyPaste(evt){
+  const items=evt.clipboardData&&evt.clipboardData.items;
+  if(!items) return;
+  const imgs=[];
+  for(let i=0;i<items.length;i++){
+    if(items[i].kind==="file"&&items[i].type.startsWith("image/")){
+      const f=items[i].getAsFile();
+      if(f){const ext=f.type.split("/")[1]||"png";imgs.push(new File([f],`paste-${Date.now()}.${ext}`,{type:f.type}));}
+    }
+  }
+  if(!imgs.length) return;
+  evt.preventDefault();
+  const input=document.getElementById("etFileInput");
+  const dt=new DataTransfer();
+  Array.from(input.files).forEach(f=>dt.items.add(f));
+  imgs.forEach(f=>dt.items.add(f));
+  input.files=dt.files;
+  etHandleAttachment();
+}
+
+// AI draft
+async function etGenerateDraft(){
+  if(!currentThread||!currentThread.emails.length){return;}
+  const statusEl=document.getElementById("etStatusMsg");
+  statusEl.textContent="Generating AI draft…";
+  statusEl.style.color="#64748b";
+  const latest=currentThread.emails[currentThread.emails.length-1];
+  try{
+    const r=await fetch(`/emails/api/${latest.id}/generate-ai/`,{method:"POST"});
+    const d=await r.json();
+    if(d.success){
+      document.getElementById("etReplyBox").value=d.ai_draft||"";
+      statusEl.textContent="AI draft ready.";
+      statusEl.style.color="#059669";
+    }else{
+      statusEl.textContent=d.message||"AI draft failed.";
+      statusEl.style.color="#ef4444";
+    }
+  }catch(e){statusEl.textContent="Error: "+e.message;statusEl.style.color="#ef4444";}
+}
+
+// improve reply
+async function etImproveReply(){
+  const text=document.getElementById("etReplyBox").value.trim();
+  const statusEl=document.getElementById("etStatusMsg");
+  if(!text){statusEl.textContent="Write your reply first.";statusEl.style.color="#ef4444";return;}
+  statusEl.textContent="Improving…";statusEl.style.color="#64748b";
+  try{
+    const r=await fetch("/emails/api/improve-reply/",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text})});
+    const d=await r.json();
+    if(d.success&&d.suggestion){
+      etAiSuggestion=d.suggestion;
+      document.getElementById("etAiText").textContent=d.suggestion;
+      document.getElementById("etAiBox").classList.add("show");
+      statusEl.textContent="Suggestion ready.";statusEl.style.color="#059669";
+    }else{statusEl.textContent="Could not improve.";statusEl.style.color="#ef4444";}
+  }catch(e){statusEl.textContent="Error: "+e.message;statusEl.style.color="#ef4444";}
+}
+function etCloseAi(){etAiSuggestion="";const b=document.getElementById("etAiBox");if(b)b.classList.remove("show");document.getElementById("etAiText").textContent="";}
+function etInsertAi(){if(!etAiSuggestion)return;document.getElementById("etReplyBox").value=etAiSuggestion;etCloseAi();}
+async function etCopyAi(){try{await navigator.clipboard.writeText(etAiSuggestion);}catch(e){etInsertAi();}}
+
+// send
+async function etSendReply(){
+  const text=document.getElementById("etReplyBox").value.trim();
+  const statusEl=document.getElementById("etStatusMsg");
+  const btn=document.getElementById("etSendBtn");
+  if(!text){statusEl.textContent="Reply text is required.";statusEl.style.color="#ef4444";return;}
+  if(!currentThread||!currentThread.emails.length){return;}
+  btn.disabled=true;btn.textContent="Sending…";
+  statusEl.textContent="Sending…";statusEl.style.color="#64748b";
+  const latest=currentThread.emails[currentThread.emails.length-1];
+  try{
+    const fd=new FormData();
+    fd.append("reply_text",text);
+    const input=document.getElementById("etFileInput");
+    if(input&&input.files) Array.from(input.files).forEach(f=>fd.append("attachments",f));
+    const r=await fetch(`/emails/api/${latest.id}/send-reply/`,{method:"POST",body:fd});
+    const d=await r.json();
+    if(d.success){
+      document.getElementById("etReplyBox").value="";
+      document.getElementById("etFileInput").value="";
+      etHandleAttachment();
+      statusEl.textContent="Reply sent ✓";statusEl.style.color="#059669";
+      await openEmailThread(currentThread.contact,currentThread.storeId,currentThread.storeName);
+      loadMyEmails();
+    }else{
+      statusEl.textContent=d.message||"Send failed.";statusEl.style.color="#ef4444";
+    }
+  }catch(e){statusEl.textContent="Error: "+e.message;statusEl.style.color="#ef4444";}
+  finally{btn.disabled=false;btn.textContent="📨 Send Reply";}
+}
+
+// ── Init ──
+boot();
+</script>
+</body>
+</html>

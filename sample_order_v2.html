@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Order Samples</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#0f172a;min-height:100vh;padding:30px;display:flex;flex-direction:column;gap:60px;align-items:center;}
+h1{color:#fff;font-size:13px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;opacity:.4;margin-bottom:-40px;align-self:flex-start;}
+
+/* ===========================
+   SAMPLE A — Dark Header Strip
+=========================== */
+.sa{background:#fff;border-radius:24px;width:100%;max-width:920px;overflow:hidden;box-shadow:0 40px 100px rgba(0,0,0,.35);}
+.sa-head{background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);padding:24px 28px;display:flex;justify-content:space-between;align-items:flex-start;}
+.sa-head-left{display:flex;gap:16px;align-items:center;}
+.sa-num{font-size:28px;font-weight:900;color:#fff;line-height:1;}
+.sa-store{font-size:11px;color:#94a3b8;margin-top:4px;}
+.sa-badges{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
+.sa-badge{padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700;}
+.sa-badge.y{background:rgba(251,191,36,.15);color:#fbbf24;border:1px solid rgba(251,191,36,.3);}
+.sa-badge.g{background:rgba(34,197,94,.15);color:#22c55e;border:1px solid rgba(34,197,94,.3);}
+.sa-badge.r{background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.3);}
+.sa-badge.b{background:rgba(99,102,241,.15);color:#818cf8;border:1px solid rgba(99,102,241,.3);}
+.sa-close{width:34px;height:34px;border-radius:10px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.sa-close:hover{background:rgba(239,68,68,.3);}
+.sa-kpi-row{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid #f1f5f9;}
+.sa-kpi{padding:14px 20px;border-right:1px solid #f1f5f9;text-align:center;}
+.sa-kpi:last-child{border-right:none;}
+.sa-kpi-val{font-size:20px;font-weight:900;color:#0f172a;}
+.sa-kpi-lbl{font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-top:2px;}
+.sa-body{display:grid;grid-template-columns:1fr 280px;min-height:340px;}
+.sa-main{padding:20px;border-right:1px solid #f1f5f9;}
+.sa-section-title{font-size:10px;font-weight:900;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;}
+.sa-product{display:flex;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid #f8fafc;}
+.sa-product:last-of-type{border-bottom:none;}
+.sa-pimg{width:52px;height:52px;border-radius:10px;object-fit:cover;border:1px solid #e2e8f0;background:#f8fafc;}
+.sa-pname{font-size:13px;font-weight:700;color:#0f172a;}
+.sa-pmeta{font-size:11px;color:#94a3b8;margin-top:2px;}
+.sa-pprice{margin-left:auto;font-size:14px;font-weight:900;color:#0f172a;white-space:nowrap;}
+.sa-total-row{display:flex;justify-content:flex-end;padding-top:12px;margin-top:4px;border-top:1px solid #f1f5f9;}
+.sa-total{text-align:right;}
+.sa-total-lbl{font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;}
+.sa-total-val{font-size:22px;font-weight:900;color:#0f172a;margin-top:2px;}
+.sa-sidebar{padding:20px;background:#fafbfd;}
+.sa-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:12px;}
+.sa-row:last-child{border-bottom:none;}
+.sa-row-lbl{color:#64748b;font-weight:600;}
+.sa-row-val{font-weight:800;color:#0f172a;}
+.sa-select{width:100%;padding:9px 12px;border:1px solid #e2e8f0;border-radius:10px;font-size:12px;font-weight:600;background:#fff;margin:10px 0;}
+.sa-btn{width:100%;padding:10px;border:none;border-radius:10px;font-size:12px;font-weight:800;cursor:pointer;}
+.sa-btn.g{background:#16a34a;color:#fff;margin-bottom:7px;}
+.sa-btn.l{background:#f1f5f9;color:#334155;}
+.sa-foot{padding:14px 20px;border-top:1px solid #f1f5f9;display:flex;gap:8px;justify-content:flex-end;background:#fafbfd;}
+.sa-foot-btn{padding:9px 18px;border:none;border-radius:10px;font-size:12px;font-weight:800;cursor:pointer;}
+.sa-foot-btn.close{background:#f1f5f9;color:#334155;}
+.sa-foot-btn.email{background:#2563eb;color:#fff;}
+
+/* ===========================
+   SAMPLE B — Full Sidebar Layout
+=========================== */
+.sb{background:#fff;border-radius:24px;width:100%;max-width:920px;overflow:hidden;box-shadow:0 40px 100px rgba(0,0,0,.35);display:flex;}
+.sb-left{width:220px;background:linear-gradient(160deg,#1e40af,#2563eb,#6366f1);padding:24px 20px;display:flex;flex-direction:column;gap:0;flex-shrink:0;}
+.sb-avatar{width:56px;height:56px;border-radius:16px;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;color:#fff;margin-bottom:14px;}
+.sb-cname{font-size:15px;font-weight:900;color:#fff;line-height:1.2;}
+.sb-cemail{font-size:11px;color:rgba(255,255,255,.6);margin-top:3px;word-break:break-all;}
+.sb-divider{height:1px;background:rgba(255,255,255,.15);margin:16px 0;}
+.sb-info-item{margin-bottom:12px;}
+.sb-info-item label{display:block;font-size:9px;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px;}
+.sb-info-item span{font-size:12px;font-weight:700;color:#fff;}
+.sb-status-pill{display:inline-block;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700;background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.25);}
+.sb-right{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.sb-rhead{padding:18px 22px;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center;}
+.sb-order-num{font-size:22px;font-weight:900;color:#0f172a;}
+.sb-order-sub{font-size:11px;color:#94a3b8;margin-top:3px;}
+.sb-rclose{width:32px;height:32px;border:1px solid #e2e8f0;border-radius:9px;background:#f8fafc;color:#475569;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;}
+.sb-rbody{flex:1;overflow-y:auto;padding:18px 22px;display:flex;flex-direction:column;gap:14px;}
+.sb-card{border:1px solid #eef2f8;border-radius:14px;overflow:hidden;}
+.sb-card-head{padding:10px 14px;background:#f8fafc;border-bottom:1px solid #eef2f8;font-size:10px;font-weight:900;color:#64748b;text-transform:uppercase;letter-spacing:.07em;}
+.sb-card-body{padding:14px;}
+.sb-prod{display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid #f8fafc;}
+.sb-prod:last-child{border-bottom:none;}
+.sb-pimg{width:44px;height:44px;border-radius:8px;object-fit:cover;border:1px solid #e2e8f0;background:#f8fafc;flex-shrink:0;}
+.sb-pname{font-size:12.5px;font-weight:700;color:#0f172a;}
+.sb-pmeta{font-size:11px;color:#94a3b8;margin-top:2px;}
+.sb-pprice{margin-left:auto;font-size:13px;font-weight:900;color:#1d4ed8;white-space:nowrap;padding-left:8px;}
+.sb-2col{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.sb-field label{font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:3px;}
+.sb-field span{font-size:12.5px;font-weight:700;color:#0f172a;}
+.sb-assign-select{width:100%;padding:9px 12px;border:1px solid #e2e8f0;border-radius:9px;font-size:12px;font-weight:600;margin-bottom:8px;}
+.sb-btn{width:100%;padding:10px;border:none;border-radius:9px;font-size:12px;font-weight:800;cursor:pointer;margin-bottom:6px;}
+.sb-btn.g{background:#16a34a;color:#fff;}
+.sb-btn.l{background:#f1f5f9;color:#334155;}
+.sb-rfoot{padding:12px 22px;border-top:1px solid #f1f5f9;display:flex;gap:8px;justify-content:flex-end;}
+.sb-fbt{padding:8px 16px;border:none;border-radius:9px;font-size:12px;font-weight:800;cursor:pointer;}
+.sb-fbt.cl{background:#f1f5f9;color:#334155;}
+.sb-fbt.em{background:#2563eb;color:#fff;}
+
+/* ===========================
+   SAMPLE C — Minimal Clean Sheet
+=========================== */
+.sc{background:#fff;border-radius:24px;width:100%;max-width:920px;overflow:hidden;box-shadow:0 40px 100px rgba(0,0,0,.35);}
+.sc-top{padding:22px 26px;display:flex;gap:16px;justify-content:space-between;align-items:center;border-bottom:2px solid #f1f5f9;}
+.sc-top-left{display:flex;align-items:center;gap:14px;}
+.sc-icon{width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,#eff6ff,#dbeafe);display:flex;align-items:center;justify-content:center;font-size:22px;}
+.sc-top-info h2{font-size:17px;font-weight:900;color:#0f172a;}
+.sc-top-info p{font-size:12px;color:#94a3b8;margin-top:3px;}
+.sc-top-right{display:flex;gap:8px;align-items:center;}
+.sc-top-pill{padding:6px 14px;border-radius:999px;font-size:12px;font-weight:800;}
+.sc-top-pill.y{background:#fef9c3;color:#854d0e;}
+.sc-top-pill.g{background:#dcfce7;color:#166534;}
+.sc-top-pill.r{background:#fee2e2;color:#991b1b;}
+.sc-close{width:34px;height:34px;border:1px solid #e2e8f0;border-radius:10px;background:none;font-size:17px;color:#94a3b8;cursor:pointer;}
+
+.sc-3col{display:grid;grid-template-columns:1fr 1fr 1fr;border-bottom:1px solid #f1f5f9;}
+.sc-kpi{padding:16px 22px;border-right:1px solid #f1f5f9;text-align:left;}
+.sc-kpi:last-child{border-right:none;}
+.sc-kpi-lbl{font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;}
+.sc-kpi-val{font-size:22px;font-weight:900;color:#0f172a;margin-top:4px;}
+.sc-kpi-sub{font-size:11px;color:#94a3b8;margin-top:2px;}
+
+.sc-body{display:grid;grid-template-columns:1fr 260px;}
+.sc-main{padding:20px 24px;border-right:1px solid #f1f5f9;}
+.sc-sec-title{font-size:10px;font-weight:900;color:#cbd5e1;text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px;}
+.sc-prod-row{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;margin-bottom:6px;background:#fafbfd;border:1px solid #f1f5f9;transition:.15s;}
+.sc-prod-row:hover{border-color:#bfdbfe;background:#eff6ff;}
+.sc-pimg{width:48px;height:48px;border-radius:9px;object-fit:cover;border:1px solid #e2e8f0;background:#f1f5f9;}
+.sc-pname{font-size:13px;font-weight:700;color:#0f172a;line-height:1.3;}
+.sc-pmeta{font-size:11px;color:#94a3b8;margin-top:2px;}
+.sc-pprice{margin-left:auto;font-size:14px;font-weight:900;color:#0f172a;}
+.sc-total{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:linear-gradient(135deg,#eff6ff,#f0fdf4);border-radius:12px;margin-top:10px;}
+.sc-total-lbl{font-size:12px;font-weight:700;color:#64748b;}
+.sc-total-val{font-size:20px;font-weight:900;color:#0f172a;}
+
+.sc-cust-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;}
+.sc-cf label{font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:3px;}
+.sc-cf span{font-size:12.5px;font-weight:700;color:#0f172a;}
+
+.sc-side{padding:20px;background:#fafbfd;display:flex;flex-direction:column;gap:14px;}
+.sc-scard{background:#fff;border:1px solid #eef2f8;border-radius:12px;padding:14px;}
+.sc-scard-title{font-size:10px;font-weight:900;color:#94a3b8;text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px;}
+.sc-srow{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f8fafc;font-size:12px;}
+.sc-srow:last-of-type{border-bottom:none;}
+.sc-srow-l{color:#64748b;font-weight:600;}
+.sc-srow-r{font-weight:800;color:#0f172a;}
+.sc-spill{display:inline-block;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:700;}
+.sc-spill.y{background:#fef9c3;color:#854d0e;}
+.sc-spill.g{background:#dcfce7;color:#166534;}
+.sc-sel{width:100%;padding:9px 12px;border:1px solid #e2e8f0;border-radius:9px;font-size:12px;margin:8px 0;}
+.sc-sbtn{width:100%;padding:10px;border:none;border-radius:9px;font-size:12px;font-weight:800;cursor:pointer;margin-top:6px;}
+.sc-sbtn.g{background:#16a34a;color:#fff;}
+.sc-sbtn.l{background:#f1f5f9;color:#334155;margin-top:6px;}
+
+.sc-foot{padding:14px 24px;border-top:1px solid #f1f5f9;display:flex;justify-content:flex-end;gap:8px;}
+.sc-fbt{padding:9px 18px;border:none;border-radius:10px;font-size:12px;font-weight:800;cursor:pointer;}
+.sc-fbt.cl{background:#f1f5f9;color:#475569;}
+.sc-fbt.em{background:#2563eb;color:#fff;}
+</style>
+</head>
+<body>
+
+<h1>▸ Sample A — Dark Header</h1>
+
+<!-- SAMPLE A -->
+<div class="sa">
+  <div class="sa-head">
+    <div class="sa-head-left">
+      <div>
+        <div class="sa-num" style="color:#fff;font-size:28px;font-weight:900;">#11509</div>
+        <div class="sa-store">kayaliofficial.shop · WooCommerce · 29 Apr 2026</div>
+        <div class="sa-badges">
+          <span class="sa-badge y">processing</span>
+          <span class="sa-badge r">unfulfilled</span>
+          <span class="sa-badge b">Unassigned</span>
+        </div>
+      </div>
+    </div>
+    <button class="sa-close">×</button>
+  </div>
+  <div class="sa-kpi-row">
+    <div class="sa-kpi"><div class="sa-kpi-val">USD 260</div><div class="sa-kpi-lbl">Order Total</div></div>
+    <div class="sa-kpi"><div class="sa-kpi-val">3</div><div class="sa-kpi-lbl">Products</div></div>
+    <div class="sa-kpi"><div class="sa-kpi-val" style="color:#f59e0b;">Processing</div><div class="sa-kpi-lbl">Payment</div></div>
+    <div class="sa-kpi"><div class="sa-kpi-val" style="color:#94a3b8;">No Track</div><div class="sa-kpi-lbl">Shipping</div></div>
+  </div>
+  <div class="sa-body">
+    <div class="sa-main">
+      <div class="sa-section-title">Products Ordered</div>
+      <div class="sa-product">
+        <img class="sa-pimg" src="https://kayaliofficial.shop/wp-content/uploads/2025/07/Maui-Duo-100ml.webp" onerror="this.style.display='none'" alt="">
+        <div><div class="sa-pname">Maldives Ylang Coco 20-100ml</div><div class="sa-pmeta">Qty: 1 · Size: 100ml</div></div>
+        <div class="sa-pprice">USD 130.00</div>
+      </div>
+      <div class="sa-product">
+        <div style="width:52px;height:52px;border-radius:10px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">📦</div>
+        <div><div class="sa-pname">Kayali Vanilla 28 · 50ml</div><div class="sa-pmeta">Qty: 2 · Size: 50ml</div></div>
+        <div class="sa-pprice">USD 130.00</div>
+      </div>
+      <div class="sa-total-row"><div class="sa-total"><div class="sa-kpi-lbl">TOTAL</div><div class="sa-total-val">USD 260.00</div></div></div>
+      <div style="margin-top:16px;">
+        <div class="sa-section-title">Customer</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px;">
+          <div><div class="sa-kpi-lbl" style="margin-bottom:3px;">Name</div><div style="font-size:13px;font-weight:700;color:#0f172a;">Maya Riffe</div></div>
+          <div><div class="sa-kpi-lbl" style="margin-bottom:3px;">Email</div><div style="font-size:13px;font-weight:700;color:#0f172a;">tokyogoth88@yahoo.co.jp</div></div>
+          <div><div class="sa-kpi-lbl" style="margin-bottom:3px;">Country</div><div style="font-size:13px;font-weight:700;color:#0f172a;">Japan</div></div>
+          <div><div class="sa-kpi-lbl" style="margin-bottom:3px;">City</div><div style="font-size:13px;font-weight:700;color:#0f172a;">Tokyo</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="sa-sidebar">
+      <div class="sa-section-title">Payment & Shipping</div>
+      <div class="sa-row"><span class="sa-row-lbl">Payment</span><span class="sa-badge y" style="font-size:11px;">processing</span></div>
+      <div class="sa-row"><span class="sa-row-lbl">Fulfillment</span><span class="sa-badge r" style="font-size:11px;">unfulfilled</span></div>
+      <div class="sa-row"><span class="sa-row-lbl">Tracking</span><span class="sa-row-val" style="color:#94a3b8;">None</span></div>
+      <div class="sa-row"><span class="sa-row-lbl">Method</span><span class="sa-row-val">PayPal</span></div>
+      <div style="margin-top:14px;">
+        <div class="sa-section-title">Assign Order</div>
+        <select class="sa-select"><option>Select team member...</option><option>Ali — Manager</option></select>
+        <button class="sa-btn g">Assign Now</button>
+        <button class="sa-btn l">Email Customer</button>
+      </div>
+    </div>
+  </div>
+  <div class="sa-foot">
+    <button class="sa-foot-btn close">Close</button>
+    <button class="sa-foot-btn email">Open in Email</button>
+  </div>
+</div>
+
+
+<h1>▸ Sample B — Blue Sidebar</h1>
+
+<!-- SAMPLE B -->
+<div class="sb">
+  <div class="sb-left">
+    <div class="sb-avatar">MR</div>
+    <div class="sb-cname">Maya Riffe</div>
+    <div class="sb-cemail">tokyogoth88@yahoo.co.jp</div>
+    <div class="sb-divider"></div>
+    <div class="sb-info-item"><label>Order</label><span>#11509</span></div>
+    <div class="sb-info-item"><label>Date</label><span>29 Apr 2026</span></div>
+    <div class="sb-info-item"><label>Store</label><span>kayaliofficial.shop</span></div>
+    <div class="sb-info-item"><label>Country</label><span>🇯🇵 Japan</span></div>
+    <div class="sb-info-item"><label>Payment</label><span class="sb-status-pill">processing</span></div>
+    <div class="sb-info-item"><label>Fulfillment</label><span class="sb-status-pill">unfulfilled</span></div>
+    <div class="sb-divider"></div>
+    <div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:6px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;">Total</div>
+    <div style="font-size:26px;font-weight:900;color:#fff;">USD 260</div>
+  </div>
+  <div class="sb-right">
+    <div class="sb-rhead">
+      <div><div class="sb-order-num">Order #11509</div><div class="sb-order-sub">3 products · WooCommerce</div></div>
+      <button class="sb-rclose">×</button>
+    </div>
+    <div class="sb-rbody">
+      <div class="sb-card">
+        <div class="sb-card-head">📦 Products</div>
+        <div class="sb-card-body">
+          <div class="sb-prod">
+            <img class="sb-pimg" src="https://kayaliofficial.shop/wp-content/uploads/2025/07/Maui-Duo-100ml.webp" onerror="this.style.display='none'" alt="">
+            <div><div class="sb-pname">Maldives Ylang Coco 20-100ml</div><div class="sb-pmeta">Qty: 1 · Size: 100ml</div></div>
+            <div class="sb-pprice">$130</div>
+          </div>
+          <div class="sb-prod">
+            <div style="width:44px;height:44px;border-radius:8px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">📦</div>
+            <div><div class="sb-pname">Kayali Vanilla 28 · 50ml</div><div class="sb-pmeta">Qty: 2 · Size: 50ml</div></div>
+            <div class="sb-pprice">$130</div>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding-top:10px;border-top:1px solid #f1f5f9;margin-top:4px;">
+            <span style="font-size:12px;font-weight:700;color:#64748b;">Order Total</span>
+            <span style="font-size:16px;font-weight:900;color:#1d4ed8;">USD 260.00</span>
+          </div>
+        </div>
+      </div>
+      <div class="sb-2col">
+        <div class="sb-card">
+          <div class="sb-card-head">👤 Customer</div>
+          <div class="sb-card-body" style="display:flex;flex-direction:column;gap:8px;">
+            <div class="sb-field"><label>Phone</label><span>+1 555 0012</span></div>
+            <div class="sb-field"><label>City</label><span>Tokyo</span></div>
+            <div class="sb-field"><label>Address</label><span>3-12 Shibuya</span></div>
+          </div>
+        </div>
+        <div class="sb-card">
+          <div class="sb-card-head">👥 Assign</div>
+          <div class="sb-card-body">
+            <select class="sb-assign-select"><option>Select member...</option><option>Ali — Manager</option></select>
+            <button class="sb-btn g">Assign Now</button>
+            <button class="sb-btn l">Email Customer</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="sb-rfoot">
+      <button class="sb-fbt cl">Close</button>
+      <button class="sb-fbt em">Open in Email</button>
+    </div>
+  </div>
+</div>
+
+
+<h1>▸ Sample C — Minimal Clean</h1>
+
+<!-- SAMPLE C -->
+<div class="sc">
+  <div class="sc-top">
+    <div class="sc-top-left">
+      <div class="sc-icon">🛍️</div>
+      <div class="sc-top-info">
+        <h2>Order #11509 — Maya Riffe</h2>
+        <p>kayaliofficial.shop · WooCommerce · 29 Apr 2026, 14:22</p>
+      </div>
+    </div>
+    <div class="sc-top-right">
+      <span class="sc-top-pill y">processing</span>
+      <span class="sc-top-pill r" style="background:#fee2e2;color:#991b1b;">unfulfilled</span>
+      <button class="sc-close">×</button>
+    </div>
+  </div>
+  <div class="sc-3col">
+    <div class="sc-kpi"><div class="sc-kpi-lbl">Order Total</div><div class="sc-kpi-val">USD 260</div><div class="sc-kpi-sub">3 items</div></div>
+    <div class="sc-kpi"><div class="sc-kpi-lbl">Payment</div><div class="sc-kpi-val" style="font-size:16px;color:#f59e0b;margin-top:6px;">Processing</div><div class="sc-kpi-sub">via PayPal</div></div>
+    <div class="sc-kpi"><div class="sc-kpi-lbl">Tracking</div><div class="sc-kpi-val" style="font-size:16px;color:#94a3b8;margin-top:6px;">Not Added</div><div class="sc-kpi-sub">Unfulfilled</div></div>
+  </div>
+  <div class="sc-body">
+    <div class="sc-main">
+      <div class="sc-sec-title">Products</div>
+      <div class="sc-prod-row">
+        <img class="sc-pimg" src="https://kayaliofficial.shop/wp-content/uploads/2025/07/Maui-Duo-100ml.webp" onerror="this.style.display='none'" alt="">
+        <div><div class="sc-pname">Maldives Ylang Coco 20-100ml</div><div class="sc-pmeta">Qty: 1 · Size: 100ml</div></div>
+        <div class="sc-pprice">$130.00</div>
+      </div>
+      <div class="sc-prod-row">
+        <div style="width:48px;height:48px;border-radius:9px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">📦</div>
+        <div><div class="sc-pname">Kayali Vanilla 28 · 50ml</div><div class="sc-pmeta">Qty: 2 · Size: 50ml</div></div>
+        <div class="sc-pprice">$130.00</div>
+      </div>
+      <div class="sc-total"><span class="sc-total-lbl">Order Total</span><span class="sc-total-val">USD 260.00</span></div>
+      <div class="sc-sec-title" style="margin-top:18px;">Customer</div>
+      <div class="sc-cust-grid">
+        <div class="sc-cf"><label>Name</label><span>Maya Riffe</span></div>
+        <div class="sc-cf"><label>Email</label><span>tokyogoth88@yahoo.co.jp</span></div>
+        <div class="sc-cf"><label>Country</label><span>Japan 🇯🇵</span></div>
+        <div class="sc-cf"><label>City</label><span>Tokyo</span></div>
+        <div class="sc-cf"><label>Phone</label><span>+1 555 0012</span></div>
+        <div class="sc-cf"><label>Address</label><span>3-12 Shibuya, 150-0002</span></div>
+      </div>
+    </div>
+    <div class="sc-side">
+      <div class="sc-scard">
+        <div class="sc-scard-title">💳 Payment</div>
+        <div class="sc-srow"><span class="sc-srow-l">Status</span><span class="sc-spill y">processing</span></div>
+        <div class="sc-srow"><span class="sc-srow-l">Method</span><span class="sc-srow-r">PayPal</span></div>
+        <div class="sc-srow"><span class="sc-srow-l">Currency</span><span class="sc-srow-r">USD</span></div>
+        <div class="sc-srow"><span class="sc-srow-l">Total</span><span class="sc-srow-r" style="color:#2563eb;">USD 260.00</span></div>
+      </div>
+      <div class="sc-scard">
+        <div class="sc-scard-title">👥 Assign Order</div>
+        <select class="sc-sel"><option>Select member...</option><option>Ali — Manager</option></select>
+        <button class="sc-sbtn g">Assign Now</button>
+        <button class="sc-sbtn l">Email Customer</button>
+      </div>
+    </div>
+  </div>
+  <div class="sc-foot">
+    <button class="sc-fbt cl">Close</button>
+    <button class="sc-fbt em">Open in Email</button>
+  </div>
+</div>
+
+</body>
+</html>

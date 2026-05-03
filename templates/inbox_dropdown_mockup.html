@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>VendorFlow AI — Organized</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #F7F8FA; --panel: #FFFFFF; --panel-2: #F5F7FA;
+    --border: #ECEEF3; --border-strong: #DEE2EA;
+    --text: #1A1F2E; --text-soft: #4A5468; --muted: #8B94A6;
+    --accent: #6D5BFF; --accent-2: #3DB7FF;
+    --green: #10B981; --green-2: #059669;
+    --amber: #F59E0B; --red: #EF4444; --black: #0F1320;
+  }
+  html, body { height:100%; background:var(--bg); color:var(--text); font-family:'Inter',-apple-system,system-ui,sans-serif; overflow:hidden; font-size:14px; }
+  .app { display:grid; grid-template-columns:220px 1fr; height:100vh; }
+
+  /* === Sidebar === */
+  .side { padding:18px 14px; border-right:1px solid var(--border); background:var(--panel); display:flex; flex-direction:column; gap:4px; }
+  .brand { display:flex; align-items:center; gap:10px; padding:4px 8px 16px; border-bottom:1px solid var(--border); margin-bottom:12px; }
+  .brand-logo { width:34px; height:34px; border-radius:9px; background:linear-gradient(135deg,#6D5BFF,#3DB7FF); display:flex; align-items:center; justify-content:center; font-weight:700; color:white; font-size:13px; }
+  .brand h1 { font-size:14px; font-weight:700; color:var(--text); }
+  .brand small { color:var(--muted); font-size:11px; }
+  .nav-item { display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:8px; color:var(--text-soft); cursor:pointer; font-size:13px; font-weight:500; transition:background .15s ease; }
+  .nav-item:hover { background:var(--panel-2); color:var(--text); }
+  .nav-item.active { background:rgba(109,91,255,.08); color:var(--accent); font-weight:600; }
+  .nav-item .ico { font-size:14px; opacity:.85; }
+  .nav-item .badge { margin-left:auto; background:var(--accent); color:white; font-size:10px; padding:1px 7px; border-radius:999px; font-weight:700; }
+
+  /* === Main === */
+  .main { padding:16px 20px; overflow:hidden; display:flex; flex-direction:column; gap:14px; }
+
+  /* === Topbar === */
+  .topbar { display:flex; align-items:center; justify-content:space-between; gap:16px; }
+  .title-wrap h2 { font-size:19px; font-weight:700; letter-spacing:-.3px; color:var(--text); display:inline-flex; align-items:center; gap:10px; }
+  .title-wrap p { color:var(--muted); font-size:12px; margin-top:2px; }
+  .live-chip { display:inline-flex; align-items:center; gap:6px; padding:3px 9px; border-radius:999px; font-size:11px; font-weight:600; background:rgba(16,185,129,.10); color:var(--green-2); border:1px solid rgba(16,185,129,.2); }
+  .live-chip .dot { width:6px; height:6px; border-radius:50%; background:var(--green); box-shadow:0 0 0 0 rgba(16,185,129,.5); animation:pulse 1.8s infinite; }
+  @keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(16,185,129,.45);} 70%{box-shadow:0 0 0 6px rgba(16,185,129,0);} 100%{box-shadow:0 0 0 0 rgba(16,185,129,0);} }
+  .actions { display:flex; gap:8px; align-items:center; }
+
+  /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     STORE + INBOX PICKER — same pill, two selects
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+  .picker-pill {
+    display:flex; align-items:center; gap:0;
+    background:var(--panel); border:1px solid var(--border);
+    border-radius:10px; height:38px; overflow:hidden;
+    box-shadow:0 1px 4px rgba(15,19,32,.06);
+  }
+
+  /* Store segment */
+  .picker-seg {
+    display:flex; align-items:center; gap:7px;
+    padding:0 12px; height:100%; cursor:pointer;
+    border-right:1px solid var(--border);
+    transition:background .15s;
+  }
+  .picker-seg:last-child { border-right:none; }
+  .picker-seg:hover { background:var(--panel-2); }
+
+  .seg-label {
+    font-size:10px; font-weight:700; color:var(--muted);
+    text-transform:uppercase; letter-spacing:.06em; white-space:nowrap;
+  }
+  .seg-select {
+    background:transparent; border:none; outline:none;
+    font-family:inherit; font-size:13px; font-weight:700;
+    color:var(--text); cursor:pointer; max-width:160px;
+  }
+  .seg-select:focus { outline:none; }
+
+  /* Inbox segment — has color dot */
+  .inbox-dot {
+    width:8px; height:8px; border-radius:50%; flex-shrink:0;
+    background:var(--green); transition:background .2s;
+  }
+  .inbox-dot.amber { background:var(--amber); }
+  .inbox-dot.muted { background:var(--muted); }
+
+  /* Unread badge on inbox select */
+  .inbox-badge-count {
+    display:inline-flex; align-items:center; justify-content:center;
+    min-width:18px; height:18px; padding:0 5px;
+    border-radius:999px; font-size:10px; font-weight:800;
+    background:var(--red); color:#fff; flex-shrink:0;
+    transition:all .2s;
+  }
+  .inbox-badge-count.zero { background:var(--panel-2); color:var(--muted); }
+
+  /* Sync button — part of the pill */
+  .seg-sync {
+    display:flex; align-items:center; gap:5px;
+    padding:0 12px; height:100%; cursor:pointer;
+    background:var(--text); color:#fff;
+    font-size:12px; font-weight:700; border:none;
+    font-family:inherit; white-space:nowrap;
+    transition:background .15s;
+  }
+  .seg-sync:hover { background:#2a2f3d; }
+
+  /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+  /* Inbox info bar (below pill, inside thread panel) */
+  .inbox-bar {
+    display:flex; align-items:center; gap:10px;
+    padding:9px 14px; border-bottom:1px solid var(--border);
+    background:var(--panel); flex-shrink:0;
+  }
+  .ib-icon {
+    width:30px; height:30px; border-radius:8px;
+    background:linear-gradient(135deg,var(--accent),var(--accent-2));
+    display:flex; align-items:center; justify-content:center;
+    color:#fff; font-size:11px; font-weight:800; flex-shrink:0;
+  }
+  .ib-email { font-size:12px; font-weight:800; color:var(--text); }
+  .ib-meta { font-size:11px; color:var(--muted); margin-top:1px; }
+  .ib-chip {
+    display:inline-flex; align-items:center; gap:4px;
+    padding:2px 8px; border-radius:20px;
+    font-size:10px; font-weight:700;
+  }
+  .ib-chip.primary { background:#ede9fe; color:#6d28d9; }
+  .ib-chip.warn { background:#fef9c3; color:#a16207; }
+  .ib-manage {
+    margin-left:auto; padding:5px 10px; border-radius:7px;
+    border:1.5px solid var(--border); background:var(--panel);
+    font-size:11px; font-weight:700; color:var(--muted);
+    cursor:pointer; transition:.15s; white-space:nowrap;
+  }
+  .ib-manage:hover { border-color:var(--accent); color:var(--accent); }
+
+  /* === Stats === */
+  .stats { display:grid; grid-template-columns:repeat(6,1fr); gap:10px; }
+  .stat { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:14px 16px; }
+  .stat .lbl { font-size:11px; color:var(--muted); font-weight:500; }
+  .stat .val { font-size:24px; font-weight:700; margin-top:4px; letter-spacing:-.5px; color:var(--text); }
+  .stat.accent .val { color:var(--accent); }
+  .stat.blue .val { color:#0EA5E9; }
+  .stat.green .val { color:var(--green-2); }
+
+  /* === Workspace === */
+  .workspace { flex:1; display:grid; grid-template-columns:340px 1fr; gap:12px; min-height:0; }
+  .panel { background:var(--panel); border:1px solid var(--border); border-radius:12px; display:flex; flex-direction:column; min-height:0; }
+
+  /* Thread list */
+  .panel-head { padding:12px 14px; border-bottom:1px solid var(--border); }
+  .search { display:flex; align-items:center; gap:8px; background:var(--panel-2); padding:7px 10px; border-radius:7px; border:1px solid var(--border); }
+  .search input { background:transparent; border:none; outline:none; color:var(--text); flex:1; font-size:12.5px; }
+  .filter-tabs { display:flex; gap:4px; padding:8px 10px; border-bottom:1px solid var(--border); }
+  .tab { font-size:11.5px; padding:5px 10px; border-radius:6px; cursor:pointer; color:var(--muted); font-weight:500; }
+  .tab:hover { background:var(--panel-2); color:var(--text); }
+  .tab.active { background:var(--text); color:white; font-weight:600; }
+  .list { overflow-y:auto; padding:6px; }
+  .list::-webkit-scrollbar { width:5px; }
+  .list::-webkit-scrollbar-thumb { background:rgba(15,19,32,.1); border-radius:3px; }
+
+  .email { display:grid; grid-template-columns:34px 1fr; gap:10px; padding:10px 12px; border-radius:8px; cursor:pointer; transition:background .15s; margin-bottom:2px; border:1px solid transparent; position:relative; }
+  .email:hover { background:var(--panel-2); }
+  .email.active { background:rgba(109,91,255,.06); border-color:rgba(109,91,255,.2); }
+  .email.unread::before { content:''; position:absolute; left:4px; top:50%; transform:translateY(-50%); width:3px; height:22px; background:var(--accent); border-radius:2px; }
+  .avatar { width:34px; height:34px; border-radius:9px; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:12px; color:white; }
+  .a1{background:#6D5BFF;} .a2{background:#3DB7FF;} .a3{background:#10B981;} .a4{background:#F59E0B;} .a5{background:#F472B6;} .a6{background:#64748B;}
+  .em-top { display:flex; align-items:center; justify-content:space-between; gap:6px; }
+  .em-name { font-size:12.5px; font-weight:600; color:var(--text); }
+  .em-name.unread { font-weight:700; }
+  .em-time { font-size:10.5px; color:var(--muted); }
+  .em-subj { font-size:12px; color:var(--text-soft); margin-top:2px; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .em-prev { font-size:11.5px; color:var(--muted); margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .em-meta { display:flex; align-items:center; gap:10px; margin-top:6px; font-size:11px; color:var(--muted); }
+  .em-meta .ico { display:inline-flex; align-items:center; gap:3px; }
+  .em-meta .ai-dot { width:6px; height:6px; border-radius:50%; background:var(--accent); }
+  .em-meta .resolved { color:var(--green-2); }
+  .em-meta .assignee { width:18px; height:18px; border-radius:50%; background:#F472B6; color:white; font-size:9px; font-weight:700; display:flex; align-items:center; justify-content:center; }
+
+  /* empty state */
+  .empty-threads { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:48px 20px; color:var(--muted); gap:8px; }
+  .empty-threads .ei { font-size:36px; }
+  .empty-threads .et { font-size:13px; font-weight:700; color:var(--text-soft); }
+  .empty-threads .es { font-size:12px; }
+
+  /* === Conversation === */
+  .conv-head { padding:12px 16px; border-bottom:1px solid var(--border); }
+  .conv-row1 { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .conv-title { font-size:14.5px; font-weight:700; color:var(--text); }
+  .conv-sub { font-size:11.5px; color:var(--muted); margin-top:2px; }
+  .conv-controls { display:flex; align-items:center; gap:6px; }
+  .assignee-chip { display:inline-flex; align-items:center; gap:6px; height:30px; padding:0 10px 0 4px; border-radius:999px; background:var(--panel-2); border:1px solid var(--border); font-size:12px; color:var(--text); font-weight:600; cursor:pointer; transition:all .15s; }
+  .assignee-chip:hover { background:var(--panel); border-color:var(--border-strong); }
+  .assignee-chip .av { width:22px; height:22px; border-radius:50%; background:linear-gradient(135deg,#6D5BFF,#F472B6); color:white; font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center; }
+  .assignee-chip .caret { font-size:9px; opacity:.5; margin-left:2px; }
+  .status-pill { display:inline-flex; align-items:center; gap:6px; height:30px; padding:0 10px; border-radius:999px; font-size:12px; font-weight:600; cursor:pointer; transition:all .15s; }
+  .status-pill.open { background:rgba(16,185,129,.10); color:var(--green-2); border:1px solid rgba(16,185,129,.25); }
+  .status-pill.open:hover { background:rgba(16,185,129,.15); }
+  .status-pill .dot { width:7px; height:7px; border-radius:50%; background:var(--green); }
+  .status-pill .caret { font-size:9px; opacity:.6; }
+  .btn-soft { height:30px; padding:0 12px; border-radius:7px; background:var(--panel); border:1px solid var(--border); color:var(--text-soft); font-size:12px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:5px; }
+  .btn-soft:hover { background:var(--panel-2); color:var(--text); }
+  .btn-dark { height:30px; padding:0 12px; border-radius:7px; background:var(--text); color:white; border:none; font-size:12px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:5px; }
+  .btn-dark:hover { background:#2a2f3d; }
+  .icon-btn-sm { width:30px; height:30px; border-radius:7px; border:1px solid var(--border); background:var(--panel); cursor:pointer; color:var(--text-soft); font-size:14px; display:flex; align-items:center; justify-content:center; }
+  .icon-btn-sm:hover { background:var(--panel-2); color:var(--text); }
+  .conv-body { flex:1; padding:18px; overflow-y:auto; display:flex; flex-direction:column; gap:10px; background:var(--panel-2); }
+  .conv-body::-webkit-scrollbar { width:5px; }
+  .conv-body::-webkit-scrollbar-thumb { background:rgba(15,19,32,.1); border-radius:3px; }
+  .bubble { max-width:70%; padding:10px 14px; border-radius:12px; font-size:13px; line-height:1.5; }
+  .bubble .meta { font-size:10px; color:var(--muted); margin-top:6px; }
+  .bubble.them { background:var(--panel); border:1px solid var(--border); align-self:flex-start; border-top-left-radius:4px; color:var(--text); }
+  .bubble.us { background:var(--accent); color:white; align-self:flex-end; border-top-right-radius:4px; }
+  .bubble.us .meta { color:rgba(255,255,255,.8); }
+  .ai-suggest { margin:10px 18px 0; padding:10px 12px; background:rgba(109,91,255,.05); border:1px solid rgba(109,91,255,.18); border-radius:8px; display:flex; align-items:center; gap:10px; font-size:12px; color:var(--text-soft); }
+  .ai-suggest b { color:var(--accent); }
+  .ai-suggest button { margin-left:auto; padding:5px 10px; border-radius:6px; background:var(--accent); color:white; border:none; font-size:11.5px; font-weight:600; cursor:pointer; }
+  .composer { padding:12px 16px; border-top:1px solid var(--border); background:var(--panel); }
+  .composer-box { background:var(--panel-2); border:1px solid var(--border); border-radius:10px; padding:10px 12px; transition:all .15s; }
+  .composer-box:focus-within { border-color:var(--accent); background:var(--panel); }
+  .composer textarea { width:100%; min-height:44px; max-height:100px; background:transparent; border:none; outline:none; color:var(--text); font-size:13px; resize:none; font-family:inherit; }
+  .composer-actions { display:flex; align-items:center; gap:6px; margin-top:8px; }
+  .icon-tool { width:30px; height:30px; border-radius:7px; border:1px solid var(--border); background:var(--panel); color:var(--text-soft); font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .15s; }
+  .icon-tool:hover { background:var(--panel-2); color:var(--text); }
+  .ca-gen { height:30px; padding:0 12px; border-radius:7px; background:var(--text); color:white; border:none; font-size:12px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:5px; }
+  .ca-gen:hover { background:#2a2f3d; }
+  .ca-send { margin-left:auto; height:32px; padding:0 16px; border-radius:7px; background:var(--green); color:white; border:none; font-size:12.5px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px; }
+  .ca-send:hover { background:var(--green-2); }
+
+  .btn-primary { height:36px; padding:0 14px; border-radius:8px; background:var(--green); color:white; border:none; font-size:12.5px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px; }
+  .btn-primary:hover { background:var(--green-2); }
+  .more-btn { width:36px; height:36px; border-radius:8px; border:1px solid var(--border); background:var(--panel); cursor:pointer; color:var(--text-soft); font-size:16px; display:flex; align-items:center; justify-content:center; position:relative; }
+  .more-btn:hover { background:var(--panel-2); }
+  .more-menu { position:absolute; top:42px; right:0; background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:6px; min-width:180px; box-shadow:0 10px 30px rgba(15,19,32,.10); display:none; z-index:50; }
+  .more-btn.open .more-menu { display:block; }
+  .menu-item { padding:8px 10px; border-radius:6px; font-size:12.5px; color:var(--text-soft); cursor:pointer; display:flex; align-items:center; gap:9px; font-weight:500; }
+  .menu-item:hover { background:var(--panel-2); color:var(--text); }
+  .menu-divider { height:1px; background:var(--border); margin:4px 2px; }
+
+  /* placeholder right panel */
+  .chat-placeholder { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--muted); gap:10px; }
+  .chat-placeholder .pi { font-size:44px; }
+  .chat-placeholder .pt { font-size:15px; font-weight:700; color:var(--text-soft); }
+  .chat-placeholder .ps { font-size:12px; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <aside class="side">
+    <div class="brand">
+      <div class="brand-logo">VF</div>
+      <div><h1>VendorFlow AI</h1><small>Ecommerce OS</small></div>
+    </div>
+    <div class="nav-item"><span class="ico">🏠</span> Overview</div>
+    <div class="nav-item"><span class="ico">🏬</span> Stores</div>
+    <div class="nav-item"><span class="ico">🛒</span> Orders</div>
+    <div class="nav-item"><span class="ico">👥</span> Team Assignment</div>
+    <div class="nav-item"><span class="ico">⚡</span> Assignment Rules</div>
+    <div class="nav-item active"><span class="ico">✉️</span> Emails <span class="badge" id="sidebarBadge">5</span></div>
+    <div class="nav-item"><span class="ico">🤝</span> Vendors</div>
+    <div style="margin-top:auto;padding:12px 10px;border-top:1px solid var(--border);">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div class="avatar a5" style="width:30px;height:30px;font-size:11px;border-radius:8px;">MA</div>
+        <div>
+          <div style="font-size:12px;font-weight:600;color:var(--text);">M Asjad</div>
+          <div style="font-size:10.5px;color:var(--muted);">Admin</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <!-- TOPBAR -->
+    <div class="topbar">
+      <div class="title-wrap">
+        <h2>Customer Inbox <span class="live-chip"><span class="dot"></span> Live</span></h2>
+        <p>Real-time Gmail sync, AI drafts, and chat-style customer support</p>
+      </div>
+      <div class="actions">
+
+        <!-- ══════════════════════════════════════════════
+             STORE + INBOX PICKER  (single pill, 3 segments)
+        ══════════════════════════════════════════════ -->
+        <div class="picker-pill">
+
+          <!-- Segment 1: Store -->
+          <div class="picker-seg">
+            <span class="seg-label">Store</span>
+            <select class="seg-select" id="storeSelect" onchange="onStoreChange()">
+              <option value="maison">Maisons De Monaco</option>
+              <option value="anmol">Anmol Ideas</option>
+              <option value="urban">Urban Threads</option>
+            </select>
+          </div>
+
+          <!-- Segment 2: Inbox (email account) -->
+          <div class="picker-seg">
+            <span class="inbox-dot" id="inboxDot"></span>
+            <span class="seg-label">Inbox</span>
+            <select class="seg-select" id="inboxSelect" onchange="onInboxChange()" style="max-width:140px;">
+            </select>
+            <span class="inbox-badge-count" id="inboxBadge">0</span>
+          </div>
+
+          <!-- Segment 3: Sync button -->
+          <button class="seg-sync">↻ Sync</button>
+        </div>
+        <!-- ══════════════════════════════════════════════ -->
+
+        <button class="btn-primary">＋ New Email</button>
+        <div class="more-btn" onclick="this.classList.toggle('open')">⋯
+          <div class="more-menu" onclick="event.stopPropagation()">
+            <div class="menu-item">⏸ Pause Live Sync</div>
+            <div class="menu-item">↻ Refresh Emails</div>
+            <div class="menu-divider"></div>
+            <div class="menu-item">🔗 Connect Email</div>
+            <div class="menu-item">⚙️ Inbox Settings</div>
+            <div class="menu-item">👤 Manage Assignment</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STATS -->
+    <div class="stats">
+      <div class="stat"><div class="lbl">Total Emails</div><div class="val" id="statTotal">–</div></div>
+      <div class="stat accent"><div class="lbl">New</div><div class="val" id="statNew">–</div></div>
+      <div class="stat blue"><div class="lbl">AI Drafts</div><div class="val" id="statDraft">–</div></div>
+      <div class="stat green"><div class="lbl">Replied</div><div class="val" id="statReplied">–</div></div>
+      <div class="stat"><div class="lbl">Resolved</div><div class="val" id="statResolved">–</div></div>
+      <div class="stat"><div class="lbl">Inboxes</div><div class="val" id="statInboxes">–</div></div>
+    </div>
+
+    <!-- WORKSPACE -->
+    <div class="workspace">
+
+      <!-- Thread list panel -->
+      <div class="panel">
+
+        <!-- Inbox info bar -->
+        <div class="inbox-bar">
+          <div class="ib-icon" id="ibIcon">S@</div>
+          <div>
+            <div class="ib-email" id="ibEmail">support@maisonsdemonaco.com</div>
+            <div class="ib-meta">
+              <span class="ib-chip primary" id="ibManager">👤 Ahmad Hassan</span>
+            </div>
+          </div>
+          <button class="ib-manage" onclick="alert('Open Inbox Assignment')">⚙ Manage</button>
+        </div>
+
+        <div class="panel-head">
+          <div class="search">
+            <span style="opacity:.5;">🔍</span>
+            <input placeholder="Search threads…">
+          </div>
+        </div>
+        <div class="filter-tabs">
+          <div class="tab active" onclick="setTab(this,'all')">All</div>
+          <div class="tab" onclick="setTab(this,'unread')">Unread</div>
+          <div class="tab" onclick="setTab(this,'draft')">AI Draft</div>
+          <div class="tab" onclick="setTab(this,'resolved')">Resolved</div>
+        </div>
+        <div class="list" id="threadList"></div>
+      </div>
+
+      <!-- Right: chat or placeholder -->
+      <div class="panel" id="rightPanel">
+        <div class="chat-placeholder">
+          <div class="pi">💬</div>
+          <div class="pt">Select a thread</div>
+          <div class="ps">Click any thread to open the conversation</div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════
+//  DATA
+// ══════════════════════════════════════════════════
+const stores = {
+  maison: {
+    name: "Maisons De Monaco",
+    inboxes: [
+      {
+        id:"support", label:"support@", email:"support@maisonsdemonaco.com",
+        icon:"S@", manager:"Ahmad Hassan", shared:2, newCount:2,
+        threads:[
+          {id:1,contact:"audreychadoutaud@gmail.com",initials:"AC",color:"#F472B6",
+           subject:"COMMANDE",preview:"Bonjour, pouvez-vous me donner des nouvelles…",
+           time:"14:27",msgs:2,status:"replied",ai:true,assigned:"Ali",resolved:true,unread:false,
+           messages:[
+             {dir:"them",sender:"Audrey",time:"14:20",body:"Bonjour, pouvez-vous me donner des nouvelles de ma commande 2085 du 25/11/2025 qui a été annulée?"},
+             {dir:"us",sender:"Support Team",time:"14:30",body:"Hello there, thank you for contacting us. We have received your message and our team is checking it."},
+           ]},
+          {id:2,contact:"asjadsahilpk@gmail.com",initials:"AS",color:"#6D5BFF",
+           subject:"Re: Order Confirmation",preview:"Hello there, thank you for contacting…",
+           time:"14:20",msgs:5,status:"drafted",ai:true,assigned:"Ahmad",resolved:false,unread:true,
+           messages:[
+             {dir:"them",sender:"Asjad",time:"14:10",body:"Hi, I placed an order 3 days ago but haven't received any tracking number yet. Can you help?"},
+             {dir:"us",sender:"Support Team",time:"14:20",body:"Hello! We're checking your order right now. We'll send the tracking number shortly."},
+           ]},
+          {id:3,contact:"client@boutique.fr",initials:"CB",color:"#EF4444",
+           subject:"Retour produit",preview:"Je souhaite retourner un article…",
+           time:"Yesterday",msgs:1,status:"new",ai:false,assigned:null,resolved:false,unread:true,
+           messages:[
+             {dir:"them",sender:"Client",time:"Yesterday",body:"Bonjour, je souhaite retourner un article reçu endommagé. Comment procéder?"},
+           ]},
+        ]
+      },
+      {
+        id:"info", label:"info@", email:"info@maisonsdemonaco.com",
+        icon:"I@", manager:"Sara Khan", shared:1, newCount:1,
+        threads:[
+          {id:4,contact:"wholesale@partner.com",initials:"WP",color:"#10B981",
+           subject:"Wholesale inquiry Q3",preview:"We are interested in a partnership…",
+           time:"11:00",msgs:1,status:"new",ai:false,assigned:"Sara",resolved:false,unread:true,
+           messages:[
+             {dir:"them",sender:"Wholesale Partner",time:"11:00",body:"Hello, we are interested in a wholesale partnership for your Monaco collection. Could you share your B2B pricing?"},
+           ]},
+          {id:5,contact:"press@vogue.fr",initials:"PV",color:"#F59E0B",
+           subject:"Press request — Feature",preview:"Nous préparons un article sur…",
+           time:"Mon",msgs:3,status:"replied",ai:true,assigned:"Sara",resolved:false,unread:false,
+           messages:[
+             {dir:"them",sender:"Vogue FR",time:"Mon 09:00",body:"Bonjour, nous préparons un article sur les marques de luxe. Seriez-vous disponible pour une interview?"},
+             {dir:"us",sender:"Sara",time:"Mon 14:00",body:"Bonjour ! Nous serions ravis de participer. Pouvez-vous nous envoyer plus de détails?"},
+           ]},
+        ]
+      },
+      {
+        id:"sales", label:"sales@", email:"sales@maisonsdemonaco.com",
+        icon:"SL", manager:null, shared:0, newCount:0,
+        threads:[]
+      },
+    ]
+  },
+  anmol: {
+    name: "Anmol Ideas",
+    inboxes:[
+      {
+        id:"hello", label:"hello@", email:"hello@anmolideas.com",
+        icon:"H@", manager:"Fatima Malik", shared:0, newCount:3,
+        threads:[
+          {id:10,contact:"buyer@example.com",initials:"BE",color:"#3DB7FF",
+           subject:"Product query",preview:"Hi, I want to know more about…",
+           time:"10:00",msgs:2,status:"new",ai:false,assigned:null,resolved:false,unread:true,
+           messages:[
+             {dir:"them",sender:"Buyer",time:"10:00",body:"Hi, I want to know more about your summer collection. Do you have any discounts for bulk orders?"},
+           ]},
+        ]
+      },
+    ]
+  },
+  urban:{
+    name:"Urban Threads",
+    inboxes:[
+      {
+        id:"support2",label:"support@",email:"support@urbanthreads.co",
+        icon:"S@",manager:null,shared:0,newCount:0,
+        threads:[]
+      },
+    ]
+  },
+};
+
+// ══════════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════════
+let activeStore = "maison";
+let activeInboxId = "support";
+let activeThreadId = null;
+let activeTab = "all";
+
+function getInbox(){ return stores[activeStore].inboxes.find(i=>i.id===activeInboxId); }
+
+// ══════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════
+function init(){
+  populateInboxSelect();
+  updateInboxDot();
+  renderInboxBar();
+  renderStats();
+  renderThreads();
+}
+
+// ══════════════════════════════════════════════════
+//  STORE CHANGE
+// ══════════════════════════════════════════════════
+function onStoreChange(){
+  activeStore = document.getElementById("storeSelect").value;
+  activeInboxId = stores[activeStore].inboxes[0].id;
+  activeThreadId = null;
+  populateInboxSelect();
+  updateInboxDot();
+  renderInboxBar();
+  renderStats();
+  renderThreads();
+  showPlaceholder();
+}
+
+function populateInboxSelect(){
+  const sel = document.getElementById("inboxSelect");
+  const inboxes = stores[activeStore].inboxes;
+  const totalNew = inboxes.reduce((s,i)=>s+i.newCount,0);
+  sel.innerHTML =
+    inboxes.map(i=>`<option value="${i.id}">${i.label} (${i.newCount} new)</option>`).join("") +
+    `<option disabled style="color:#ccc;">──────────────</option>` +
+    `<option value="__all__">📬 All Emails (${totalNew} new)</option>`;
+  sel.value = activeInboxId;
+  updateBadgeDisplay();
+}
+
+// ══════════════════════════════════════════════════
+//  INBOX CHANGE
+// ══════════════════════════════════════════════════
+function onInboxChange(){
+  activeInboxId = document.getElementById("inboxSelect").value;
+  activeThreadId = null;
+  updateInboxDot();
+  renderInboxBar();
+  renderStats();
+  renderThreads();
+  showPlaceholder();
+  updateBadgeDisplay();
+}
+
+function updateBadgeDisplay(){
+  const badge = document.getElementById("inboxBadge");
+  if(activeInboxId === "__all__"){
+    const total = stores[activeStore].inboxes.reduce((s,i)=>s+i.newCount,0);
+    badge.textContent = total;
+    badge.className = "inbox-badge-count" + (total===0?" zero":"");
+  } else {
+    const inbox = getInbox();
+    badge.textContent = inbox.newCount;
+    badge.className = "inbox-badge-count" + (inbox.newCount===0?" zero":"");
+  }
+}
+
+function updateInboxDot(){
+  const dot = document.getElementById("inboxDot");
+  if(activeInboxId === "__all__"){
+    const totalNew = stores[activeStore].inboxes.reduce((s,i)=>s+i.newCount,0);
+    dot.className = "inbox-dot" + (totalNew>0?"":" amber");
+  } else {
+    const inbox = getInbox();
+    dot.className = "inbox-dot" + (inbox.newCount>0?"":(inbox.manager?" amber":" muted"));
+  }
+}
+
+// ══════════════════════════════════════════════════
+//  INBOX BAR
+// ══════════════════════════════════════════════════
+function renderInboxBar(){
+  const mgr = document.getElementById("ibManager");
+
+  if(activeInboxId === "__all__"){
+    const inboxes = stores[activeStore].inboxes;
+    const total = inboxes.reduce((s,i)=>s+i.threads.length, 0);
+    const totalNew = inboxes.reduce((s,i)=>s+i.newCount, 0);
+    document.getElementById("ibIcon").textContent = "📬";
+    document.getElementById("ibEmail").textContent = "All Inboxes — " + inboxes.map(i=>i.label).join(", ");
+    mgr.textContent = `${inboxes.length} inboxes · ${total} threads · ${totalNew} new`;
+    mgr.className = "ib-chip primary";
+    return;
+  }
+
+  const inbox = getInbox();
+  document.getElementById("ibIcon").textContent = inbox.icon;
+  document.getElementById("ibEmail").textContent = inbox.email;
+  if(inbox.manager){
+    mgr.textContent = "👤 " + inbox.manager + (inbox.shared>0?` · +${inbox.shared} shared`:"");
+    mgr.className = "ib-chip primary";
+  } else {
+    mgr.textContent = "⚠ No manager assigned";
+    mgr.className = "ib-chip warn";
+  }
+}
+
+// ══════════════════════════════════════════════════
+//  STATS
+// ══════════════════════════════════════════════════
+function renderStats(){
+  let threads;
+  if(activeInboxId === "__all__"){
+    threads = stores[activeStore].inboxes.flatMap(i=>i.threads);
+  } else {
+    threads = getInbox().threads;
+  }
+  document.getElementById("statTotal").textContent = threads.length;
+  document.getElementById("statNew").textContent = threads.filter(t=>t.status==="new").length;
+  document.getElementById("statDraft").textContent = threads.filter(t=>t.ai).length;
+  document.getElementById("statReplied").textContent = threads.filter(t=>t.status==="replied").length;
+  document.getElementById("statResolved").textContent = threads.filter(t=>t.resolved).length;
+  document.getElementById("statInboxes").textContent = stores[activeStore].inboxes.length;
+}
+
+// ══════════════════════════════════════════════════
+//  THREAD LIST
+// ══════════════════════════════════════════════════
+function setTab(el, tab){
+  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+  el.classList.add("active");
+  activeTab = tab;
+  renderThreads();
+}
+
+// returns {thread, inbox} pairs
+function getAllThreadPairs(){
+  if(activeInboxId === "__all__"){
+    return stores[activeStore].inboxes.flatMap(inbox=>
+      inbox.threads.map(t=>({thread:t, inbox}))
+    );
+  }
+  const inbox = getInbox();
+  return inbox.threads.map(t=>({thread:t, inbox}));
+}
+
+function renderThreads(){
+  let pairs = getAllThreadPairs();
+
+  if(activeTab==="unread")   pairs = pairs.filter(p=>p.thread.unread);
+  if(activeTab==="draft")    pairs = pairs.filter(p=>p.thread.ai);
+  if(activeTab==="resolved") pairs = pairs.filter(p=>p.thread.resolved);
+
+  const list = document.getElementById("threadList");
+  const isAllView = activeInboxId === "__all__";
+
+  if(!pairs.length){
+    list.innerHTML = `<div class="empty-threads"><div class="ei">📭</div><div class="et">No threads</div><div class="es">Nothing to show for this filter.</div></div>`;
+    return;
+  }
+
+  list.innerHTML = pairs.map(({thread:t, inbox:inb})=>{
+    const statusPill = {new:`<span style="color:#EF4444;">● New</span>`,replied:`<span style="color:#10B981;">✓ Replied</span>`,drafted:`<span style="color:#6D5BFF;">✦ AI Draft</span>`}[t.status]||"";
+    // inbox tag — only shown in All Emails view
+    const inboxTag = isAllView
+      ? `<span style="display:inline-flex;align-items:center;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700;background:#f0f4ff;color:#6D5BFF;border:1px solid rgba(109,91,255,.15);">📧 ${inb.label}</span>`
+      : "";
+    return `<div class="email ${t.unread?"unread":""} ${activeThreadId===t.id?"active":""}" onclick="openThread(${t.id},'${inb.id}')">
+      <div class="avatar" style="background:${t.color};font-size:11px;width:34px;height:34px;border-radius:9px;">${t.initials}</div>
+      <div>
+        <div class="em-top">
+          <div class="em-name ${t.unread?"unread":""}">${t.contact.split("@")[0]}</div>
+          <div class="em-time">${t.time}</div>
+        </div>
+        <div class="em-subj">${t.subject}</div>
+        <div class="em-prev">${t.preview}</div>
+        <div class="em-meta">
+          ${inboxTag}
+          <span class="ico">💬 ${t.msgs}</span>
+          ${t.ai?`<span class="ico"><span class="ai-dot"></span> AI</span>`:""}
+          ${t.assigned?`<span class="ico assignee" title="${t.assigned}">${t.assigned[0]}</span>`:""}
+          ${t.resolved?`<span class="ico resolved">✓ Resolved</span>`:""}
+          ${statusPill}
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+// ══════════════════════════════════════════════════
+//  OPEN THREAD
+// ══════════════════════════════════════════════════
+function openThread(id){
+  activeThreadId = id;
+  const inbox = getInbox();
+  const thread = inbox.threads.find(t=>t.id===id);
+  if(!thread) return;
+  thread.unread = false;
+  renderThreads();
+
+  const assigneeHTML = thread.assigned
+    ? `<button class="assignee-chip"><span class="av">${thread.assigned[0]}</span>${thread.assigned}<span class="caret">▾</span></button>`
+    : `<button class="assignee-chip" style="color:var(--muted);">＋ Assign<span class="caret">▾</span></button>`;
+
+  const statusHTML = thread.resolved
+    ? `<button class="status-pill open"><span class="dot" style="background:#10B981;"></span>Resolved<span class="caret">▾</span></button>`
+    : `<button class="status-pill open"><span class="dot"></span>Open<span class="caret">▾</span></button>`;
+
+  const messagesHTML = thread.messages.map(m=>`
+    <div class="bubble ${m.dir==="us"?"us":"them"}">
+      ${m.body}
+      <div class="meta">${m.sender} · ${m.time}</div>
+    </div>`).join("");
+
+  document.getElementById("rightPanel").innerHTML = `
+    <div class="conv-head">
+      <div class="conv-row1">
+        <div>
+          <div class="conv-title">${thread.subject}</div>
+          <div class="conv-sub">${thread.contact} · <span style="color:var(--accent);font-weight:700;">${inbox.email}</span> · ${thread.msgs} messages</div>
+        </div>
+        <div class="conv-controls">
+          ${assigneeHTML}
+          ${statusHTML}
+          <button class="btn-soft">📦 Order</button>
+          <button class="btn-dark">✨ AI Draft</button>
+          <button class="icon-btn-sm">⋯</button>
+        </div>
+      </div>
+    </div>
+    <div class="conv-body">${messagesHTML}</div>
+    <div class="ai-suggest">
+      <span>✨</span>
+      <div><b>AI suggestion ready.</b> Click to insert into reply box.</div>
+      <button>Use draft</button>
+    </div>
+    <div class="composer">
+      <div class="composer-box">
+        <textarea placeholder="Reply via ${inbox.email}…"></textarea>
+        <div class="composer-actions">
+          <button class="ca-gen">✨ Generate AI</button>
+          <button class="icon-tool" title="Improve">⚡</button>
+          <button class="icon-tool" title="Attach">📎</button>
+          <button class="ca-send">Send →</button>
+        </div>
+      </div>
+    </div>`;
+
+  // scroll chat to bottom
+  setTimeout(()=>{ const b=document.querySelector(".conv-body"); if(b) b.scrollTop=b.scrollHeight; }, 50);
+}
+
+function showPlaceholder(){
+  document.getElementById("rightPanel").innerHTML = `
+    <div class="chat-placeholder">
+      <div class="pi">💬</div>
+      <div class="pt">Select a thread</div>
+      <div class="ps">Click any thread to open the conversation</div>
+    </div>`;
+}
+
+// init
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Email Settings — Sample</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:Inter,Arial,sans-serif;background:#f1f5f9;color:#1a1f2e;min-height:100vh;}
+
+  /* ── Top bar ── */
+  .topbar{background:#fff;border-bottom:1px solid #e2e8f0;padding:18px 28px 0;display:flex;flex-direction:column;gap:0;}
+  .topbar-title{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+  .topbar-title h1{font-size:22px;font-weight:800;letter-spacing:-.4px;}
+  .live-badge{background:#dcfce7;color:#16a34a;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;border:1px solid #bbf7d0;}
+
+  /* ── Tabs ── */
+  .tabs{display:flex;gap:4px;}
+  .tab{padding:9px 18px;font-size:13px;font-weight:700;border:none;background:transparent;cursor:pointer;border-radius:10px 10px 0 0;color:#94a3b8;border-bottom:2px solid transparent;transition:all .15s;}
+  .tab.active{color:#6366f1;border-bottom:2px solid #6366f1;background:#f5f3ff;}
+  .tab:hover:not(.active){color:#475569;background:#f8fafc;}
+
+  /* ── Content ── */
+  .content{padding:28px;max-width:860px;}
+
+  /* ── Section card ── */
+  .settings-card{background:#fff;border:1px solid #e2e8f0;border-radius:16px;margin-bottom:20px;overflow:hidden;}
+  .card-head{padding:16px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;}
+  .card-head h3{font-size:14px;font-weight:800;color:#1a1f2e;}
+  .card-head p{font-size:12px;color:#94a3b8;margin-top:2px;}
+  .card-body{padding:20px;}
+
+  /* ── Connected account row ── */
+  .account-row{display:flex;align-items:center;gap:14px;padding:14px 16px;border:1px solid #e2e8f0;border-radius:12px;margin-bottom:10px;background:#fafbfc;transition:box-shadow .15s;}
+  .account-row:last-child{margin-bottom:0;}
+  .account-row:hover{box-shadow:0 4px 14px rgba(15,23,42,.07);}
+  .acc-avatar{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;color:#fff;font-size:15px;font-weight:800;flex-shrink:0;}
+  .acc-info{flex:1;min-width:0;}
+  .acc-email{font-size:13px;font-weight:700;color:#1a1f2e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .acc-meta{font-size:11.5px;color:#94a3b8;margin-top:2px;}
+  .status-dot{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;}
+  .status-dot.active{background:#dcfce7;color:#16a34a;}
+  .status-dot.inactive{background:#fee2e2;color:#dc2626;}
+  .status-dot::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block;}
+  .acc-actions{display:flex;gap:6px;flex-shrink:0;}
+  .btn-sm{height:30px;padding:0 12px;border-radius:8px;font-size:11.5px;font-weight:700;cursor:pointer;border:1px solid #e2e8f0;background:#fff;color:#475569;transition:all .12s;}
+  .btn-sm:hover{background:#f1f5f9;color:#1a1f2e;}
+  .btn-sm.danger:hover{background:#fee2e2;color:#dc2626;border-color:#fecaca;}
+  .btn-primary{background:#6366f1;color:#fff;border:none;height:34px;padding:0 16px;border-radius:10px;font-size:12.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:background .15s;}
+  .btn-primary:hover{background:#4f46e5;}
+
+  /* ── Assigned members ── */
+  .members-wrap{margin-top:10px;display:flex;flex-wrap:wrap;gap:7px;}
+  .member-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px 4px 6px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:999px;font-size:11.5px;font-weight:600;color:#475569;}
+  .member-chip-av{width:20px;height:20px;border-radius:50%;background:linear-gradient(135deg,#10b981,#059669);display:flex;align-items:center;justify-content:center;color:#fff;font-size:9px;font-weight:800;}
+  .no-members{font-size:12px;color:#94a3b8;font-style:italic;}
+
+  /* ── Toggle row ── */
+  .toggle-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid #f1f5f9;}
+  .toggle-row:last-child{border-bottom:none;padding-bottom:0;}
+  .toggle-label h4{font-size:13px;font-weight:700;color:#1a1f2e;}
+  .toggle-label p{font-size:11.5px;color:#94a3b8;margin-top:2px;}
+  .toggle{position:relative;width:42px;height:24px;flex-shrink:0;}
+  .toggle input{opacity:0;width:0;height:0;}
+  .toggle-slider{position:absolute;inset:0;background:#cbd5e1;border-radius:999px;cursor:pointer;transition:.2s;}
+  .toggle-slider:before{content:'';position:absolute;width:18px;height:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s;box-shadow:0 2px 4px rgba(0,0,0,.15);}
+  .toggle input:checked+.toggle-slider{background:#6366f1;}
+  .toggle input:checked+.toggle-slider:before{transform:translateX(18px);}
+
+  /* ── Select ── */
+  .setting-select{height:34px;padding:0 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:12.5px;font-weight:600;color:#1a1f2e;background:#fff;cursor:pointer;outline:none;}
+  .setting-select:focus{border-color:#6366f1;}
+
+  /* ── Connect email form ── */
+  .connect-form{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;}
+  .form-field{display:flex;flex-direction:column;gap:5px;flex:1;min-width:200px;}
+  .form-field label{font-size:11.5px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.04em;}
+  .form-field input{height:36px;padding:0 12px;border:1px solid #e2e8f0;border-radius:10px;font-size:13px;color:#1a1f2e;background:#fafbfc;outline:none;}
+  .form-field input:focus{border-color:#6366f1;background:#fff;}
+
+  /* ── Inbox section (simple placeholder) ── */
+  .inbox-placeholder{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:60px 40px;text-align:center;color:#94a3b8;}
+  .inbox-placeholder .big-icon{font-size:40px;margin-bottom:12px;}
+  .inbox-placeholder p{font-size:14px;}
+</style>
+</head>
+<body>
+
+<!-- Top bar with tabs -->
+<div class="topbar">
+  <div class="topbar-title">
+    <h1>Customer Inbox</h1>
+    <span class="live-badge">● Live</span>
+  </div>
+  <div class="tabs">
+    <button class="tab" onclick="switchTab('inbox',this)">✉️ &nbsp;Inbox</button>
+    <button class="tab active" onclick="switchTab('settings',this)">⚙️ &nbsp;Settings</button>
+  </div>
+</div>
+
+<!-- INBOX TAB (placeholder) -->
+<div id="tab-inbox" style="display:none;" class="content">
+  <div class="inbox-placeholder">
+    <div class="big-icon">✉️</div>
+    <p>Your inbox threads appear here.</p>
+  </div>
+</div>
+
+<!-- SETTINGS TAB -->
+<div id="tab-settings" class="content">
+
+  <!-- 1. Connected Email Accounts -->
+  <div class="settings-card">
+    <div class="card-head">
+      <div>
+        <h3>📬 Connected Email Accounts</h3>
+        <p>Manage inboxes connected to this store</p>
+      </div>
+      <button class="btn-primary" onclick="showConnectForm()">+ Connect New Email</button>
+    </div>
+    <div class="card-body">
+
+      <!-- Connect form (hidden by default) -->
+      <div id="connectForm" style="display:none;background:#f5f3ff;border:1px solid #c4b5fd;border-radius:12px;padding:16px;margin-bottom:16px;">
+        <div class="connect-form">
+          <div class="form-field">
+            <label>Gmail Address</label>
+            <input type="email" placeholder="sales@yourdomain.com">
+          </div>
+          <div class="form-field">
+            <label>App Password</label>
+            <input type="password" placeholder="xxxx xxxx xxxx xxxx">
+          </div>
+          <button class="btn-primary" style="height:36px;margin-bottom:1px;">Connect</button>
+          <button class="btn-sm" style="height:36px;margin-bottom:1px;" onclick="hideConnectForm()">Cancel</button>
+        </div>
+        <p style="font-size:11px;color:#7c3aed;margin-top:10px;">💡 Use a Gmail App Password — not your regular password. <a href="#" style="color:#6366f1;">How to generate →</a></p>
+      </div>
+
+      <!-- Account: active -->
+      <div class="account-row">
+        <div class="acc-avatar">MA</div>
+        <div class="acc-info">
+          <div class="acc-email">maisonsdemonaco@gmail.com</div>
+          <div class="acc-meta">Last synced: 2 min ago &nbsp;·&nbsp; IMAP: imap.gmail.com</div>
+          <div class="members-wrap" style="margin-top:7px;">
+            <div class="member-chip"><div class="member-chip-av">AL</div>Ali Hassan</div>
+            <div class="member-chip"><div class="member-chip-av" style="background:linear-gradient(135deg,#3b82f6,#2563eb);">SA</div>Sara Ahmed</div>
+          </div>
+        </div>
+        <span class="status-dot active">Active</span>
+        <div class="acc-actions">
+          <button class="btn-sm">✏️ Edit</button>
+          <button class="btn-sm danger">🗑 Remove</button>
+        </div>
+      </div>
+
+      <!-- Account: inactive -->
+      <div class="account-row">
+        <div class="acc-avatar" style="background:linear-gradient(135deg,#94a3b8,#64748b);">SL</div>
+        <div class="acc-info">
+          <div class="acc-email">sales@inglockswetrust.com</div>
+          <div class="acc-meta">Last synced: Never &nbsp;·&nbsp; IMAP: imap.gmail.com</div>
+          <div class="members-wrap" style="margin-top:7px;">
+            <span class="no-members">No team members assigned</span>
+          </div>
+        </div>
+        <span class="status-dot inactive">Inactive</span>
+        <div class="acc-actions">
+          <button class="btn-sm">✏️ Edit</button>
+          <button class="btn-sm danger">🗑 Remove</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 2. Live Sync Settings -->
+  <div class="settings-card">
+    <div class="card-head">
+      <div>
+        <h3>🔄 Live Sync Settings</h3>
+        <p>Control how often emails are pulled from Gmail</p>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="toggle-row">
+        <div class="toggle-label">
+          <h4>Enable Live Sync</h4>
+          <p>Automatically sync inbox every few seconds</p>
+        </div>
+        <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div class="toggle-label">
+          <h4>Sync Interval</h4>
+          <p>How often to pull new emails</p>
+        </div>
+        <select class="setting-select">
+          <option>Every 30 seconds</option>
+          <option selected>Every 60 seconds</option>
+          <option>Every 5 minutes</option>
+        </select>
+      </div>
+      <div class="toggle-row">
+        <div class="toggle-label">
+          <h4>Sync on Tab Focus</h4>
+          <p>Re-sync when you switch back to this tab</p>
+        </div>
+        <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. AI Draft Settings -->
+  <div class="settings-card">
+    <div class="card-head">
+      <div>
+        <h3>🤖 AI Draft Settings</h3>
+        <p>Control how AI suggests and generates replies</p>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="toggle-row">
+        <div class="toggle-label">
+          <h4>Auto-suggest Reply on Open</h4>
+          <p>Show AI suggestion when a thread is opened</p>
+        </div>
+        <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div class="toggle-label">
+          <h4>Default Reply Tone</h4>
+          <p>Tone used when generating AI drafts</p>
+        </div>
+        <select class="setting-select">
+          <option>Formal</option>
+          <option selected>Friendly & Professional</option>
+          <option>Concise</option>
+          <option>Empathetic</option>
+        </select>
+      </div>
+      <div class="toggle-row">
+        <div class="toggle-label">
+          <h4>Auto-generate Draft on New Email</h4>
+          <p>Immediately generate an AI draft for every new email</p>
+        </div>
+        <label class="toggle"><input type="checkbox"><span class="toggle-slider"></span></label>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Notification Settings -->
+  <div class="settings-card">
+    <div class="card-head">
+      <div>
+        <h3>🔔 Notification Settings</h3>
+        <p>Choose when to be alerted about new emails</p>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="toggle-row">
+        <div class="toggle-label">
+          <h4>Browser Notifications</h4>
+          <p>Show a popup when a new email arrives</p>
+        </div>
+        <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <div class="toggle-label">
+          <h4>Notify only for Unread</h4>
+          <p>Only notify if the email is unread</p>
+        </div>
+        <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  function switchTab(tab, el){
+    document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+    el.classList.add("active");
+    document.getElementById("tab-inbox").style.display = tab==="inbox" ? "block" : "none";
+    document.getElementById("tab-settings").style.display = tab==="settings" ? "block" : "none";
+  }
+  function showConnectForm(){
+    document.getElementById("connectForm").style.display="block";
+  }
+  function hideConnectForm(){
+    document.getElementById("connectForm").style.display="none";
+  }
+</script>
+</body>
+</html>

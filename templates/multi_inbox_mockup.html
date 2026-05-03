@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Multi-Inbox — Mockup</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Inter','Segoe UI',sans-serif;background:#f4f7fb;color:#0f172a;font-size:14px;-webkit-font-smoothing:antialiased;height:100vh;overflow:hidden;}
+
+/* ── Top Bar ── */
+.topbar{height:56px;background:#fff;border-bottom:1px solid #e8eaf2;display:flex;align-items:center;padding:0 20px;gap:14px;flex-shrink:0;}
+.topbar-brand{font-size:15px;font-weight:900;color:#0f172a;letter-spacing:-.02em;}
+.topbar-brand span{color:#6366f1;}
+.store-selector{display:flex;align-items:center;gap:8px;padding:7px 14px;background:#f1f5f9;border-radius:10px;cursor:pointer;border:1.5px solid #e2e8f0;transition:.15s;}
+.store-selector:hover{border-color:#6366f1;background:#f0f4ff;}
+.store-dot{width:8px;height:8px;border-radius:50%;background:#10b981;flex-shrink:0;}
+.store-name{font-size:13px;font-weight:700;color:#0f172a;}
+.store-arrow{font-size:11px;color:#94a3b8;margin-left:4px;}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+.sync-btn{display:flex;align-items:center;gap:6px;padding:7px 14px;border-radius:10px;background:linear-gradient(135deg,#6366f1,#06b6d4);color:#fff;font-size:12px;font-weight:700;border:none;cursor:pointer;}
+
+/* ── Layout ── */
+.layout{display:grid;grid-template-columns:380px 1fr;height:calc(100vh - 56px);}
+
+/* ── LEFT PANEL ── */
+.left-panel{display:flex;flex-direction:column;border-right:1px solid #e8eaf2;background:#fff;overflow:hidden;}
+
+/* Inbox Tabs */
+.inbox-tabs{flex-shrink:0;border-bottom:1px solid #e8eaf2;padding:0 14px;}
+.tabs-label{font-size:10px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.07em;padding:12px 2px 8px;}
+.tabs-row{display:flex;gap:0;overflow-x:auto;scrollbar-width:none;}
+.tabs-row::-webkit-scrollbar{display:none;}
+
+.inbox-tab{
+  display:flex;align-items:center;gap:7px;
+  padding:10px 14px;
+  border-bottom:2px solid transparent;
+  cursor:pointer;white-space:nowrap;
+  transition:.15s;flex-shrink:0;
+  color:#64748b;font-size:12px;font-weight:600;
+}
+.inbox-tab:hover{color:#0f172a;background:#f8fafc;}
+.inbox-tab.active{color:#6366f1;border-bottom-color:#6366f1;font-weight:800;background:#f0f4ff;}
+.tab-icon{font-size:14px;}
+.tab-label{max-width:110px;overflow:hidden;text-overflow:ellipsis;}
+.tab-badge{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-width:18px;height:18px;padding:0 5px;
+  border-radius:999px;font-size:10px;font-weight:800;
+  background:#ef4444;color:#fff;
+}
+.tab-badge.zero{background:#f1f5f9;color:#94a3b8;}
+
+/* Account info bar */
+.account-bar{
+  display:flex;align-items:center;gap:10px;
+  padding:11px 16px;
+  background:linear-gradient(135deg,rgba(99,102,241,.06),rgba(6,182,212,.04));
+  border-bottom:1px solid #e8eaf2;
+  flex-shrink:0;
+}
+.acc-icon{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#6366f1,#06b6d4);display:grid;place-items:center;color:#fff;font-size:14px;font-weight:800;flex-shrink:0;}
+.acc-info{flex:1;min-width:0;}
+.acc-email{font-size:12px;font-weight:800;color:#0f172a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.acc-meta{font-size:11px;color:#64748b;margin-top:1px;}
+.acc-manager{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;background:#ede9fe;color:#6d28d9;font-size:11px;font-weight:700;}
+.acc-manage-btn{padding:6px 11px;border-radius:8px;font-size:11px;font-weight:700;border:1.5px solid #e2e8f0;background:#fff;color:#64748b;cursor:pointer;transition:.15s;flex-shrink:0;}
+.acc-manage-btn:hover{border-color:#6366f1;color:#6366f1;}
+
+/* Search + filter */
+.search-area{padding:10px 14px;border-bottom:1px solid #f1f5f9;flex-shrink:0;display:flex;gap:8px;}
+.search-box{flex:1;padding:9px 12px;border:1.5px solid #e8eaf2;border-radius:10px;font-family:inherit;font-size:12px;outline:none;transition:.15s;color:#0f172a;}
+.search-box:focus{border-color:#6366f1;}
+.filter-btn{padding:9px 12px;border-radius:10px;border:1.5px solid #e2e8f0;background:#fff;font-size:12px;font-weight:700;color:#64748b;cursor:pointer;transition:.15s;white-space:nowrap;}
+.filter-btn.active{background:#6366f1;color:#fff;border-color:#6366f1;}
+
+/* Thread list */
+.thread-list{flex:1;overflow-y:auto;}
+.thread-list::-webkit-scrollbar{width:4px;}
+.thread-list::-webkit-scrollbar-thumb{background:#e2e8f0;border-radius:4px;}
+
+.thread-item{
+  padding:13px 16px;border-bottom:1px solid #f1f5f9;
+  cursor:pointer;transition:.15s;position:relative;
+}
+.thread-item:hover{background:#f8fafc;}
+.thread-item.active{background:linear-gradient(135deg,rgba(99,102,241,.07),rgba(6,182,212,.04));border-left:3px solid #6366f1;}
+.thread-item.unread .ti-contact{font-weight:800;color:#0f172a;}
+.thread-item.unread::after{content:'';position:absolute;top:50%;right:14px;transform:translateY(-50%);width:7px;height:7px;border-radius:50%;background:#6366f1;}
+
+.ti-top{display:flex;align-items:center;gap:8px;margin-bottom:4px;}
+.ti-avatar{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;color:#fff;font-size:11px;font-weight:800;flex-shrink:0;}
+.ti-main{flex:1;min-width:0;}
+.ti-contact{font-size:13px;font-weight:600;color:#334155;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ti-time{font-size:11px;color:#94a3b8;flex-shrink:0;}
+.ti-subject{font-size:12px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:6px;padding-left:38px;}
+.ti-pills{display:flex;gap:5px;flex-wrap:wrap;align-items:center;padding-left:38px;}
+.pill{display:inline-flex;align-items:center;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700;}
+.pill-new{background:#fee2e2;color:#dc2626;}
+.pill-replied{background:#dcfce7;color:#15803d;}
+.pill-drafted{background:#dbeafe;color:#1d4ed8;}
+.pill-msgs{background:#f1f5f9;color:#475569;}
+.pill-resolved{background:#dcfce7;color:#15803d;}
+.assigned-chip{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700;background:#ede9fe;color:#6d28d9;}
+
+.empty-state{padding:48px 20px;text-align:center;color:#94a3b8;}
+.empty-icon{font-size:36px;margin-bottom:10px;}
+.empty-title{font-size:14px;font-weight:700;color:#475569;margin-bottom:4px;}
+.empty-sub{font-size:12px;}
+
+/* ── RIGHT: Chat ── */
+.right-panel{display:flex;flex-direction:column;overflow:hidden;}
+
+.chat-placeholder{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  color:#94a3b8;gap:12px;background:#f8fafc;
+}
+.chat-placeholder-icon{font-size:48px;}
+.chat-placeholder-title{font-size:16px;font-weight:700;color:#475569;}
+.chat-placeholder-sub{font-size:13px;}
+
+.chat-header{padding:16px 20px;background:#fff;border-bottom:1px solid #e8eaf2;flex-shrink:0;}
+.ch-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;}
+.ch-subject{font-size:17px;font-weight:800;color:#0f172a;line-height:1.3;}
+.ch-meta{font-size:11px;color:#94a3b8;margin-top:3px;}
+.ch-meta span{color:#6366f1;font-weight:700;}
+.ch-actions{display:flex;gap:6px;flex-shrink:0;}
+.ch-btn{display:inline-flex;align-items:center;gap:5px;padding:8px 12px;border-radius:10px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;border:1.5px solid #e2e8f0;background:#fff;color:#334155;transition:.15s;white-space:nowrap;}
+.ch-btn:hover{border-color:#c7d2e8;background:#f8fafc;}
+.ch-btn.green{background:#059669;color:#fff;border:none;}
+.ch-btn.indigo{background:#6366f1;color:#fff;border:none;}
+
+.assign-strip{display:flex;align-items:center;gap:8px;padding:9px 0 0;flex-wrap:wrap;}
+.as-label{font-size:10px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;}
+.as-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;}
+
+.chat-body{flex:1;overflow-y:auto;padding:20px 22px;background:#f8fafc;}
+.chat-body::-webkit-scrollbar{width:4px;}
+.chat-body::-webkit-scrollbar-thumb{background:#e2e8f0;border-radius:4px;}
+.chat-thread{display:flex;flex-direction:column;gap:14px;}
+.chat-row{display:flex;width:100%;}
+.chat-row.customer{justify-content:flex-start;}
+.chat-row.support{justify-content:flex-end;}
+.msg-stack{display:flex;flex-direction:column;max-width:72%;}
+.chat-row.support .msg-stack{align-items:flex-end;}
+.sender-name{font-size:11px;font-weight:800;color:#64748b;margin-bottom:5px;opacity:.75;}
+.chat-row.support .sender-name{color:#047857;}
+.bubble{padding:13px 16px;border-radius:20px;line-height:1.55;font-size:13.5px;box-shadow:0 4px 14px rgba(15,23,42,.06);word-break:break-word;}
+.chat-row.customer .bubble{background:#fff;border:1px solid #e5e7eb;color:#111827;border-top-left-radius:5px;}
+.chat-row.support .bubble{background:linear-gradient(135deg,#2563eb,#4f46e5);color:#fff;border-top-right-radius:5px;}
+.msg-time{font-size:11px;color:#94a3b8;margin-top:5px;}
+
+.reply-area{padding:12px 16px;background:#fff;border-top:1px solid #e8eaf2;flex-shrink:0;}
+.reply-textarea{width:100%;min-height:70px;border:1.5px solid #e2e8f0;border-radius:12px;padding:11px 13px;font-family:inherit;font-size:13px;resize:none;outline:none;color:#0f172a;transition:.15s;}
+.reply-textarea:focus{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.1);}
+.reply-actions{display:flex;align-items:center;gap:6px;margin-top:9px;flex-wrap:wrap;}
+</style>
+</head>
+<body>
+
+<!-- Top Bar -->
+<div class="topbar">
+  <div class="topbar-brand">Vendor<span>Flow</span></div>
+  <div class="store-selector" onclick="alert('Store switcher')">
+    <div class="store-dot"></div>
+    <div class="store-name">Maisons De Monaco</div>
+    <div class="store-arrow">▾</div>
+  </div>
+  <div class="topbar-right">
+    <button class="sync-btn">↻ Sync Inbox</button>
+  </div>
+</div>
+
+<div class="layout">
+
+  <!-- ════════════════ LEFT PANEL ════════════════ -->
+  <div class="left-panel">
+
+    <!-- INBOX TABS -->
+    <div class="inbox-tabs">
+      <div class="tabs-label">Inboxes</div>
+      <div class="tabs-row">
+
+        <div class="inbox-tab active" onclick="switchTab(this,'support')" id="tab-support">
+          <span class="tab-icon">📧</span>
+          <span class="tab-label">support@</span>
+          <span class="tab-badge" id="badge-support">3</span>
+        </div>
+
+        <div class="inbox-tab" onclick="switchTab(this,'info')" id="tab-info">
+          <span class="tab-icon">📧</span>
+          <span class="tab-label">info@</span>
+          <span class="tab-badge" id="badge-info">1</span>
+        </div>
+
+        <div class="inbox-tab" onclick="switchTab(this,'sales')" id="tab-sales">
+          <span class="tab-icon">📧</span>
+          <span class="tab-label">sales@</span>
+          <span class="tab-badge zero" id="badge-sales">0</span>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ACCOUNT INFO BAR -->
+    <div class="account-bar" id="accountBar">
+      <div class="acc-icon" id="accIcon">S@</div>
+      <div class="acc-info">
+        <div class="acc-email" id="accEmail">support@maisonsdemonaco.com</div>
+        <div class="acc-meta">
+          <span class="acc-manager" id="accManager">👤 Ahmad Hassan</span>
+          &nbsp;· 2 shared
+        </div>
+      </div>
+      <button class="acc-manage-btn" onclick="alert('Open Inbox Assignment Modal')">⚙ Manage</button>
+    </div>
+
+    <!-- SEARCH -->
+    <div class="search-area">
+      <input class="search-box" placeholder="Search threads…" type="text">
+      <button class="filter-btn active" onclick="this.classList.toggle('active')">All</button>
+      <button class="filter-btn" onclick="this.classList.toggle('active')">New</button>
+    </div>
+
+    <!-- THREAD LIST -->
+    <div class="thread-list" id="threadList"></div>
+
+  </div>
+
+  <!-- ════════════════ RIGHT: CHAT ════════════════ -->
+  <div class="right-panel" id="rightPanel">
+    <div class="chat-placeholder" id="chatPlaceholder">
+      <div class="chat-placeholder-icon">💬</div>
+      <div class="chat-placeholder-title">Select a thread</div>
+      <div class="chat-placeholder-sub">Click any thread to open the conversation</div>
+    </div>
+  </div>
+
+</div>
+
+
+<script>
+// ── Data per inbox ──
+const inboxData = {
+  support: {
+    email: "support@maisonsdemonaco.com",
+    icon: "S@",
+    manager: "Ahmad Hassan",
+    shared: 2,
+    threads: [
+      {
+        id:1, contact:"audrey@gmail.com", initials:"AC", color:"#7c3aed",
+        subject:"COMMANDE — Order inquiry", time:"10:32", status:"drafted",
+        msgs:2, assigned:"Ahmad", unread:true,
+        messages:[
+          {dir:"customer", sender:"Audrey Chadoutaud", time:"09:10", body:"Bonjour, je voudrais savoir où en est ma commande ? Je n'ai pas reçu de confirmation de livraison."},
+          {dir:"support",  sender:"Support Team",      time:"10:32", body:"Bonjour Audrey, merci pour votre message. Votre commande est en cours de traitement. Vous recevrez un email de confirmation sous 24h."},
+        ]
+      },
+      {
+        id:2, contact:"asjadsahilpk@gmail.com", initials:"AS", color:"#0284c7",
+        subject:"Re: Re: Order Confirmation", time:"09:15", status:"replied",
+        msgs:5, assigned:"Sara", unread:false,
+        messages:[
+          {dir:"customer", sender:"Asjad Sahil", time:"08:00", body:"Hi, I placed an order 3 days ago. Can you confirm the tracking number?"},
+          {dir:"support",  sender:"Sara Khan",   time:"09:15", body:"Hello! Your tracking number is TRK-298471. You can track it on the carrier website. Please let us know if you need anything else!"},
+        ]
+      },
+      {
+        id:3, contact:"client@boutique.fr", initials:"CB", color:"#dc2626",
+        subject:"Retour produit / Return request", time:"Yesterday", status:"new",
+        msgs:1, assigned:null, unread:true,
+        messages:[
+          {dir:"customer", sender:"Client Boutique", time:"Yesterday", body:"Bonjour, je souhaite retourner un article. Comment puis-je procéder ?"},
+        ]
+      },
+    ]
+  },
+  info: {
+    email: "info@maisonsdemonaco.com",
+    icon: "I@",
+    manager: "Sara Khan",
+    shared: 1,
+    threads: [
+      {
+        id:4, contact:"wholesale@partner.com", initials:"WP", color:"#059669",
+        subject:"Wholesale inquiry — Q3 2026", time:"11:00", status:"new",
+        msgs:1, assigned:"Sara", unread:true,
+        messages:[
+          {dir:"customer", sender:"Wholesale Partner", time:"11:00", body:"Hello, we are interested in a wholesale partnership for your Monaco collection. Could you please share your B2B pricing catalogue?"},
+        ]
+      },
+      {
+        id:5, contact:"press@magazine.fr", initials:"PM", color:"#d97706",
+        subject:"Press request — Feature article", time:"Mon", status:"replied",
+        msgs:3, assigned:"Sara", unread:false,
+        messages:[
+          {dir:"customer", sender:"Press Magazine", time:"Mon 09:00", body:"Bonjour, nous préparons un article sur les marques de luxe françaises. Seriez-vous disponible pour une interview ?"},
+          {dir:"support",  sender:"Sara Khan",      time:"Mon 14:00", body:"Bonjour ! Nous serions ravis de participer. Pouvez-vous nous envoyer plus de détails sur le format de l'interview ?"},
+          {dir:"customer", sender:"Press Magazine", time:"Mon 16:30", body:"Bien sûr ! L'interview serait en format écrit, environ 500 mots. Nous aimerions l'inclure dans notre édition de Juin."},
+        ]
+      },
+    ]
+  },
+  sales: {
+    email: "sales@maisonsdemonaco.com",
+    icon: "SL",
+    manager: null,
+    shared: 0,
+    threads: []
+  }
+};
+
+let activeTab = "support";
+let activeThread = null;
+
+// ── Switch Tab ──
+function switchTab(el, tab){
+  document.querySelectorAll(".inbox-tab").forEach(t=>t.classList.remove("active"));
+  el.classList.add("active");
+  activeTab = tab;
+  activeThread = null;
+  renderAccountBar();
+  renderThreadList();
+  showPlaceholder();
+}
+
+// ── Account Bar ──
+function renderAccountBar(){
+  const d = inboxData[activeTab];
+  document.getElementById("accIcon").textContent = d.icon;
+  document.getElementById("accEmail").textContent = d.email;
+  if(d.manager){
+    document.getElementById("accManager").textContent = "👤 " + d.manager;
+    document.getElementById("accManager").style.display = "";
+  } else {
+    document.getElementById("accManager").textContent = "⚠ No manager assigned";
+    document.getElementById("accManager").style.background = "#fef9c3";
+    document.getElementById("accManager").style.color = "#a16207";
+  }
+}
+
+// ── Thread List ──
+function renderThreadList(){
+  const threads = inboxData[activeTab].threads;
+  const list = document.getElementById("threadList");
+
+  if(!threads.length){
+    list.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">📭</div>
+        <div class="empty-title">No threads yet</div>
+        <div class="empty-sub">This inbox has no emails.</div>
+      </div>`;
+    return;
+  }
+
+  list.innerHTML = threads.map(t => {
+    const statusPill = {
+      new:     `<span class="pill pill-new">New</span>`,
+      replied: `<span class="pill pill-replied">Replied</span>`,
+      drafted: `<span class="pill pill-drafted">AI Draft</span>`,
+    }[t.status] || "";
+    const assignedChip = t.assigned
+      ? `<span class="assigned-chip">👤 ${t.assigned}</span>` : "";
+    return `
+      <div class="thread-item ${t.unread?"unread":""} ${activeThread===t.id?"active":""}"
+           onclick="openThread(${t.id})">
+        <div class="ti-top">
+          <div class="ti-avatar" style="background:${t.color};">${t.initials}</div>
+          <div class="ti-main">
+            <div class="ti-contact">${t.contact}</div>
+          </div>
+          <span class="ti-time">${t.time}</span>
+        </div>
+        <div class="ti-subject">${t.subject}</div>
+        <div class="ti-pills">
+          <span class="pill pill-msgs">${t.msgs} msgs</span>
+          ${statusPill}
+          ${assignedChip}
+        </div>
+      </div>`;
+  }).join("");
+}
+
+// ── Open Thread ──
+function openThread(id){
+  activeThread = id;
+  renderThreadList();
+
+  // find thread
+  const thread = inboxData[activeTab].threads.find(t=>t.id===id);
+  if(!thread) return;
+  thread.unread = false;
+  updateBadge(activeTab);
+
+  const statusColor = {new:"#ef4444", replied:"#10b981", drafted:"#3b82f6"};
+  const assignStrip = thread.assigned
+    ? `<div class="assign-strip">
+        <span class="as-label">Thread Assign:</span>
+        <span class="as-chip" style="background:#ede9fe;color:#6d28d9;">👤 ${thread.assigned}</span>
+        <span style="color:#e2e8f0;margin:0 2px;">|</span>
+        <span class="as-label">Inbox:</span>
+        <span class="as-chip" style="background:#dcfce7;color:#15803d;">📧 ${inboxData[activeTab].email.split("@")[0]}@</span>
+       </div>`
+    : `<div class="assign-strip">
+        <span class="as-label">Thread Assign:</span>
+        <span style="font-size:12px;color:#94a3b8;font-style:italic;">Not assigned</span>
+        <button style="padding:4px 10px;border-radius:8px;border:1.5px solid #6366f1;background:#fff;color:#6366f1;font-size:11px;font-weight:700;cursor:pointer;margin-left:4px;">+ Assign</button>
+       </div>`;
+
+  const messagesHTML = thread.messages.map(m => `
+    <div class="chat-row ${m.dir}">
+      <div class="msg-stack">
+        <div class="sender-name">${m.sender}</div>
+        <div class="bubble">${m.body}</div>
+        <div class="msg-time">${m.time}</div>
+      </div>
+    </div>`).join("");
+
+  document.getElementById("rightPanel").innerHTML = `
+    <div class="chat-header">
+      <div class="ch-top">
+        <div>
+          <div class="ch-subject">${thread.subject}</div>
+          <div class="ch-meta">${thread.contact} · <span>${inboxData[activeTab].email}</span> · ${thread.msgs} messages</div>
+        </div>
+        <div class="ch-actions">
+          <button class="ch-btn">Open Order</button>
+          <button class="ch-btn indigo">🤖 AI Draft</button>
+          <button class="ch-btn green">✅ Resolve</button>
+        </div>
+      </div>
+      ${assignStrip}
+    </div>
+    <div class="chat-body">
+      <div class="chat-thread">${messagesHTML}</div>
+    </div>
+    <div class="reply-area">
+      <textarea class="reply-textarea" placeholder="Reply to ${thread.contact} via ${inboxData[activeTab].email}…"></textarea>
+      <div class="reply-actions">
+        <button class="ch-btn">🤖 AI Draft</button>
+        <button class="ch-btn">✨ Improve</button>
+        <button class="ch-btn">📎 Attach</button>
+        <button class="ch-btn green" style="margin-left:auto;" onclick="fakeReply(${id})">📨 Send Reply</button>
+      </div>
+    </div>`;
+
+  // scroll to bottom
+  setTimeout(()=>{
+    const body = document.querySelector(".chat-body");
+    if(body) body.scrollTop = body.scrollHeight;
+  }, 50);
+}
+
+function fakeReply(id){
+  const ta = document.querySelector(".reply-textarea");
+  if(!ta||!ta.value.trim()){ ta&&ta.focus(); return; }
+  const thread = inboxData[activeTab].threads.find(t=>t.id===id);
+  if(thread){
+    thread.messages.push({dir:"support", sender:"Support Team", time:"Just now", body: ta.value.trim()});
+    thread.status = "replied";
+    thread.msgs++;
+  }
+  openThread(id);
+}
+
+function showPlaceholder(){
+  document.getElementById("rightPanel").innerHTML = `
+    <div class="chat-placeholder" id="chatPlaceholder">
+      <div class="chat-placeholder-icon">💬</div>
+      <div class="chat-placeholder-title">Select a thread</div>
+      <div class="chat-placeholder-sub">Click any thread to open the conversation</div>
+    </div>`;
+}
+
+function updateBadge(tab){
+  const count = inboxData[tab].threads.filter(t=>t.unread).length;
+  const badge = document.getElementById("badge-"+tab);
+  badge.textContent = count;
+  badge.className = "tab-badge" + (count===0?" zero":"");
+}
+
+// ── Init ──
+renderAccountBar();
+renderThreadList();
+</script>
+</body>
+</html>

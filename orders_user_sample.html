@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>VendorFlow AI — Orders</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root {
+    --bg:#F7F8FA; --panel:#fff; --panel-2:#F5F7FA;
+    --border:#ECEEF3; --border-strong:#DEE2EA;
+    --text:#1A1F2E; --text-soft:#4A5468; --muted:#8B94A6;
+    --accent:#6D5BFF; --accent-2:#3DB7FF;
+    --green:#10B981; --green-2:#059669; --green-bg:#E7F8F1;
+    --amber:#F59E0B; --amber-2:#B45309; --amber-bg:#FFF7E6;
+    --red:#EF4444; --red-2:#B91C1C; --red-bg:#FEE7E7;
+    --pink:#F472B6; --pink-2:#DB2777;
+    --blue:#3DB7FF; --blue-2:#0284C7; --blue-bg:#E5F4FE;
+    --black:#0F1320;
+  }
+  html, body { height:100%; background:var(--bg); color:var(--text);
+    font-family:'Inter',-apple-system,system-ui,sans-serif; font-size:14px; overflow:hidden;
+  }
+  .app { display:grid; grid-template-columns:220px 1fr; height:100vh; }
+
+  .side { padding:18px 14px; border-right:1px solid var(--border);
+    background:var(--panel); display:flex; flex-direction:column; gap:4px;
+  }
+  .brand { display:flex; align-items:center; gap:10px; padding:4px 8px 16px;
+    border-bottom:1px solid var(--border); margin-bottom:12px;
+  }
+  .brand-logo { width:34px; height:34px; border-radius:9px;
+    background:linear-gradient(135deg,#6D5BFF,#3DB7FF); color:white;
+    display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px;
+  }
+  .brand h1 { font-size:14px; font-weight:700; }
+  .brand small { color:var(--muted); font-size:11px; }
+  .nav-item { display:flex; align-items:center; gap:10px;
+    padding:8px 10px; border-radius:8px; color:var(--text-soft);
+    cursor:pointer; font-size:13px; font-weight:500; transition:background .15s;
+  }
+  .nav-item:hover { background:var(--panel-2); color:var(--text); }
+  .nav-item.active { background:rgba(109,91,255,.08); color:var(--accent); font-weight:600; }
+  .nav-item .badge { margin-left:auto; background:var(--accent); color:white;
+    font-size:10px; padding:1px 7px; border-radius:999px; font-weight:700;
+  }
+
+  .main { display:flex; flex-direction:column; min-width:0; }
+
+  .top {
+    padding:14px 22px; display:flex; align-items:center; justify-content:space-between;
+    gap:14px; border-bottom:1px solid var(--border); background:var(--panel);
+  }
+  .top h2 { font-size:18px; font-weight:700; letter-spacing:-0.3px; }
+  .top p { color:var(--muted); font-size:11.5px; margin-top:1px; }
+  .role-pill {
+    display:inline-flex; align-items:center; gap:6px; padding:3px 10px;
+    border-radius:999px; font-size:11px; font-weight:600;
+    background:rgba(109,91,255,.08); color:var(--accent);
+    border:1px solid rgba(109,91,255,.2); margin-left:10px;
+  }
+  .top-actions { display:flex; align-items:center; gap:8px; }
+  .view-toggle {
+    display:flex; background:var(--panel-2); border:1px solid var(--border);
+    border-radius:8px; padding:3px;
+  }
+  .vt {
+    padding:6px 10px; border-radius:6px; font-size:11.5px; font-weight:600;
+    color:var(--muted); cursor:pointer; display:inline-flex; align-items:center; gap:5px;
+  }
+  .vt:hover { color:var(--text); }
+  .vt.active { background:white; color:var(--text); box-shadow:0 1px 3px rgba(0,0,0,.06); }
+  .icon-btn {
+    width:34px; height:34px; border-radius:8px; border:1px solid var(--border);
+    background:var(--panel); cursor:pointer; color:var(--text-soft); font-size:14px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .icon-btn:hover { background:var(--panel-2); color:var(--text); }
+  .btn-primary {
+    height:34px; padding:0 14px; border-radius:8px;
+    background:var(--green); color:white; border:none;
+    font-size:12.5px; font-weight:600; cursor:pointer;
+    display:inline-flex; align-items:center; gap:6px;
+  }
+  .btn-primary:hover { background:var(--green-2); }
+
+  .stats {
+    display:grid; grid-template-columns:repeat(4,1fr); gap:10px;
+    padding:14px 22px 0; background:var(--bg);
+  }
+  .stat {
+    background:var(--panel); border:1px solid var(--border);
+    border-radius:10px; padding:12px 14px; cursor:pointer;
+    transition:all .15s; position:relative; overflow:hidden;
+  }
+  .stat:hover { border-color:var(--border-strong); }
+  .stat .lbl { font-size:11px; color:var(--muted); font-weight:500; display:flex; align-items:center; gap:5px; }
+  .stat .val { font-size:22px; font-weight:700; margin-top:2px; letter-spacing:-.3px; }
+  .stat .delta { font-size:10.5px; color:var(--green-2); font-weight:600; margin-top:2px; }
+  .stat .delta.bad { color:var(--red-2); }
+  .stat.alert { border-color:rgba(245,158,11,.4); background:linear-gradient(135deg,rgba(245,158,11,.04),white); }
+  .stat.alert .val { color:var(--amber-2); }
+
+  .attention {
+    margin:14px 22px 0; background:linear-gradient(90deg,rgba(245,158,11,.08),rgba(239,68,68,.05));
+    border:1px solid rgba(245,158,11,.25); border-radius:10px; padding:12px 14px;
+    display:flex; align-items:center; gap:14px; font-size:12.5px;
+  }
+  .attention .icon { font-size:16px; color:var(--amber-2); }
+  .attention .msg { color:var(--text-soft); flex:1; }
+  .attention .msg b { color:var(--text); }
+  .attention button {
+    padding:5px 12px; border-radius:6px; font-size:11.5px; font-weight:600;
+    background:var(--text); color:white; border:none; cursor:pointer;
+  }
+  .attention .dismiss { background:transparent; color:var(--muted); padding:5px 8px; }
+
+  .filter-row {
+    padding:14px 22px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  }
+  .search-box {
+    flex:1; max-width:340px; display:flex; align-items:center; gap:8px;
+    background:var(--panel); padding:8px 12px; border-radius:8px;
+    border:1px solid var(--border);
+  }
+  .search-box:focus-within { border-color:var(--accent); }
+  .search-box input { background:transparent; border:none; outline:none; flex:1; font-size:12.5px; }
+  .chips { display:flex; gap:6px; flex-wrap:wrap; }
+  .chip {
+    padding:6px 11px; border-radius:999px; font-size:11.5px; font-weight:600;
+    background:var(--panel); border:1px solid var(--border); color:var(--text-soft);
+    cursor:pointer; display:inline-flex; align-items:center; gap:5px;
+  }
+  .chip:hover { background:var(--panel-2); color:var(--text); border-color:var(--border-strong); }
+  .chip.active { background:var(--text); color:white; border-color:var(--text); }
+  .chip.warn { color:var(--red-2); border-color:rgba(239,68,68,.3); background:var(--red-bg); }
+  .chip.warn:hover { background:rgba(239,68,68,.15); }
+  .chip .count { background:rgba(255,255,255,.18); padding:1px 6px; border-radius:999px; font-size:10px; }
+  .chip:not(.active) .count { background:var(--panel-2); color:var(--muted); border:1px solid var(--border); }
+  .chip.warn .count { background:var(--red); color:white; border:none; }
+  .saved-views { margin-left:auto; display:flex; gap:6px; align-items:center; }
+  .saved-views .lbl { font-size:11px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:.4px; }
+
+  .table-wrap { flex:1; overflow:auto; padding:0 22px 22px; }
+  .table-wrap::-webkit-scrollbar { height:8px; width:8px; }
+  .table-wrap::-webkit-scrollbar-thumb { background:rgba(15,19,32,.15); border-radius:4px; }
+
+  table { width:100%; border-collapse:separate; border-spacing:0;
+    background:var(--panel); border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+  thead { position:sticky; top:0; background:var(--panel-2); z-index:5; }
+  thead th { padding:11px 12px; text-align:left; font-size:10.5px; font-weight:700;
+    color:var(--muted); text-transform:uppercase; letter-spacing:.5px;
+    border-bottom:1px solid var(--border); }
+  thead th .sort { font-size:9px; opacity:.5; margin-left:3px; }
+  tbody td { padding:12px; border-bottom:1px solid var(--border); font-size:12.5px; vertical-align:middle; }
+  tbody tr { cursor:pointer; transition:background .12s; position:relative; }
+  tbody tr:hover { background:var(--panel-2); }
+  tbody tr.selected { background:rgba(109,91,255,.04); }
+  tbody tr:last-child td { border-bottom:none; }
+
+  .row-status-bar { width:4px; padding:0 !important; }
+  .row-status-bar > div { width:4px; height:42px; border-radius:0 4px 4px 0; }
+  .bar-green { background:var(--green); }
+  .bar-amber { background:var(--amber); }
+  .bar-red { background:var(--red); }
+  .bar-grey { background:#CBD5E1; }
+  .bar-blue { background:var(--accent-2); }
+
+  .order-id { font-weight:700; color:var(--accent); font-size:13px; display:flex; align-items:center; gap:6px; }
+  .order-id .priority { background:var(--red-bg); color:var(--red-2); padding:1px 6px; border-radius:4px; font-size:9.5px; font-weight:700; }
+  .order-date { font-size:10.5px; color:var(--muted); margin-top:1px; }
+  .age { font-size:10px; color:var(--muted); margin-top:1px; }
+  .age.old { color:var(--amber-2); font-weight:600; }
+  .age.urgent { color:var(--red-2); font-weight:700; }
+
+  .customer-cell { display:flex; align-items:center; gap:9px; }
+  .avatar { width:30px; height:30px; border-radius:50%; color:white; font-size:11px;
+    font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .a1{background:linear-gradient(135deg,#6D5BFF,#3DB7FF)}.a2{background:linear-gradient(135deg,#F472B6,#FB923C)}.a3{background:linear-gradient(135deg,#10B981,#3DB7FF)}.a4{background:linear-gradient(135deg,#FB923C,#F59E0B)}.a5{background:linear-gradient(135deg,#F472B6,#6D5BFF)}.a6{background:linear-gradient(135deg,#3DB7FF,#10B981)}.a7{background:linear-gradient(135deg,#0EA5E9,#6D5BFF)}
+  .customer-name { font-weight:600; color:var(--text); font-size:12.5px; }
+  .customer-email { font-size:10.5px; color:var(--muted); margin-top:1px; }
+
+  .product-cell { display:flex; align-items:center; gap:9px; min-width:200px; }
+  .product-thumbs { display:flex; align-items:center; }
+  .product-thumb { width:34px; height:34px; border-radius:7px; border:2px solid white;
+    background-size:cover; background-position:center; flex-shrink:0; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+  .product-thumbs .product-thumb + .product-thumb { margin-left:-8px; }
+  .product-thumbs .more { width:34px; height:34px; border-radius:7px; background:var(--panel-2);
+    border:2px solid white; margin-left:-8px; font-size:10px; font-weight:700; color:var(--text-soft);
+    display:flex; align-items:center; justify-content:center; }
+  .product-name { font-weight:600; font-size:12px; color:var(--text); max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .product-meta { font-size:10.5px; color:var(--muted); margin-top:1px; }
+
+  .amount { font-weight:700; font-size:13px; color:var(--text); }
+  .amount-currency { font-size:10px; color:var(--muted); font-weight:500; }
+
+  .status-stack { display:flex; flex-direction:column; gap:3px; align-items:flex-start; }
+  .pill { display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:999px; font-size:10px; font-weight:700; }
+  .pill .dot { width:5px; height:5px; border-radius:50%; }
+  .pill.pay-ok{background:var(--green-bg);color:var(--green-2)}.pill.pay-ok .dot{background:var(--green)}
+  .pill.pay-pending{background:var(--amber-bg);color:var(--amber-2)}.pill.pay-pending .dot{background:var(--amber)}
+  .pill.pay-failed{background:var(--red-bg);color:var(--red-2)}.pill.pay-failed .dot{background:var(--red)}
+  .pill.ful-ok{background:var(--green-bg);color:var(--green-2)}.pill.ful-ok .dot{background:var(--green)}
+  .pill.ful-process{background:var(--blue-bg);color:var(--blue-2)}.pill.ful-process .dot{background:var(--blue)}
+  .pill.ful-failed{background:var(--red-bg);color:var(--red-2)}.pill.ful-failed .dot{background:var(--red)}
+  .pill.ful-pending{background:var(--panel-2);color:var(--muted);border:1px solid var(--border)}
+
+  .vendor-cell { display:flex; align-items:center; gap:7px; }
+  .vendor-cell .avatar { width:24px; height:24px; font-size:9px; }
+  .vendor-name { font-weight:600; font-size:11.5px; }
+  .vendor-unassigned { padding:4px 10px; border-radius:999px;
+    background:var(--panel-2); border:1px dashed var(--border-strong);
+    font-size:11px; font-weight:600; color:var(--muted);
+    display:inline-flex; align-items:center; gap:4px; }
+  .vendor-unassigned:hover { color:var(--accent); border-color:var(--accent); cursor:pointer; }
+
+  .tracking-cell { display:flex; flex-direction:column; gap:3px; }
+  .tracking-row { display:flex; align-items:center; gap:6px; }
+  .courier-icon { width:18px; height:18px; border-radius:4px; font-size:8px; font-weight:700;
+    display:flex; align-items:center; justify-content:center; color:white; }
+  .courier-dhl{background:#FFCC00;color:#D40511}.courier-fedex{background:#4D148C}.courier-laposte{background:#003DA5}
+  .tracking-id { font-family:'SF Mono','Monaco',monospace; font-size:10.5px; color:var(--text-soft); font-weight:600; }
+  .tracking-eta { font-size:10px; color:var(--muted); }
+  .tracking-eta.delivered { color:var(--green-2); font-weight:600; }
+  .tracking-none { display:inline-flex; align-items:center; gap:4px; padding:3px 8px;
+    border-radius:6px; font-size:10.5px; font-weight:600;
+    background:var(--red-bg); color:var(--red-2); cursor:pointer; }
+  .tracking-none:hover { background:rgba(239,68,68,.18); }
+
+  .actions-cell { display:flex; align-items:center; gap:4px; opacity:0; transition:opacity .15s; }
+  tr:hover .actions-cell { opacity:1; }
+  .row-action { width:26px; height:26px; border-radius:6px; border:1px solid var(--border);
+    background:var(--panel); color:var(--text-soft); font-size:11px;
+    display:flex; align-items:center; justify-content:center; cursor:pointer; }
+  .row-action:hover { background:var(--panel-2); color:var(--text); }
+
+  .cb { width:16px; height:16px; border:1.5px solid var(--border-strong);
+    border-radius:4px; cursor:pointer; background:white; flex-shrink:0;
+    display:inline-flex; align-items:center; justify-content:center; }
+  .cb.on { background:var(--accent); border-color:var(--accent); }
+  .cb.on::after { content:'✓'; color:white; font-size:11px; font-weight:700; }
+
+  .bulk-bar { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(120px);
+    background:var(--text); color:white; padding:10px 14px; border-radius:14px;
+    box-shadow:0 12px 40px rgba(15,19,32,.25);
+    display:flex; align-items:center; gap:10px;
+    transition:transform .25s cubic-bezier(.2,.9,.3,1.2);
+    z-index:60; font-size:12.5px; font-weight:600; }
+  .bulk-bar.show { transform:translateX(-50%) translateY(0); }
+  .bulk-bar .count { background:var(--accent); padding:5px 11px; border-radius:8px; font-weight:700; }
+  .bulk-bar .divider { width:1px; height:24px; background:rgba(255,255,255,.15); }
+  .bulk-bar button { background:transparent; border:none; color:white;
+    padding:6px 10px; border-radius:7px; cursor:pointer; font-size:12px; font-weight:600;
+    display:inline-flex; align-items:center; gap:5px; }
+  .bulk-bar button:hover { background:rgba(255,255,255,.1); }
+  .bulk-bar .danger:hover { background:rgba(239,68,68,.2); color:#FCA5A5; }
+  .bulk-bar .close { color:rgba(255,255,255,.5); padding:6px 8px; }
+
+  .panel-overlay { position:fixed; inset:0; background:rgba(15,19,32,.35); z-index:80;
+    opacity:0; pointer-events:none; transition:opacity .2s; }
+  .panel-overlay.show { opacity:1; pointer-events:all; }
+  .side-panel { position:fixed; top:0; right:0; bottom:0; width:480px;
+    background:var(--panel); z-index:90; box-shadow:-12px 0 40px rgba(15,19,32,.12);
+    transform:translateX(100%); transition:transform .25s cubic-bezier(.2,.9,.3,1);
+    display:flex; flex-direction:column; }
+  .side-panel.show { transform:translateX(0); }
+  .sp-head { padding:18px 20px; border-bottom:1px solid var(--border);
+    display:flex; align-items:flex-start; justify-content:space-between; }
+  .sp-head h3 { font-size:16px; font-weight:700; }
+  .sp-head .order-meta { font-size:11.5px; color:var(--muted); margin-top:2px; }
+  .sp-close { width:30px; height:30px; border-radius:7px; border:1px solid var(--border);
+    background:var(--panel); cursor:pointer; font-size:14px; color:var(--text-soft);
+    display:flex; align-items:center; justify-content:center; }
+  .sp-body { flex:1; overflow-y:auto; padding:18px 20px; }
+  .sp-body::-webkit-scrollbar { width:5px; }
+  .sp-body::-webkit-scrollbar-thumb { background:rgba(15,19,32,.1); border-radius:3px; }
+  .sp-section { margin-bottom:20px; }
+  .sp-section h4 { font-size:11px; color:var(--muted); font-weight:700;
+    text-transform:uppercase; letter-spacing:.5px; margin-bottom:8px; }
+  .sp-row { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border); font-size:12.5px; }
+  .sp-row:last-child { border-bottom:none; }
+  .sp-row .l { color:var(--muted); }
+  .sp-row .v { font-weight:600; color:var(--text); }
+  .sp-product { display:flex; gap:12px; padding:10px; background:var(--panel-2);
+    border:1px solid var(--border); border-radius:9px; margin-bottom:8px; }
+  .sp-product-thumb { width:50px; height:50px; border-radius:7px; background-size:cover; background-position:center; flex-shrink:0; }
+  .sp-product .name { font-weight:600; font-size:12.5px; }
+  .sp-product .meta { font-size:11px; color:var(--muted); margin-top:2px; }
+  .sp-product .price { font-weight:700; font-size:12.5px; margin-top:4px; }
+  .timeline { position:relative; padding-left:18px; }
+  .timeline::before { content:''; position:absolute; left:5px; top:6px; bottom:6px; width:2px; background:var(--border); }
+  .tl-item { position:relative; padding:6px 0; font-size:12px; }
+  .tl-item::before { content:''; position:absolute; left:-18px; top:11px; width:10px; height:10px;
+    border-radius:50%; background:var(--green); border:2px solid white; box-shadow:0 0 0 1px var(--green); }
+  .tl-item.pending::before { background:var(--panel-2); border-color:var(--border-strong); box-shadow:0 0 0 1px var(--border-strong); }
+  .tl-item .when { font-size:10.5px; color:var(--muted); }
+  .sp-actions { padding:14px 20px; border-top:1px solid var(--border); display:flex; gap:8px; flex-wrap:wrap; }
+  .sp-actions button { padding:8px 12px; border-radius:7px; font-size:12px; font-weight:600;
+    border:1px solid var(--border); background:var(--panel); color:var(--text-soft); cursor:pointer;
+    display:inline-flex; align-items:center; gap:5px; }
+  .sp-actions button:hover { background:var(--panel-2); color:var(--text); }
+  .sp-actions .primary { background:var(--text); color:white; border-color:var(--text); }
+  .sp-actions .primary:hover { background:#2a2f3d; }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand">
+      <div class="brand-logo">VF</div>
+      <div><h1>VendorFlow AI</h1><small>Ecommerce OS</small></div>
+    </div>
+    <div class="nav-item">🏠 Overview</div>
+    <div class="nav-item">🏬 Stores</div>
+    <div class="nav-item active">🛒 Orders <span class="badge">87</span></div>
+    <div class="nav-item">👥 Team</div>
+    <div class="nav-item">⚡ Rules</div>
+    <div class="nav-item">✉️ Emails</div>
+    <div class="nav-item">🤝 Vendors</div>
+  </aside>
+  <main class="main">
+    <div class="top">
+      <div>
+        <h2>Orders <span class="role-pill">🛡️ Admin · Full access</span></h2>
+        <p>Manage orders across all connected stores · Maisons De Monaco</p>
+      </div>
+      <div class="top-actions">
+        <div class="view-toggle">
+          <div class="vt active">☰ Table</div>
+          <div class="vt">▦ Cards</div>
+          <div class="vt">⫶⫶⫶ Kanban</div>
+        </div>
+        <button class="icon-btn">⇅</button>
+        <button class="icon-btn">⤓</button>
+        <button class="btn-primary">＋ New Order</button>
+      </div>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="lbl">📦 Today's Orders</div><div class="val">24</div><div class="delta">↑ 12% vs yesterday</div></div>
+      <div class="stat"><div class="lbl">💰 Today's Revenue</div><div class="val">€1,847</div><div class="delta">↑ €245</div></div>
+      <div class="stat alert"><div class="lbl">⚠ Need Attention</div><div class="val">8</div><div class="delta bad">3 overdue · 5 unassigned</div></div>
+      <div class="stat"><div class="lbl">🚚 Out for Delivery</div><div class="val">12</div><div class="delta">5 arriving today</div></div>
+    </div>
+    <div class="attention">
+      <div class="icon">⚠</div>
+      <div class="msg"><b>3 orders</b> need vendor assignment · <b>2 failed payments</b> · <b>5 orders</b> have no tracking after 24h</div>
+      <button>Review &amp; Fix</button>
+      <button class="dismiss">Dismiss</button>
+    </div>
+    <div class="filter-row">
+      <div class="search-box">
+        <span style="opacity:.5;">🔍</span>
+        <input placeholder="Search by order ID, customer, tracking, product..."/>
+      </div>
+      <div class="chips">
+        <div class="chip active">All <span class="count">87</span></div>
+        <div class="chip warn">⚠ Failed <span class="count">2</span></div>
+        <div class="chip">⏳ Processing <span class="count">28</span></div>
+        <div class="chip">📦 No Tracking <span class="count">5</span></div>
+        <div class="chip">👤 Unassigned <span class="count">3</span></div>
+        <div class="chip">🔥 Today <span class="count">24</span></div>
+      </div>
+      <div class="saved-views">
+        <span class="lbl">Views</span>
+        <div class="chip">⭐ My Orders</div>
+        <div class="chip">＋ Save view</div>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th class="row-status-bar"></th>
+            <th style="width:30px;"><div class="cb" id="select-all" onclick="toggleAll(this)"></div></th>
+            <th>Order <span class="sort">⇅</span></th>
+            <th>Customer</th>
+            <th>Product</th>
+            <th>Amount <span class="sort">⇅</span></th>
+            <th>Status</th>
+            <th>Vendor</th>
+            <th>Tracking</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="tbody">
+          <tr onclick="openPanel(event)">
+            <td class="row-status-bar"><div class="bar-green"></div></td>
+            <td onclick="event.stopPropagation()"><div class="cb" onclick="toggleRow(this)"></div></td>
+            <td><div class="order-id">#4373</div><div class="order-date">29 Apr 2026</div><div class="age">2h ago</div></td>
+            <td><div class="customer-cell"><div class="avatar a1">JR</div><div><div class="customer-name">Julien Renault</div><div class="customer-email">jul.renault35@gmail.com</div></div></div></td>
+            <td><div class="product-cell"><div class="product-thumbs"><div class="product-thumb" style="background:linear-gradient(135deg,#6B7280,#4B5563);"></div></div><div><div class="product-name">Pull Maison de Monaco Gris</div><div class="product-meta">Qty 1 · Size M · Gray</div></div></div></td>
+            <td><span class="amount">59</span><span class="amount-currency">.00 EUR</span></td>
+            <td><div class="status-stack"><span class="pill pay-ok"><span class="dot"></span> Paid</span><span class="pill ful-ok"><span class="dot"></span> Fulfilled</span></div></td>
+            <td><div class="vendor-cell"><div class="avatar a4">AK</div><div class="vendor-name">Akhtar</div></div></td>
+            <td><div class="tracking-cell"><div class="tracking-row"><div class="courier-icon courier-dhl">DHL</div><div class="tracking-id">42734…7401</div></div><div class="tracking-eta">📍 In transit · ETA tomorrow</div></div></td>
+            <td><div class="actions-cell" onclick="event.stopPropagation()"><button class="row-action">👁</button><button class="row-action">✎</button><button class="row-action">⋯</button></div></td>
+          </tr>
+          <tr onclick="openPanel(event)">
+            <td class="row-status-bar"><div class="bar-amber"></div></td>
+            <td onclick="event.stopPropagation()"><div class="cb" onclick="toggleRow(this)"></div></td>
+            <td><div class="order-id">#4375</div><div class="order-date">29 Apr 2026</div><div class="age">4h ago</div></td>
+            <td><div class="customer-cell"><div class="avatar a2">AP</div><div><div class="customer-name">Amandine PAOLI</div><div class="customer-email">amandine2212@gmail.com</div></div></div></td>
+            <td><div class="product-cell"><div class="product-thumbs"><div class="product-thumb" style="background:linear-gradient(135deg,#9CA3AF,#6B7280);"></div></div><div><div class="product-name">Pull Maison de Monaco Gris</div><div class="product-meta">Qty 1 · Size S · Gray</div></div></div></td>
+            <td><span class="amount">59</span><span class="amount-currency">.00 EUR</span></td>
+            <td><div class="status-stack"><span class="pill pay-ok"><span class="dot"></span> Paid</span><span class="pill ful-process"><span class="dot"></span> Processing</span></div></td>
+            <td><div class="vendor-cell"><div class="avatar a3">MA</div><div class="vendor-name">M Akbar</div></div></td>
+            <td><div class="tracking-cell"><div class="tracking-none">⚠ No tracking yet</div><div class="tracking-eta">Add within 24h</div></div></td>
+            <td><div class="actions-cell" onclick="event.stopPropagation()"><button class="row-action">📦</button><button class="row-action">✎</button><button class="row-action">⋯</button></div></td>
+          </tr>
+          <tr onclick="openPanel(event)" class="selected">
+            <td class="row-status-bar"><div class="bar-amber"></div></td>
+            <td onclick="event.stopPropagation()"><div class="cb on" onclick="toggleRow(this)"></div></td>
+            <td><div class="order-id">#4376 <span class="priority">URGENT</span></div><div class="order-date">29 Apr 2026</div><div class="age old">⏰ 18h old</div></td>
+            <td><div class="customer-cell"><div class="avatar a3">NQ</div><div><div class="customer-name">Naelle Quemin</div><div class="customer-email">djeddiquemin.naelle@gmail.com</div></div></div></td>
+            <td><div class="product-cell"><div class="product-thumbs"><div class="product-thumb" style="background:linear-gradient(135deg,#6B7280,#4B5563);"></div><div class="product-thumb" style="background:linear-gradient(135deg,#FB923C,#F59E0B);"></div><div class="more">+3</div></div><div><div class="product-name">Pull Monaco + 4 items</div><div class="product-meta">5 products · mixed sizes</div></div></div></td>
+            <td><span class="amount">149</span><span class="amount-currency">.00 EUR</span></td>
+            <td><div class="status-stack"><span class="pill pay-ok"><span class="dot"></span> Paid</span><span class="pill ful-process"><span class="dot"></span> Processing</span></div></td>
+            <td><div class="vendor-cell"><div class="avatar a3">MA</div><div class="vendor-name">M Akbar</div></div></td>
+            <td><div class="tracking-cell"><div class="tracking-none">⚠ No tracking yet</div><div class="tracking-eta" style="color:var(--red-2);font-weight:600;">⏰ Overdue by 6h</div></div></td>
+            <td><div class="actions-cell" onclick="event.stopPropagation()"><button class="row-action">📦</button><button class="row-action">✎</button><button class="row-action">⋯</button></div></td>
+          </tr>
+          <tr onclick="openPanel(event)">
+            <td class="row-status-bar"><div class="bar-grey"></div></td>
+            <td onclick="event.stopPropagation()"><div class="cb" onclick="toggleRow(this)"></div></td>
+            <td><div class="order-id">#4377</div><div class="order-date">29 Apr 2026</div><div class="age">5h ago</div></td>
+            <td><div class="customer-cell"><div class="avatar a4">SM</div><div><div class="customer-name">SERVEL Margaux</div><div class="customer-email">margauxservel@laposte.net</div></div></div></td>
+            <td><div class="product-cell"><div class="product-thumbs"><div class="product-thumb" style="background:linear-gradient(135deg,#9CA3AF,#6B7280);"></div></div><div><div class="product-name">Pull Maison de Monaco Gris</div><div class="product-meta">Qty 1 · Size S · Gray</div></div></div></td>
+            <td><span class="amount">59</span><span class="amount-currency">.00 EUR</span></td>
+            <td><div class="status-stack"><span class="pill pay-ok"><span class="dot"></span> Paid</span><span class="pill ful-pending">○ Awaiting vendor</span></div></td>
+            <td><div class="vendor-unassigned">＋ Assign vendor</div></td>
+            <td><div class="tracking-none" style="background:none;color:var(--muted);">— Pending vendor</div></td>
+            <td><div class="actions-cell" onclick="event.stopPropagation()"><button class="row-action">👤</button><button class="row-action">⋯</button></div></td>
+          </tr>
+          <tr onclick="openPanel(event)">
+            <td class="row-status-bar"><div class="bar-red"></div></td>
+            <td onclick="event.stopPropagation()"><div class="cb" onclick="toggleRow(this)"></div></td>
+            <td><div class="order-id">#4381 <span class="priority" style="background:var(--amber-bg);color:var(--amber-2);">RETRY</span></div><div class="order-date">29 Apr 2026</div><div class="age">3h ago</div></td>
+            <td><div class="customer-cell"><div class="avatar a5">JB</div><div><div class="customer-name">Johan Bechadergue</div><div class="customer-email">johan.bechadergue@live.fr</div></div></div></td>
+            <td><div class="product-cell"><div class="product-thumbs"><div class="product-thumb" style="background:linear-gradient(135deg,#6B7280,#4B5563);"></div></div><div><div class="product-name">Pull Maison de Monaco Gris</div><div class="product-meta">Qty 1 · Size M · Gray</div></div></div></td>
+            <td><span class="amount">59</span><span class="amount-currency">.00 EUR</span></td>
+            <td><div class="status-stack"><span class="pill pay-failed"><span class="dot"></span> Payment failed</span><span class="pill ful-failed"><span class="dot"></span> On hold</span></div></td>
+            <td><div class="vendor-unassigned" style="background:var(--red-bg);color:var(--red-2);border-style:solid;border-color:rgba(239,68,68,.3);">⚠ Blocked</div></td>
+            <td><div class="tracking-eta" style="color:var(--red-2);">— Awaiting payment</div></td>
+            <td><div class="actions-cell" onclick="event.stopPropagation()"><button class="row-action">↻</button><button class="row-action">✉</button><button class="row-action">⋯</button></div></td>
+          </tr>
+          <tr onclick="openPanel(event)">
+            <td class="row-status-bar"><div class="bar-green"></div></td>
+            <td onclick="event.stopPropagation()"><div class="cb" onclick="toggleRow(this)"></div></td>
+            <td><div class="order-id">#4379</div><div class="order-date">28 Apr 2026</div><div class="age">1d ago</div></td>
+            <td><div class="customer-cell"><div class="avatar a6">IM</div><div><div class="customer-name">Isabelle Mussot</div><div class="customer-email">zaboumussot@gmail.com</div></div></div></td>
+            <td><div class="product-cell"><div class="product-thumbs"><div class="product-thumb" style="background:linear-gradient(135deg,#9CA3AF,#6B7280);"></div></div><div><div class="product-name">Pull Maison de Monaco Gris</div><div class="product-meta">Qty 1 · Size S · Gray</div></div></div></td>
+            <td><span class="amount">59</span><span class="amount-currency">.00 EUR</span></td>
+            <td><div class="status-stack"><span class="pill pay-ok"><span class="dot"></span> Paid</span><span class="pill ful-ok"><span class="dot"></span> Delivered</span></div></td>
+            <td><div class="vendor-cell"><div class="avatar a4">AK</div><div class="vendor-name">Akhtar</div></div></td>
+            <td><div class="tracking-cell"><div class="tracking-row"><div class="courier-icon courier-laposte">LP</div><div class="tracking-id">LP9847…2310</div></div><div class="tracking-eta delivered">✓ Delivered yesterday</div></div></td>
+            <td><div class="actions-cell" onclick="event.stopPropagation()"><button class="row-action">🧾</button><button class="row-action">⋯</button></div></td>
+          </tr>
+          <tr onclick="openPanel(event)">
+            <td class="row-status-bar"><div class="bar-blue"></div></td>
+            <td onclick="event.stopPropagation()"><div class="cb" onclick="toggleRow(this)"></div></td>
+            <td><div class="order-id">#4382</div><div class="order-date">28 Apr 2026</div><div class="age">1d ago</div></td>
+            <td><div class="customer-cell"><div class="avatar a3">CS</div><div><div class="customer-name">CELINE SIMIAN</div><div class="customer-email">simian.celine@orange.fr</div></div></div></td>
+            <td><div class="product-cell"><div class="product-thumbs"><div class="product-thumb" style="background:linear-gradient(135deg,#6B7280,#4B5563);"></div></div><div><div class="product-name">Pull Maison de Monaco Gris</div><div class="product-meta">Qty 1 · Size S · Gray</div></div></div></td>
+            <td><span class="amount">59</span><span class="amount-currency">.00 EUR</span></td>
+            <td><div class="status-stack"><span class="pill pay-ok"><span class="dot"></span> Paid</span><span class="pill ful-process"><span class="dot"></span> Out for delivery</span></div></td>
+            <td><div class="vendor-cell"><div class="avatar a3">MA</div><div class="vendor-name">M Akbar</div></div></td>
+            <td><div class="tracking-cell"><div class="tracking-row"><div class="courier-icon courier-fedex">Fx</div><div class="tracking-id">7745…0921</div></div><div class="tracking-eta">🚚 Arriving today by 6pm</div></div></td>
+            <td><div class="actions-cell" onclick="event.stopPropagation()"><button class="row-action">📍</button><button class="row-action">⋯</button></div></td>
+          </tr>
+          <tr onclick="openPanel(event)">
+            <td class="row-status-bar"><div class="bar-amber"></div></td>
+            <td onclick="event.stopPropagation()"><div class="cb" onclick="toggleRow(this)"></div></td>
+            <td><div class="order-id">#4383</div><div class="order-date">28 Apr 2026</div><div class="age">1d ago</div></td>
+            <td><div class="customer-cell"><div class="avatar a7">CM</div><div><div class="customer-name">Carmen Mandula</div><div class="customer-email">podeleanalessandra@yahoo.com</div></div></div></td>
+            <td><div class="product-cell"><div class="product-thumbs"><div class="product-thumb" style="background:linear-gradient(135deg,#F472B6,#DB2777);"></div><div class="product-thumb" style="background:linear-gradient(135deg,#6D5BFF,#3DB7FF);"></div></div><div><div class="product-name">L'ensemble Amore + 1</div><div class="product-meta">2 products · €90 total</div></div></div></td>
+            <td><span class="amount">90</span><span class="amount-currency">.00 EUR</span></td>
+            <td><div class="status-stack"><span class="pill pay-ok"><span class="dot"></span> Paid</span><span class="pill ful-process"><span class="dot"></span> Processing</span></div></td>
+            <td><div class="vendor-unassigned">＋ Assign vendor</div></td>
+            <td><div class="tracking-none">⚠ No tracking yet</div></td>
+            <td><div class="actions-cell" onclick="event.stopPropagation()"><button class="row-action">👤</button><button class="row-action">⋯</button></div></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<div class="bulk-bar" id="bulkBar">
+  <span class="count" id="bulkCount">1 selected</span>
+  <div class="divider"></div>
+  <button>👤 Assign vendor</button>
+  <button>📦 Add tracking</button>
+  <button>✓ Mark fulfilled</button>
+  <button>✉ Email customer</button>
+  <button>⤓ Export</button>
+  <div class="divider"></div>
+  <button class="danger">🗑 Cancel</button>
+  <button class="close" onclick="clearSelection()">✕</button>
+</div>
+
+<div class="panel-overlay" id="overlay" onclick="closePanel()"></div>
+<div class="side-panel" id="sidePanel">
+  <div class="sp-head">
+    <div><h3>Order #4376</h3><div class="order-meta">29 Apr 2026 · €149.00 · 5 products</div></div>
+    <button class="sp-close" onclick="closePanel()">✕</button>
+  </div>
+  <div class="sp-body">
+    <div class="sp-section">
+      <h4>Customer</h4>
+      <div class="customer-cell"><div class="avatar a3">NQ</div><div><div class="customer-name">Naelle Quemin</div><div class="customer-email">djeddiquemin.naelle@gmail.com</div></div></div>
+    </div>
+    <div class="sp-section">
+      <h4>Products</h4>
+      <div class="sp-product"><div class="sp-product-thumb" style="background:linear-gradient(135deg,#6B7280,#4B5563);"></div><div style="flex:1;"><div class="name">Pull Maison de Monaco Gris</div><div class="meta">Size M · Gray · Qty 2</div><div class="price">€118.00</div></div></div>
+      <div class="sp-product"><div class="sp-product-thumb" style="background:linear-gradient(135deg,#FB923C,#F59E0B);"></div><div style="flex:1;"><div class="name">Écharpe Monaco Orange</div><div class="meta">One size · Orange · Qty 1</div><div class="price">€31.00</div></div></div>
+    </div>
+    <div class="sp-section">
+      <h4>Order Summary</h4>
+      <div class="sp-row"><span class="l">Subtotal</span><span class="v">€144.00</span></div>
+      <div class="sp-row"><span class="l">Shipping</span><span class="v">€5.00</span></div>
+      <div class="sp-row"><span class="l">Total</span><span class="v">€149.00</span></div>
+      <div class="sp-row"><span class="l">Payment</span><span class="v"><span class="pill pay-ok"><span class="dot"></span> Visa •••4711</span></span></div>
+    </div>
+    <div class="sp-section">
+      <h4>Vendor &amp; Fulfillment</h4>
+      <div class="sp-row"><span class="l">Vendor</span><span class="v">M Akbar</span></div>
+      <div class="sp-row"><span class="l">Status</span><span class="v"><span class="pill ful-process"><span class="dot"></span> Processing</span></span></div>
+      <div class="sp-row"><span class="l">Tracking</span><span class="v" style="color:var(--red-2);">No tracking yet</span></div>
+    </div>
+    <div class="sp-section">
+      <h4>Timeline</h4>
+      <div class="timeline">
+        <div class="tl-item"><b>Order placed</b><div class="when">29 Apr · 11:24 AM</div></div>
+        <div class="tl-item"><b>Payment received</b><div class="when">29 Apr · 11:25 AM</div></div>
+        <div class="tl-item"><b>Auto-assigned to M Akbar</b><div class="when">29 Apr · 11:26 AM</div></div>
+        <div class="tl-item pending"><b>Tracking pending</b><div class="when">Overdue by 6h</div></div>
+        <div class="tl-item pending"><b>Customer notified</b><div class="when">—</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="sp-actions">
+    <button class="primary">📦 Add Tracking</button>
+    <button>👤 Reassign</button>
+    <button>✉ Email customer</button>
+    <button>⋯ More</button>
+  </div>
+</div>
+
+<script>
+  function toggleRow(cb){cb.classList.toggle('on');cb.closest('tr').classList.toggle('selected');updateBulkBar();}
+  function toggleAll(cb){const on=!cb.classList.contains('on');cb.classList.toggle('on',on);document.querySelectorAll('#tbody .cb').forEach(c=>{c.classList.toggle('on',on);c.closest('tr').classList.toggle('selected',on);});updateBulkBar();}
+  function updateBulkBar(){const n=document.querySelectorAll('#tbody .cb.on').length;const b=document.getElementById('bulkBar');b.classList.toggle('show',n>0);if(n>0)document.getElementById('bulkCount').textContent=n+' selected';}
+  function clearSelection(){document.querySelectorAll('.cb.on').forEach(c=>{c.classList.remove('on');const t=c.closest('tr');if(t)t.classList.remove('selected');});updateBulkBar();}
+  function openPanel(e){document.getElementById('sidePanel').classList.add('show');document.getElementById('overlay').classList.add('show');}
+  function closePanel(){document.getElementById('sidePanel').classList.remove('show');document.getElementById('overlay').classList.remove('show');}
+  document.querySelectorAll('.filter-row .chips .chip').forEach(c=>{c.addEventListener('click',()=>{document.querySelectorAll('.filter-row .chips .chip').forEach(x=>x.classList.remove('active'));c.classList.add('active');});});
+  document.querySelectorAll('.vt').forEach(v=>{v.addEventListener('click',()=>{document.querySelectorAll('.vt').forEach(x=>x.classList.remove('active'));v.classList.add('active');});});
+  updateBulkBar();
+</script>
+</body>
+</html>
