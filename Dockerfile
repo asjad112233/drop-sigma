@@ -28,4 +28,5 @@ ENV PYTHONUNBUFFERED=1
 
 EXPOSE 8080
 
-CMD python manage.py migrate --noinput && python manage.py ensure_superuser && gunicorn core.wsgi --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+RUN chmod +x startup.sh
+CMD ["./startup.sh"]
