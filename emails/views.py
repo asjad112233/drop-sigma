@@ -17,8 +17,31 @@ from email import encoders
 
 import imaplib
 import smtplib
+import socket
+import ssl
 
 from stores.models import Store
+
+
+def _smtp_connect(host, port=465, timeout=30):
+    """SMTP_SSL connection forced over IPv4 to avoid Railway IPv6 issues."""
+    context = ssl.create_default_context()
+    infos = socket.getaddrinfo(host, port, socket.AF_INET, socket.SOCK_STREAM)
+    if not infos:
+        raise Exception(f"Cannot resolve {host}")
+    ip = infos[0][4][0]
+    raw = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    raw.settimeout(timeout)
+    raw.connect((ip, port))
+    tls = context.wrap_socket(raw, server_hostname=host)
+    smtp = smtplib.SMTP_SSL.__new__(smtplib.SMTP_SSL)
+    smtplib.SMTP.__init__(smtp)
+    smtp.sock = tls
+    smtp.file = smtp.sock.makefile('rb')
+    smtp._host = host
+    smtp.getreply()
+    smtp.ehlo()
+    return smtp
 from .models import EmailMessage, EmailAccount, EmailAttachment, EmailThreadAssignment, EmailTemplate
 from .serializers import EmailMessageSerializer
 from .services import sync_gmail_inbox, generate_ai_reply, generate_ai_text, generate_smart_suggestion, render_template_content, SAMPLE_TEMPLATE_DATA, build_template_context
@@ -52,7 +75,7 @@ def send_email_with_store_account(store, recipient, subject, body, files=None):
         part.add_header("Content-Disposition", f'attachment; filename="{f.name}"')
         msg.attach(part)
 
-    smtp = smtplib.SMTP_SSL(account.smtp_host, 465, timeout=30)
+    smtp = _smtp_connect(account.smtp_host)
     smtp.login(account.email, account.app_password)
     smtp.sendmail(account.email, [recipient], msg.as_string())
     smtp.quit()
@@ -1001,7 +1024,7 @@ def send_test_template_api(request, template_id):
             msg['Reply-To'] = t.reply_to
         msg.attach(MIMEText2(full_html, 'html'))
 
-        smtp = smtplib.SMTP_SSL(account.smtp_host, 465, timeout=30)
+        smtp = _smtp_connect(account.smtp_host)
         smtp.login(account.email, account.app_password)
         smtp.sendmail(account.email, [test_email], msg.as_string())
         smtp.quit()
