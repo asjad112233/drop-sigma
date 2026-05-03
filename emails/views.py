@@ -98,7 +98,7 @@ def connect_email_account_api(request):
         }, status=404)
 
     try:
-        imap = imaplib.IMAP4_SSL("imap.gmail.com", 993)
+        imap = imaplib.IMAP4_SSL("imap.gmail.com", 993, timeout=20)
         imap.login(email, app_password)
         imap.logout()
     except Exception as e:
@@ -108,7 +108,7 @@ def connect_email_account_api(request):
         }, status=400)
 
     try:
-        smtp = smtplib.SMTP("smtp.gmail.com", 587)
+        smtp = smtplib.SMTP("smtp.gmail.com", 587, timeout=20)
         smtp.starttls()
         smtp.login(email, app_password)
         smtp.quit()
