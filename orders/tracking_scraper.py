@@ -79,7 +79,15 @@ def _extract_status(page, tracking_number: str = "") -> str:
     def _tracking_on_page():
         if not tracking_number:
             return True
-        return tracking_number.lower() in body_text.lower()
+        if tracking_number.lower() in body_text.lower():
+            return True
+        # URL mein tracking number ho toh hum sahi page pe hain
+        try:
+            if tracking_number.lower() in page.url.lower():
+                return True
+        except Exception:
+            pass
+        return False
 
     for sel in STATUS_SELECTORS:
         try:
@@ -149,7 +157,7 @@ def scrape_tracking_status(url: str, tracking_number: str = "", timeout_ms: int 
                 if direct:
                     # Direct URL — open and scrape
                     page.goto(url, wait_until="domcontentloaded", timeout=timeout_ms)
-                    page.wait_for_timeout(4000)
+                    page.wait_for_timeout(6000)
                     return _extract_status(page, tracking_number)
 
                 # Smart mode: try URL patterns
