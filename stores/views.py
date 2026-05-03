@@ -149,13 +149,22 @@ def auto_connect_store(request):
 
 # ✅ STEP 2: WooCommerce sends keys here
 @csrf_exempt
-@api_view(["POST"])
+@api_view(["POST", "GET"])
 @permission_classes([AllowAny])
 def wc_callback_api(request):
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"WC callback received — method={request.method} data={dict(request.data)}")
+
+    if request.method == "GET":
+        return Response({"status": "callback endpoint active"})
+
     consumer_key = request.data.get("consumer_key")
     consumer_secret = request.data.get("consumer_secret")
     key_id = request.data.get("key_id")
     user_id_raw = request.data.get("user_id")
+
+    logger.info(f"WC callback data: ck={bool(consumer_key)} cs={bool(consumer_secret)} user_id={user_id_raw}")
 
     try:
         user_data = json.loads(user_id_raw) if user_id_raw else {}
@@ -166,6 +175,7 @@ def wc_callback_api(request):
     store_url = user_data.get("store_url")
 
     if not consumer_key or not consumer_secret or not store_url:
+        logger.error(f"WC callback missing data: ck={consumer_key} cs={consumer_secret} url={store_url}")
         return Response({
             "success": False,
             "message": "WooCommerce callback missing required data."
@@ -173,18 +183,23 @@ def wc_callback_api(request):
 
     user = User.objects.filter(is_superuser=True).first()
 
-    store, created = Store.objects.update_or_create(
-        store_url=store_url,
-        defaults={
-            "user": user,
-            "name": name,
-            "platform": "woocommerce",
-            "api_key": consumer_key,
-            "api_secret": consumer_secret,
-            "access_token": str(key_id) if key_id else "",
-            "is_active": True,
-        }
-    )
+    try:
+        store, created = Store.objects.update_or_create(
+            store_url=store_url,
+            defaults={
+                "user": user,
+                "name": name,
+                "platform": "woocommerce",
+                "api_key": consumer_key,
+                "api_secret": consumer_secret,
+                "access_token": str(key_id) if key_id else "",
+                "is_active": True,
+            }
+        )
+        logger.info(f"WC store saved: {store.id} created={created}")
+    except Exception as e:
+        logger.error(f"WC callback DB error: {e}")
+        return Response({"success": False, "message": str(e)}, status=500)
 
     _register_webhook_for_store(store, request)
 

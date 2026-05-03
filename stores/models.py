@@ -6,7 +6,7 @@ class Store(models.Model):
         ('woocommerce', 'WooCommerce'),
     )
 
-    user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
+    user = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, blank=True)
     name = models.CharField(max_length=255)
     platform = models.CharField(max_length=50, choices=PLATFORM_CHOICES)
     store_url = models.URLField()
