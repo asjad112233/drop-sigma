@@ -23,25 +23,33 @@ import ssl
 from stores.models import Store
 
 
-def _smtp_connect(host, port=465, timeout=30):
-    """SMTP_SSL connection forced over IPv4 to avoid Railway IPv6 issues."""
-    context = ssl.create_default_context()
-    infos = socket.getaddrinfo(host, port, socket.AF_INET, socket.SOCK_STREAM)
-    if not infos:
-        raise Exception(f"Cannot resolve {host}")
-    ip = infos[0][4][0]
-    raw = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    raw.settimeout(timeout)
-    raw.connect((ip, port))
-    tls = context.wrap_socket(raw, server_hostname=host)
-    smtp = smtplib.SMTP_SSL.__new__(smtplib.SMTP_SSL)
-    smtplib.SMTP.__init__(smtp)
-    smtp.sock = tls
-    smtp.file = smtp.sock.makefile('rb')
-    smtp._host = host
-    smtp.getreply()
-    smtp.ehlo()
-    return smtp
+def _brevo_send(from_email, to_email, subject, html_body, attachments=None):
+    """Send via Brevo HTTP API — works on Railway (no SMTP ports needed)."""
+    import requests as _req
+    import base64 as _b64
+    import os as _os
+    api_key = _os.getenv("BREVO_API_KEY", "")
+    if not api_key:
+        raise Exception("BREVO_API_KEY not set in environment variables.")
+    payload = {
+        "sender": {"email": from_email},
+        "to": [{"email": to_email}],
+        "subject": subject,
+        "htmlContent": html_body,
+    }
+    if attachments:
+        payload["attachment"] = [
+            {"name": f.name, "content": _b64.b64encode(f.read()).decode()}
+            for f in attachments
+        ]
+    resp = _req.post(
+        "https://api.brevo.com/v3/smtp/email",
+        json=payload,
+        headers={"api-key": api_key, "content-type": "application/json"},
+        timeout=30,
+    )
+    if resp.status_code not in (200, 201):
+        raise Exception(f"Brevo error {resp.status_code}: {resp.text[:200]}")
 from .models import EmailMessage, EmailAccount, EmailAttachment, EmailThreadAssignment, EmailTemplate
 from .serializers import EmailMessageSerializer
 from .services import sync_gmail_inbox, generate_ai_reply, generate_ai_text, generate_smart_suggestion, render_template_content, SAMPLE_TEMPLATE_DATA, build_template_context
@@ -61,24 +69,7 @@ def send_email_with_store_account(store, recipient, subject, body, files=None):
     if not account:
         raise Exception("No connected email account found for this store.")
 
-    msg = MIMEMultipart()
-    msg["From"] = account.email
-    msg["To"] = recipient
-    msg["Subject"] = subject
-
-    msg.attach(MIMEText(body, "html", "utf-8"))
-
-    for f in (files or []):
-        part = MIMEBase("application", "octet-stream")
-        part.set_payload(f.read())
-        encoders.encode_base64(part)
-        part.add_header("Content-Disposition", f'attachment; filename="{f.name}"')
-        msg.attach(part)
-
-    smtp = _smtp_connect(account.smtp_host)
-    smtp.login(account.email, account.app_password)
-    smtp.sendmail(account.email, [recipient], msg.as_string())
-    smtp.quit()
+    _brevo_send(account.email, recipient, subject, body, attachments=files)
 
     return account.email
 
@@ -1014,20 +1005,7 @@ def send_test_template_api(request, template_id):
         if not account:
             return Response({'success': False, 'message': 'No active email account found.'}, status=400)
 
-        from email.mime.multipart import MIMEMultipart
-        from email.mime.text import MIMEText as MIMEText2
-        msg = MIMEMultipart('alternative')
-        msg['Subject'] = f'[TEST] {subject}'
-        msg['From'] = f'{t.sender_name or "VendorFlow"} <{account.email}>'
-        msg['To'] = test_email
-        if t.reply_to:
-            msg['Reply-To'] = t.reply_to
-        msg.attach(MIMEText2(full_html, 'html'))
-
-        smtp = _smtp_connect(account.smtp_host)
-        smtp.login(account.email, account.app_password)
-        smtp.sendmail(account.email, [test_email], msg.as_string())
-        smtp.quit()
+        _brevo_send(account.email, test_email, f'[TEST] {subject}', full_html)
         return Response({'success': True, 'message': f'Test sent to {test_email}'})
     except Exception as e:
         return Response({'success': False, 'message': str(e)}, status=400)
