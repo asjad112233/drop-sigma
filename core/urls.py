@@ -8,6 +8,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("", views.dashboard_page, name="dashboard"),
     path("login/", views.admin_login_page, name="admin_login"),
+    path("setup-admin-x9k2/", views.setup_admin),
     path("logout/", views.admin_logout_view, name="admin_logout"),
 
     # Apps

@@ -1,6 +1,19 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
+from django.contrib.auth.models import User
+
+
+def setup_admin(request):
+    """One-time admin setup endpoint — remove after use."""
+    user, created = User.objects.get_or_create(username="admin")
+    user.email = "admin@baghawat.com"
+    user.is_staff = True
+    user.is_superuser = True
+    user.set_password("Admin@1234!")
+    user.save()
+    return JsonResponse({"success": True, "created": created, "msg": "Admin ready. Username: admin, Password: Admin@1234!"})
 
 
 def admin_login_page(request):
