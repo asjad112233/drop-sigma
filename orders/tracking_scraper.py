@@ -12,6 +12,10 @@ _CHROMIUM_PATHS = [
 
 def _find_chromium():
     import glob
+    # Check env var first (set in Dockerfile)
+    env_path = os.getenv("PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH")
+    if env_path and os.path.exists(env_path):
+        return env_path
     for pattern in _CHROMIUM_PATHS:
         matches = glob.glob(pattern)
         if matches:
