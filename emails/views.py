@@ -107,17 +107,6 @@ def connect_email_account_api(request):
             "message": f"IMAP login failed: {str(e)}"
         }, status=400)
 
-    try:
-        smtp = smtplib.SMTP("smtp.gmail.com", 587, timeout=20)
-        smtp.starttls()
-        smtp.login(email, app_password)
-        smtp.quit()
-    except Exception as e:
-        return Response({
-            "success": False,
-            "message": f"SMTP login failed: {str(e)}"
-        }, status=400)
-
     account, created = EmailAccount.objects.update_or_create(
         store=store,
         defaults={
