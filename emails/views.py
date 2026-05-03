@@ -52,8 +52,7 @@ def send_email_with_store_account(store, recipient, subject, body, files=None):
         part.add_header("Content-Disposition", f'attachment; filename="{f.name}"')
         msg.attach(part)
 
-    smtp = smtplib.SMTP(account.smtp_host, account.smtp_port)
-    smtp.starttls()
+    smtp = smtplib.SMTP_SSL(account.smtp_host, 465, timeout=30)
     smtp.login(account.email, account.app_password)
     smtp.sendmail(account.email, [recipient], msg.as_string())
     smtp.quit()
@@ -1002,8 +1001,7 @@ def send_test_template_api(request, template_id):
             msg['Reply-To'] = t.reply_to
         msg.attach(MIMEText2(full_html, 'html'))
 
-        smtp = smtplib.SMTP(account.smtp_host, account.smtp_port)
-        smtp.starttls()
+        smtp = smtplib.SMTP_SSL(account.smtp_host, 465, timeout=30)
         smtp.login(account.email, account.app_password)
         smtp.sendmail(account.email, [test_email], msg.as_string())
         smtp.quit()
