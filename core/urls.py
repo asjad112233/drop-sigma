@@ -1,17 +1,14 @@
 from django.contrib import admin
 from django.urls import path, include
-from django.shortcuts import render
 from django.conf import settings
 from django.conf.urls.static import static
-
-
-def dashboard_page(request):
-    return render(request, "dashboard.html")
-
+from . import views
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("", dashboard_page, name="dashboard"),
+    path("", views.dashboard_page, name="dashboard"),
+    path("login/", views.admin_login_page, name="admin_login"),
+    path("logout/", views.admin_logout_view, name="admin_logout"),
 
     # Apps
     path("stores/", include("stores.urls")),

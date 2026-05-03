@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Login — VendorFlow AI</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Inter','Segoe UI',sans-serif;min-height:100vh;background:linear-gradient(135deg,#0f172a 0%,#1e293b 50%,#0f172a 100%);display:flex;align-items:center;justify-content:center;padding:20px;-webkit-font-smoothing:antialiased;}
+.blob{position:fixed;border-radius:50%;filter:blur(80px);opacity:.15;pointer-events:none;}
+.blob1{width:500px;height:500px;background:#2563eb;top:-150px;left:-150px;}
+.blob2{width:400px;height:400px;background:#7c3aed;bottom:-100px;right:-100px;}
+.card{position:relative;z-index:1;background:rgba(255,255,255,.06);backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,.12);border-radius:28px;padding:44px 40px;width:100%;max-width:420px;box-shadow:0 32px 80px rgba(0,0,0,.4);}
+.brand{display:flex;align-items:center;gap:12px;margin-bottom:36px;}
+.brand-logo{width:46px;height:46px;border-radius:14px;background:linear-gradient(135deg,#2563eb,#7c3aed);display:grid;place-items:center;font-weight:800;font-size:18px;color:#fff;box-shadow:0 8px 24px rgba(37,99,235,.4);}
+.brand-name{font-size:16px;font-weight:700;color:#fff;letter-spacing:-.01em;}
+.brand-tag{font-size:11px;color:rgba(255,255,255,.5);margin-top:1px;}
+h1{font-size:26px;font-weight:800;color:#fff;letter-spacing:-.03em;margin-bottom:6px;}
+.sub{font-size:14px;color:rgba(255,255,255,.5);margin-bottom:30px;}
+.field{margin-bottom:16px;}
+.field label{display:block;font-size:12px;font-weight:700;color:rgba(255,255,255,.65);margin-bottom:7px;letter-spacing:.02em;text-transform:uppercase;}
+.field input{width:100%;height:48px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:0 16px;font-size:14px;color:#fff;font-family:inherit;outline:none;transition:.18s;}
+.field input::placeholder{color:rgba(255,255,255,.3);}
+.field input:focus{border-color:rgba(37,99,235,.7);background:rgba(37,99,235,.1);box-shadow:0 0 0 3px rgba(37,99,235,.18);}
+.error{background:rgba(239,68,68,.18);border:1px solid rgba(239,68,68,.3);color:#fca5a5;font-size:13px;font-weight:600;padding:11px 14px;border-radius:10px;margin-bottom:18px;}
+.login-btn{width:100%;height:50px;margin-top:8px;background:linear-gradient(135deg,#2563eb,#7c3aed);border:none;border-radius:14px;color:#fff;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 12px 32px rgba(37,99,235,.35);transition:.18s;}
+.login-btn:hover{opacity:.9;transform:translateY(-2px);}
+.login-btn:active{transform:scale(.98);}
+.divider{display:flex;align-items:center;gap:12px;margin:24px 0;color:rgba(255,255,255,.25);font-size:12px;}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:rgba(255,255,255,.12);}
+.other-links{display:flex;flex-direction:column;gap:8px;}
+.other-link{display:block;text-align:center;padding:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:12px;color:rgba(255,255,255,.6);font-size:13px;font-weight:600;text-decoration:none;transition:.15s;}
+.other-link:hover{background:rgba(255,255,255,.1);color:#fff;}
+</style>
+</head>
+<body>
+<div class="blob blob1"></div>
+<div class="blob blob2"></div>
+<div class="card">
+  <div class="brand">
+    <div class="brand-logo">V</div>
+    <div>
+      <div class="brand-name">VendorFlow AI</div>
+      <div class="brand-tag">Admin Portal</div>
+    </div>
+  </div>
+  <h1>Welcome back</h1>
+  <p class="sub">Sign in to access the admin dashboard</p>
+
+  {% if error %}
+  <div class="error">{{ error }}</div>
+  {% endif %}
+
+  <form method="post">
+    {% csrf_token %}
+    <div class="field">
+      <label>Username</label>
+      <input type="text" name="username" placeholder="Enter username" autofocus required>
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" name="password" placeholder="Enter password" required>
+    </div>
+    <button type="submit" class="login-btn">Sign In →</button>
+  </form>
+
+  <div class="divider">other portals</div>
+  <div class="other-links">
+    <a href="/employee/login/" class="other-link">👥 Team Member Login</a>
+    <a href="/vendor/login/" class="other-link">🏪 Vendor Login</a>
+  </div>
+</div>
+</body>
+</html>
