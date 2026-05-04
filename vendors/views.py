@@ -232,9 +232,11 @@ def approve_tracking_api(request, submission_id):
     order.fulfillment_status = "shipped"
     order.save()
 
-    # Send shipping notification via the store's own email account + HTML template
-    from orders.services import _fire_auto_email
-    _fire_auto_email(order, "shipped")
+    try:
+        from orders.services import _fire_auto_email
+        _fire_auto_email(order, "shipped")
+    except Exception:
+        pass
 
     log_activity(order, "tracking_approved",
                  f"Tracking approved: {sub.tracking_number}. Customer notified.",

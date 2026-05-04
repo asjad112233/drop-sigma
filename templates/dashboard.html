@@ -6563,13 +6563,11 @@ function deleteSelectedOrderFromMenu(){if(openOrderActionMenuId)deleteOrder(open
 async function deleteOrder(orderId){const order=currentOrders.find(o=>String(o.id)===String(orderId));const orderNo=order?(order.external_order_id||order.id):orderId;if(!await _confirm(`Delete order #${orderNo}?`, {title:"Delete Order", icon:"🗑️", danger:true, confirmText:"Delete", details:"This action cannot be undone."}))return;setOrderVendorMessage("Deleting order...");try{const response=await fetch(`/orders/api/delete/${orderId}/`,{method:"DELETE",headers:{"X-CSRFToken":getCSRFToken()}});let data={};try{data=await response.json();}catch(e){}if(!response.ok||data.success===false){setOrderVendorMessage(data.message||"Order delete failed",true);await _alert(data.message||"Order delete failed.", "Error", "❌");return;}setOrderVendorMessage("Order deleted successfully.");await loadOrders();}catch(error){setOrderVendorMessage(error.message,true);await _alert("Order delete failed: "+error.message, "Error", "❌");}}
 
 async function ensureOrderVendorsLoaded(){
-  if(allOrderVendors.length){
-    fillBulkVendorSelect();
-    return;
-  }
-  const response = await fetch("/vendors/api/");
-  const data = await response.json();
-  allOrderVendors = Array.isArray(data) ? data : (data.vendors || data.data || []);
+  try{
+    const response = await fetch("/vendors/api/");
+    const data = await response.json();
+    allOrderVendors = Array.isArray(data) ? data : (data.vendors || data.data || []);
+  }catch(_){}
   fillBulkVendorSelect();
 }
 
@@ -6648,7 +6646,7 @@ function updateSelectedOrdersCount(){
 }
 
 let _poxVaOrderId = null;
-function poxOpenVendorAssign(event, orderId){
+async function poxOpenVendorAssign(event, orderId){
   event.stopPropagation();
   _poxVaOrderId = orderId;
   const pop = document.getElementById("poxVaPopover");
@@ -6656,13 +6654,11 @@ function poxOpenVendorAssign(event, orderId){
   const perm = document.getElementById("poxVaPermanent");
   const btn = document.getElementById("poxVaAssignBtn");
   if(!pop||!sel) return;
-  // reset state
   if(perm) perm.checked = false;
   if(btn){ btn.textContent = "Assign"; btn.disabled = false; }
-  // populate vendors
-  sel.innerHTML = '<option value="">Select vendor…</option>' +
-    (allOrderVendors||[]).map(v=>`<option value="${v.id}">${escapeHtml(v.name||v.email||"Vendor")}</option>`).join("");
-  // anchor to right edge of button, open upward/downward as needed
+
+  // Always fetch fresh vendor list so newly added vendors show up
+  sel.innerHTML = '<option value="">Loading…</option>';
   const rect = event.currentTarget.getBoundingClientRect();
   const ph = 160;
   pop.style.left = "auto";
@@ -6670,6 +6666,15 @@ function poxOpenVendorAssign(event, orderId){
   const top = (rect.bottom + ph > window.innerHeight - 8) ? rect.top - ph - 6 : rect.bottom + 6;
   pop.style.top = Math.max(8, top) + "px";
   pop.style.display = "block";
+
+  try{
+    const r = await fetch("/vendors/api/");
+    const data = await r.json();
+    allOrderVendors = Array.isArray(data) ? data : (data.vendors || data.data || []);
+  }catch(_){}
+
+  sel.innerHTML = '<option value="">Select vendor…</option>' +
+    (allOrderVendors||[]).map(v=>`<option value="${v.id}">${escapeHtml(v.name||v.email||"Vendor")}</option>`).join("");
   sel.focus();
   setTimeout(()=>document.addEventListener("click", _poxVaOutside), 20);
 }
