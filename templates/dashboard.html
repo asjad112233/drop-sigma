@@ -3831,7 +3831,6 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
         <div class="actions" style="margin-top:0;">
           <button class="btn green" onclick="openCreateEmpModal()">+ Create Employee</button>
           <button class="btn" onclick="loadTeamMembers()">↻ Refresh</button>
-          <a href="/employee/login/" target="_blank" class="btn" style="background:#6366f1;color:#fff;border:none;text-decoration:none;">🔗 Employee Portal</a>
         </div>
       </div>
 
@@ -3868,7 +3867,6 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
           <p>Manage vendors, tracking approvals, and login credentials.</p>
         </div>
         <div class="actions" style="margin-top:0;">
-          <a href="/vendor/login/" target="_blank"><button class="btn">Vendor Portal ↗</button></a>
           <button class="btn" onclick="loadVendors()">Refresh</button>
           <button class="btn green" onclick="openVendorModal()">+ Add Vendor</button>
         </div>
@@ -3977,7 +3975,7 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
 
       <!-- Order History Side Panel -->
       <div id="orderHistoryOverlay" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.35);z-index:50000;backdrop-filter:blur(2px);" onclick="closeOrderHistory()"></div>
-      <div id="orderHistoryPanel" style="display:none;position:fixed;top:0;right:0;bottom:0;width:420px;background:var(--vf-surface);z-index:50001;box-shadow:-12px 0 40px rgba(0,0,0,.14);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .25s cubic-bezier(.2,.9,.3,1);">
+      <div id="orderHistoryPanel" style="display:none;position:fixed;top:0;right:0;bottom:0;width:420px;background:var(--vf-surface);z-index:50001;box-shadow:-12px 0 40px rgba(0,0,0,.14);flex-direction:column;transform:translateX(100%);transition:transform .25s cubic-bezier(.2,.9,.3,1);">
         <div style="padding:18px 20px;border-bottom:1px solid var(--vf-line);display:flex;align-items:center;justify-content:space-between;">
           <div>
             <div style="font-size:15px;font-weight:700;" id="ohPanelTitle">Order History</div>
