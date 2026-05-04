@@ -219,30 +219,38 @@ def tracking_queue_api(request):
 
 @api_view(["POST"])
 def approve_tracking_api(request, submission_id):
-    sub = get_object_or_404(VendorTrackingSubmission, id=submission_id)
-    sub.status = "approved"
-    sub.reviewed_at = timezone.now()
-    sub.save()
-
-    order = sub.order
-    order.tracking_number = sub.tracking_number
-    order.tracking_company = sub.courier_name or order.tracking_company
-    order.tracking_url = sub.tracking_url or order.tracking_url
-    order.vendor_status = "approved"
-    order.fulfillment_status = "shipped"
-    order.save()
-
     try:
-        from orders.services import _fire_auto_email
-        _fire_auto_email(order, "shipped")
-    except Exception:
-        pass
+        sub = get_object_or_404(VendorTrackingSubmission, id=submission_id)
+        sub.status = "approved"
+        sub.reviewed_at = timezone.now()
+        sub.save()
 
-    log_activity(order, "tracking_approved",
-                 f"Tracking approved: {sub.tracking_number}. Customer notified.",
-                 actor="Admin")
+        order = sub.order
+        order.tracking_number = sub.tracking_number
+        order.tracking_company = sub.courier_name or order.tracking_company
+        order.tracking_url = sub.tracking_url or order.tracking_url
+        order.vendor_status = "approved"
+        order.fulfillment_status = "shipped"
+        order.save()
 
-    return Response({"success": True, "message": "Tracking approved and customer notified."})
+        try:
+            from orders.services import _fire_auto_email
+            _fire_auto_email(order, "shipped")
+        except Exception:
+            pass
+
+        try:
+            log_activity(order, "tracking_approved",
+                         f"Tracking approved: {sub.tracking_number}. Customer notified.",
+                         actor="Admin")
+        except Exception:
+            pass
+
+        return Response({"success": True, "message": "Tracking approved and customer notified."})
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"approve_tracking_api error: {e}", exc_info=True)
+        return Response({"success": False, "message": str(e)}, status=500)
 
 
 @api_view(["POST"])
@@ -302,44 +310,55 @@ def tracking_queue_settings_api(request):
 @api_view(["POST"])
 def approve_tracking_permanent_api(request, submission_id):
     """Approve this submission AND permanently auto-approve all future submissions for this product."""
-    sub = get_object_or_404(VendorTrackingSubmission, id=submission_id)
+    try:
+        sub = get_object_or_404(VendorTrackingSubmission, id=submission_id)
 
-    # Approve this submission first (reuse existing approve logic)
-    sub.status = "approved"
-    sub.reviewed_at = timezone.now()
-    sub.save()
+        sub.status = "approved"
+        sub.reviewed_at = timezone.now()
+        sub.save()
 
-    order = sub.order
-    from orders.services import COURIER_URL_TEMPLATES, _fire_auto_email
-    if sub.courier_name:
-        tmpl = COURIER_URL_TEMPLATES.get(sub.courier_name.lower())
-        tracking_url = tmpl.format(num=sub.tracking_number) if tmpl else (sub.tracking_url or "")
-    else:
-        tracking_url = sub.tracking_url or ""
+        order = sub.order
+        from orders.services import COURIER_URL_TEMPLATES, _fire_auto_email
+        if sub.courier_name:
+            tmpl = COURIER_URL_TEMPLATES.get(sub.courier_name.lower())
+            tracking_url = tmpl.format(num=sub.tracking_number) if tmpl else (sub.tracking_url or "")
+        else:
+            tracking_url = sub.tracking_url or ""
 
-    order.tracking_number = sub.tracking_number
-    order.tracking_company = sub.courier_name or order.tracking_company
-    order.tracking_url = tracking_url or order.tracking_url
-    order.vendor_status = "approved"
-    order.fulfillment_status = "shipped"
-    order.save()
-    _fire_auto_email(order, "shipped")
-    log_activity(order, "tracking_approved",
-                 f"Tracking approved (permanent): {sub.tracking_number}. Customer notified.",
-                 actor="Admin")
+        order.tracking_number = sub.tracking_number
+        order.tracking_company = sub.courier_name or order.tracking_company
+        order.tracking_url = tracking_url or order.tracking_url
+        order.vendor_status = "approved"
+        order.fulfillment_status = "shipped"
+        order.save()
 
-    # Register product for permanent auto-approve
-    if order.product_id:
-        ProductTrackingAutoApprove.objects.update_or_create(
-            product_id=order.product_id,
-            store=order.store,
-            defaults={"product_name": order.product_name or ""},
-        )
+        try:
+            _fire_auto_email(order, "shipped")
+        except Exception:
+            pass
 
-    return Response({
-        "success": True,
-        "message": "Approved and set to auto-approve for all future orders of this product."
-    })
+        try:
+            log_activity(order, "tracking_approved",
+                         f"Tracking approved (permanent): {sub.tracking_number}. Customer notified.",
+                         actor="Admin")
+        except Exception:
+            pass
+
+        if order.product_id:
+            ProductTrackingAutoApprove.objects.update_or_create(
+                product_id=order.product_id,
+                store=order.store,
+                defaults={"product_name": order.product_name or ""},
+            )
+
+        return Response({
+            "success": True,
+            "message": "Approved and set to auto-approve for all future orders of this product."
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"approve_tracking_permanent_api error: {e}", exc_info=True)
+        return Response({"success": False, "message": str(e)}, status=500)
 
 
 @api_view(["DELETE"])

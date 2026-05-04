@@ -5897,6 +5897,34 @@ function _stopOrdersPolling(){
   _ordersLatestId = null;
 }
 
+let _tqPollTimer = null;
+let _tqLastPendingCount = null;
+
+function _startTqPolling(){
+  if(_tqPollTimer) return;
+  _tqPollTimer = setInterval(async ()=>{
+    try{
+      const storeParam = selectedStoreId ? `&store_id=${selectedStoreId}` : "";
+      const r = await fetch(`/vendors/api/tracking-queue/?status=pending${storeParam}`);
+      const d = await r.json();
+      const count = (d.submissions||[]).length;
+      if(_tqLastPendingCount !== null && count !== _tqLastPendingCount){
+        tqLoad();
+        if(typeof loadTrackingQueue==="function"){
+          const qPanel=document.getElementById("vendorsPanelQueue");
+          if(qPanel&&qPanel.style.display!=="none") loadTrackingQueue("pending");
+        }
+      }
+      _tqLastPendingCount = count;
+    } catch(e){}
+  }, 30000);
+}
+
+function _stopTqPolling(){
+  if(_tqPollTimer){ clearInterval(_tqPollTimer); _tqPollTimer = null; }
+  _tqLastPendingCount = null;
+}
+
 function _showNewOrderToast(count){
   _showNewOrderToast2(`🛒 ${count} new order${count>1?"s":""} arrived!`);
 }
@@ -5908,6 +5936,9 @@ function showSection(section){
   }
   if(section !== "orders"){
     _stopOrdersPolling();
+  }
+  if(section !== "trackingQueue" && section !== "vendors"){
+    _stopTqPolling();
   }
   document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
   document.querySelectorAll(".sidebar button").forEach(b => b.classList.remove("active"));
@@ -5956,12 +5987,14 @@ function showSection(section){
     document.getElementById("navVendors").classList.add("active");
     loadVendors();
     loadTrackingQueue("pending");
+    _startTqPolling();
   }
 
   if(section === "trackingQueue"){
     document.getElementById("trackingQueueSection").classList.add("active");
     document.getElementById("navTrackingQueue").classList.add("active");
     tqLoad();
+    _startTqPolling();
   }
 }
 
@@ -12875,10 +12908,11 @@ async function loadTrackingQueue(status){
 async function approveTracking(submissionId){
   if(!await _confirm("Approve this tracking submission?", {title:"Approve Tracking", icon:"✅", confirmText:"Approve", details:"Customer will be notified by email."}))return;
   try{
-    const r=await fetch(`/vendors/api/tracking-queue/${submissionId}/approve/`,{method:"POST",headers:{"X-CSRFToken":getCSRFToken()}});
-    const d=await r.json();
-    if(d.success){loadTrackingQueue(currentQueueFilter);}
-    else await _alert(d.message||"Failed to approve.", "Error", "❌");
+    const r=await fetch(`/vendors/api/tracking-queue/${submissionId}/approve/`,{method:"POST",headers:{"Content-Type":"application/json","X-CSRFToken":getCSRFToken()}});
+    let d={};
+    try{ d=await r.json(); }catch(_){ d={success:false,message:`Server error (HTTP ${r.status})`}; }
+    if(d.success){ loadTrackingQueue(currentQueueFilter); }
+    else await _alert(d.message||d.detail||`Approve failed (HTTP ${r.status}).`, "Error", "❌");
   }catch(e){await _alert(e.message, "Error", "❌");}
 }
 function promptRejectTracking(submissionId){
@@ -13023,11 +13057,12 @@ async function tqApprove(submissionId){
   if(!await _confirm("Approve this tracking submission?", {title:"Approve Tracking", icon:"✅", confirmText:"Approve", details:"The vendor's tracking info will be applied to the order."})) return;
   try{
     const r = await fetch(`/vendors/api/tracking-queue/${submissionId}/approve/`, {
-      method:"POST", headers:{"X-CSRFToken": getCSRFToken()}
+      method:"POST", headers:{"Content-Type":"application/json","X-CSRFToken": getCSRFToken()}
     });
-    const d = await r.json();
+    let d={};
+    try{ d=await r.json(); }catch(_){ d={success:false,message:`Server error (HTTP ${r.status})`}; }
     if(d.success){ await tqLoad(); }
-    else await _alert(d.message||"Failed to approve.", "Error", "❌");
+    else await _alert(d.message||d.detail||`Approve failed (HTTP ${r.status}).`, "Error", "❌");
   }catch(e){ await _alert(e.message, "Error", "❌"); }
 }
 
@@ -13039,11 +13074,12 @@ async function tqApprovePermanent(submissionId){
   )) return;
   try{
     const r = await fetch(`/vendors/api/tracking-queue/${submissionId}/approve-permanent/`, {
-      method:"POST", headers:{"X-CSRFToken": getCSRFToken()}
+      method:"POST", headers:{"Content-Type":"application/json","X-CSRFToken": getCSRFToken()}
     });
-    const d = await r.json();
+    let d={};
+    try{ d=await r.json(); }catch(_){ d={success:false,message:`Server error (HTTP ${r.status})`}; }
     if(d.success){ await tqLoad(); }
-    else await _alert(d.message||"Failed.", "Error", "❌");
+    else await _alert(d.message||d.detail||`Approve failed (HTTP ${r.status}).`, "Error", "❌");
   }catch(e){ await _alert(e.message, "Error", "❌"); }
 }
 
