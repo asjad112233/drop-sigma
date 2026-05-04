@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Drop Sigma — Ecommerce Operations OS</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --brand:#2563eb;
+  --brand2:#7c3aed;
+  --dark:#0f172a;
+  --mid:#1e293b;
+  --text:#0f172a;
+  --sub:#64748b;
+  --line:#e2e8f0;
+  --surface:#f8fafc;
+}
+html{scroll-behavior:smooth;}
+body{font-family:'Inter','Segoe UI',system-ui,sans-serif;color:var(--text);background:#fff;-webkit-font-smoothing:antialiased;}
+
+/* ── NAV ── */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  background:rgba(255,255,255,.85);
+  backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--line);
+  padding:0 5%;
+  height:64px;display:flex;align-items:center;justify-content:space-between;
+}
+.nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none;}
+.nav-logo-icon{
+  width:36px;height:36px;border-radius:10px;
+  background:linear-gradient(135deg,var(--brand),var(--brand2));
+  display:grid;place-items:center;
+  font-weight:900;font-size:13px;color:#fff;
+  flex-shrink:0;
+}
+.nav-logo-name{font-size:16px;font-weight:800;color:var(--dark);letter-spacing:-.02em;}
+.nav-logo-tag{font-size:10px;color:var(--sub);font-weight:600;margin-top:1px;}
+.nav-links{display:flex;align-items:center;gap:8px;}
+.nav-link{text-decoration:none;font-size:14px;font-weight:600;color:var(--sub);padding:8px 14px;border-radius:10px;transition:.15s;}
+.nav-link:hover{color:var(--dark);background:var(--surface);}
+.nav-btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:10px 20px;border-radius:12px;
+  background:linear-gradient(135deg,var(--brand),var(--brand2));
+  color:#fff;font-size:14px;font-weight:700;
+  text-decoration:none;transition:.18s;
+  box-shadow:0 4px 14px rgba(37,99,235,.3);
+}
+.nav-btn:hover{opacity:.9;transform:translateY(-1px);}
+
+/* ── HERO ── */
+.hero{
+  padding:140px 5% 100px;
+  background:linear-gradient(180deg,#f0f4ff 0%,#fff 100%);
+  text-align:center;
+  position:relative;overflow:hidden;
+}
+.hero-badge{
+  display:inline-flex;align-items:center;gap:6px;
+  background:#eff6ff;color:var(--brand);
+  border:1px solid #bfdbfe;
+  font-size:12px;font-weight:700;
+  padding:6px 14px;border-radius:20px;
+  margin-bottom:24px;letter-spacing:.02em;
+}
+.hero h1{
+  font-size:clamp(38px,6vw,72px);
+  font-weight:900;line-height:1.06;
+  letter-spacing:-.04em;color:var(--dark);
+  max-width:860px;margin:0 auto 20px;
+}
+.hero h1 span{
+  background:linear-gradient(135deg,var(--brand),var(--brand2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+.hero-sub{
+  font-size:clamp(16px,2vw,20px);color:var(--sub);
+  max-width:580px;margin:0 auto 40px;line-height:1.6;font-weight:400;
+}
+.hero-cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+.btn-primary{
+  padding:15px 32px;border-radius:14px;
+  background:linear-gradient(135deg,var(--brand),var(--brand2));
+  color:#fff;font-size:16px;font-weight:800;
+  text-decoration:none;transition:.18s;
+  box-shadow:0 8px 24px rgba(37,99,235,.35);
+}
+.btn-primary:hover{opacity:.9;transform:translateY(-2px);}
+.btn-ghost{
+  padding:15px 32px;border-radius:14px;
+  border:1.5px solid var(--line);
+  color:var(--dark);font-size:16px;font-weight:700;
+  text-decoration:none;transition:.18s;background:#fff;
+}
+.btn-ghost:hover{border-color:var(--brand);color:var(--brand);}
+
+/* Dashboard preview mockup */
+.hero-visual{
+  margin:60px auto 0;max-width:900px;
+  background:var(--dark);border-radius:20px;
+  padding:12px;box-shadow:0 40px 80px rgba(15,23,42,.18);
+  position:relative;
+}
+.hero-visual-bar{
+  display:flex;gap:6px;padding:0 0 10px;
+}
+.hero-visual-dot{width:10px;height:10px;border-radius:50%;}
+.hero-visual-inner{
+  background:#1e293b;border-radius:12px;padding:24px;
+  display:grid;grid-template-columns:repeat(4,1fr);gap:12px;
+}
+.mock-card{
+  background:#0f172a;border-radius:10px;padding:16px;
+  border:1px solid rgba(255,255,255,.06);
+}
+.mock-label{font-size:10px;color:#64748b;font-weight:600;margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;}
+.mock-value{font-size:22px;font-weight:800;color:#fff;}
+.mock-sub{font-size:11px;margin-top:4px;font-weight:600;}
+.green{color:#10b981;} .blue{color:#60a5fa;} .purple{color:#a78bfa;} .orange{color:#fb923c;}
+
+.mock-row{
+  grid-column:1/-1;background:#0f172a;border-radius:10px;
+  padding:12px 16px;display:flex;align-items:center;gap:12px;
+  border:1px solid rgba(255,255,255,.06);
+}
+.mock-row-dot{width:8px;height:8px;border-radius:50%;background:#10b981;flex-shrink:0;}
+.mock-row-text{font-size:12px;color:#94a3b8;flex:1;}
+.mock-row-pill{
+  font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;
+}
+
+/* ── STATS STRIP ── */
+.stats{
+  background:var(--dark);padding:48px 5%;
+  display:flex;gap:0;justify-content:center;flex-wrap:wrap;
+}
+.stat{
+  flex:1;min-width:160px;max-width:220px;
+  text-align:center;padding:0 24px;
+  border-right:1px solid rgba(255,255,255,.08);
+}
+.stat:last-child{border-right:none;}
+.stat-num{font-size:36px;font-weight:900;color:#fff;letter-spacing:-.04em;}
+.stat-num span{
+  background:linear-gradient(135deg,#60a5fa,#a78bfa);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.stat-label{font-size:13px;color:#64748b;margin-top:4px;font-weight:500;}
+
+/* ── SECTION COMMONS ── */
+section{padding:96px 5%;}
+.section-label{
+  display:inline-block;font-size:11px;font-weight:800;
+  letter-spacing:.1em;text-transform:uppercase;
+  color:var(--brand);background:#eff6ff;
+  border:1px solid #bfdbfe;padding:5px 12px;border-radius:20px;
+  margin-bottom:16px;
+}
+.section-title{font-size:clamp(28px,4vw,44px);font-weight:900;letter-spacing:-.03em;color:var(--dark);margin-bottom:12px;}
+.section-sub{font-size:17px;color:var(--sub);line-height:1.6;max-width:540px;}
+.section-head{margin-bottom:56px;}
+
+/* ── FEATURES GRID ── */
+.features-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
+  gap:20px;
+}
+.feature-card{
+  background:#fff;border:1px solid var(--line);
+  border-radius:20px;padding:28px;
+  transition:.2s;cursor:default;
+}
+.feature-card:hover{
+  border-color:var(--brand);
+  box-shadow:0 12px 32px rgba(37,99,235,.1);
+  transform:translateY(-3px);
+}
+.feat-icon{
+  width:48px;height:48px;border-radius:14px;
+  display:grid;place-items:center;font-size:22px;
+  margin-bottom:16px;flex-shrink:0;
+}
+.feat-title{font-size:17px;font-weight:800;color:var(--dark);margin-bottom:8px;}
+.feat-desc{font-size:14px;color:var(--sub);line-height:1.65;}
+.feat-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px;}
+.feat-tag{
+  font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;
+  background:var(--surface);color:var(--sub);border:1px solid var(--line);
+}
+
+/* ── HOW IT WORKS ── */
+.how-bg{background:var(--surface);}
+.steps{display:flex;flex-direction:column;gap:0;max-width:700px;margin:0 auto;}
+.step{
+  display:flex;gap:24px;padding:32px 0;
+  border-bottom:1px solid var(--line);
+}
+.step:last-child{border-bottom:none;}
+.step-num{
+  width:44px;height:44px;border-radius:12px;flex-shrink:0;
+  background:linear-gradient(135deg,var(--brand),var(--brand2));
+  display:grid;place-items:center;
+  font-weight:900;font-size:16px;color:#fff;
+  box-shadow:0 6px 16px rgba(37,99,235,.3);
+}
+.step-content h3{font-size:18px;font-weight:800;color:var(--dark);margin-bottom:6px;}
+.step-content p{font-size:14px;color:var(--sub);line-height:1.65;}
+
+/* ── PORTALS ── */
+.portals-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}
+@media(max-width:768px){.portals-grid{grid-template-columns:1fr;}}
+.portal-card{
+  border-radius:20px;padding:32px;text-align:center;
+  border:1px solid var(--line);transition:.2s;
+}
+.portal-card:hover{transform:translateY(-4px);box-shadow:0 16px 40px rgba(0,0,0,.08);}
+.portal-icon{font-size:36px;margin-bottom:16px;}
+.portal-title{font-size:20px;font-weight:800;color:var(--dark);margin-bottom:8px;}
+.portal-desc{font-size:14px;color:var(--sub);line-height:1.6;margin-bottom:20px;}
+.portal-btn{
+  display:inline-block;padding:10px 22px;border-radius:12px;
+  font-size:14px;font-weight:700;text-decoration:none;transition:.15s;
+}
+
+/* ── CTA BANNER ── */
+.cta-banner{
+  background:linear-gradient(135deg,var(--dark) 0%,#1e1b4b 100%);
+  padding:96px 5%;text-align:center;
+  position:relative;overflow:hidden;
+}
+.cta-banner::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse at 30% 50%,rgba(37,99,235,.25) 0%,transparent 60%),
+             radial-gradient(ellipse at 70% 50%,rgba(124,58,237,.2) 0%,transparent 60%);
+}
+.cta-banner *{position:relative;z-index:1;}
+.cta-banner h2{font-size:clamp(28px,4vw,48px);font-weight:900;color:#fff;letter-spacing:-.03em;margin-bottom:14px;}
+.cta-banner p{font-size:17px;color:rgba(255,255,255,.6);margin-bottom:36px;}
+
+/* ── FOOTER ── */
+footer{background:var(--dark);padding:40px 5%;text-align:center;}
+.footer-logo{display:flex;align-items:center;gap:8px;justify-content:center;margin-bottom:12px;}
+.footer-logo-icon{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--brand),var(--brand2));display:grid;place-items:center;font-size:11px;font-weight:900;color:#fff;}
+.footer-logo-name{font-size:15px;font-weight:800;color:#fff;}
+footer p{font-size:13px;color:#475569;}
+
+@media(max-width:768px){
+  .hero-visual-inner{grid-template-columns:repeat(2,1fr);}
+  .stats{flex-direction:column;align-items:center;}
+  .stat{border-right:none;border-bottom:1px solid rgba(255,255,255,.08);padding:16px 0;}
+}
+</style>
+</head>
+<body>
+
+<!-- ── NAV ── -->
+<nav>
+  <a href="/" class="nav-logo">
+    <div class="nav-logo-icon">DS</div>
+    <div>
+      <div class="nav-logo-name">Drop Sigma</div>
+      <div class="nav-logo-tag">Ecommerce OS</div>
+    </div>
+  </a>
+  <div class="nav-links">
+    <a href="#features" class="nav-link">Features</a>
+    <a href="#how" class="nav-link">How it works</a>
+    <a href="#portals" class="nav-link">Portals</a>
+    <a href="/login/" class="nav-btn">Admin Login →</a>
+  </div>
+</nav>
+
+<!-- ── HERO ── -->
+<div class="hero">
+  <div class="hero-badge">⚡ Built for Dropshipping Businesses</div>
+  <h1>Run Your Entire <span>Ecommerce Operation</span> From One Place</h1>
+  <p class="hero-sub">Multi-store order management, vendor coordination, team workflows, and AI-powered customer email — all in a single dashboard.</p>
+  <div class="hero-cta">
+    <a href="/login/" class="btn-primary">Access Dashboard →</a>
+    <a href="#features" class="btn-ghost">See Features</a>
+  </div>
+
+  <!-- Mock Dashboard Preview -->
+  <div class="hero-visual">
+    <div class="hero-visual-bar">
+      <div class="hero-visual-dot" style="background:#ef4444;"></div>
+      <div class="hero-visual-dot" style="background:#f59e0b;"></div>
+      <div class="hero-visual-dot" style="background:#10b981;"></div>
+    </div>
+    <div class="hero-visual-inner">
+      <div class="mock-card">
+        <div class="mock-label">Total Orders</div>
+        <div class="mock-value">1,284</div>
+        <div class="mock-sub green">↑ 12% this week</div>
+      </div>
+      <div class="mock-card">
+        <div class="mock-label">Pending Assign</div>
+        <div class="mock-value">47</div>
+        <div class="mock-sub orange">Needs attention</div>
+      </div>
+      <div class="mock-card">
+        <div class="mock-label">Tracking Queue</div>
+        <div class="mock-value">8</div>
+        <div class="mock-sub blue">Awaiting approval</div>
+      </div>
+      <div class="mock-card">
+        <div class="mock-label">Emails Inbox</div>
+        <div class="mock-value">23</div>
+        <div class="mock-sub purple">AI drafts ready</div>
+      </div>
+      <div class="mock-row">
+        <div class="mock-row-dot"></div>
+        <div class="mock-row-text">#1047 · Ahmed Al-Rashid · DHL Express → Auto-approved ✓</div>
+        <div class="mock-row-pill" style="background:rgba(16,185,129,.15);color:#10b981;">Shipped</div>
+      </div>
+      <div class="mock-row">
+        <div class="mock-row-dot" style="background:#f59e0b;"></div>
+        <div class="mock-row-text">#1051 · Sara Malik · Tracking submitted — review pending</div>
+        <div class="mock-row-pill" style="background:rgba(245,158,11,.15);color:#f59e0b;">Pending</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── STATS ── -->
+<div class="stats">
+  <div class="stat"><div class="stat-num"><span>∞</span></div><div class="stat-label">Stores connected</div></div>
+  <div class="stat"><div class="stat-num"><span>3</span></div><div class="stat-label">User portals</div></div>
+  <div class="stat"><div class="stat-num"><span>AI</span></div><div class="stat-label">Email drafting</div></div>
+  <div class="stat"><div class="stat-num"><span>0</span></div><div class="stat-label">Manual tracking errors</div></div>
+  <div class="stat"><div class="stat-num"><span>24/7</span></div><div class="stat-label">Live order sync</div></div>
+</div>
+
+<!-- ── FEATURES ── -->
+<section id="features">
+  <div class="section-head">
+    <div class="section-label">Platform Features</div>
+    <h2 class="section-title">Everything you need to scale</h2>
+    <p class="section-sub">From order intake to customer email — Drop Sigma handles every step of your dropshipping workflow.</p>
+  </div>
+
+  <div class="features-grid">
+
+    <div class="feature-card">
+      <div class="feat-icon" style="background:#eff6ff;">🏬</div>
+      <div class="feat-title">Multi-Store Management</div>
+      <div class="feat-desc">Connect unlimited WooCommerce and Shopify stores. View all orders in one unified dashboard with per-store filtering and live sync.</div>
+      <div class="feat-tags"><span class="feat-tag">WooCommerce</span><span class="feat-tag">Shopify</span><span class="feat-tag">Live Webhooks</span></div>
+    </div>
+
+    <div class="feature-card">
+      <div class="feat-icon" style="background:#f0fdf4;">🛒</div>
+      <div class="feat-title">Order Management</div>
+      <div class="feat-desc">View, filter, search and bulk-action all orders. Assign orders to team members or vendors. Track fulfillment and payment status in real time.</div>
+      <div class="feat-tags"><span class="feat-tag">Bulk Actions</span><span class="feat-tag">Smart Filters</span><span class="feat-tag">Order Timeline</span></div>
+    </div>
+
+    <div class="feature-card">
+      <div class="feat-icon" style="background:#faf5ff;">🏭</div>
+      <div class="feat-title">Vendor Management</div>
+      <div class="feat-desc">Assign vendors to specific products or entire stores. Permanent auto-assignment rules mean zero manual effort for repeat products.</div>
+      <div class="feat-tags"><span class="feat-tag">Auto-Assignment</span><span class="feat-tag">Vendor Portal</span><span class="feat-tag">Permissions</span></div>
+    </div>
+
+    <div class="feature-card">
+      <div class="feat-icon" style="background:#fff7ed;">📦</div>
+      <div class="feat-title">Tracking Approval Queue</div>
+      <div class="feat-desc">Vendors submit tracking numbers through their portal. You review and approve — or set auto-approve rules per product for zero friction.</div>
+      <div class="feat-tags"><span class="feat-tag">Review Queue</span><span class="feat-tag">Auto-Approve</span><span class="feat-tag">Courier Links</span></div>
+    </div>
+
+    <div class="feature-card">
+      <div class="feat-icon" style="background:#f0fdf4;">✉️</div>
+      <div class="feat-title">Gmail Inbox Integration</div>
+      <div class="feat-desc">Connect your Gmail via Google OAuth. Read, reply, and manage customer emails directly inside Drop Sigma — no tab switching.</div>
+      <div class="feat-tags"><span class="feat-tag">Gmail OAuth</span><span class="feat-tag">Auto-Sync</span><span class="feat-tag">Send & Receive</span></div>
+    </div>
+
+    <div class="feature-card">
+      <div class="feat-icon" style="background:#fdf4ff;">🤖</div>
+      <div class="feat-title">AI Email Drafts</div>
+      <div class="feat-desc">AI reads the customer's email and your order context to generate a ready-to-send reply. Set tone, language and auto-draft preferences.</div>
+      <div class="feat-tags"><span class="feat-tag">GPT-Powered</span><span class="feat-tag">Order Context</span><span class="feat-tag">Tone Control</span></div>
+    </div>
+
+    <div class="feature-card">
+      <div class="feat-icon" style="background:#fff1f2;">📧</div>
+      <div class="feat-title">Automated Email Templates</div>
+      <div class="feat-desc">Set up triggered emails for order placed, shipped, cancelled, refund and more. Personalise with dynamic variables and send automatically.</div>
+      <div class="feat-tags"><span class="feat-tag">Auto-Trigger</span><span class="feat-tag">Custom Templates</span><span class="feat-tag">Dynamic Vars</span></div>
+    </div>
+
+    <div class="feature-card">
+      <div class="feat-icon" style="background:#f0f9ff;">👥</div>
+      <div class="feat-title">Team Management</div>
+      <div class="feat-desc">Create team member accounts with role-based permissions. Assign orders directly to team members and track their workload.</div>
+      <div class="feat-tags"><span class="feat-tag">Role Permissions</span><span class="feat-tag">Order Assignment</span><span class="feat-tag">Employee Portal</span></div>
+    </div>
+
+    <div class="feature-card">
+      <div class="feat-icon" style="background:#f0fdf4;">📊</div>
+      <div class="feat-title">Overview Dashboard</div>
+      <div class="feat-desc">KPI cards, store health checks, order stats, revenue, and live activity feed — everything at a glance when you log in.</div>
+      <div class="feat-tags"><span class="feat-tag">KPI Cards</span><span class="feat-tag">Store Health</span><span class="feat-tag">Activity Log</span></div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ── HOW IT WORKS ── -->
+<section id="how" class="how-bg">
+  <div style="max-width:700px;margin:0 auto;">
+    <div class="section-head" style="text-align:center;">
+      <div class="section-label">How It Works</div>
+      <h2 class="section-title">From order to delivery — fully managed</h2>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <h3>Connect Your Stores</h3>
+          <p>Link your WooCommerce or Shopify stores. Orders sync in real time via webhooks — no manual imports, no delays.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <h3>Assign Vendors & Team Members</h3>
+          <p>Set permanent product-to-vendor rules so new orders are auto-assigned. Or manually assign any order to a vendor or team member.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <h3>Vendor Submits Tracking</h3>
+          <p>Your vendor logs into their portal and submits a tracking number. You review it in the Tracking Queue and approve with one click.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-content">
+          <h3>Customer Gets Notified</h3>
+          <p>The moment tracking is approved, an automated email fires to the customer with their shipment details — using your branded template.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-content">
+          <h3>Handle Support with AI</h3>
+          <p>Customer replies land in your Gmail inbox inside Drop Sigma. AI drafts a context-aware reply in seconds — you just review and send.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── PORTALS ── -->
+<section id="portals">
+  <div class="section-head" style="text-align:center;">
+    <div class="section-label">Three Portals, One System</div>
+    <h2 class="section-title">The right access for every role</h2>
+    <p class="section-sub" style="margin:0 auto;">Everyone on your team gets their own login — with exactly the access they need.</p>
+  </div>
+  <div class="portals-grid">
+
+    <div class="portal-card" style="background:linear-gradient(135deg,#eff6ff,#f5f3ff);">
+      <div class="portal-icon">🛡️</div>
+      <div class="portal-title">Admin Portal</div>
+      <div class="portal-desc">Full control over orders, vendors, team, email inbox, and all settings. The command centre for your operation.</div>
+      <a href="/login/" class="portal-btn" style="background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;">Admin Login →</a>
+    </div>
+
+    <div class="portal-card" style="background:linear-gradient(135deg,#f0fdf4,#ecfdf5);">
+      <div class="portal-icon">🏪</div>
+      <div class="portal-title">Vendor Portal</div>
+      <div class="portal-desc">Vendors see only their assigned orders. They submit tracking numbers and view approval status — nothing more, nothing less.</div>
+      <a href="/login/?tab=vendor" class="portal-btn" style="background:linear-gradient(135deg,#059669,#10b981);color:#fff;">Vendor Login →</a>
+    </div>
+
+    <div class="portal-card" style="background:linear-gradient(135deg,#faf5ff,#f5f3ff);">
+      <div class="portal-icon">👥</div>
+      <div class="portal-title">Team Portal</div>
+      <div class="portal-desc">Team members see their assigned orders with permission-gated actions. Perfect for support and operations staff.</div>
+      <a href="/login/?tab=team" class="portal-btn" style="background:linear-gradient(135deg,#6d28d9,#7c3aed);color:#fff;">Team Login →</a>
+    </div>
+
+  </div>
+</section>
+
+<!-- ── CTA BANNER ── -->
+<div class="cta-banner">
+  <h2>Ready to streamline your operation?</h2>
+  <p>Log in and start managing your stores, vendors, and customers — all from one place.</p>
+  <a href="/login/" class="btn-primary" style="font-size:17px;padding:16px 36px;">Access Dashboard →</a>
+</div>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <div class="footer-logo">
+    <div class="footer-logo-icon">DS</div>
+    <div class="footer-logo-name">Drop Sigma</div>
+  </div>
+  <p>© 2025 Drop Sigma · Ecommerce Operations OS</p>
+</footer>
+
+</body>
+</html>
