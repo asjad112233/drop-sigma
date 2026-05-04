@@ -1,5 +1,7 @@
 from django.urls import path
 from .views import (
+    gmail_oauth_start_api,
+    gmail_oauth_callback,
     emails_list_api,
     email_detail_api,
     generate_ai_draft_api,
@@ -94,4 +96,8 @@ urlpatterns = [
 
     # Auto Email Toggle
     path("api/auto-email/", auto_email_toggle_api, name="auto_email_toggle_api"),
+
+    # Gmail OAuth2
+    path("oauth/start/", gmail_oauth_start_api, name="gmail_oauth_start"),
+    path("oauth/callback/", gmail_oauth_callback, name="gmail_oauth_callback"),
 ]

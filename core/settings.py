@@ -137,3 +137,8 @@ IMAP_PASSWORD = os.getenv("IMAP_PASSWORD")
 
 # Public URL for WooCommerce webhooks/callbacks
 WOOCOMMERCE_BASE_URL = os.getenv("WOOCOMMERCE_BASE_URL", "")
+
+# Google OAuth2 for Gmail
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
+GOOGLE_OAUTH_REDIRECT_URI = os.getenv("GOOGLE_OAUTH_REDIRECT_URI", "http://127.0.0.1:8000/emails/oauth/callback/")

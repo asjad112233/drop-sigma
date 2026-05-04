@@ -4,10 +4,10 @@ from orders.models import Order
 
 
 class EmailAccount(models.Model):
-    store = models.OneToOneField(
+    store = models.ForeignKey(
         Store,
         on_delete=models.CASCADE,
-        related_name="email_account"
+        related_name="email_accounts"
     )
 
     email = models.EmailField()
@@ -18,6 +18,9 @@ class EmailAccount(models.Model):
 
     smtp_host = models.CharField(max_length=255, default="smtp.gmail.com")
     smtp_port = models.IntegerField(default=587)
+
+    auth_type = models.CharField(max_length=20, default="password")  # 'password' or 'oauth'
+    oauth_refresh_token = models.TextField(blank=True, default="")
 
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)

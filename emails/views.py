@@ -1,3 +1,6 @@
+import os
+import requests
+
 from django.conf import settings
 from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
@@ -21,6 +24,54 @@ import socket
 import ssl
 
 from stores.models import Store
+
+
+def _get_gmail_access_token(refresh_token):
+    from django.conf import settings as _settings
+    client_id = getattr(_settings, "GOOGLE_CLIENT_ID", "") or os.getenv("GOOGLE_CLIENT_ID", "")
+    client_secret = getattr(_settings, "GOOGLE_CLIENT_SECRET", "") or os.getenv("GOOGLE_CLIENT_SECRET", "")
+    resp = requests.post("https://oauth2.googleapis.com/token", data={
+        "grant_type": "refresh_token",
+        "refresh_token": refresh_token,
+        "client_id": client_id,
+        "client_secret": client_secret,
+    }, timeout=15)
+    if not resp.ok:
+        raise Exception(f"Token refresh failed: {resp.text[:200]}")
+    return resp.json()["access_token"]
+
+
+def _gmail_api_send(account, recipient, subject, html_body, files=None):
+    import base64 as _b64
+    from email.mime.multipart import MIMEMultipart as _MMP
+    from email.mime.text import MIMEText as _MMT
+    from email.mime.base import MIMEBase as _MMB
+    from email import encoders as _enc
+
+    access_token = _get_gmail_access_token(account.oauth_refresh_token)
+
+    msg = _MMP()
+    msg["From"] = account.email
+    msg["To"] = recipient
+    msg["Subject"] = subject
+    msg.attach(_MMT(html_body, "html"))
+
+    for f in (files or []):
+        part = _MMB("application", "octet-stream")
+        part.set_payload(f.read())
+        _enc.encode_base64(part)
+        part.add_header("Content-Disposition", f'attachment; filename="{f.name}"')
+        msg.attach(part)
+
+    raw = _b64.urlsafe_b64encode(msg.as_bytes()).decode()
+    resp = requests.post(
+        "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
+        headers={"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"},
+        json={"raw": raw},
+        timeout=30,
+    )
+    if not resp.ok:
+        raise Exception(f"Gmail API error: {resp.text[:200]}")
 
 
 def _brevo_send(from_email, to_email, subject, html_body, attachments=None):
@@ -69,7 +120,10 @@ def send_email_with_store_account(store, recipient, subject, body, files=None):
     if not account:
         raise Exception("No connected email account found for this store.")
 
-    _brevo_send(account.email, recipient, subject, body, attachments=files)
+    if account.auth_type == "oauth" and account.oauth_refresh_token:
+        _gmail_api_send(account, recipient, subject, body, files=files)
+    else:
+        _brevo_send(account.email, recipient, subject, body, attachments=files)
 
     return account.email
 
@@ -122,8 +176,8 @@ def connect_email_account_api(request):
 
     account, created = EmailAccount.objects.update_or_create(
         store=store,
+        email=email,
         defaults={
-            "email": email,
             "app_password": app_password,
             "imap_host": "imap.gmail.com",
             "imap_port": 993,
@@ -142,22 +196,104 @@ def connect_email_account_api(request):
 
 
 @api_view(["GET"])
+def gmail_oauth_start_api(request):
+    import urllib.parse
+    from django.conf import settings as _settings
+    store_id = request.GET.get("store_id")
+    client_id = getattr(_settings, "GOOGLE_CLIENT_ID", "") or os.getenv("GOOGLE_CLIENT_ID", "")
+    redirect_uri = getattr(_settings, "GOOGLE_OAUTH_REDIRECT_URI", "") or os.getenv("GOOGLE_OAUTH_REDIRECT_URI", "http://127.0.0.1:8000/emails/oauth/callback/")
+    if not client_id:
+        return Response({"success": False, "message": "Google OAuth not configured."}, status=500)
+    params = {
+        "client_id": client_id,
+        "redirect_uri": redirect_uri,
+        "response_type": "code",
+        "scope": "https://mail.google.com/ email profile",
+        "access_type": "offline",
+        "prompt": "consent",
+        "state": store_id,
+    }
+    url = "https://accounts.google.com/o/oauth2/v2/auth?" + urllib.parse.urlencode(params)
+    return Response({"success": True, "url": url})
+
+
+def gmail_oauth_callback(request):
+    from django.shortcuts import redirect as _redirect
+    from django.conf import settings as _settings
+    code = request.GET.get("code")
+    store_id = request.GET.get("state")
+    if request.GET.get("error") or not code:
+        return _redirect("/?gmail_error=denied")
+
+    client_id = getattr(_settings, "GOOGLE_CLIENT_ID", "") or os.getenv("GOOGLE_CLIENT_ID", "")
+    client_secret = getattr(_settings, "GOOGLE_CLIENT_SECRET", "") or os.getenv("GOOGLE_CLIENT_SECRET", "")
+    redirect_uri = getattr(_settings, "GOOGLE_OAUTH_REDIRECT_URI", "") or os.getenv("GOOGLE_OAUTH_REDIRECT_URI", "http://127.0.0.1:8000/emails/oauth/callback/")
+
+    token_resp = requests.post("https://oauth2.googleapis.com/token", data={
+        "grant_type": "authorization_code",
+        "code": code,
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "redirect_uri": redirect_uri,
+    }, timeout=15)
+
+    if not token_resp.ok:
+        return _redirect("/?gmail_error=auth_failed")
+
+    tokens = token_resp.json()
+    refresh_token = tokens.get("refresh_token")
+    access_token = tokens.get("access_token")
+    if not refresh_token:
+        return _redirect("/?gmail_error=no_refresh_token")
+
+    user_resp = requests.get(
+        "https://www.googleapis.com/oauth2/v1/userinfo",
+        headers={"Authorization": f"Bearer {access_token}"},
+        timeout=10,
+    )
+    email = user_resp.json().get("email", "")
+
+    store = Store.objects.filter(id=store_id).first()
+    if not store:
+        return _redirect("/?gmail_error=store_not_found")
+
+    EmailAccount.objects.update_or_create(
+        store=store,
+        email=email,
+        defaults={
+            "app_password": "",
+            "oauth_refresh_token": refresh_token,
+            "auth_type": "oauth",
+            "imap_host": "imap.gmail.com",
+            "imap_port": 993,
+            "smtp_host": "smtp.gmail.com",
+            "smtp_port": 465,
+            "is_active": True,
+        },
+    )
+    return _redirect("/?gmail_connected=1")
+
+
+@api_view(["GET"])
 def connected_email_api(request):
     store_id = request.GET.get("store_id")
 
-    account = EmailAccount.objects.filter(store_id=store_id, is_active=True).first()
+    accounts = EmailAccount.objects.filter(store_id=store_id, is_active=True)
 
-    if not account:
+    if not accounts.exists():
         return Response({
             "success": True,
             "connected": False,
-            "email": None
+            "email": None,
+            "accounts": []
         })
 
+    accounts_list = [{"id": a.id, "email": a.email, "auth_type": a.auth_type} for a in accounts]
     return Response({
         "success": True,
         "connected": True,
-        "email": account.email
+        "email": accounts_list[0]["email"],
+        "accounts": accounts_list
     })
 
 
@@ -175,13 +311,19 @@ _SETTINGS_FIELDS = [
 @permission_classes([AllowAny])
 def email_settings_api(request):
     store_id = request.GET.get("store_id")
-    account = EmailAccount.objects.filter(store_id=store_id).first()
+    account_id = request.GET.get("account_id")
+
+    if account_id:
+        account = EmailAccount.objects.filter(id=account_id, store_id=store_id).first()
+    else:
+        account = EmailAccount.objects.filter(store_id=store_id).first()
 
     if not account:
         return Response({"success": True, "connected": False})
 
     s = {f: getattr(account, f) for f in _SETTINGS_FIELDS}
     s["email"] = account.email
+    s["account_id"] = account.id
     s["imap_host"] = account.imap_host
     s["is_active"] = account.is_active
     s["last_synced"] = account.last_synced.isoformat() if account.last_synced else None
@@ -195,9 +337,14 @@ def email_settings_api(request):
 @permission_classes([AllowAny])
 def email_settings_update_api(request):
     store_id = request.data.get("store_id")
+    account_id = request.data.get("account_id")
     new_settings = request.data.get("settings", {})
 
-    account = EmailAccount.objects.filter(store_id=store_id).first()
+    if account_id:
+        account = EmailAccount.objects.filter(id=account_id, store_id=store_id).first()
+    else:
+        account = EmailAccount.objects.filter(store_id=store_id).first()
+
     if not account:
         return Response({"success": False, "message": "No email account found."}, status=404)
 
@@ -215,24 +362,27 @@ def email_settings_update_api(request):
 @permission_classes([AllowAny])
 def disconnect_email_account_api(request):
     store_id = request.data.get("store_id")
+    account_id = request.data.get("account_id")
 
     if not store_id:
         return Response({"success": False, "message": "store_id required."}, status=400)
 
-    account = EmailAccount.objects.filter(store_id=store_id).first()
+    if account_id:
+        account = EmailAccount.objects.filter(id=account_id, store_id=store_id).first()
+    else:
+        account = EmailAccount.objects.filter(store_id=store_id).first()
+
     if not account:
         return Response({"success": False, "message": "No email account found."}, status=404)
 
-    # Delete all email messages and attachments for this store
-    EmailMessage.objects.filter(store_id=store_id).delete()
-
-    # Delete thread assignments
-    EmailThreadAssignment.objects.filter(store_id=store_id).delete()
-
-    # Delete the account itself
     account.delete()
 
-    return Response({"success": True, "message": "Email account and all data removed."})
+    # If no more accounts for this store, clean up messages/threads
+    if not EmailAccount.objects.filter(store_id=store_id).exists():
+        EmailMessage.objects.filter(store_id=store_id).delete()
+        EmailThreadAssignment.objects.filter(store_id=store_id).delete()
+
+    return Response({"success": True, "message": "Email account disconnected."})
 
 
 @csrf_exempt

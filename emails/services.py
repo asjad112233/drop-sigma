@@ -1,6 +1,8 @@
 import re
 import imaplib
 import email
+import os
+import requests as _requests
 
 import anthropic
 from email.header import decode_header
@@ -624,16 +626,145 @@ def render_template_content(text, context=None):
     return re.sub(r'\{\{([^}#/][^}]*)\}\}', replacer, text)
 
 
+def _imap_connect(account):
+    """Connect to IMAP using app password or OAuth2 XOAUTH2."""
+    mail = imaplib.IMAP4_SSL(account.imap_host, account.imap_port)
+    if getattr(account, 'auth_type', 'password') == 'oauth' and account.oauth_refresh_token:
+        client_id = getattr(settings, 'GOOGLE_CLIENT_ID', '') or os.getenv("GOOGLE_CLIENT_ID", "")
+        client_secret = getattr(settings, 'GOOGLE_CLIENT_SECRET', '') or os.getenv("GOOGLE_CLIENT_SECRET", "")
+        resp = _requests.post("https://oauth2.googleapis.com/token", data={
+            "grant_type": "refresh_token",
+            "refresh_token": account.oauth_refresh_token,
+            "client_id": client_id,
+            "client_secret": client_secret,
+        }, timeout=15)
+        token_data = resp.json()
+        access_token = token_data.get("access_token", "")
+        if not access_token:
+            raise Exception(f"OAuth token refresh failed: {token_data.get('error', 'unknown')} - {token_data.get('error_description', '')}")
+        auth_string = f"user={account.email}\x01auth=Bearer {access_token}\x01\x01"
+        mail.authenticate("XOAUTH2", lambda x: auth_string.encode())
+    else:
+        mail.login(account.email, account.app_password)
+    return mail
+
+
 def mark_email_read_in_gmail(account, gmail_uid):
     """Mark a specific email as read (\Seen) in Gmail via IMAP."""
     try:
-        mail = imaplib.IMAP4_SSL(account.imap_host, account.imap_port)
-        mail.login(account.email, account.app_password)
+        mail = _imap_connect(account)
         mail.select(account.sync_folder or "INBOX")
         mail.store(str(gmail_uid).encode(), "+FLAGS", "\\Seen")
         mail.logout()
     except Exception as e:
         print(f"Gmail mark-read error: {e}")
+
+
+def _gmail_api_get_access_token(account):
+    """Refresh and return a Gmail API access token for an OAuth account."""
+    client_id = getattr(settings, 'GOOGLE_CLIENT_ID', '') or os.getenv("GOOGLE_CLIENT_ID", "")
+    client_secret = getattr(settings, 'GOOGLE_CLIENT_SECRET', '') or os.getenv("GOOGLE_CLIENT_SECRET", "")
+    resp = _requests.post("https://oauth2.googleapis.com/token", data={
+        "grant_type": "refresh_token",
+        "refresh_token": account.oauth_refresh_token,
+        "client_id": client_id,
+        "client_secret": client_secret,
+    }, timeout=15)
+    data = resp.json()
+    access_token = data.get("access_token", "")
+    if not access_token:
+        raise Exception(f"Token refresh failed: {data.get('error', 'unknown')}")
+    return access_token
+
+
+def _sync_gmail_api(account, store):
+    """Sync inbox using Gmail HTTP API (for OAuth accounts)."""
+    import base64
+    from email import message_from_bytes
+
+    access_token = _gmail_api_get_access_token(account)
+    headers = {"Authorization": f"Bearer {access_token}"}
+    base_url = "https://gmail.googleapis.com/gmail/v1/users/me"
+    fetch_limit = max(10, min(account.fetch_limit or 30, 100))
+
+    # List messages in INBOX
+    list_resp = _requests.get(
+        f"{base_url}/messages",
+        headers=headers,
+        params={"labelIds": "INBOX", "maxResults": fetch_limit},
+        timeout=15,
+    )
+    if not list_resp.ok:
+        raise Exception(f"Gmail API list failed: {list_resp.text[:200]}")
+
+    messages = list_resp.json().get("messages", [])
+    saved_count = 0
+
+    for msg_ref in messages:
+        msg_id = msg_ref["id"]
+
+        # Check already saved (use gmail_uid = message id)
+        if EmailMessage.objects.filter(store=store, gmail_uid=msg_id).exists():
+            continue
+
+        # Fetch full message in RAW format
+        msg_resp = _requests.get(
+            f"{base_url}/messages/{msg_id}",
+            headers=headers,
+            params={"format": "raw"},
+            timeout=15,
+        )
+        if not msg_resp.ok:
+            continue
+
+        msg_data = msg_resp.json()
+        raw_b64 = msg_data.get("raw", "")
+        raw_bytes = base64.urlsafe_b64decode(raw_b64 + "==")
+
+        label_ids = msg_data.get("labelIds", [])
+        is_read = "UNREAD" not in label_ids
+
+        msg = message_from_bytes(raw_bytes)
+        subject = clean_text(msg.get("Subject"))
+        sender = clean_text(msg.get("From"))
+        recipient = clean_text(msg.get("To")) or account.email
+        body = extract_body(msg)
+
+        category = classify_email(subject, body)
+        linked_order = find_order_from_email(store, subject, body)
+
+        email_obj = EmailMessage.objects.create(
+            store=store,
+            order=linked_order,
+            sender=sender,
+            recipient=recipient,
+            subject=subject,
+            body=body,
+            status="drafted",
+            category=category,
+            is_read=is_read,
+            gmail_uid=msg_id,
+            raw_data={
+                "source": "gmail_api",
+                "connected_email": account.email,
+                "gmail_uid": msg_id,
+                "is_read": is_read,
+            }
+        )
+
+        save_attachments(email_obj, msg)
+
+        if account.ai_auto_draft:
+            email_obj.ai_draft = generate_ai_reply(email_obj, account)
+        else:
+            email_obj.ai_draft = quick_reply(email_obj.body) or generate_auto_draft(email_obj)
+        email_obj.save()
+
+        saved_count += 1
+
+    account.last_synced = timezone.now()
+    account.save(update_fields=["last_synced"])
+    return saved_count
 
 
 def sync_gmail_inbox(store_id=2):
@@ -646,114 +777,94 @@ def sync_gmail_inbox(store_id=2):
             "count": 0
         }
 
-    account = EmailAccount.objects.filter(store=store, is_active=True).first()
+    accounts = EmailAccount.objects.filter(store=store, is_active=True)
 
-    if not account:
+    if not accounts.exists():
         return {
             "success": False,
             "message": "No email connected for this store.",
             "count": 0
         }
 
-    try:
-        mail = imaplib.IMAP4_SSL(account.imap_host, account.imap_port)
-        mail.login(account.email, account.app_password)
-        mail.select(account.sync_folder or "INBOX")
+    total_saved = 0
+    errors = []
 
-        status, messages = mail.search(None, "ALL")
+    for account in accounts:
+        # OAuth accounts use Gmail API instead of IMAP
+        if getattr(account, 'auth_type', 'password') == 'oauth' and account.oauth_refresh_token:
+            try:
+                total_saved += _sync_gmail_api(account, store)
+            except Exception as e:
+                errors.append(f"{account.email}: {str(e)}")
+            continue
 
-        if status != "OK" or not messages or not messages[0]:
+        try:
+            mail = _imap_connect(account)
+            mail.select(account.sync_folder or "INBOX")
+            status, messages = mail.search(None, "ALL")
+
+            if status == "OK" and messages and messages[0]:
+                fetch_limit = max(10, min(account.fetch_limit or 30, 100))
+                email_ids = messages[0].split()[-fetch_limit:]
+
+                for num in email_ids:
+                    status, data = mail.fetch(num, "(RFC822 FLAGS)")
+                    if status != "OK" or not data or not data[0]:
+                        continue
+
+                    flags_data = data[0][0] if isinstance(data[0], tuple) else data[0]
+                    is_read = b"\\Seen" in flags_data
+                    msg = email.message_from_bytes(data[0][1])
+
+                    subject = clean_text(msg.get("Subject"))
+                    sender = clean_text(msg.get("From"))
+                    recipient = clean_text(msg.get("To")) or account.email
+                    body = extract_body(msg)
+                    category = classify_email(subject, body)
+                    linked_order = find_order_from_email(store, subject, body)
+                    gmail_uid = str(num.decode() if isinstance(num, bytes) else num) + "_" + account.email
+
+                    if not EmailMessage.objects.filter(store=store, gmail_uid=gmail_uid).exists():
+                        email_obj = EmailMessage.objects.create(
+                            store=store,
+                            order=linked_order,
+                            sender=sender,
+                            recipient=recipient,
+                            subject=subject,
+                            body=body,
+                            status="drafted",
+                            category=category,
+                            is_read=is_read,
+                            gmail_uid=gmail_uid,
+                            raw_data={
+                                "source": "gmail_imap",
+                                "mailbox": "INBOX",
+                                "connected_email": account.email,
+                                "gmail_uid": gmail_uid,
+                                "is_read": is_read,
+                            }
+                        )
+                        save_attachments(email_obj, msg)
+                        if account.ai_auto_draft:
+                            email_obj.ai_draft = generate_ai_reply(email_obj, account)
+                        else:
+                            email_obj.ai_draft = quick_reply(email_obj.body) or generate_auto_draft(email_obj)
+                        email_obj.save()
+                        total_saved += 1
+                    else:
+                        EmailMessage.objects.filter(store=store, gmail_uid=gmail_uid).update(is_read=is_read)
+
             mail.logout()
             account.last_synced = timezone.now()
             account.save(update_fields=["last_synced"])
-            return {
-                "success": True,
-                "message": "Inbox synced: 0 new emails",
-                "count": 0
-            }
+        except Exception as e:
+            errors.append(f"{account.email}: {str(e)}")
 
-        fetch_limit = max(10, min(account.fetch_limit or 30, 100))
-        email_ids = messages[0].split()[-fetch_limit:]
-        saved_count = 0
+    if errors and total_saved == 0:
+        return {"success": False, "message": "; ".join(errors), "count": 0}
 
-        for num in email_ids:
-            status, data = mail.fetch(num, "(RFC822 FLAGS)")
-
-            if status != "OK" or not data or not data[0]:
-                continue
-
-            flags_data = data[0][0] if isinstance(data[0], tuple) else data[0]
-            is_read = b"\\Seen" in flags_data
-
-            msg = email.message_from_bytes(data[0][1])
-
-            subject = clean_text(msg.get("Subject"))
-            sender = clean_text(msg.get("From"))
-            recipient = clean_text(msg.get("To")) or account.email
-            body = extract_body(msg)
-
-            category = classify_email(subject, body)
-            linked_order = find_order_from_email(store, subject, body)
-            gmail_uid = str(num.decode() if isinstance(num, bytes) else num)
-
-            exists = EmailMessage.objects.filter(
-                store=store,
-                gmail_uid=gmail_uid,
-                recipient=recipient
-            ).exists()
-
-            if not exists:
-                email_obj = EmailMessage.objects.create(
-                    store=store,
-                    order=linked_order,
-                    sender=sender,
-                    recipient=recipient,
-                    subject=subject,
-                    body=body,
-                    status="drafted",
-                    category=category,
-                    is_read=is_read,
-                    gmail_uid=gmail_uid,
-                    raw_data={
-                        "source": "gmail_imap",
-                        "mailbox": "INBOX",
-                        "connected_email": account.email,
-                        "gmail_uid": gmail_uid,
-                        "is_read": is_read,
-                    }
-                )
-
-                save_attachments(email_obj, msg)
-
-                if account.ai_auto_draft:
-                    email_obj.ai_draft = generate_ai_reply(email_obj, account)
-                else:
-                    email_obj.ai_draft = quick_reply(email_obj.body) or generate_auto_draft(email_obj)
-                email_obj.save()
-
-                saved_count += 1
-
-            else:
-                EmailMessage.objects.filter(
-                    store=store,
-                    gmail_uid=gmail_uid,
-                    recipient=recipient
-                ).update(is_read=is_read)
-
-        mail.logout()
-
-        account.last_synced = timezone.now()
-        account.save(update_fields=["last_synced"])
-
-        return {
-            "success": True,
-            "message": f"Inbox synced: {saved_count} new emails",
-            "count": saved_count
-        }
-
-    except Exception as e:
-        return {
-            "success": False,
-            "message": str(e),
-            "count": 0
-        }
+    return {
+        "success": True,
+        "message": f"Inbox synced: {total_saved} new emails" + (f" (errors: {'; '.join(errors)})" if errors else ""),
+        "count": total_saved
+    }

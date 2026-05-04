@@ -4850,25 +4850,13 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
           <div class="em-settings-card">
             <div class="em-settings-card-head">
               <div>
-                <h3>📬 Connected Email Account</h3>
-                <p>The Gmail inbox connected to this store</p>
+                <h3>📬 Connected Email Accounts</h3>
+                <p>Gmail inboxes connected to this store</p>
               </div>
-              <button class="em-settings-btn-primary" onclick="openConnectEmailModal()">+ Connect / Change</button>
+              <button class="em-settings-btn-primary" onclick="openConnectEmailModal()">+ Add Inbox</button>
             </div>
             <div id="settingsAccountRow">
-              <div class="em-stg-acc-row" id="stgAccRowInner" style="display:none;">
-                <div class="em-stg-acc-av" id="stgAccAv">—</div>
-                <div class="em-stg-acc-info">
-                  <div class="em-stg-acc-email" id="stgAccEmail"></div>
-                  <div class="em-stg-acc-meta" id="stgAccMeta"></div>
-                </div>
-                <span class="em-stg-acc-status" id="stgAccStatus">Active</span>
-                <div class="em-stg-acc-actions">
-                  <button class="em-stg-acc-btn" id="stgBtnEdit" onclick="openConnectEmailModal()">✏️ Edit</button>
-                  <button class="em-stg-acc-btn em-stg-acc-btn-reconnect" id="stgBtnReconnect" style="display:none;" onclick="openConnectEmailModal()">🔄 Reconnect</button>
-                  <button class="em-stg-acc-btn em-stg-acc-btn-remove" onclick="confirmRemoveEmailAccount()">🗑 Remove</button>
-                </div>
-              </div>
+              <div id="stgAccList"></div>
               <div class="em-stg-acc-empty" id="stgAccEmpty" style="display:none;">
                 <p>No email account connected yet.</p>
                 <button class="em-stg-acc-btn" onclick="openConnectEmailModal()">+ Connect Email</button>
@@ -5762,26 +5750,20 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
       <button class="btn red" onclick="closeConnectEmailModal()">Close</button>
     </div>
 
-    <div class="connect-email-help">
-      <h3 style="margin:0 0 10px;font-size:15px;color:#0f172a;">How to Generate Gmail App Password?</h3>
-
-      <div style="background:#fff7ed;border:1px solid #fed7aa;padding:10px;border-radius:10px;margin-bottom:12px;font-size:13px;color:#9a3412;">
-        ⚠️ Enable <b>2-Step Verification</b> first, otherwise App Password will not work.
+    <!-- Gmail OAuth Option (Recommended) -->
+    <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:12px;padding:16px;margin-bottom:16px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <img src="https://www.gstatic.com/images/branding/product/1x/gmail_2020q4_32dp.png" style="width:24px;height:24px;">
+        <strong style="font-size:14px;color:#15803d;">Connect Gmail (Recommended)</strong>
+        <span style="background:#dcfce7;color:#166534;font-size:11px;padding:2px 8px;border-radius:20px;font-weight:700;">FREE • No setup required</span>
       </div>
-
-      <ol style="margin:0 0 12px 18px;padding:0;font-size:13px;color:#475569;line-height:1.65;">
-        <li>Go to your Google Account</li>
-        <li>Open <b>Security</b></li>
-        <li>Turn ON <b>2-Step Verification</b></li>
-        <li>Search / open <b>App Passwords</b></li>
-        <li>Select <b>Mail</b> → <b>Other</b></li>
-        <li>Copy the 16-digit password and paste it below</li>
-      </ol>
-
-      <a href="https://myaccount.google.com/apppasswords" target="_blank" style="display:inline-block;padding:8px 12px;background:#2563eb;color:white;border-radius:10px;text-decoration:none;font-size:13px;font-weight:700;">
-        Open App Password Page
-      </a>
+      <p style="font-size:12px;color:#475569;margin:0 0 12px;">One click — no app passwords, no 2FA setup needed.</p>
+      <button id="connectGmailOAuthBtn" class="btn green" onclick="connectGmailOAuth()" style="width:100%;">
+        Connect Gmail with Google
+      </button>
     </div>
+
+    <div style="text-align:center;color:#94a3b8;font-size:12px;margin:8px 0;">— or use App Password —</div>
 
     <label>Email Address</label>
     <input id="connectEmailAddress" placeholder="sales@yourdomain.com">
@@ -5790,7 +5772,7 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
     <input id="connectEmailPassword" type="password" placeholder="16 digit app password / generated code">
 
     <div class="actions">
-      <button id="connectEmailBtn" class="btn green" onclick="connectEmailAccount()">Connect Email</button>
+      <button id="connectEmailBtn" class="btn" style="background:#64748b;color:#fff;" onclick="connectEmailAccount()">Connect with App Password</button>
       <button class="btn dark" onclick="closeConnectEmailModal()">Cancel</button>
     </div>
 
@@ -5871,6 +5853,7 @@ let threadUiState = loadThreadUiState();
 let emailFilter = "";
 let emailLiveTimer = null;
 let connectedStoreEmail = null;
+let connectedStoreAccounts = []; // [{id, email, auth_type}]
 let activeEmailInbox = null; // null = use connected email (default), "__all__" = all inboxes
 let liveSyncEnabled = true;
 let emailTeamMembers = [];
@@ -8303,43 +8286,37 @@ async function loadEmailSettings(){
     const data = await r.json();
 
     const loading = document.getElementById("stgAccLoading");
-    const rowInner = document.getElementById("stgAccRowInner");
+    const list = document.getElementById("stgAccList");
     const empty = document.getElementById("stgAccEmpty");
     if(loading) loading.style.display="none";
 
     if(!data.success || !data.connected){
       if(empty) empty.style.display="flex";
-      if(rowInner) rowInner.style.display="none";
+      if(list) list.innerHTML="";
       return;
     }
 
     const s = data.settings;
     emailSettings = s;
-
-    // Show account row
-    if(rowInner) rowInner.style.display="flex";
     if(empty) empty.style.display="none";
 
-    // Populate connected account row
-    const av = document.getElementById("stgAccAv");
-    const em = document.getElementById("stgAccEmail");
-    const meta = document.getElementById("stgAccMeta");
-    const st = document.getElementById("stgAccStatus");
-    const btnReconnect = document.getElementById("stgBtnReconnect");
-    const btnEdit = document.getElementById("stgBtnEdit");
-    if(av) av.textContent = (s.email||"?").substring(0,2).toUpperCase();
-    if(em) em.textContent = s.email||"";
-    if(meta){
-      const syncStr = s.last_synced ? "Last synced: " + _timeAgoStr(s.last_synced) : "Never synced";
-      meta.textContent = syncStr + "  ·  IMAP: " + (s.imap_host||"imap.gmail.com");
+    // Render all connected accounts
+    if(list){
+      const accs = connectedStoreAccounts.length ? connectedStoreAccounts : [{id: s.account_id, email: s.email}];
+      list.innerHTML = accs.map(acc => `
+        <div class="em-stg-acc-row" style="display:flex;">
+          <div class="em-stg-acc-av">${(acc.email||"?").substring(0,2).toUpperCase()}</div>
+          <div class="em-stg-acc-info">
+            <div class="em-stg-acc-email">${acc.email||""}</div>
+            <div class="em-stg-acc-meta">${acc.auth_type==="oauth"?"OAuth (Gmail API)":"App Password"}</div>
+          </div>
+          <span class="em-stg-acc-status active">Active</span>
+          <div class="em-stg-acc-actions">
+            <button class="em-stg-acc-btn em-stg-acc-btn-remove" onclick="confirmRemoveEmailAccount(${acc.id||'null'})">🗑 Remove</button>
+          </div>
+        </div>
+      `).join("");
     }
-    if(st){
-      st.className = "em-stg-acc-status " + (s.is_active ? "active" : "inactive");
-      st.textContent = s.is_active ? "Active" : "Inactive";
-    }
-    // Show reconnect button only if account is inactive
-    if(btnReconnect) btnReconnect.style.display = s.is_active ? "none" : "";
-    if(btnEdit) btnEdit.style.display = s.is_active ? "" : "none";
 
     // Sync settings
     _setChk("settingSyncOnTabFocus", s.sync_on_tab_focus);
@@ -9571,7 +9548,10 @@ document.addEventListener("change",function(e){
   }
 });
 
-function confirmRemoveEmailAccount(){
+let _disconnectAccountId = null;
+
+function confirmRemoveEmailAccount(accountId){
+  _disconnectAccountId = accountId || null;
   const modal = document.getElementById("removeEmailModal");
   if(modal) modal.style.display="flex";
 }
@@ -9589,7 +9569,7 @@ async function executeRemoveEmailAccount(){
     const r = await fetch("/emails/api/disconnect/",{
       method:"POST",
       headers:{"Content-Type":"application/json","X-CSRFToken":getCSRFToken(),"X-Requested-With":"XMLHttpRequest"},
-      body:JSON.stringify({store_id: selectedStoreId})
+      body:JSON.stringify({store_id: selectedStoreId, account_id: _disconnectAccountId})
     });
     const data = await r.json();
 
@@ -9600,6 +9580,7 @@ async function executeRemoveEmailAccount(){
       allEmails = [];
       emailSettings = {};
       connectedStoreEmail = null;
+      connectedStoreAccounts = [];
       renderEmails();
       updateEmailStats();
       // Reload settings tab to show empty state
@@ -9851,34 +9832,39 @@ function populateEmailInboxPicker(){
 
   sel.innerHTML = "";
 
-  if(connectedStoreEmail){
-    const opt = document.createElement("option");
-    opt.value = connectedStoreEmail;
-    opt.textContent = connectedStoreEmail + " (" + totalUnread + " new)";
-    sel.appendChild(opt);
-  } else {
+  const accounts = connectedStoreAccounts.length ? connectedStoreAccounts : (connectedStoreEmail ? [{id: null, email: connectedStoreEmail}] : []);
+
+  if(accounts.length === 0){
     const opt = document.createElement("option");
     opt.value = "";
     opt.textContent = "No inbox connected";
     sel.appendChild(opt);
+  } else {
+    accounts.forEach(acc => {
+      const opt = document.createElement("option");
+      opt.value = acc.email;
+      opt.textContent = acc.email;
+      sel.appendChild(opt);
+    });
   }
 
-  const divider = document.createElement("option");
-  divider.disabled = true;
-  divider.textContent = "──────────────";
-  divider.style.color = "#ccc";
-  sel.appendChild(divider);
+  if(accounts.length > 1){
+    const divider = document.createElement("option");
+    divider.disabled = true;
+    divider.textContent = "──────────────";
+    divider.style.color = "#ccc";
+    sel.appendChild(divider);
 
-  const allOpt = document.createElement("option");
-  allOpt.value = "__all__";
-  allOpt.textContent = "📬 All Emails (" + totalUnread + " new)";
-  sel.appendChild(allOpt);
+    const allOpt = document.createElement("option");
+    allOpt.value = "__all__";
+    allOpt.textContent = "📬 All Emails (" + totalUnread + " new)";
+    sel.appendChild(allOpt);
+  }
 
   // Default: connected email (not All Inboxes)
   if(activeEmailInbox === "__all__"){
     sel.value = "__all__";
   } else {
-    // Reset to connected email as default
     activeEmailInbox = connectedStoreEmail || "";
     sel.value = activeEmailInbox;
   }
@@ -10070,7 +10056,10 @@ async function loadEmails(options={}){
     try{
       const r = await fetch(`/emails/api/connected-email/?store_id=${selectedStoreId}`);
       const d = await r.json();
-      if(d.success && d.connected && d.email) connectedStoreEmail = d.email;
+      if(d.success && d.connected && d.email){
+        connectedStoreEmail = d.email;
+        connectedStoreAccounts = d.accounts || [];
+      }
     }catch(_){}
   }
 
@@ -10130,9 +10119,8 @@ function updateEmailStats(){
   document.getElementById("emailReplied").innerText = replied;
   document.getElementById("emailClosed").innerText = resolved; // repurposed as Resolved
 
-  // Inboxes count = 1 if connected, else 0
   const inboxesEl = document.getElementById("emailStoreId");
-  if(inboxesEl) inboxesEl.innerText = connectedStoreEmail ? 1 : 0;
+  if(inboxesEl) inboxesEl.innerText = connectedStoreAccounts.length || (connectedStoreEmail ? 1 : 0);
 
   document.getElementById("folderInbox").innerText = threads.length;
   document.getElementById("folderDrafted").innerText = drafted;
@@ -11658,12 +11646,14 @@ async function loadConnectedEmailAccount(){
 
     if(data.success && data.connected){
       connectedStoreEmail = data.email || null;
-      emailEl.innerText = data.email || "Connected";
+      connectedStoreAccounts = data.accounts || [];
+      emailEl.innerText = connectedStoreAccounts.length > 1 ? `${connectedStoreAccounts.length} inboxes connected` : (data.email || "Connected");
       statusEl.classList.remove("offline");
       statusEl.classList.add("online");
       statusEl.innerText = "Online";
     }else{
       connectedStoreEmail = null;
+      connectedStoreAccounts = [];
       emailEl.innerText = "No email connected";
       statusEl.classList.remove("online");
       statusEl.classList.add("offline");
@@ -11680,6 +11670,21 @@ async function loadConnectedEmailAccount(){
   // Refresh picker pill with updated inbox info
   populateEmailInboxPicker();
   updateActiveStoreLabels();
+}
+
+async function connectGmailOAuth(){
+  const btn = document.getElementById("connectGmailOAuthBtn");
+  const msg = document.getElementById("connectEmailMessage");
+  const storeId = selectedStoreId;
+  if(!storeId){ msg.innerText = "Please select a store first."; msg.style.color="red"; return; }
+  btn.disabled = true;
+  btn.innerText = "Opening Google...";
+  try {
+    const r = await fetch(`/emails/oauth/start/?store_id=${storeId}`);
+    const d = await r.json();
+    if(d.url){ window.location.href = d.url; }
+    else { msg.innerText = d.message || "Failed to start OAuth."; msg.style.color="red"; btn.disabled=false; btn.innerText="Connect Gmail with Google"; }
+  } catch(e){ msg.innerText = "Error: "+e.message; msg.style.color="red"; btn.disabled=false; btn.innerText="Connect Gmail with Google"; }
 }
 
 async function connectEmailAccount(){
