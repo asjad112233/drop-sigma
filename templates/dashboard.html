@@ -5741,42 +5741,45 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
 
 
 <div id="connectEmailModal" class="modal-bg">
-  <div class="modal">
-    <div class="modal-head">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-head" style="border-bottom:1px solid #f1f5f9;padding-bottom:16px;margin-bottom:24px;">
       <div>
-        <h2>Connect Your Email</h2>
-        <p class="sub">Connect project inbox using email and generated app password/code.</p>
+        <h2 style="font-size:20px;">Connect Inbox</h2>
+        <p class="sub" style="margin-top:3px;">Link a Gmail account to send &amp; receive emails</p>
       </div>
-      <button class="btn red" onclick="closeConnectEmailModal()">Close</button>
+      <button class="btn red" onclick="closeConnectEmailModal()" style="padding:8px 16px;font-size:13px;">✕ Close</button>
     </div>
 
-    <!-- Gmail OAuth Option (Recommended) -->
-    <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:12px;padding:16px;margin-bottom:16px;">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-        <img src="https://www.gstatic.com/images/branding/product/1x/gmail_2020q4_32dp.png" style="width:24px;height:24px;">
-        <strong style="font-size:14px;color:#15803d;">Connect Gmail (Recommended)</strong>
-        <span style="background:#dcfce7;color:#166534;font-size:11px;padding:2px 8px;border-radius:20px;font-weight:700;">FREE • No setup required</span>
+    <!-- Google branding row -->
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;">
+      <div style="width:52px;height:52px;background:#fff;border:1.5px solid #e2e8f0;border-radius:14px;display:grid;place-items:center;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,.06);">
+        <img src="https://www.gstatic.com/images/branding/product/1x/gmail_2020q4_32dp.png" style="width:28px;height:28px;">
       </div>
-      <p style="font-size:12px;color:#475569;margin:0 0 12px;">One click — no app passwords, no 2FA setup needed.</p>
-      <button id="connectGmailOAuthBtn" class="btn green" onclick="connectGmailOAuth()" style="width:100%;">
-        Connect Gmail with Google
-      </button>
+      <div>
+        <div style="font-size:15px;font-weight:800;color:#0f172a;">Gmail via Google OAuth</div>
+        <div style="font-size:12px;color:#64748b;margin-top:2px;">Secure · No app passwords needed · Free</div>
+      </div>
     </div>
 
-    <div style="text-align:center;color:#94a3b8;font-size:12px;margin:8px 0;">— or use App Password —</div>
-
-    <label>Email Address</label>
-    <input id="connectEmailAddress" placeholder="sales@yourdomain.com">
-
-    <label>Generated Code / App Password</label>
-    <input id="connectEmailPassword" type="password" placeholder="16 digit app password / generated code">
-
-    <div class="actions">
-      <button id="connectEmailBtn" class="btn" style="background:#64748b;color:#fff;" onclick="connectEmailAccount()">Connect with App Password</button>
-      <button class="btn dark" onclick="closeConnectEmailModal()">Cancel</button>
+    <!-- Feature pills -->
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px;">
+      <span style="background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;">✓ One-click setup</span>
+      <span style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;">✓ Auto sync inbox</span>
+      <span style="background:#faf5ff;color:#6d28d9;border:1px solid #ddd6fe;font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;">✓ Send &amp; receive</span>
+      <span style="background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;">✓ AI reply drafts</span>
     </div>
 
-    <p id="connectEmailMessage" class="sub"></p>
+    <!-- Connect button -->
+    <button id="connectGmailOAuthBtn" onclick="connectGmailOAuth()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:12px;padding:15px 20px;background:#fff;border:1.5px solid #e2e8f0;border-radius:14px;font-size:15px;font-weight:700;color:#0f172a;cursor:pointer;transition:.18s;box-shadow:0 2px 8px rgba(0,0,0,.06);" onmouseover="this.style.borderColor='#2563eb';this.style.boxShadow='0 4px 16px rgba(37,99,235,.15)';" onmouseout="this.style.borderColor='#e2e8f0';this.style.boxShadow='0 2px 8px rgba(0,0,0,.06)';">
+      <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
+      Continue with Google
+    </button>
+
+    <p style="text-align:center;font-size:11px;color:#94a3b8;margin-top:14px;line-height:1.6;">
+      You'll be redirected to Google to grant read &amp; send access.<br>We never store your Google password.
+    </p>
+
+    <p id="connectEmailMessage" class="sub" style="margin-top:10px;text-align:center;"></p>
   </div>
 </div>
 
