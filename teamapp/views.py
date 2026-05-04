@@ -124,7 +124,7 @@ def employee_login_page(request):
 
 def employee_logout_view(request):
     logout(request)
-    return redirect("/employee/login/")
+    return redirect("/")
 
 
 def employee_portal_page(request):

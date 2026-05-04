@@ -48,7 +48,7 @@ def admin_login_page(request):
 
 def admin_logout_view(request):
     logout(request)
-    return redirect("/login/")
+    return redirect("/")
 
 
 @login_required(login_url="/login/")

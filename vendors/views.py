@@ -395,7 +395,7 @@ def vendor_login_page(request):
 
 def vendor_logout_view(request):
     logout(request)
-    return redirect("/vendor/login/")
+    return redirect("/")
 
 
 # ─── Vendor Portal ────────────────────────────────────────────────────────────
