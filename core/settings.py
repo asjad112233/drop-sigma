@@ -26,6 +26,16 @@ CSRF_TRUSTED_ORIGINS = [
     f"https://{h.strip()}" for h in os.getenv("ALLOWED_HOSTS", "").split(",") if h.strip() and h.strip() != "*"
 ] + ["http://127.0.0.1:8000", "http://localhost:8000"]
 
+# DRF: use CSRF-exempt session auth so AJAX calls from the admin SPA
+# don't need a matching CSRF token in the header. Session cookie alone
+# is sufficient since this is a same-domain single-page dashboard.
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "core.auth.CsrfExemptSessionAuthentication",
+        "rest_framework.authentication.BasicAuthentication",
+    ],
+}
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
