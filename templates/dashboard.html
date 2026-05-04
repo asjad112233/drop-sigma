@@ -6921,19 +6921,18 @@ function toggleStoreMenu(storeId){
 }
 
 function getCSRFToken(){
+  // Cookie is always current (updated by server on every response).
+  // Form field can be stale after a deployment restart, so prefer cookie.
+  const cookieRow = document.cookie
+    .split('; ')
+    .find(row => row.startsWith('csrftoken='));
+  if(cookieRow){
+    return decodeURIComponent(cookieRow.split('=')[1]);
+  }
   const hiddenToken = document.querySelector('[name=csrfmiddlewaretoken]');
   if(hiddenToken && hiddenToken.value){
     return hiddenToken.value;
   }
-
-  const cookieValue = document.cookie
-    .split('; ')
-    .find(row => row.startsWith('csrftoken='));
-
-  if(cookieValue){
-    return decodeURIComponent(cookieValue.split('=')[1]);
-  }
-
   return "";
 }
 
