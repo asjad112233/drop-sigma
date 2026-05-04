@@ -3422,6 +3422,76 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
         </div>
       </div>
 
+      <!-- SETUP WIZARD -->
+      <div id="setupWizard" style="display:none;margin-bottom:22px;">
+        <div style="background:#fff;border:1px solid #e3e8f0;border-radius:22px;padding:22px 24px;position:relative;overflow:hidden;box-shadow:0 12px 32px rgba(15,23,42,.07);">
+          <!-- subtle top accent -->
+          <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#6366f1,#8b5cf6,#0ea5e9);border-radius:22px 22px 0 0;"></div>
+          <!-- header -->
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;position:relative;z-index:1;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:grid;place-items:center;font-size:16px;box-shadow:0 4px 12px rgba(99,102,241,.3);">🚀</div>
+              <div>
+                <div style="font-size:15px;font-weight:900;color:#0f172a;letter-spacing:-.02em;">Get Started</div>
+                <div style="font-size:12px;color:#64748b;margin-top:1px;">Complete setup to unlock your workspace</div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="font-size:12px;font-weight:700;color:#6366f1;" id="setupProgressText">0 / 3 done</div>
+              <div style="width:80px;height:6px;background:#e2e8f0;border-radius:999px;overflow:hidden;">
+                <div id="setupProgressBar" style="height:100%;width:0%;background:linear-gradient(90deg,#6366f1,#8b5cf6);border-radius:999px;transition:width .5s ease;"></div>
+              </div>
+            </div>
+          </div>
+          <!-- steps -->
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;position:relative;z-index:1;">
+
+            <!-- Step 1: Connect Store -->
+            <div id="setupStep1" onclick="setupStepClick(1)" style="background:#f8fafc;border:1.5px solid #e3e8f0;border-radius:16px;padding:16px 18px;cursor:pointer;transition:all .2s;"
+              onmouseover="this.style.background='#eff6ff';this.style.borderColor='#93c5fd';this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 20px rgba(37,99,235,.1)'"
+              onmouseout="this.style.background='#f8fafc';this.style.borderColor='#e3e8f0';this.style.transform='translateY(0)';this.style.boxShadow='none'">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;">
+                <div style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#0ea5e9,#6366f1);display:grid;place-items:center;font-size:20px;box-shadow:0 4px 12px rgba(14,165,233,.25);flex-shrink:0;">🏬</div>
+                <div id="setupStep1Check" style="display:none;width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,#22c55e,#16a34a);place-items:center;font-size:13px;color:#fff;font-weight:900;box-shadow:0 4px 10px rgba(34,197,94,.35);">✓</div>
+                <div id="setupStep1Num" style="width:24px;height:24px;border-radius:50%;border:2px solid #cbd5e1;display:grid;place-items:center;font-size:11px;font-weight:800;color:#94a3b8;">1</div>
+              </div>
+              <div style="font-size:13.5px;font-weight:800;color:#0f172a;margin-bottom:4px;letter-spacing:-.01em;">Connect your Store</div>
+              <div style="font-size:12px;color:#64748b;line-height:1.5;">Link WooCommerce or Shopify to sync orders automatically</div>
+              <div style="margin-top:12px;display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:700;color:#2563eb;">Connect →</div>
+            </div>
+
+            <!-- Step 2: Connect Email -->
+            <div id="setupStep2" onclick="setupStepClick(2)" style="background:#f8fafc;border:1.5px solid #e3e8f0;border-radius:16px;padding:16px 18px;cursor:pointer;transition:all .2s;"
+              onmouseover="this.style.background='#eff6ff';this.style.borderColor='#93c5fd';this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 20px rgba(37,99,235,.1)'"
+              onmouseout="this.style.background='#f8fafc';this.style.borderColor='#e3e8f0';this.style.transform='translateY(0)';this.style.boxShadow='none'">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;">
+                <div style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#f59e0b,#ef4444);display:grid;place-items:center;font-size:20px;box-shadow:0 4px 12px rgba(245,158,11,.25);flex-shrink:0;">✉️</div>
+                <div id="setupStep2Check" style="display:none;width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,#22c55e,#16a34a);place-items:center;font-size:13px;color:#fff;font-weight:900;box-shadow:0 4px 10px rgba(34,197,94,.35);">✓</div>
+                <div id="setupStep2Num" style="width:24px;height:24px;border-radius:50%;border:2px solid #cbd5e1;display:grid;place-items:center;font-size:11px;font-weight:800;color:#94a3b8;">2</div>
+              </div>
+              <div style="font-size:13.5px;font-weight:800;color:#0f172a;margin-bottom:4px;letter-spacing:-.01em;">Connect your Email</div>
+              <div style="font-size:12px;color:#64748b;line-height:1.5;">Connect Gmail to send &amp; receive customer emails in one place</div>
+              <div style="margin-top:12px;display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:700;color:#2563eb;">Connect →</div>
+            </div>
+
+            <!-- Step 3: Auto Email Template -->
+            <div id="setupStep3" onclick="setupStepClick(3)" style="background:#f8fafc;border:1.5px solid #e3e8f0;border-radius:16px;padding:16px 18px;cursor:pointer;transition:all .2s;"
+              onmouseover="this.style.background='#eff6ff';this.style.borderColor='#93c5fd';this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 20px rgba(37,99,235,.1)'"
+              onmouseout="this.style.background='#f8fafc';this.style.borderColor='#e3e8f0';this.style.transform='translateY(0)';this.style.boxShadow='none'">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;">
+                <div style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#10b981,#0ea5e9);display:grid;place-items:center;font-size:20px;box-shadow:0 4px 12px rgba(16,185,129,.25);flex-shrink:0;">⚡</div>
+                <div id="setupStep3Check" style="display:none;width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,#22c55e,#16a34a);place-items:center;font-size:13px;color:#fff;font-weight:900;box-shadow:0 4px 10px rgba(34,197,94,.35);">✓</div>
+                <div id="setupStep3Num" style="width:24px;height:24px;border-radius:50%;border:2px solid #cbd5e1;display:grid;place-items:center;font-size:11px;font-weight:800;color:#94a3b8;">3</div>
+              </div>
+              <div style="font-size:13.5px;font-weight:800;color:#0f172a;margin-bottom:4px;letter-spacing:-.01em;">Turn ON Auto Email</div>
+              <div style="font-size:12px;color:#64748b;line-height:1.5;">Enable automatic shipping &amp; status emails for your customers</div>
+              <div style="margin-top:12px;display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:700;color:#2563eb;">Enable →</div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
       <!-- ALERT BANNER -->
       <div id="ovAlertBar" style="display:none;background:linear-gradient(135deg,#fff7ed,#fef3c7);border:1px solid #fed7aa;border-radius:16px;padding:14px 20px;margin-bottom:20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
         <span style="font-size:18px;">⚠️</span>
@@ -4268,13 +4338,16 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
               <div style="font-size:12px;color:#94a3b8;margin-top:2px;">Automatically send the default template email when an order status changes.</div>
             </div>
             <!-- Toggle switch -->
-            <label style="position:relative;display:inline-flex;align-items:center;cursor:pointer;flex-shrink:0;" title="Toggle auto email">
-              <input type="checkbox" id="autoEmailToggle" style="opacity:0;width:0;height:0;position:absolute;" onchange="onAutoEmailToggle(this.checked)">
-              <div id="autoEmailTrack" style="width:44px;height:24px;border-radius:999px;background:#e2e8f0;transition:background .2s;position:relative;">
-                <div id="autoEmailThumb" style="position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.2);transition:transform .2s;"></div>
-              </div>
-            </label>
-            <span id="autoEmailStatus" style="font-size:12px;font-weight:700;color:#94a3b8;min-width:28px;">OFF</span>
+            <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+              <span id="autoEmailHint" style="font-size:12px;font-weight:600;color:#dc2626;animation:aeStatusBlink 1.6s ease-in-out infinite;white-space:nowrap;">⚠ Turn on to start sending</span>
+              <label style="position:relative;display:inline-flex;align-items:center;cursor:pointer;" title="Toggle auto email">
+                <input type="checkbox" id="autoEmailToggle" style="opacity:0;width:0;height:0;position:absolute;" onchange="onAutoEmailToggle(this.checked)">
+                <div id="autoEmailTrack" style="width:44px;height:24px;border-radius:999px;background:#dc2626;transition:background .2s;position:relative;animation:aeTrackBlink 1.6s ease-in-out infinite;">
+                  <div id="autoEmailThumb" style="position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.2);transition:transform .2s;"></div>
+                </div>
+              </label>
+              <span id="autoEmailStatus" style="font-size:12px;font-weight:800;color:#dc2626;min-width:28px;animation:aeStatusBlink 1.6s ease-in-out infinite;">OFF</span>
+            </div>
           </div>
 
           <!-- Auto Email Status Panel (shown when ON) -->
@@ -6124,10 +6197,84 @@ async function loadOverview(){
       }).join("") : `<div style="text-align:center;padding:16px;color:var(--vf-muted);font-size:12px;">No unread emails 🎉</div>`;
     }
 
+    // Setup wizard
+    loadSetupWizard();
+
   }catch(e){
     console.error("Overview error:", e);
   }
 }
+
+// ─── SETUP WIZARD ────────────────────────────────────────────────────────────
+async function loadSetupWizard(){
+  try{
+    const [storesRes, emailRes, autoRes] = await Promise.all([
+      fetch("/stores/api/"),
+      fetch(`/emails/api/connected-email/?store_id=${selectedStoreId||""}`),
+      fetch(`/emails/api/auto-email/?store_id=${selectedStoreId||""}`)
+    ]);
+    const storesData = await storesRes.json();
+    const emailData  = await emailRes.json().catch(()=>({connected:false}));
+    const autoData   = await autoRes.json().catch(()=>({auto_email_enabled:false}));
+
+    const hasStore   = (storesData.stores?.length > 0) || (Array.isArray(storesData) && storesData.length > 0);
+    const hasEmail   = emailData.connected === true;
+    const hasAuto    = autoData.auto_email_enabled === true;
+
+    const allDone = hasStore && hasEmail && hasAuto;
+    const wizard  = document.getElementById("setupWizard");
+    if(!wizard) return;
+
+    if(allDone){ wizard.style.display = "none"; return; }
+    wizard.style.display = "block";
+    wizard.style.animation = "setupFadeIn .4s ease both";
+
+    _setStep(1, hasStore);
+    _setStep(2, hasEmail);
+    _setStep(3, hasAuto);
+
+    const done = [hasStore,hasEmail,hasAuto].filter(Boolean).length;
+    document.getElementById("setupProgressText").textContent = `${done} / 3 done`;
+    document.getElementById("setupProgressBar").style.width = `${Math.round(done/3*100)}%`;
+  }catch(e){ console.warn("Setup wizard:", e); }
+}
+
+function _setStep(n, done){
+  const card  = document.getElementById(`setupStep${n}`);
+  const check = document.getElementById(`setupStep${n}Check`);
+  const num   = document.getElementById(`setupStep${n}Num`);
+  if(!card) return;
+  if(done){
+    card.style.background  = "#f0fdf4";
+    card.style.borderColor = "#86efac";
+    card.style.cursor      = "default";
+    card.onmouseover = card.onmouseout = null;
+    if(check){ check.style.display = "grid"; }
+    if(num)  { num.style.display   = "none";  }
+    const arrow = card.querySelector("div[style*='2563eb']");
+    if(arrow){ arrow.style.color = "#16a34a"; arrow.textContent = "Done ✓"; }
+  }
+}
+
+function setupStepClick(n){
+  if(n === 1){ showSection("stores"); openAddStoreModal(); }
+  if(n === 2){ showSection("emails"); setTimeout(()=>openConnectEmailModal(), 200); }
+  if(n === 3){
+    showSection("emails");
+    setTimeout(()=>{
+      const templatesBtn = document.getElementById("emNavTemplates");
+      if(templatesBtn) templatesBtn.click();
+    }, 300);
+  }
+}
+
+if(!document.getElementById("setupWizardStyle")){
+  const s = document.createElement("style");
+  s.id = "setupWizardStyle";
+  s.textContent = `@keyframes setupFadeIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}@keyframes aeTrackBlink{0%,100%{background:#dc2626;box-shadow:0 0 0 0 rgba(220,38,38,0)}50%{background:#ef4444;box-shadow:0 0 0 7px rgba(220,38,38,.22)}}@keyframes aeStatusBlink{0%,100%{color:#dc2626;opacity:1}50%{color:#ef4444;opacity:.5}}@keyframes aeBarPulse{0%,100%{border-color:#e3e8f0}50%{border-color:#fca5a5;box-shadow:0 2px 12px rgba(220,38,38,.15)}}`;
+  document.head.appendChild(s);
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 async function loadStores(){
   const grid = document.getElementById("storesGrid");
@@ -8515,9 +8662,29 @@ function _renderAutoEmailToggle(on){
   const status = document.getElementById("autoEmailStatus");
   if(!chk) return;
   chk.checked = on;
-  if(track)  track.style.background  = on ? "#2563eb" : "#e2e8f0";
-  if(thumb)  thumb.style.transform   = on ? "translateX(20px)" : "translateX(0)";
-  if(status){ status.textContent = on ? "ON" : "OFF"; status.style.color = on ? "#2563eb" : "#94a3b8"; }
+  const bar  = document.getElementById("autoEmailBar");
+  const hint = document.getElementById("autoEmailHint");
+  if(bar){
+    bar.style.animation   = on ? "none" : "aeBarPulse 1.6s ease-in-out infinite";
+    bar.style.borderColor = on ? "#e3e8f0" : "";
+  }
+  if(hint){
+    hint.textContent      = on ? "✓ Auto email is active" : "⚠ Turn on to start sending";
+    hint.style.color      = on ? "#16a34a" : "#dc2626";
+    hint.style.animation  = on ? "none" : "aeStatusBlink 1.6s ease-in-out infinite";
+  }
+  if(track){
+    track.style.background = on ? "#16a34a" : "#dc2626";
+    track.style.animation  = on ? "none" : "aeTrackBlink 1.6s ease-in-out infinite";
+    track.style.boxShadow  = on ? "none" : "";
+  }
+  if(thumb)  thumb.style.transform = on ? "translateX(20px)" : "translateX(0)";
+  if(status){
+    status.textContent      = on ? "ON" : "OFF";
+    status.style.color      = on ? "#16a34a" : "#dc2626";
+    status.style.fontWeight = "800";
+    status.style.animation  = on ? "none" : "aeStatusBlink 1.6s ease-in-out infinite";
+  }
   const panel = document.getElementById("autoEmailPanel");
   if(panel) panel.style.display = on ? "block" : "none";
 }
