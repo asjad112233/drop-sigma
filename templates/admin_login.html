@@ -3,72 +3,251 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin Login — VendorFlow AI</title>
+<title>Login — Drop Sigma</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'Inter','Segoe UI',sans-serif;min-height:100vh;background:linear-gradient(135deg,#0f172a 0%,#1e293b 50%,#0f172a 100%);display:flex;align-items:center;justify-content:center;padding:20px;-webkit-font-smoothing:antialiased;}
-.blob{position:fixed;border-radius:50%;filter:blur(80px);opacity:.15;pointer-events:none;}
-.blob1{width:500px;height:500px;background:#2563eb;top:-150px;left:-150px;}
-.blob2{width:400px;height:400px;background:#7c3aed;bottom:-100px;right:-100px;}
-.card{position:relative;z-index:1;background:rgba(255,255,255,.06);backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,.12);border-radius:28px;padding:44px 40px;width:100%;max-width:420px;box-shadow:0 32px 80px rgba(0,0,0,.4);}
-.brand{display:flex;align-items:center;gap:12px;margin-bottom:36px;}
-.brand-logo{width:46px;height:46px;border-radius:14px;background:linear-gradient(135deg,#2563eb,#7c3aed);display:grid;place-items:center;font-weight:800;font-size:18px;color:#fff;box-shadow:0 8px 24px rgba(37,99,235,.4);}
-.brand-name{font-size:16px;font-weight:700;color:#fff;letter-spacing:-.01em;}
-.brand-tag{font-size:11px;color:rgba(255,255,255,.5);margin-top:1px;}
-h1{font-size:26px;font-weight:800;color:#fff;letter-spacing:-.03em;margin-bottom:6px;}
-.sub{font-size:14px;color:rgba(255,255,255,.5);margin-bottom:30px;}
-.field{margin-bottom:16px;}
-.field label{display:block;font-size:12px;font-weight:700;color:rgba(255,255,255,.65);margin-bottom:7px;letter-spacing:.02em;text-transform:uppercase;}
-.field input{width:100%;height:48px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:0 16px;font-size:14px;color:#fff;font-family:inherit;outline:none;transition:.18s;}
-.field input::placeholder{color:rgba(255,255,255,.3);}
-.field input:focus{border-color:rgba(37,99,235,.7);background:rgba(37,99,235,.1);box-shadow:0 0 0 3px rgba(37,99,235,.18);}
-.error{background:rgba(239,68,68,.18);border:1px solid rgba(239,68,68,.3);color:#fca5a5;font-size:13px;font-weight:600;padding:11px 14px;border-radius:10px;margin-bottom:18px;}
-.login-btn{width:100%;height:50px;margin-top:8px;background:linear-gradient(135deg,#2563eb,#7c3aed);border:none;border-radius:14px;color:#fff;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 12px 32px rgba(37,99,235,.35);transition:.18s;}
-.login-btn:hover{opacity:.9;transform:translateY(-2px);}
+body{
+  font-family:'Inter','Segoe UI',sans-serif;
+  min-height:100vh;
+  background:linear-gradient(135deg,#0f172a 0%,#1e293b 60%,#0f172a 100%);
+  display:flex;align-items:center;justify-content:center;
+  padding:20px;
+  -webkit-font-smoothing:antialiased;
+}
+.blob{position:fixed;border-radius:50%;filter:blur(90px);opacity:.14;pointer-events:none;transition:all .6s ease;}
+.blob1{width:520px;height:520px;background:#2563eb;top:-160px;left:-160px;}
+.blob2{width:420px;height:420px;background:#7c3aed;bottom:-120px;right:-120px;}
+
+.card{
+  position:relative;z-index:1;
+  background:rgba(255,255,255,.06);
+  backdrop-filter:blur(28px);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:30px;
+  padding:0;
+  width:100%;max-width:440px;
+  box-shadow:0 40px 100px rgba(0,0,0,.45);
+  overflow:hidden;
+}
+
+/* ── Brand header ── */
+.brand-bar{
+  display:flex;align-items:center;gap:12px;
+  padding:32px 40px 24px;
+  border-bottom:1px solid rgba(255,255,255,.07);
+}
+.brand-logo{
+  width:44px;height:44px;border-radius:13px;
+  background:linear-gradient(135deg,#2563eb,#7c3aed);
+  display:grid;place-items:center;
+  font-weight:900;font-size:15px;color:#fff;
+  box-shadow:0 6px 20px rgba(37,99,235,.35);
+  flex-shrink:0;
+}
+.brand-name{font-size:16px;font-weight:800;color:#fff;letter-spacing:-.01em;}
+.brand-tag{font-size:11px;color:rgba(255,255,255,.4);margin-top:2px;}
+
+/* ── Tab switcher ── */
+.tabs{
+  display:flex;gap:0;
+  padding:16px 40px 0;
+}
+.tab-btn{
+  flex:1;
+  padding:10px 6px;
+  background:none;
+  border:none;border-bottom:2px solid transparent;
+  color:rgba(255,255,255,.4);
+  font-size:12px;font-weight:700;
+  font-family:inherit;
+  cursor:pointer;
+  transition:.18s;
+  text-align:center;
+  letter-spacing:.02em;
+  text-transform:uppercase;
+}
+.tab-btn:hover{color:rgba(255,255,255,.75);}
+.tab-btn.active{color:#fff;border-bottom-color:#2563eb;}
+.tab-btn.active.vendor{border-bottom-color:#10b981;}
+.tab-btn.active.team{border-bottom-color:#7c3aed;}
+
+/* ── Form panels ── */
+.panels{padding:28px 40px 36px;min-height:320px;}
+.panel{display:none;}
+.panel.active{display:block;}
+
+.panel-title{font-size:22px;font-weight:800;color:#fff;letter-spacing:-.03em;margin-bottom:4px;}
+.panel-sub{font-size:13px;color:rgba(255,255,255,.45);margin-bottom:24px;}
+
+.field{margin-bottom:15px;}
+.field label{
+  display:block;font-size:11px;font-weight:700;
+  color:rgba(255,255,255,.55);margin-bottom:6px;
+  letter-spacing:.04em;text-transform:uppercase;
+}
+.field input{
+  width:100%;height:48px;
+  background:rgba(255,255,255,.07);
+  border:1px solid rgba(255,255,255,.13);
+  border-radius:12px;padding:0 16px;
+  font-size:14px;color:#fff;font-family:inherit;
+  outline:none;transition:.18s;
+}
+.field input::placeholder{color:rgba(255,255,255,.28);}
+.field input:focus{
+  border-color:rgba(37,99,235,.65);
+  background:rgba(37,99,235,.09);
+  box-shadow:0 0 0 3px rgba(37,99,235,.15);
+}
+.panel.vendor .field input:focus{
+  border-color:rgba(16,185,129,.65);
+  background:rgba(16,185,129,.07);
+  box-shadow:0 0 0 3px rgba(16,185,129,.13);
+}
+.panel.team .field input:focus{
+  border-color:rgba(124,58,237,.65);
+  background:rgba(124,58,237,.07);
+  box-shadow:0 0 0 3px rgba(124,58,237,.13);
+}
+
+.error-box{
+  background:rgba(239,68,68,.16);
+  border:1px solid rgba(239,68,68,.28);
+  color:#fca5a5;
+  font-size:13px;font-weight:600;
+  padding:11px 14px;border-radius:11px;
+  margin-bottom:18px;
+}
+
+.login-btn{
+  width:100%;height:50px;margin-top:6px;
+  border:none;border-radius:14px;
+  color:#fff;font-size:15px;font-weight:800;
+  cursor:pointer;font-family:inherit;
+  transition:.18s;
+}
+.login-btn:hover{opacity:.88;transform:translateY(-2px);}
 .login-btn:active{transform:scale(.98);}
-.divider{display:flex;align-items:center;gap:12px;margin:24px 0;color:rgba(255,255,255,.25);font-size:12px;}
-.divider::before,.divider::after{content:'';flex:1;height:1px;background:rgba(255,255,255,.12);}
-.other-links{display:flex;flex-direction:column;gap:8px;}
-.other-link{display:block;text-align:center;padding:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:12px;color:rgba(255,255,255,.6);font-size:13px;font-weight:600;text-decoration:none;transition:.15s;}
-.other-link:hover{background:rgba(255,255,255,.1);color:#fff;}
+
+.panel.admin .login-btn{
+  background:linear-gradient(135deg,#2563eb,#7c3aed);
+  box-shadow:0 10px 28px rgba(37,99,235,.35);
+}
+.panel.vendor .login-btn{
+  background:linear-gradient(135deg,#059669,#10b981);
+  box-shadow:0 10px 28px rgba(16,185,129,.3);
+}
+.panel.team .login-btn{
+  background:linear-gradient(135deg,#6d28d9,#7c3aed);
+  box-shadow:0 10px 28px rgba(124,58,237,.35);
+}
 </style>
 </head>
 <body>
 <div class="blob blob1"></div>
 <div class="blob blob2"></div>
+
 <div class="card">
-  <div class="brand">
-    <div class="brand-logo">V</div>
+  <div class="brand-bar">
+    <div class="brand-logo">DS</div>
     <div>
-      <div class="brand-name">VendorFlow AI</div>
-      <div class="brand-tag">Admin Portal</div>
+      <div class="brand-name">Drop Sigma</div>
+      <div class="brand-tag">Management Portal</div>
     </div>
   </div>
-  <h1>Welcome back</h1>
-  <p class="sub">Sign in to access the admin dashboard</p>
 
-  {% if error %}
-  <div class="error">{{ error }}</div>
-  {% endif %}
+  <div class="tabs">
+    <button class="tab-btn admin" onclick="switchTab('admin')">🛡 Admin</button>
+    <button class="tab-btn vendor" onclick="switchTab('vendor')">🏪 Vendor</button>
+    <button class="tab-btn team" onclick="switchTab('team')">👥 Team</button>
+  </div>
 
-  <form method="post">
-    {% csrf_token %}
-    <div class="field">
-      <label>Username</label>
-      <input type="text" name="username" placeholder="Enter username" autofocus required>
+  <div class="panels">
+
+    <!-- Admin Panel -->
+    <div class="panel admin" id="panel-admin">
+      <div class="panel-title">Admin Login</div>
+      <div class="panel-sub">Sign in to access the admin dashboard</div>
+
+      {% if error and tab == "admin" %}
+      <div class="error-box">{{ error }}</div>
+      {% endif %}
+
+      <form method="post" action="/login/">
+        {% csrf_token %}
+        <div class="field">
+          <label>Username</label>
+          <input type="text" name="username" placeholder="Enter username" {% if tab == "admin" %}autofocus{% endif %} required>
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <input type="password" name="password" placeholder="Enter password" required>
+        </div>
+        <button type="submit" class="login-btn">Sign In →</button>
+      </form>
     </div>
-    <div class="field">
-      <label>Password</label>
-      <input type="password" name="password" placeholder="Enter password" required>
-    </div>
-    <button type="submit" class="login-btn">Sign In →</button>
-  </form>
 
-  <div class="divider">other portals</div>
-  <div class="other-links">
-    <a href="/employee/login/" class="other-link">👥 Team Member Login</a>
-    <a href="/vendor/login/" class="other-link">🏪 Vendor Login</a>
+    <!-- Vendor Panel -->
+    <div class="panel vendor" id="panel-vendor">
+      <div class="panel-title">Vendor Login</div>
+      <div class="panel-sub">Access your assigned orders and submit tracking</div>
+
+      {% if error and tab == "vendor" %}
+      <div class="error-box">{{ error }}</div>
+      {% endif %}
+
+      <form method="post" action="/vendor/login/">
+        {% csrf_token %}
+        <div class="field">
+          <label>Email Address</label>
+          <input type="email" name="email" placeholder="vendor@email.com" {% if tab == "vendor" %}autofocus{% endif %} required>
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <input type="password" name="password" placeholder="Your password" required>
+        </div>
+        <button type="submit" class="login-btn">Sign In →</button>
+      </form>
+    </div>
+
+    <!-- Team Panel -->
+    <div class="panel team" id="panel-team">
+      <div class="panel-title">Team Login</div>
+      <div class="panel-sub">Sign in to your team member account</div>
+
+      {% if error and tab == "team" %}
+      <div class="error-box">{{ error }}</div>
+      {% endif %}
+
+      <form method="post" action="/employee/login/">
+        {% csrf_token %}
+        <div class="field">
+          <label>Email Address</label>
+          <input type="email" name="email" placeholder="team@email.com" {% if tab == "team" %}autofocus{% endif %} required>
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <input type="password" name="password" placeholder="Your password" required>
+        </div>
+        <button type="submit" class="login-btn">Sign In →</button>
+      </form>
+    </div>
+
   </div>
 </div>
+
+<script>
+function switchTab(name){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelector('.tab-btn.'+name).classList.add('active');
+  document.getElementById('panel-'+name).classList.add('active');
+  const inp = document.querySelector('#panel-'+name+' input');
+  if(inp) inp.focus();
+}
+
+// Activate tab from Django context
+switchTab('{{ tab|default:"admin" }}');
+</script>
 </body>
 </html>

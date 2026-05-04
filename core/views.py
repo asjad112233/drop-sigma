@@ -20,7 +20,10 @@ def admin_login_page(request):
     if request.user.is_authenticated and request.user.is_staff:
         return redirect("/")
 
-    error = None
+    # Tab from URL param (vendor / team / admin)
+    tab = request.GET.get("tab", "admin")
+    error = request.GET.get("error", None)
+
     if request.method == "POST":
         username = request.POST.get("username", "").strip()
         password = request.POST.get("password", "")
@@ -32,8 +35,9 @@ def admin_login_page(request):
             error = "You don't have admin access."
         else:
             error = "Invalid username or password."
+        tab = "admin"
 
-    return render(request, "admin_login.html", {"error": error})
+    return render(request, "admin_login.html", {"error": error, "tab": tab})
 
 
 def admin_logout_view(request):

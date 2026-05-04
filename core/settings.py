@@ -21,6 +21,11 @@ ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "*").split(",")
 USE_X_FORWARDED_HOST = True
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
+# Keep users logged in for 30 days even after browser restart
+SESSION_COOKIE_AGE = 60 * 60 * 24 * 30  # 30 days
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+SESSION_SAVE_EVERY_REQUEST = True
+
 # Allow CSRF from all configured hosts (supports HTTPS in production)
 CSRF_TRUSTED_ORIGINS = [
     f"https://{h.strip()}" for h in os.getenv("ALLOWED_HOSTS", "").split(",") if h.strip() and h.strip() != "*"

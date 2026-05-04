@@ -375,22 +375,22 @@ def vendor_login_page(request):
     if request.user.is_authenticated and hasattr(request.user, "vendor_profile"):
         return redirect("/vendor/dashboard/")
 
-    error = None
-    if request.method == "POST":
-        email = request.POST.get("email", "").strip()
-        password = request.POST.get("password", "").strip()
-        try:
-            vendor = Vendor.objects.get(email=email)
-            if vendor.user:
-                user = authenticate(request, username=vendor.user.username, password=password)
-                if user:
-                    login(request, user)
-                    return redirect("/vendor/dashboard/")
-        except Vendor.DoesNotExist:
-            pass
-        error = "Invalid email or password."
+    if request.method == "GET":
+        return redirect("/login/?tab=vendor")
 
-    return render(request, "vendor_login.html", {"error": error})
+    # POST — try login
+    email = request.POST.get("email", "").strip()
+    password = request.POST.get("password", "").strip()
+    try:
+        vendor = Vendor.objects.get(email=email)
+        if vendor.user:
+            user = authenticate(request, username=vendor.user.username, password=password)
+            if user:
+                login(request, user)
+                return redirect("/vendor/dashboard/")
+    except Vendor.DoesNotExist:
+        pass
+    return redirect("/login/?tab=vendor&error=Invalid+email+or+password.")
 
 
 def vendor_logout_view(request):

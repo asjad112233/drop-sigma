@@ -105,21 +105,21 @@ def employee_login_page(request):
     if request.user.is_authenticated and request.user.team_profile.exists():
         return redirect("/employee/dashboard/")
 
-    error = None
-    if request.method == "POST":
-        email    = request.POST.get("email", "").strip()
-        password = request.POST.get("password", "").strip()
-        try:
-            member = TeamMember.objects.get(email=email, is_active=True)
-            user = authenticate(request, username=member.user.username, password=password)
-            if user:
-                login(request, user)
-                return redirect("/employee/dashboard/")
-        except TeamMember.DoesNotExist:
-            pass
-        error = "Invalid email or password."
+    if request.method == "GET":
+        return redirect("/login/?tab=team")
 
-    return render(request, "employee_login.html", {"error": error})
+    # POST — try login
+    email    = request.POST.get("email", "").strip()
+    password = request.POST.get("password", "").strip()
+    try:
+        member = TeamMember.objects.get(email=email, is_active=True)
+        user = authenticate(request, username=member.user.username, password=password)
+        if user:
+            login(request, user)
+            return redirect("/employee/dashboard/")
+    except TeamMember.DoesNotExist:
+        pass
+    return redirect("/login/?tab=team&error=Invalid+email+or+password.")
 
 
 def employee_logout_view(request):
