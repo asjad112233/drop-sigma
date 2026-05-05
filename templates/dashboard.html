@@ -5321,6 +5321,7 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
               <div id="chatInput" contenteditable="true" data-placeholder="Select a channel…"
                 onkeydown="chatKeyDown(event)"
                 oninput="_tcOnComposerInput()"
+                onpaste="tcHandlePaste(event)"
                 class="tc-ce-input"></div>
               <div id="tcAttachPreview" style="display:none;padding:6px 14px 0;flex-wrap:wrap;gap:6px;"></div>
               <div class="tc-c-bottom">
@@ -14149,6 +14150,37 @@ async function sendChatMessage(){
     loadChatMessages();
     _tcWsBroadcastNew(content);
   }
+}
+
+function tcHandlePaste(e){
+  e.preventDefault();
+  const cd = e.clipboardData;
+  if(!cd) return;
+  // Allow image paste
+  for(const item of cd.items){
+    if(item.type.startsWith("image/")){
+      const file = item.getAsFile();
+      if(file){
+        _tcAttachFiles.push(file);
+        const reader = new FileReader();
+        reader.onload = ev => {
+          const prev = document.getElementById("tcAttachPreview");
+          if(prev){
+            prev.style.display = "flex";
+            const img = document.createElement("img");
+            img.src = ev.target.result;
+            img.style.cssText = "max-height:60px;border-radius:6px;border:1px solid #e2e8f0;";
+            prev.appendChild(img);
+          }
+        };
+        reader.readAsDataURL(file);
+      }
+      return;
+    }
+  }
+  // Plain text only — strip all HTML
+  const text = cd.getData("text/plain");
+  if(text) document.execCommand("insertText", false, text);
 }
 
 function chatKeyDown(e){
