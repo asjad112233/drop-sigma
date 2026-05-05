@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from .models import TeamMember, AssignmentRule
+from .models import TeamMember, AssignmentRule, ChatChannel, ChatMessage, ChatReaction
 from .serializers import TeamMemberSerializer, AssignmentRuleSerializer
 
 
@@ -361,3 +361,162 @@ def employee_thread_reopen_api(request):
     assignment.resolved_at = None
     assignment.save()
     return Response({"success": True, "message": "Thread re-opened."})
+
+
+# ─── Team Chat APIs ───────────────────────────────────────────────────────────
+
+_DEFAULT_CHANNELS = [
+    {"name": "general",    "slug": "general",    "description": "General team discussion"},
+    {"name": "operations", "slug": "operations", "description": "Orders & vendor ops"},
+    {"name": "support",    "slug": "support",    "description": "Customer support"},
+]
+
+
+def _sender_info(user):
+    member = user.team_profile.first()
+    if member:
+        initials = "".join(w[0].upper() for w in member.name.split()[:2])
+        return {"name": member.name, "role": member.role, "initials": initials}
+    return {"name": "Admin", "role": "owner", "initials": "AD"}
+
+
+def _serialize_message(msg, current_user_id, include_replies=True):
+    info = _sender_info(msg.sender)
+    reactions = {}
+    for r in msg.reactions.select_related("sender"):
+        if r.emoji not in reactions:
+            reactions[r.emoji] = {"count": 0, "mine": False}
+        reactions[r.emoji]["count"] += 1
+        if r.sender_id == current_user_id:
+            reactions[r.emoji]["mine"] = True
+
+    replies = []
+    if include_replies:
+        for rep in msg.replies.order_by("created_at").select_related("sender"):
+            replies.append(_serialize_message(rep, current_user_id, include_replies=False))
+
+    return {
+        "id":             msg.id,
+        "content":        msg.content,
+        "sender_name":    info["name"],
+        "sender_role":    info["role"],
+        "sender_initials": info["initials"],
+        "created_at":     msg.created_at.isoformat(),
+        "reactions":      reactions,
+        "reply_count":    msg.replies.count(),
+        "replies":        replies,
+    }
+
+
+@api_view(["GET", "POST"])
+def chat_channels_api(request):
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Not authenticated"}, status=401)
+
+    if request.method == "POST":
+        name = request.data.get("name", "").strip()
+        description = request.data.get("description", "").strip()
+        if not name:
+            return Response({"success": False, "message": "Name required."}, status=400)
+        slug = name.lower().replace(" ", "-")
+        base, ctr = slug, 1
+        while ChatChannel.objects.filter(slug=slug).exists():
+            slug = f"{base}-{ctr}"; ctr += 1
+        ch = ChatChannel.objects.create(name=name, slug=slug, description=description)
+        return Response({"success": True, "channel": {"id": ch.id, "name": ch.name, "slug": ch.slug, "description": ch.description}})
+
+    for d in _DEFAULT_CHANNELS:
+        ChatChannel.objects.get_or_create(slug=d["slug"], defaults={"name": d["name"], "description": d["description"]})
+
+    channels = ChatChannel.objects.all().order_by("id")
+    data = []
+    for ch in channels:
+        last = ch.messages.filter(parent=None).order_by("-created_at").first()
+        data.append({
+            "id":            ch.id,
+            "name":          ch.name,
+            "slug":          ch.slug,
+            "description":   ch.description,
+            "message_count": ch.messages.filter(parent=None).count(),
+            "last_message":  last.content[:60] if last else None,
+            "last_time":     last.created_at.isoformat() if last else None,
+        })
+    return Response({"success": True, "channels": data})
+
+
+@api_view(["GET"])
+def chat_messages_api(request):
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Not authenticated"}, status=401)
+
+    channel_id = request.GET.get("channel_id")
+    if not channel_id:
+        return Response({"success": False, "message": "channel_id required."}, status=400)
+
+    try:
+        ch = ChatChannel.objects.get(id=channel_id)
+    except ChatChannel.DoesNotExist:
+        return Response({"success": False, "message": "Channel not found."}, status=404)
+
+    msgs = ch.messages.filter(parent=None).select_related("sender").prefetch_related("reactions", "replies__sender", "replies__reactions")
+    uid = request.user.id
+    return Response({
+        "success":  True,
+        "channel":  {"id": ch.id, "name": ch.name, "description": ch.description},
+        "messages": [_serialize_message(m, uid) for m in msgs],
+    })
+
+
+@api_view(["POST"])
+def chat_send_api(request):
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Not authenticated"}, status=401)
+
+    channel_id = request.data.get("channel_id")
+    content    = request.data.get("content", "").strip()
+    parent_id  = request.data.get("parent_id")
+
+    if not channel_id or not content:
+        return Response({"success": False, "message": "channel_id and content required."}, status=400)
+
+    try:
+        ch = ChatChannel.objects.get(id=channel_id)
+    except ChatChannel.DoesNotExist:
+        return Response({"success": False, "message": "Channel not found."}, status=404)
+
+    parent = None
+    if parent_id:
+        parent = ChatMessage.objects.filter(id=parent_id, channel=ch).first()
+
+    msg = ChatMessage.objects.create(channel=ch, sender=request.user, content=content, parent=parent)
+    return Response({"success": True, "message": _serialize_message(msg, request.user.id)})
+
+
+@api_view(["POST"])
+def chat_reaction_api(request):
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Not authenticated"}, status=401)
+
+    message_id = request.data.get("message_id")
+    emoji      = request.data.get("emoji", "").strip()
+    if not message_id or not emoji:
+        return Response({"success": False, "message": "message_id and emoji required."}, status=400)
+
+    try:
+        msg = ChatMessage.objects.get(id=message_id)
+    except ChatMessage.DoesNotExist:
+        return Response({"success": False, "message": "Message not found."}, status=404)
+
+    obj, created = ChatReaction.objects.get_or_create(message=msg, sender=request.user, emoji=emoji)
+    if not created:
+        obj.delete()
+
+    reactions = {}
+    for r in msg.reactions.select_related("sender"):
+        if r.emoji not in reactions:
+            reactions[r.emoji] = {"count": 0, "mine": False}
+        reactions[r.emoji]["count"] += 1
+        if r.sender_id == request.user.id:
+            reactions[r.emoji]["mine"] = True
+
+    return Response({"success": True, "added": created, "reactions": reactions})

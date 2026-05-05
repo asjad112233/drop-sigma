@@ -3305,6 +3305,7 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
 /* ── Tracking Queue Section ── */
 #trackingQueueSection{padding:28px 32px;}
 #navTrackingQueue:before{content:'📦'}
+#navChat:before{content:'💬'}
 .tq-topbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:22px;}
 .tq-topbar h1{font-size:26px;font-weight:900;color:var(--vf-text);margin:0;letter-spacing:-.5px;}
 .tq-topbar p{margin:0;color:var(--vf-muted);font-size:13px;}
@@ -3394,6 +3395,7 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
     <button id="navEmails" onclick="showSection('emails')" title="Emails">Emails</button>
     <button id="navVendors" onclick="showSection('vendors')" title="Vendors">Vendors</button>
     <button id="navTrackingQueue" onclick="showSection('trackingQueue')" title="Tracking Queue" style="position:relative;">Tracking Queue <span id="tqNavBadge" style="display:none;position:absolute;top:8px;right:10px;background:#ef4444;color:#fff;font-size:9px;font-weight:900;border-radius:999px;padding:1px 6px;min-width:16px;text-align:center;"></span></button>
+    <button id="navChat" onclick="showSection('chat')" title="Team Chat">Team Chat</button>
 
     <!-- Project switcher moved to sidebar bottom -->
     <div class="sidebar-project-wrap">
@@ -5210,9 +5212,84 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
 
     </section>
 
+    <!-- ====================================================== -->
+    <!-- TEAM CHAT SECTION                                        -->
+    <!-- ====================================================== -->
+    <section id="chatSection" class="section">
+      <div id="chatLayout">
+        <!-- Channel sidebar -->
+        <div id="chatChSidebar">
+          <div class="chat-sb-head">
+            <div>
+              <div class="chat-sb-title">Team Chat</div>
+              <div class="chat-sb-sub" id="chatActiveStore">—</div>
+            </div>
+            <button class="chat-new-ch-btn" onclick="openNewChannelModal()" title="New channel">+</button>
+          </div>
+          <div class="chat-sb-label">CHANNELS</div>
+          <div id="chatChannelList"></div>
+          <div class="chat-sb-label" style="margin-top:14px;">TEAM</div>
+          <div id="chatMemberList"></div>
+        </div>
+
+        <!-- Main messages -->
+        <div id="chatMain">
+          <div class="chat-main-head">
+            <div>
+              <div class="chat-ch-name" id="chatChName"># general</div>
+              <div class="chat-ch-desc" id="chatChDesc">General team discussion</div>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button class="chat-icon-btn" onclick="loadChatMessages()" title="Refresh">↻</button>
+            </div>
+          </div>
+          <div class="chat-messages" id="chatMessages">
+            <div class="chat-empty">Select a channel to start chatting</div>
+          </div>
+          <div class="chat-composer">
+            <textarea id="chatInput" placeholder="Message #general…" rows="1"
+              onkeydown="chatKeyDown(event)"
+              oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,140)+'px'"></textarea>
+            <button class="chat-send-btn" onclick="sendChatMessage()">Send ↑</button>
+          </div>
+        </div>
+
+        <!-- Thread panel (hidden by default) -->
+        <div id="chatThread" style="display:none;">
+          <div class="chat-thread-head">
+            <div class="chat-ch-name">Thread</div>
+            <button class="chat-icon-btn" onclick="closeThread()">✕</button>
+          </div>
+          <div class="chat-thread-parent" id="chatThreadParent"></div>
+          <div class="chat-thread-divider">Replies</div>
+          <div class="chat-messages chat-thread-msgs" id="chatThreadReplies"></div>
+          <div class="chat-composer" style="border-top:1px solid var(--vf-line);padding:12px 16px 14px;">
+            <textarea id="chatThreadInput" placeholder="Reply in thread…" rows="1"
+              onkeydown="chatThreadKeyDown(event)"
+              oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"></textarea>
+            <button class="chat-send-btn" onclick="sendThreadReply()">Reply ↑</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
   </main>
 </div>
 
+<!-- New Channel Modal -->
+<div id="newChannelModal" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(15,23,42,.55);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:20px;padding:28px 30px;width:420px;box-shadow:0 24px 60px rgba(15,23,42,.18);">
+    <h3 style="margin:0 0 18px;font-size:20px;font-weight:800;color:var(--vf-text);">New Channel</h3>
+    <label style="display:block;font-size:13px;font-weight:700;color:var(--vf-muted);margin-bottom:6px;">Channel Name</label>
+    <input id="newChName" type="text" placeholder="e.g. refunds" style="width:100%;padding:11px 14px;border:1px solid var(--vf-line);border-radius:12px;font-size:14px;font-family:inherit;box-sizing:border-box;margin-bottom:14px;outline:none;" />
+    <label style="display:block;font-size:13px;font-weight:700;color:var(--vf-muted);margin-bottom:6px;">Description (optional)</label>
+    <input id="newChDesc" type="text" placeholder="What's this channel about?" style="width:100%;padding:11px 14px;border:1px solid var(--vf-line);border-radius:12px;font-size:14px;font-family:inherit;box-sizing:border-box;margin-bottom:20px;outline:none;" />
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button onclick="closeNewChannelModal()" style="padding:10px 20px;border-radius:12px;border:1px solid var(--vf-line);background:#fff;font-size:14px;font-weight:700;cursor:pointer;color:var(--vf-muted);">Cancel</button>
+      <button onclick="submitNewChannel()" style="padding:10px 20px;border-radius:12px;border:none;background:#2563eb;color:#fff;font-size:14px;font-weight:700;cursor:pointer;">Create</button>
+    </div>
+  </div>
+</div>
 
 <style>
 /* ── Vendor Create Modal (sample-match) ──────────────────────────────── */
@@ -5276,6 +5353,89 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
 /* Confetti pieces */
 .vm-confetti{position:fixed;top:-20px;width:10px;height:15px;border-radius:3px;z-index:10002;animation:vmFall 2.8s linear forwards;}
 @keyframes vmFall{to{transform:translateY(110vh) rotate(720deg);opacity:0;}}
+
+/* ── Team Chat ─────────────────────────────────────────────────────────── */
+#chatSection.active{display:flex!important;flex-direction:column;height:calc(100vh - 48px);min-height:0;padding:0!important;}
+#chatLayout{flex:1;display:grid;grid-template-columns:240px 1fr;gap:14px;min-height:0;overflow:hidden;padding:16px 20px 20px;}
+#chatLayout.with-thread{grid-template-columns:240px 1fr 340px;}
+
+/* Channel sidebar */
+#chatChSidebar{background:var(--vf-surface,#fff);border:1px solid var(--vf-line,#e3e8f0);border-radius:18px;display:flex;flex-direction:column;overflow:hidden;padding:16px 12px;}
+.chat-sb-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding:0 4px;}
+.chat-sb-title{font-size:16px;font-weight:800;color:var(--vf-text,#0f172a);}
+.chat-sb-sub{font-size:11px;color:var(--vf-muted,#64748b);margin-top:2px;}
+.chat-new-ch-btn{width:28px;height:28px;border-radius:8px;border:1px solid var(--vf-line,#e3e8f0);background:var(--vf-surface-2,#f8fafc);color:var(--vf-muted,#64748b);font-size:18px;font-weight:400;cursor:pointer;display:grid;place-items:center;line-height:1;}
+.chat-new-ch-btn:hover{background:var(--vf-line,#e3e8f0);color:var(--vf-text,#0f172a);}
+.chat-sb-label{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--vf-muted,#64748b);padding:0 8px;margin-bottom:4px;}
+.chat-ch-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;cursor:pointer;font-size:13.5px;font-weight:500;color:var(--vf-muted,#64748b);transition:all .12s;}
+.chat-ch-item:hover{background:var(--vf-surface-2,#f8fafc);color:var(--vf-text,#0f172a);}
+.chat-ch-item.active{background:#eef2ff;color:#4338ca;font-weight:700;}
+.chat-ch-hash{color:var(--vf-muted,#94a3b8);font-size:14px;}
+.chat-ch-badge{margin-left:auto;background:#ef4444;color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;}
+.chat-member-item{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:10px;cursor:default;font-size:13px;color:var(--vf-muted,#64748b);}
+.chat-member-av{width:24px;height:24px;border-radius:7px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;font-size:10px;font-weight:700;display:grid;place-items:center;flex-shrink:0;}
+.chat-member-dot{width:8px;height:8px;border-radius:99px;margin-left:auto;flex-shrink:0;}
+.chat-member-dot.available{background:#10b981;}
+.chat-member-dot.busy{background:#ef4444;}
+.chat-member-dot.offline,.chat-member-dot.limited{background:#94a3b8;}
+
+/* Main chat */
+#chatMain{background:var(--vf-surface,#fff);border:1px solid var(--vf-line,#e3e8f0);border-radius:18px;display:flex;flex-direction:column;min-height:0;overflow:hidden;}
+.chat-main-head{padding:16px 20px 14px;border-bottom:1px solid var(--vf-line,#e3e8f0);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.chat-ch-name{font-size:18px;font-weight:800;color:var(--vf-text,#0f172a);letter-spacing:-.3px;}
+.chat-ch-desc{font-size:12px;color:var(--vf-muted,#64748b);margin-top:2px;}
+.chat-messages{flex:1;overflow-y:auto;padding:14px 20px;display:flex;flex-direction:column;gap:2px;min-height:0;}
+.chat-empty{color:var(--vf-muted,#94a3b8);font-size:14px;text-align:center;margin:auto;}
+.chat-icon-btn{width:34px;height:34px;border-radius:9px;border:1px solid var(--vf-line,#e3e8f0);background:var(--vf-surface-2,#f8fafc);color:var(--vf-muted,#64748b);font-size:15px;cursor:pointer;display:grid;place-items:center;}
+.chat-icon-btn:hover{background:var(--vf-line,#e3e8f0);color:var(--vf-text,#0f172a);}
+
+/* Messages */
+.chat-msg{display:grid;grid-template-columns:38px 1fr;gap:10px;padding:5px 0;}
+.chat-msg:hover{background:var(--vf-surface-2,#f8fafc);border-radius:10px;margin:0 -8px;padding:5px 8px;}
+.chat-msg.cont{padding-top:1px;}
+.chat-msg.cont .chat-msg-av{visibility:hidden;}
+.chat-msg.cont .chat-msg-head{display:none;}
+.chat-msg-av{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;font-size:13px;font-weight:700;display:grid;place-items:center;align-self:start;flex-shrink:0;}
+.chat-msg-av.owner{background:linear-gradient(135deg,#f59e0b,#ef4444);}
+.chat-msg-av.support{background:linear-gradient(135deg,#10b981,#059669);}
+.chat-msg-av.order_manager{background:linear-gradient(135deg,#3b82f6,#6366f1);}
+.chat-msg-av.refund_manager{background:linear-gradient(135deg,#ec4899,#f43f5e);}
+.chat-msg-av.vendor_manager{background:linear-gradient(135deg,#f97316,#ef4444);}
+.chat-msg-av.email_manager{background:linear-gradient(135deg,#06b6d4,#0ea5e9);}
+.chat-msg-body{min-width:0;}
+.chat-msg-head{display:flex;align-items:baseline;gap:8px;margin-bottom:3px;}
+.chat-msg-name{font-size:14px;font-weight:800;color:var(--vf-text,#0f172a);}
+.chat-msg-role{font-size:9.5px;font-weight:800;text-transform:uppercase;padding:2px 7px;border-radius:5px;background:#eef2ff;color:#4338ca;letter-spacing:.4px;}
+.chat-msg-role.owner{background:#fef3c7;color:#b45309;}
+.chat-msg-time{font-size:11.5px;color:var(--vf-muted,#94a3b8);}
+.chat-msg-text{font-size:14px;line-height:1.55;color:#334155;word-break:break-word;}
+.chat-reactions{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;}
+.chat-reaction{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border:1px solid var(--vf-line,#e3e8f0);border-radius:99px;font-size:12px;cursor:pointer;font-weight:600;color:var(--vf-muted,#64748b);background:#fff;transition:all .12s;}
+.chat-reaction:hover{border-color:#94a3b8;color:var(--vf-text,#0f172a);}
+.chat-reaction.mine{background:#eef2ff;border-color:#c7d2fe;color:#4338ca;}
+.chat-quick-react{display:inline-flex;gap:2px;margin-top:6px;}
+.chat-quick-react button{width:28px;height:28px;border-radius:7px;border:1px solid transparent;background:var(--vf-surface-2,#f8fafc);font-size:14px;cursor:pointer;transition:all .12s;}
+.chat-quick-react button:hover{border-color:var(--vf-line);background:#fff;}
+.chat-thread-footer{display:inline-flex;align-items:center;gap:7px;margin-top:5px;padding:4px 10px 4px 4px;border:1px solid transparent;border-radius:9px;cursor:pointer;background:var(--vf-surface-2,#f8fafc);font-size:12px;color:#4338ca;font-weight:700;transition:all .12s;}
+.chat-thread-footer:hover{border-color:#c7d2fe;background:#eef2ff;}
+
+/* Day divider */
+.chat-day{display:flex;align-items:center;gap:10px;color:var(--vf-muted,#64748b);font-size:11.5px;font-weight:700;margin:10px 0 4px;}
+.chat-day::before,.chat-day::after{content:'';flex:1;height:1px;background:var(--vf-line,#e3e8f0);}
+
+/* Composer */
+.chat-composer{display:flex;align-items:flex-end;gap:10px;padding:12px 16px 16px;border-top:1px solid var(--vf-line,#e3e8f0);flex-shrink:0;}
+.chat-composer textarea{flex:1;padding:11px 14px;border:1px solid var(--vf-line,#e3e8f0);border-radius:12px;font-family:inherit;font-size:14px;resize:none;min-height:42px;max-height:140px;background:var(--vf-surface-2,#f8fafc);color:var(--vf-text,#0f172a);transition:border-color .15s;}
+.chat-composer textarea:focus{outline:none;border-color:#6366f1;background:#fff;box-shadow:0 0 0 3px rgba(99,102,241,.1);}
+.chat-send-btn{height:42px;padding:0 16px;border-radius:12px;border:none;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;transition:all .15s;box-shadow:0 4px 12px rgba(79,70,229,.25);flex-shrink:0;}
+.chat-send-btn:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(79,70,229,.35);}
+
+/* Thread panel */
+#chatThread{background:var(--vf-surface,#fff);border:1px solid var(--vf-line,#e3e8f0);border-radius:18px;display:flex;flex-direction:column;min-height:0;overflow:hidden;}
+.chat-thread-head{padding:16px 18px 14px;border-bottom:1px solid var(--vf-line,#e3e8f0);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.chat-thread-parent{padding:14px 18px;border-bottom:1px solid var(--vf-line,#e3e8f0);flex-shrink:0;background:var(--vf-surface-2,#f8fafc);}
+.chat-thread-divider{padding:8px 18px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--vf-muted,#64748b);border-bottom:1px solid var(--vf-line,#e3e8f0);flex-shrink:0;}
+.chat-thread-msgs{flex:1;overflow-y:auto;padding:12px 16px;}
 </style>
 
 <!-- ─── Custom Alert / Confirm Dialog ─────────────────────────────────────── -->
@@ -6023,6 +6183,12 @@ function showSection(section){
     document.getElementById("navTrackingQueue").classList.add("active");
     tqLoad();
     _startTqPolling();
+  }
+
+  if(section === "chat"){
+    document.getElementById("chatSection").classList.add("active");
+    document.getElementById("navChat").classList.add("active");
+    loadChatChannels();
   }
 }
 
@@ -13307,6 +13473,297 @@ window.addEventListener('resize', function(){
     };
   }
 })();
+</script>
+
+<script>
+// ─── Team Chat ───────────────────────────────────────────────────────────────
+const esc = s => escHtml(s);
+let _chatCurrentChannelId = null;
+let _chatCurrentChannelName = "general";
+let _chatThreadParentId = null;
+let _chatMembers = [];
+
+const QUICK_EMOJIS = ["👍","❤️","😂","🎉","🚀","😮"];
+
+function _chatTime(iso){
+  const d = new Date(iso);
+  return d.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
+}
+
+function _chatDateLabel(iso){
+  const d = new Date(iso);
+  const today = new Date();
+  const yesterday = new Date(); yesterday.setDate(today.getDate()-1);
+  if(d.toDateString()===today.toDateString()) return "Today";
+  if(d.toDateString()===yesterday.toDateString()) return "Yesterday";
+  return d.toLocaleDateString([],{month:"long",day:"numeric"});
+}
+
+function _renderReactions(reactions, msgId){
+  if(!reactions || !Object.keys(reactions).length) return "";
+  const items = Object.entries(reactions).map(([emoji, data])=>`
+    <button class="chat-reaction${data.mine?" mine":""}" onclick="toggleReaction(${msgId},'${emoji}')">${emoji} ${data.count}</button>
+  `).join("");
+  return `<div class="chat-reactions">${items}</div>`;
+}
+
+function _renderQuickReact(msgId){
+  const btns = QUICK_EMOJIS.map(e=>`<button onclick="toggleReaction(${msgId},'${e}')" title="${e}">${e}</button>`).join("");
+  return `<div class="chat-quick-react">${btns}</div>`;
+}
+
+function _renderMessage(msg, showDate, prevSameSender){
+  const isCont = prevSameSender;
+  const contClass = isCont ? " cont" : "";
+  const roleClass = msg.sender_role==="owner" ? " owner" : (" " + (msg.sender_role||""));
+  const dateHtml = showDate ? `<div class="chat-day">${showDate}</div>` : "";
+  const threadHtml = msg.reply_count > 0
+    ? `<div class="chat-thread-footer" onclick="openThread(${msg.id})">${msg.reply_count} ${msg.reply_count===1?"reply":"replies"} →</div>`
+    : "";
+  return `${dateHtml}
+    <div class="chat-msg${contClass}" data-mid="${msg.id}">
+      <div class="chat-msg-av${roleClass}">${msg.sender_initials}</div>
+      <div class="chat-msg-body">
+        <div class="chat-msg-head">
+          <span class="chat-msg-name">${esc(msg.sender_name)}</span>
+          <span class="chat-msg-role ${msg.sender_role||""}">${msg.sender_role||"member"}</span>
+          <span class="chat-msg-time">${_chatTime(msg.created_at)}</span>
+        </div>
+        <div class="chat-msg-text">${esc(msg.content).replace(/\n/g,"<br>")}</div>
+        ${_renderReactions(msg.reactions, msg.id)}
+        ${_renderQuickReact(msg.id)}
+        ${threadHtml}
+      </div>
+    </div>`;
+}
+
+async function loadChatChannels(){
+  try{
+    const r = await fetch("/teamapp/chat/channels/");
+    const d = await r.json();
+    if(!d.success) return;
+
+    // Render channel list
+    const list = document.getElementById("chatChannelList");
+    list.innerHTML = d.channels.map(ch=>`
+      <div class="chat-ch-item${_chatCurrentChannelId===ch.id?" active":""}" onclick="selectChannel(${ch.id},'${esc(ch.name)}','${esc(ch.description||"")}')">
+        <span class="chat-ch-hash">#</span>
+        <span>${esc(ch.name)}</span>
+        ${ch.message_count>0?`<span class="chat-ch-badge" style="display:none;">${ch.message_count}</span>`:""}
+      </div>
+    `).join("");
+
+    // Auto-select general if nothing selected
+    if(!_chatCurrentChannelId && d.channels.length){
+      const gen = d.channels.find(c=>c.slug==="general") || d.channels[0];
+      selectChannel(gen.id, gen.name, gen.description||"");
+    }
+
+    // Load team members into sidebar
+    loadChatMembers();
+  } catch(e){ console.error("chat channels:", e); }
+}
+
+async function loadChatMembers(){
+  try{
+    const r = await fetch("/teamapp/members/");
+    const d = await r.json();
+    if(!d.success) return;
+    _chatMembers = d.members;
+    const ml = document.getElementById("chatMemberList");
+    ml.innerHTML = d.members.slice(0,8).map(m=>{
+      const initials = m.name.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
+      return `<div class="chat-member-item">
+        <div class="chat-member-av">${initials}</div>
+        <span style="font-size:13px;color:var(--vf-text,#0f172a);">${esc(m.name)}</span>
+        <div class="chat-member-dot ${m.status||"offline"}"></div>
+      </div>`;
+    }).join("");
+  } catch(e){}
+}
+
+function selectChannel(id, name, description){
+  _chatCurrentChannelId = id;
+  _chatCurrentChannelName = name;
+  // Update active state
+  document.querySelectorAll(".chat-ch-item").forEach(el=>el.classList.remove("active"));
+  document.querySelectorAll(".chat-ch-item").forEach(el=>{
+    if(el.textContent.trim().includes(name)) el.classList.add("active");
+  });
+  document.getElementById("chatChName").textContent = "# " + name;
+  document.getElementById("chatChDesc").textContent = description || "";
+  document.getElementById("chatInput").placeholder = `Message #${name}…`;
+  closeThread();
+  loadChatMessages();
+}
+
+async function loadChatMessages(){
+  if(!_chatCurrentChannelId) return;
+  try{
+    const r = await fetch(`/teamapp/chat/messages/?channel_id=${_chatCurrentChannelId}`);
+    const d = await r.json();
+    if(!d.success) return;
+    renderMessages(d.messages, "chatMessages");
+  } catch(e){ console.error("chat messages:", e); }
+}
+
+function renderMessages(msgs, containerId){
+  const el = document.getElementById(containerId);
+  if(!msgs.length){
+    el.innerHTML = `<div class="chat-empty">No messages yet. Start the conversation!</div>`;
+    return;
+  }
+  let html = "";
+  let lastDate = null;
+  let lastSender = null;
+  for(let i=0; i<msgs.length; i++){
+    const msg = msgs[i];
+    const dateLabel = _chatDateLabel(msg.created_at);
+    const showDate = dateLabel !== lastDate ? dateLabel : null;
+    const prevSame = !showDate && lastSender === msg.sender_name;
+    html += _renderMessage(msg, showDate, prevSame);
+    lastDate = dateLabel;
+    lastSender = msg.sender_name;
+  }
+  el.innerHTML = html;
+  el.scrollTop = el.scrollHeight;
+}
+
+async function sendChatMessage(){
+  if(!_chatCurrentChannelId) return;
+  const input = document.getElementById("chatInput");
+  const content = input.value.trim();
+  if(!content) return;
+  input.value = "";
+  input.style.height = "auto";
+  try{
+    const r = await fetch("/teamapp/chat/send/", {
+      method:"POST",
+      headers:{"Content-Type":"application/json","X-CSRFToken":getCsrfToken()},
+      body: JSON.stringify({channel_id: _chatCurrentChannelId, content})
+    });
+    const d = await r.json();
+    if(d.success) loadChatMessages();
+  } catch(e){ console.error("send:", e); }
+}
+
+function chatKeyDown(e){
+  if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); sendChatMessage(); }
+}
+
+async function toggleReaction(msgId, emoji){
+  try{
+    const r = await fetch("/teamapp/chat/reaction/", {
+      method:"POST",
+      headers:{"Content-Type":"application/json","X-CSRFToken":getCsrfToken()},
+      body: JSON.stringify({message_id: msgId, emoji})
+    });
+    const d = await r.json();
+    if(d.success){
+      if(_chatThreadParentId){ loadThreadMessages(_chatThreadParentId); }
+      else { loadChatMessages(); }
+    }
+  } catch(e){}
+}
+
+async function openThread(msgId){
+  _chatThreadParentId = msgId;
+  const layout = document.getElementById("chatLayout");
+  layout.classList.add("with-thread");
+  const thread = document.getElementById("chatThread");
+  thread.style.display = "flex";
+  thread.style.flexDirection = "column";
+  loadThreadMessages(msgId);
+}
+
+async function loadThreadMessages(msgId){
+  try{
+    const r = await fetch(`/teamapp/chat/messages/?channel_id=${_chatCurrentChannelId}`);
+    const d = await r.json();
+    if(!d.success) return;
+    const parent = d.messages.find(m=>m.id===msgId);
+    if(!parent) return;
+    // Render parent
+    const parentEl = document.getElementById("chatThreadParent");
+    parentEl.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <div class="chat-msg-av${parent.sender_role==="owner"?" owner":(" "+parent.sender_role)}" style="width:32px;height:32px;font-size:11px;">${esc(parent.sender_initials)}</div>
+        <div>
+          <span class="chat-msg-name" style="font-size:13px;">${esc(parent.sender_name)}</span>
+          <span class="chat-msg-time" style="margin-left:8px;">${_chatTime(parent.created_at)}</span>
+        </div>
+      </div>
+      <div class="chat-msg-text" style="font-size:13.5px;">${esc(parent.content).replace(/\n/g,"<br>")}</div>
+    `;
+    // Render replies
+    renderMessages(parent.replies || [], "chatThreadReplies");
+  } catch(e){}
+}
+
+async function sendThreadReply(){
+  if(!_chatCurrentChannelId || !_chatThreadParentId) return;
+  const input = document.getElementById("chatThreadInput");
+  const content = input.value.trim();
+  if(!content) return;
+  input.value = "";
+  input.style.height = "auto";
+  try{
+    const r = await fetch("/teamapp/chat/send/", {
+      method:"POST",
+      headers:{"Content-Type":"application/json","X-CSRFToken":getCsrfToken()},
+      body: JSON.stringify({channel_id: _chatCurrentChannelId, content, parent_id: _chatThreadParentId})
+    });
+    const d = await r.json();
+    if(d.success){ loadThreadMessages(_chatThreadParentId); loadChatMessages(); }
+  } catch(e){}
+}
+
+function chatThreadKeyDown(e){
+  if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); sendThreadReply(); }
+}
+
+function closeThread(){
+  _chatThreadParentId = null;
+  document.getElementById("chatLayout").classList.remove("with-thread");
+  const thread = document.getElementById("chatThread");
+  thread.style.display = "none";
+}
+
+function openNewChannelModal(){
+  const m = document.getElementById("newChannelModal");
+  m.style.display = "flex";
+  document.getElementById("newChName").value = "";
+  document.getElementById("newChDesc").value = "";
+  document.getElementById("newChName").focus();
+}
+
+function closeNewChannelModal(){
+  document.getElementById("newChannelModal").style.display = "none";
+}
+
+async function submitNewChannel(){
+  const name = document.getElementById("newChName").value.trim();
+  const description = document.getElementById("newChDesc").value.trim();
+  if(!name) return;
+  try{
+    const r = await fetch("/teamapp/chat/channels/", {
+      method:"POST",
+      headers:{"Content-Type":"application/json","X-CSRFToken":getCsrfToken()},
+      body: JSON.stringify({name, description})
+    });
+    const d = await r.json();
+    if(d.success){
+      closeNewChannelModal();
+      loadChatChannels();
+      selectChannel(d.channel.id, d.channel.name, d.channel.description);
+    }
+  } catch(e){}
+}
+
+function getCsrfToken(){
+  const m = document.cookie.match(/csrftoken=([^;]+)/);
+  return m ? m[1] : "";
+}
 </script>
 </body>
 </html>

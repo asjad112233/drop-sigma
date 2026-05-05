@@ -7,4 +7,9 @@ urlpatterns = [
     path("members/<int:member_id>/delete/", views.delete_team_member_api),
     path("rules/", views.assignment_rules_api),
     path("rules/create/", views.create_assignment_rule_api),
+    # Chat
+    path("chat/channels/", views.chat_channels_api),
+    path("chat/messages/", views.chat_messages_api),
+    path("chat/send/", views.chat_send_api),
+    path("chat/reaction/", views.chat_reaction_api),
 ]

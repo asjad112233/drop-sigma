@@ -58,3 +58,38 @@ class AssignmentRule(models.Model):
 
     def __str__(self):
         return f"{self.rule_type} → {self.assign_to_role}"
+
+
+# ─── Team Chat ────────────────────────────────────────────────────────────────
+
+class ChatChannel(models.Model):
+    name        = models.CharField(max_length=100)
+    slug        = models.SlugField(unique=True)
+    description = models.CharField(max_length=255, blank=True)
+    created_at  = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"#{self.name}"
+
+
+class ChatMessage(models.Model):
+    channel    = models.ForeignKey(ChatChannel, on_delete=models.CASCADE, related_name="messages")
+    sender     = models.ForeignKey(User, on_delete=models.CASCADE, related_name="chat_messages")
+    content    = models.TextField()
+    parent     = models.ForeignKey("self", null=True, blank=True, on_delete=models.CASCADE, related_name="replies")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at"]
+
+    def __str__(self):
+        return f"{self.sender} → #{self.channel.name}: {self.content[:40]}"
+
+
+class ChatReaction(models.Model):
+    message = models.ForeignKey(ChatMessage, on_delete=models.CASCADE, related_name="reactions")
+    sender  = models.ForeignKey(User, on_delete=models.CASCADE, related_name="chat_reactions")
+    emoji   = models.CharField(max_length=10)
+
+    class Meta:
+        unique_together = ("message", "sender", "emoji")
