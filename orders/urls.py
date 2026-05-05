@@ -26,6 +26,9 @@ urlpatterns = [
     path("bulk-assign-vendor/", views.bulk_assign_vendor_api),
     path("remove-product-vendor-assignment/", views.remove_product_vendor_assignment_api),
 
+    # Order lookup by number (for chat links)
+    path("api/lookup/", views.order_lookup_by_number_api, name="order_lookup_by_number"),
+
     # Overview
     path("overview/", views.overview_api, name="overview_api"),
 

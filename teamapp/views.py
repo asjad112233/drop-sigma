@@ -5,17 +5,37 @@ from django.contrib.auth.models import User
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from .models import TeamMember, AssignmentRule, ChatChannel, ChatMessage, ChatReaction
+from .models import TeamMember, AssignmentRule, ChatChannel, ChatMessage, ChatReaction, ChatReadReceipt
 from .serializers import TeamMemberSerializer, AssignmentRuleSerializer
 
 
 # ─── Admin: Team Members ──────────────────────────────────────────────────────
 
+def _admin_display_name(u):
+    full = u.get_full_name()
+    return full if full else u.username
+
+
 @api_view(["GET"])
 def team_members_api(request):
-    members = TeamMember.objects.filter(is_active=True).order_by("name")
-    serializer = TeamMemberSerializer(members, many=True)
-    return Response({"success": True, "members": serializer.data})
+    qs = TeamMember.objects.filter(is_active=True).order_by("name")
+    if request.user.is_authenticated:
+        qs = qs.exclude(user=request.user)
+    serializer = TeamMemberSerializer(qs, many=True)
+
+    # Include admin/superuser contacts (excluding self)
+    admin_contacts = []
+    for u in User.objects.filter(is_superuser=True).order_by("id"):
+        if request.user.is_authenticated and u.id == request.user.id:
+            continue
+        admin_contacts.append({
+            "id": None, "user": u.id,
+            "name": _admin_display_name(u),
+            "role": "owner", "status": "available",
+            "is_admin": True,
+        })
+
+    return Response({"success": True, "members": serializer.data, "admin_contacts": admin_contacts})
 
 
 @api_view(["POST"])
@@ -54,6 +74,17 @@ def create_team_member_api(request):
         permissions=perms,
         is_active=True,
     )
+
+    # Auto-add to the General channel
+    general, _ = ChatChannel.objects.get_or_create(slug="general", is_dm=False, defaults={"name": "general", "description": "General team discussion"})
+    if general:
+        general.members.add(user)
+        added_by = _sender_info(request.user)["name"]
+        ChatMessage.objects.create(
+            channel=general,
+            sender=request.user,
+            content=f"📢 {name} has been added to #general by {added_by}. Welcome!",
+        )
 
     return Response({"success": True, "member": TeamMemberSerializer(member).data})
 
@@ -373,11 +404,22 @@ _DEFAULT_CHANNELS = [
 
 
 def _sender_info(user):
+    # Team member
     member = user.team_profile.first()
     if member:
         initials = "".join(w[0].upper() for w in member.name.split()[:2])
         return {"name": member.name, "role": member.role, "initials": initials}
-    return {"name": "Admin", "role": "owner", "initials": "AD"}
+    # Vendor
+    try:
+        vendor = user.vendor_profile
+        initials = "".join(w[0].upper() for w in vendor.name.split()[:2])
+        return {"name": vendor.name, "role": "vendor", "initials": initials}
+    except Exception:
+        pass
+    # Admin / superuser fallback
+    full = user.get_full_name() or user.username
+    initials = "".join(w[0].upper() for w in full.split()[:2]) or "AD"
+    return {"name": full, "role": "owner", "initials": initials}
 
 
 def _serialize_message(msg, current_user_id, include_replies=True):
@@ -398,14 +440,71 @@ def _serialize_message(msg, current_user_id, include_replies=True):
     return {
         "id":             msg.id,
         "content":        msg.content,
+        "sender_id":      msg.sender_id,
         "sender_name":    info["name"],
         "sender_role":    info["role"],
         "sender_initials": info["initials"],
         "created_at":     msg.created_at.isoformat(),
+        "is_mine":        msg.sender_id == current_user_id,
         "reactions":      reactions,
         "reply_count":    msg.replies.count(),
         "replies":        replies,
     }
+
+
+@api_view(["POST"])
+def chat_dm_api(request):
+    """Get or create a private DM channel between current user and target_user_id."""
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Not authenticated"}, status=401)
+    target_id = request.data.get("target_user_id")
+    if not target_id:
+        return Response({"success": False, "message": "target_user_id required."}, status=400)
+    try:
+        target = User.objects.get(pk=target_id)
+    except User.DoesNotExist:
+        return Response({"success": False, "message": "User not found."}, status=404)
+
+    me = request.user
+    if me.id == target.id:
+        return Response({"success": False, "message": "Cannot DM yourself."}, status=400)
+
+    # Deterministic slug: dm-{lower_id}-{higher_id}
+    a, b = sorted([me.id, target.id])
+    slug = f"dm-{a}-{b}"
+
+    channel = ChatChannel.objects.filter(slug=slug, is_dm=True).first()
+    if not channel:
+        # Build display name from both sides
+        def _display(u):
+            try:
+                p = u.team_profile.first()
+                if p: return p.name
+            except Exception: pass
+            try:
+                v = u.vendor_profile
+                if v: return v.name
+            except Exception: pass
+            return u.get_full_name() or u.username
+
+        name = f"{_display(me)} & {_display(target)}"
+        channel = ChatChannel.objects.create(name=name, slug=slug, is_dm=True)
+        channel.participants.set([me, target])
+
+    # Build per-caller display name (show the OTHER person's name)
+    def _display(u):
+        try:
+            p = u.team_profile.first()
+            if p: return p.name
+        except Exception: pass
+        try:
+            v = u.vendor_profile
+            if v: return v.name
+        except Exception: pass
+        return u.get_full_name() or u.username
+
+    other_name = _display(target)
+    return Response({"success": True, "channel_id": channel.id, "channel_name": other_name})
 
 
 @api_view(["GET", "POST"])
@@ -428,20 +527,49 @@ def chat_channels_api(request):
     for d in _DEFAULT_CHANNELS:
         ChatChannel.objects.get_or_create(slug=d["slug"], defaults={"name": d["name"], "description": d["description"]})
 
-    channels = ChatChannel.objects.all().order_by("id")
+    if request.user.is_superuser:
+        channels = ChatChannel.objects.filter(is_dm=False).order_by("id")
+    else:
+        channels = ChatChannel.objects.filter(is_dm=False, members=request.user).order_by("id")
     data = []
     for ch in channels:
         last = ch.messages.filter(parent=None).order_by("-created_at").first()
+        receipt = ChatReadReceipt.objects.filter(user=request.user, channel=ch).first()
+        if receipt:
+            unread = ch.messages.filter(parent=None, created_at__gt=receipt.last_read_at).count()
+        else:
+            unread = ch.messages.filter(parent=None).count()
+        last_sender = _sender_info(last.sender)["name"] if last else None
         data.append({
-            "id":            ch.id,
-            "name":          ch.name,
-            "slug":          ch.slug,
-            "description":   ch.description,
-            "message_count": ch.messages.filter(parent=None).count(),
-            "last_message":  last.content[:60] if last else None,
-            "last_time":     last.created_at.isoformat() if last else None,
+            "id":             ch.id,
+            "name":           ch.name,
+            "slug":           ch.slug,
+            "description":    ch.description,
+            "message_count":  ch.messages.filter(parent=None).count(),
+            "last_message":   last.content[:60] if last else None,
+            "last_sender":    last_sender,
+            "last_time":      last.created_at.isoformat() if last else None,
+            "unread_count":   unread,
         })
     return Response({"success": True, "channels": data})
+
+
+@api_view(["POST"])
+def chat_mark_read_api(request):
+    if not request.user.is_authenticated:
+        return Response({"success": False}, status=401)
+    channel_id = request.data.get("channel_id")
+    if not channel_id:
+        return Response({"success": False}, status=400)
+    from django.utils import timezone
+    ch = ChatChannel.objects.filter(id=channel_id).first()
+    if not ch:
+        return Response({"success": False}, status=404)
+    ChatReadReceipt.objects.update_or_create(
+        user=request.user, channel=ch,
+        defaults={"last_read_at": timezone.now()}
+    )
+    return Response({"success": True})
 
 
 @api_view(["GET"])
@@ -458,12 +586,16 @@ def chat_messages_api(request):
     except ChatChannel.DoesNotExist:
         return Response({"success": False, "message": "Channel not found."}, status=404)
 
+    if not ch.is_dm and not request.user.is_superuser and not ch.members.filter(pk=request.user.pk).exists():
+        return Response({"success": False, "message": "Not a member of this channel."}, status=403)
+
     msgs = ch.messages.filter(parent=None).select_related("sender").prefetch_related("reactions", "replies__sender", "replies__reactions")
     uid = request.user.id
     return Response({
-        "success":  True,
-        "channel":  {"id": ch.id, "name": ch.name, "description": ch.description},
-        "messages": [_serialize_message(m, uid) for m in msgs],
+        "success":         True,
+        "current_user_id": uid,
+        "channel":         {"id": ch.id, "name": ch.name, "description": ch.description},
+        "messages":        [_serialize_message(m, uid) for m in msgs],
     })
 
 
@@ -520,3 +652,98 @@ def chat_reaction_api(request):
             reactions[r.emoji]["mine"] = True
 
     return Response({"success": True, "added": created, "reactions": reactions})
+
+
+@api_view(["DELETE"])
+def chat_delete_message_api(request, msg_id):
+    if not request.user.is_authenticated:
+        return Response({"success": False}, status=401)
+    try:
+        msg = ChatMessage.objects.get(id=msg_id)
+    except ChatMessage.DoesNotExist:
+        return Response({"success": False, "message": "Not found."}, status=404)
+    if not request.user.is_superuser:
+        return Response({"success": False, "message": "Only admins can delete messages."}, status=403)
+    msg.delete()
+    return Response({"success": True})
+
+
+@api_view(["PATCH"])
+def chat_edit_message_api(request, msg_id):
+    if not request.user.is_authenticated:
+        return Response({"success": False}, status=401)
+    try:
+        msg = ChatMessage.objects.get(id=msg_id)
+    except ChatMessage.DoesNotExist:
+        return Response({"success": False, "message": "Not found."}, status=404)
+    if msg.sender != request.user:
+        return Response({"success": False, "message": "Not authorized."}, status=403)
+    content = request.data.get("content", "").strip()
+    if not content:
+        return Response({"success": False, "message": "Content required."})
+    msg.content = content
+    msg.save()
+    return Response({"success": True, "content": msg.content})
+
+
+@api_view(["GET"])
+def chat_channel_members_api(request, channel_id):
+    if not request.user.is_authenticated:
+        return Response({"success": False}, status=401)
+    try:
+        ch = ChatChannel.objects.get(id=channel_id, is_dm=False)
+    except ChatChannel.DoesNotExist:
+        return Response({"success": False, "message": "Channel not found."}, status=404)
+
+    members_data = []
+    for u in ch.members.select_related().all():
+        info = _sender_info(u)
+        members_data.append({"user_id": u.id, "name": info["name"], "role": info["role"], "initials": info["initials"]})
+
+    return Response({"success": True, "channel_id": ch.id, "channel_name": ch.name, "members": members_data})
+
+
+@api_view(["POST"])
+def chat_channel_members_add_api(request, channel_id):
+    if not request.user.is_authenticated or not request.user.is_superuser:
+        return Response({"success": False, "message": "Admin only."}, status=403)
+    try:
+        ch = ChatChannel.objects.get(id=channel_id, is_dm=False)
+    except ChatChannel.DoesNotExist:
+        return Response({"success": False, "message": "Channel not found."}, status=404)
+
+    user_id = request.data.get("user_id")
+    if not user_id:
+        return Response({"success": False, "message": "user_id required."}, status=400)
+    try:
+        u = User.objects.get(pk=user_id)
+    except User.DoesNotExist:
+        return Response({"success": False, "message": "User not found."}, status=404)
+
+    ch.members.add(u)
+    info = _sender_info(u)
+    added_by = _sender_info(request.user)["name"]
+    # Post a system notification message so the added user sees it as unread
+    ChatMessage.objects.create(
+        channel=ch,
+        sender=request.user,
+        content=f"📢 {info['name']} has been added to #{ch.name} by {added_by}.",
+    )
+    return Response({"success": True, "member": {"user_id": u.id, "name": info["name"], "role": info["role"], "initials": info["initials"]}})
+
+
+@api_view(["DELETE"])
+def chat_channel_members_remove_api(request, channel_id, user_id):
+    if not request.user.is_authenticated or not request.user.is_superuser:
+        return Response({"success": False, "message": "Admin only."}, status=403)
+    try:
+        ch = ChatChannel.objects.get(id=channel_id, is_dm=False)
+    except ChatChannel.DoesNotExist:
+        return Response({"success": False, "message": "Channel not found."}, status=404)
+    try:
+        u = User.objects.get(pk=user_id)
+    except User.DoesNotExist:
+        return Response({"success": False, "message": "User not found."}, status=404)
+
+    ch.members.remove(u)
+    return Response({"success": True})

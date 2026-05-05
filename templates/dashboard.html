@@ -2,6 +2,10 @@
 <html>
 <head>
   <title>VendorFlow Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
   <style>
     html,body{height:100%}
     body{margin:0;font-family:Arial;background:#f5f7fb;color:#111827;overflow:hidden}
@@ -5216,60 +5220,195 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
     <!-- TEAM CHAT SECTION                                        -->
     <!-- ====================================================== -->
     <section id="chatSection" class="section">
-      <div id="chatLayout">
-        <!-- Channel sidebar -->
-        <div id="chatChSidebar">
-          <div class="chat-sb-head">
-            <div>
-              <div class="chat-sb-title">Team Chat</div>
-              <div class="chat-sb-sub" id="chatActiveStore">—</div>
+      <div class="tc-app" id="tcApp">
+
+        <!-- ── Chat Sidebar ── -->
+        <aside class="tc-sidebar">
+          <div class="tc-sb-head">
+            <div class="tc-logo">DS</div>
+            <div class="tc-br-text">
+              <div class="tc-br-name">Team Chat</div>
+              <div class="tc-br-sub">Drop Sigma</div>
             </div>
-            <button class="chat-new-ch-btn" onclick="openNewChannelModal()" title="New channel">+</button>
+            <button class="tc-icon-btn" onclick="openNewChannelModal()" title="New channel" style="margin-left:auto;"><i class="fa-solid fa-plus"></i></button>
           </div>
-          <div class="chat-sb-label">CHANNELS</div>
-          <div id="chatChannelList"></div>
-          <div class="chat-sb-label" style="margin-top:14px;">TEAM</div>
-          <div id="chatMemberList"></div>
+
+          <div class="tc-channels" id="tcChannels">
+            <div class="tc-group">
+              <div class="tc-group-head" onclick="tcToggleGroup(this)">
+                <span><i class="fa-solid fa-caret-down tc-caret"></i> Channels</span>
+                <button class="tc-ha-btn" onclick="event.stopPropagation();openNewChannelModal()"><i class="fa-solid fa-plus"></i></button>
+              </div>
+              <div id="tcChannelList"></div>
+              <div class="tc-add-row" onclick="openNewChannelModal()">
+                <div class="tc-pl">+</div>
+                <span>Add channel</span>
+              </div>
+            </div>
+
+            <div class="tc-group">
+              <div class="tc-group-head" onclick="tcToggleGroup(this)">
+                <span><i class="fa-solid fa-caret-down tc-caret"></i> Team Members</span>
+                <button class="tc-ha-btn" onclick="event.stopPropagation();openCreateEmpModal()" title="Add Employee"><i class="fa-solid fa-plus"></i></button>
+              </div>
+              <div id="tcMemberList"></div>
+              <div class="tc-add-row" onclick="openVendorModal()">
+                <div class="tc-pl">+</div>
+                <span>Add Vendor</span>
+              </div>
+              <div class="tc-add-row" onclick="openCreateEmpModal()">
+                <div class="tc-pl">+</div>
+                <span>Add Employee</span>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <!-- ── Chat Main ── -->
+        <main class="tc-main">
+          <!-- Header -->
+          <div class="tc-ch-header">
+            <div class="tc-ch-title-block">
+              <div class="tc-ch-title"><span class="tc-hash" id="tcChHash" style="display:none;">#</span><span id="tcChName"></span></div>
+              <div class="tc-ch-meta" id="tcChDesc"></div>
+            </div>
+            <div class="tc-h-actions">
+              <i class="fa-solid fa-circle" id="tcConnBadge" title="Connecting…" style="font-size:8px;color:#f59e0b;margin-right:4px;"></i>
+              <div id="tcMembersAvatars" onclick="tcOpenMembersModal()" title="View members" style="display:none;cursor:pointer;align-items:center;gap:0;padding:3px 6px 3px 3px;border-radius:20px;border:1px solid #e8e2f8;background:#faf8ff;transition:background .15s;" onmouseenter="this.style.background='#ede9fe'" onmouseleave="this.style.background='#faf8ff'"></div>
+              <button class="tc-icon-btn" onclick="loadChatMessages()" title="Refresh"><i class="fa-solid fa-rotate"></i></button>
+            </div>
+          </div>
+
+          <!-- Members Modal -->
+          <div id="tcMembersModal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.45);align-items:center;justify-content:center;">
+            <div style="background:#fff;border-radius:14px;width:420px;max-width:94vw;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(109,40,217,.18);">
+              <div style="padding:18px 20px 14px;border-bottom:1px solid #ede9fe;display:flex;align-items:center;justify-content:space-between;">
+                <div>
+                  <div style="font-weight:700;font-size:15px;color:#3b0764;">Members of <span id="tcMembersModalChName">#general</span></div>
+                  <div style="font-size:12px;color:#7c3aed;margin-top:2px;"><span id="tcMembersModalCount">0</span> members</div>
+                </div>
+                <button onclick="document.getElementById('tcMembersModal').style.display='none';" style="background:none;border:none;cursor:pointer;color:#7c3aed;font-size:18px;padding:4px;"><i class="fa-solid fa-xmark"></i></button>
+              </div>
+              <div id="tcMembersList" style="overflow-y:auto;flex:1;padding:12px 20px;"></div>
+              <div style="padding:14px 20px;border-top:1px solid #ede9fe;">
+                <div style="font-size:12px;font-weight:600;color:#7c3aed;margin-bottom:8px;">Add Member</div>
+                <div style="display:flex;gap:8px;">
+                  <select id="tcAddMemberSelect" style="flex:1;border:1.5px solid #ddd5f3;border-radius:8px;padding:7px 10px;font-size:13px;color:#3b0764;outline:none;">
+                    <option value="">Select employee…</option>
+                  </select>
+                  <button onclick="tcAddChannelMember()" style="background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:13px;font-weight:600;cursor:pointer;">Add</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Messages -->
+          <div class="tc-messages" id="chatMessages">
+            <div class="tc-empty"><i class="fa-regular fa-comments" style="font-size:36px;display:block;margin-bottom:12px;color:#d6cfee;"></i>Select a channel to start chatting</div>
+          </div>
+
+          <!-- Typing indicator -->
+          <div id="tcTypingBar" style="display:none;align-items:center;gap:8px;padding:4px 24px 2px;min-height:22px;">
+            <div class="tc-typing-dots"><span></span><span></span><span></span></div>
+            <span class="tc-typing-text" style="font-size:12.5px;color:#7c3aed;font-weight:500;font-style:italic;"></span>
+          </div>
+
+          <!-- Composer -->
+          <div class="tc-composer-wrap">
+            <div class="tc-composer" id="tcComposer">
+              <div class="tc-c-toolbar">
+                <button title="Bold" onclick="tcFormat('bold')"><i class="fa-solid fa-bold"></i></button>
+                <button title="Italic" onclick="tcFormat('italic')"><i class="fa-solid fa-italic"></i></button>
+                <button title="Strikethrough" onclick="tcFormat('strike')"><i class="fa-solid fa-strikethrough"></i></button>
+                <div class="tc-c-sep"></div>
+                <button title="Link" onclick="tcFormat('link')"><i class="fa-solid fa-link"></i></button>
+                <button title="Code" onclick="tcFormat('code')"><i class="fa-solid fa-code"></i></button>
+                <div class="tc-c-sep"></div>
+                <button title="Bullet list" onclick="tcFormat('bullet')"><i class="fa-solid fa-list-ul"></i></button>
+                <button title="Numbered list" onclick="tcFormat('numbered')"><i class="fa-solid fa-list-ol"></i></button>
+              </div>
+              <div id="chatInput" contenteditable="true" data-placeholder="Select a channel…"
+                onkeydown="chatKeyDown(event)"
+                oninput="_tcOnComposerInput()"
+                class="tc-ce-input"></div>
+              <div id="tcAttachPreview" style="display:none;padding:6px 14px 0;flex-wrap:wrap;gap:6px;"></div>
+              <div class="tc-c-bottom">
+                <div class="tc-c-left">
+                  <button title="Emoji" onclick="toggleEmojiPicker()"><i class="fa-regular fa-face-smile"></i></button>
+                  <button title="Mention" onclick="insertMention()"><i class="fa-solid fa-at"></i></button>
+                  <button title="Attach file" onclick="document.getElementById('tcFileInput').click()"><i class="fa-solid fa-paperclip"></i></button>
+                  <input type="file" id="tcFileInput" style="display:none;" onchange="tcHandleAttach(this)" multiple />
+                </div>
+                <div class="tc-c-right">
+                  <button class="tc-send-btn" onclick="sendChatMessage()">
+                    <span>Send</span>
+                    <span class="tc-send-arrow"><i class="fa-solid fa-paper-plane"></i></span>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <!-- Emoji Picker -->
+            <div class="tc-emoji-picker" id="tcEmojiPicker">
+              <div class="tc-ep-cat">Quick Reactions</div>
+              <div class="tc-ep-grid">
+                <button onclick="insertEmoji('👍')">👍</button><button onclick="insertEmoji('❤️')">❤️</button>
+                <button onclick="insertEmoji('😂')">😂</button><button onclick="insertEmoji('🎉')">🎉</button>
+                <button onclick="insertEmoji('🚀')">🚀</button><button onclick="insertEmoji('😮')">😮</button>
+                <button onclick="insertEmoji('🔥')">🔥</button><button onclick="insertEmoji('✅')">✅</button>
+              </div>
+              <div class="tc-ep-cat" style="margin-top:8px;">People & Faces</div>
+              <div class="tc-ep-grid">
+                <button onclick="insertEmoji('😊')">😊</button><button onclick="insertEmoji('😍')">😍</button>
+                <button onclick="insertEmoji('🤔')">🤔</button><button onclick="insertEmoji('😅')">😅</button>
+                <button onclick="insertEmoji('🙏')">🙏</button><button onclick="insertEmoji('💪')">💪</button>
+                <button onclick="insertEmoji('👀')">👀</button><button onclick="insertEmoji('🤝')">🤝</button>
+              </div>
+              <div class="tc-ep-cat" style="margin-top:8px;">Objects</div>
+              <div class="tc-ep-grid">
+                <button onclick="insertEmoji('📦')">📦</button><button onclick="insertEmoji('📧')">📧</button>
+                <button onclick="insertEmoji('💰')">💰</button><button onclick="insertEmoji('⚠️')">⚠️</button>
+                <button onclick="insertEmoji('📊')">📊</button><button onclick="insertEmoji('🔔')">🔔</button>
+                <button onclick="insertEmoji('💡')">💡</button><button onclick="insertEmoji('🎯')">🎯</button>
+              </div>
+            </div>
+            <div class="tc-c-hint"><kbd>Enter</kbd> to send · <kbd>Shift+Enter</kbd> for newline</div>
+          </div>
+        </main>
+
+        <!-- ── Thread Panel ── -->
+        <div class="tc-thread" id="tcThread">
+          <div class="tc-thread-head">
+            <div>
+              <h4>Thread</h4>
+              <div class="tc-thread-sub" id="tcThreadSub">replies</div>
+            </div>
+            <button class="tc-icon-btn" onclick="closeThread()"><i class="fa-solid fa-xmark"></i></button>
+          </div>
+          <div class="tc-thread-body">
+            <div class="tc-thread-parent-msg" id="chatThreadParent"></div>
+            <div class="tc-thread-divider"><span class="tc-td-line"></span><span>Replies</span><span class="tc-td-line"></span></div>
+            <div class="tc-thread-replies" id="chatThreadReplies"></div>
+          </div>
+          <div class="tc-thread-composer">
+            <div class="tc-composer">
+              <div id="chatThreadInput" contenteditable="true" data-placeholder="Reply in thread…"
+                onkeydown="chatThreadKeyDown(event)"
+                class="tc-ce-input"></div>
+              <div class="tc-c-bottom">
+                <div class="tc-c-left">
+                  <button title="Emoji"><i class="fa-regular fa-face-smile"></i></button>
+                </div>
+                <div class="tc-c-right">
+                  <button class="tc-send-btn" onclick="sendThreadReply()">
+                    <span>Reply</span>
+                    <span class="tc-send-arrow"><i class="fa-solid fa-paper-plane"></i></span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <!-- Main messages -->
-        <div id="chatMain">
-          <div class="chat-main-head">
-            <div>
-              <div class="chat-ch-name" id="chatChName"># general</div>
-              <div class="chat-ch-desc" id="chatChDesc">General team discussion</div>
-            </div>
-            <div style="display:flex;gap:8px;">
-              <button class="chat-icon-btn" onclick="loadChatMessages()" title="Refresh">↻</button>
-            </div>
-          </div>
-          <div class="chat-messages" id="chatMessages">
-            <div class="chat-empty">Select a channel to start chatting</div>
-          </div>
-          <div class="chat-composer">
-            <textarea id="chatInput" placeholder="Message #general…" rows="1"
-              onkeydown="chatKeyDown(event)"
-              oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,140)+'px'"></textarea>
-            <button class="chat-send-btn" onclick="sendChatMessage()">Send ↑</button>
-          </div>
-        </div>
-
-        <!-- Thread panel (hidden by default) -->
-        <div id="chatThread" style="display:none;">
-          <div class="chat-thread-head">
-            <div class="chat-ch-name">Thread</div>
-            <button class="chat-icon-btn" onclick="closeThread()">✕</button>
-          </div>
-          <div class="chat-thread-parent" id="chatThreadParent"></div>
-          <div class="chat-thread-divider">Replies</div>
-          <div class="chat-messages chat-thread-msgs" id="chatThreadReplies"></div>
-          <div class="chat-composer" style="border-top:1px solid var(--vf-line);padding:12px 16px 14px;">
-            <textarea id="chatThreadInput" placeholder="Reply in thread…" rows="1"
-              onkeydown="chatThreadKeyDown(event)"
-              oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"></textarea>
-            <button class="chat-send-btn" onclick="sendThreadReply()">Reply ↑</button>
-          </div>
-        </div>
       </div>
     </section>
 
@@ -5277,16 +5416,16 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
 </div>
 
 <!-- New Channel Modal -->
-<div id="newChannelModal" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(15,23,42,.55);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;">
-  <div style="background:#fff;border-radius:20px;padding:28px 30px;width:420px;box-shadow:0 24px 60px rgba(15,23,42,.18);">
-    <h3 style="margin:0 0 18px;font-size:20px;font-weight:800;color:var(--vf-text);">New Channel</h3>
-    <label style="display:block;font-size:13px;font-weight:700;color:var(--vf-muted);margin-bottom:6px;">Channel Name</label>
-    <input id="newChName" type="text" placeholder="e.g. refunds" style="width:100%;padding:11px 14px;border:1px solid var(--vf-line);border-radius:12px;font-size:14px;font-family:inherit;box-sizing:border-box;margin-bottom:14px;outline:none;" />
-    <label style="display:block;font-size:13px;font-weight:700;color:var(--vf-muted);margin-bottom:6px;">Description (optional)</label>
-    <input id="newChDesc" type="text" placeholder="What's this channel about?" style="width:100%;padding:11px 14px;border:1px solid var(--vf-line);border-radius:12px;font-size:14px;font-family:inherit;box-sizing:border-box;margin-bottom:20px;outline:none;" />
+<div id="newChannelModal" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(13,13,18,.6);backdrop-filter:blur(8px);align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:22px;padding:30px 32px;width:440px;box-shadow:0 28px 70px rgba(20,14,60,.18);border:1px solid #e7e2f5;">
+    <h3 style="margin:0 0 20px;font-size:20px;font-weight:800;color:#0d0d12;letter-spacing:-.3px;">New Channel</h3>
+    <label style="display:block;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9a99ad;margin-bottom:7px;">Channel Name</label>
+    <input id="newChName" type="text" placeholder="e.g. refunds" style="width:100%;padding:12px 14px;border:1.5px solid #e7e2f5;border-radius:12px;font-size:14px;font-family:inherit;box-sizing:border-box;margin-bottom:16px;outline:none;transition:border-color .15s;" onfocus="this.style.borderColor='#7c3aed'" onblur="this.style.borderColor='#e7e2f5'" />
+    <label style="display:block;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9a99ad;margin-bottom:7px;">Description <span style="font-weight:400;text-transform:none;">(optional)</span></label>
+    <input id="newChDesc" type="text" placeholder="What's this channel about?" style="width:100%;padding:12px 14px;border:1.5px solid #e7e2f5;border-radius:12px;font-size:14px;font-family:inherit;box-sizing:border-box;margin-bottom:22px;outline:none;transition:border-color .15s;" onfocus="this.style.borderColor='#7c3aed'" onblur="this.style.borderColor='#e7e2f5'" />
     <div style="display:flex;gap:10px;justify-content:flex-end;">
-      <button onclick="closeNewChannelModal()" style="padding:10px 20px;border-radius:12px;border:1px solid var(--vf-line);background:#fff;font-size:14px;font-weight:700;cursor:pointer;color:var(--vf-muted);">Cancel</button>
-      <button onclick="submitNewChannel()" style="padding:10px 20px;border-radius:12px;border:none;background:#2563eb;color:#fff;font-size:14px;font-weight:700;cursor:pointer;">Create</button>
+      <button onclick="closeNewChannelModal()" style="padding:11px 22px;border-radius:12px;border:1.5px solid #e7e2f5;background:#fff;font-size:14px;font-weight:700;cursor:pointer;color:#6b6b7d;font-family:inherit;">Cancel</button>
+      <button onclick="submitNewChannel()" style="padding:11px 22px;border-radius:12px;border:none;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 4px 14px rgba(124,58,237,.3);">Create Channel</button>
     </div>
   </div>
 </div>
@@ -5354,88 +5493,175 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
 .vm-confetti{position:fixed;top:-20px;width:10px;height:15px;border-radius:3px;z-index:10002;animation:vmFall 2.8s linear forwards;}
 @keyframes vmFall{to{transform:translateY(110vh) rotate(720deg);opacity:0;}}
 
-/* ── Team Chat ─────────────────────────────────────────────────────────── */
+/* ── Team Chat Premium (matching sample design) ─────────────────────────── */
 #chatSection.active{display:flex!important;flex-direction:column;height:calc(100vh - 48px);min-height:0;padding:0!important;}
-#chatLayout{flex:1;display:grid;grid-template-columns:240px 1fr;gap:14px;min-height:0;overflow:hidden;padding:16px 20px 20px;}
-#chatLayout.with-thread{grid-template-columns:240px 1fr 340px;}
+.tc-app{flex:1;display:grid;grid-template-columns:280px 1fr;grid-template-rows:1fr;min-height:0;overflow:hidden;padding:14px;gap:14px;background:linear-gradient(180deg,#f6f4ff 0%,#eee9ff 100%);}
+.tc-app.with-thread{grid-template-columns:280px 1fr 380px;}
 
-/* Channel sidebar */
-#chatChSidebar{background:var(--vf-surface,#fff);border:1px solid var(--vf-line,#e3e8f0);border-radius:18px;display:flex;flex-direction:column;overflow:hidden;padding:16px 12px;}
-.chat-sb-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding:0 4px;}
-.chat-sb-title{font-size:16px;font-weight:800;color:var(--vf-text,#0f172a);}
-.chat-sb-sub{font-size:11px;color:var(--vf-muted,#64748b);margin-top:2px;}
-.chat-new-ch-btn{width:28px;height:28px;border-radius:8px;border:1px solid var(--vf-line,#e3e8f0);background:var(--vf-surface-2,#f8fafc);color:var(--vf-muted,#64748b);font-size:18px;font-weight:400;cursor:pointer;display:grid;place-items:center;line-height:1;}
-.chat-new-ch-btn:hover{background:var(--vf-line,#e3e8f0);color:var(--vf-text,#0f172a);}
-.chat-sb-label{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--vf-muted,#64748b);padding:0 8px;margin-bottom:4px;}
-.chat-ch-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;cursor:pointer;font-size:13.5px;font-weight:500;color:var(--vf-muted,#64748b);transition:all .12s;}
-.chat-ch-item:hover{background:var(--vf-surface-2,#f8fafc);color:var(--vf-text,#0f172a);}
-.chat-ch-item.active{background:#eef2ff;color:#4338ca;font-weight:700;}
-.chat-ch-hash{color:var(--vf-muted,#94a3b8);font-size:14px;}
-.chat-ch-badge{margin-left:auto;background:#ef4444;color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;}
-.chat-member-item{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:10px;cursor:default;font-size:13px;color:var(--vf-muted,#64748b);}
-.chat-member-av{width:24px;height:24px;border-radius:7px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;font-size:10px;font-weight:700;display:grid;place-items:center;flex-shrink:0;}
-.chat-member-dot{width:8px;height:8px;border-radius:99px;margin-left:auto;flex-shrink:0;}
-.chat-member-dot.available{background:#10b981;}
-.chat-member-dot.busy{background:#ef4444;}
-.chat-member-dot.offline,.chat-member-dot.limited{background:#94a3b8;}
+/* Sidebar */
+.tc-sidebar{background:#fff;border:1px solid #e7e2f5;border-radius:18px;box-shadow:0 1px 3px rgba(20,14,60,.05);display:flex;flex-direction:column;overflow:hidden;}
+.tc-sb-head{padding:16px 16px 14px;display:flex;align-items:center;gap:12px;border-bottom:1px solid #f0ecfb;}
+.tc-logo{width:40px;height:40px;border-radius:11px;background:linear-gradient(135deg,#3b82f6,#8b5cf6);color:#fff;font-weight:800;font-size:12px;display:grid;place-items:center;letter-spacing:-.5px;box-shadow:0 4px 12px rgba(124,58,237,.3);flex-shrink:0;}
+.tc-br-text{flex:1;min-width:0;}
+.tc-br-name{font-weight:800;color:#0d0d12;font-size:15px;letter-spacing:-.2px;}
+.tc-br-sub{color:#9a99ad;font-size:11px;margin-top:1px;}
+.tc-channels{flex:1;overflow-y:auto;padding:10px;}
+.tc-group{margin-bottom:16px;}
+.tc-group-head{display:flex;align-items:center;justify-content:space-between;padding:6px 8px;color:#9a99ad;font-size:12px;font-weight:600;cursor:pointer;text-transform:uppercase;letter-spacing:.4px;}
+.tc-group-head:hover{color:#0d0d12;}
+.tc-caret{font-size:10px;margin-right:4px;}
+.tc-ha-btn{background:none;border:none;color:#9a99ad;font-size:12px;cursor:pointer;width:22px;height:22px;border-radius:5px;display:grid;place-items:center;}
+.tc-ha-btn:hover{background:#f3f0ff;color:#7c3aed;}
+.tc-ch,.tc-dm{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;color:#6b6b7d;font-size:13.5px;cursor:pointer;transition:background .1s;margin-bottom:1px;}
+.tc-ch:hover,.tc-dm:hover{background:#f5f3ff;}
+.tc-ch.active,.tc-dm.active{background:#f3f0ff;color:#0d0d12;font-weight:600;box-shadow:inset 0 1px 2px rgba(20,14,60,.06);}
+.tc-ch.unread,.tc-dm.unread{color:#0d0d12;font-weight:700;}
+.tc-unread-badge{margin-left:auto;background:#6366f1;color:#fff;font-size:11px;font-weight:800;border-radius:999px;min-width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;padding:0 6px;flex-shrink:0;line-height:1;}
+.tc-verified{display:inline-flex;align-items:center;margin-left:3px;vertical-align:middle;}
+.tc-verified svg{width:15px;height:15px;}
+.tc-ch-icon{width:16px;text-align:center;color:#9a99ad;font-size:13px;}
+.tc-ch-name-txt{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tc-badge{background:#ef4444;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px;min-width:20px;text-align:center;}
+.tc-dm-av{width:24px;height:24px;border-radius:6px;color:#fff;display:grid;place-items:center;font-size:10px;font-weight:700;position:relative;flex-shrink:0;}
+.tc-dm-av::after{content:"";position:absolute;bottom:-1px;right:-1px;width:8px;height:8px;border-radius:99px;border:2px solid #fff;}
+.tc-dm-av.available::after{background:#10b981;}
+.tc-dm-av.busy::after{background:#ef4444;}
+.tc-dm-av.offline::after,.tc-dm-av.limited::after{background:#9a99ad;}
+.tc-add-row{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;color:#9a99ad;font-size:13px;cursor:pointer;}
+.tc-add-row:hover{background:#f5f3ff;color:#0d0d12;}
+.tc-pl{width:22px;height:22px;border-radius:5px;background:#f3f0ff;display:grid;place-items:center;font-size:10px;color:#9a99ad;}
 
-/* Main chat */
-#chatMain{background:var(--vf-surface,#fff);border:1px solid var(--vf-line,#e3e8f0);border-radius:18px;display:flex;flex-direction:column;min-height:0;overflow:hidden;}
-.chat-main-head{padding:16px 20px 14px;border-bottom:1px solid var(--vf-line,#e3e8f0);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
-.chat-ch-name{font-size:18px;font-weight:800;color:var(--vf-text,#0f172a);letter-spacing:-.3px;}
-.chat-ch-desc{font-size:12px;color:var(--vf-muted,#64748b);margin-top:2px;}
-.chat-messages{flex:1;overflow-y:auto;padding:14px 20px;display:flex;flex-direction:column;gap:2px;min-height:0;}
-.chat-empty{color:var(--vf-muted,#94a3b8);font-size:14px;text-align:center;margin:auto;}
-.chat-icon-btn{width:34px;height:34px;border-radius:9px;border:1px solid var(--vf-line,#e3e8f0);background:var(--vf-surface-2,#f8fafc);color:var(--vf-muted,#64748b);font-size:15px;cursor:pointer;display:grid;place-items:center;}
-.chat-icon-btn:hover{background:var(--vf-line,#e3e8f0);color:var(--vf-text,#0f172a);}
+/* Main */
+.tc-main{background:#fff;border:1px solid #e7e2f5;border-radius:18px;box-shadow:0 1px 3px rgba(20,14,60,.05);display:flex;flex-direction:column;overflow:hidden;min-height:0;}
+.tc-ch-header{padding:16px 24px 14px;display:flex;align-items:flex-end;justify-content:space-between;border-bottom:1px solid #e7e2f5;gap:16px;flex-shrink:0;}
+.tc-ch-title-block{display:flex;flex-direction:column;gap:4px;min-width:0;}
+.tc-ch-title{display:flex;align-items:center;gap:6px;font-weight:900;color:#0d0d12;font-size:22px;letter-spacing:-.5px;line-height:1.05;}
+.tc-hash{color:#9a99ad;font-weight:700;}
+.tc-ch-meta{display:flex;align-items:center;gap:8px;color:#9a99ad;font-size:12.5px;}
+.tc-h-actions{display:flex;align-items:center;gap:6px;}
+.tc-icon-btn{width:36px;height:36px;display:grid;place-items:center;border-radius:10px;color:#6b6b7d;background:#faf9ff;border:1px solid #e7e2f5;font-size:14px;cursor:pointer;transition:all .12s;}
+.tc-icon-btn:hover{background:#f3f0ff;color:#0d0d12;border-color:#d6cfee;}
 
-/* Messages */
-.chat-msg{display:grid;grid-template-columns:38px 1fr;gap:10px;padding:5px 0;}
-.chat-msg:hover{background:var(--vf-surface-2,#f8fafc);border-radius:10px;margin:0 -8px;padding:5px 8px;}
-.chat-msg.cont{padding-top:1px;}
-.chat-msg.cont .chat-msg-av{visibility:hidden;}
-.chat-msg.cont .chat-msg-head{display:none;}
-.chat-msg-av{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;font-size:13px;font-weight:700;display:grid;place-items:center;align-self:start;flex-shrink:0;}
-.chat-msg-av.owner{background:linear-gradient(135deg,#f59e0b,#ef4444);}
-.chat-msg-av.support{background:linear-gradient(135deg,#10b981,#059669);}
-.chat-msg-av.order_manager{background:linear-gradient(135deg,#3b82f6,#6366f1);}
-.chat-msg-av.refund_manager{background:linear-gradient(135deg,#ec4899,#f43f5e);}
-.chat-msg-av.vendor_manager{background:linear-gradient(135deg,#f97316,#ef4444);}
-.chat-msg-av.email_manager{background:linear-gradient(135deg,#06b6d4,#0ea5e9);}
-.chat-msg-body{min-width:0;}
-.chat-msg-head{display:flex;align-items:baseline;gap:8px;margin-bottom:3px;}
-.chat-msg-name{font-size:14px;font-weight:800;color:var(--vf-text,#0f172a);}
-.chat-msg-role{font-size:9.5px;font-weight:800;text-transform:uppercase;padding:2px 7px;border-radius:5px;background:#eef2ff;color:#4338ca;letter-spacing:.4px;}
-.chat-msg-role.owner{background:#fef3c7;color:#b45309;}
-.chat-msg-time{font-size:11.5px;color:var(--vf-muted,#94a3b8);}
-.chat-msg-text{font-size:14px;line-height:1.55;color:#334155;word-break:break-word;}
-.chat-reactions{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;}
-.chat-reaction{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border:1px solid var(--vf-line,#e3e8f0);border-radius:99px;font-size:12px;cursor:pointer;font-weight:600;color:var(--vf-muted,#64748b);background:#fff;transition:all .12s;}
-.chat-reaction:hover{border-color:#94a3b8;color:var(--vf-text,#0f172a);}
-.chat-reaction.mine{background:#eef2ff;border-color:#c7d2fe;color:#4338ca;}
-.chat-quick-react{display:inline-flex;gap:2px;margin-top:6px;}
-.chat-quick-react button{width:28px;height:28px;border-radius:7px;border:1px solid transparent;background:var(--vf-surface-2,#f8fafc);font-size:14px;cursor:pointer;transition:all .12s;}
-.chat-quick-react button:hover{border-color:var(--vf-line);background:#fff;}
-.chat-thread-footer{display:inline-flex;align-items:center;gap:7px;margin-top:5px;padding:4px 10px 4px 4px;border:1px solid transparent;border-radius:9px;cursor:pointer;background:var(--vf-surface-2,#f8fafc);font-size:12px;color:#4338ca;font-weight:700;transition:all .12s;}
-.chat-thread-footer:hover{border-color:#c7d2fe;background:#eef2ff;}
+/* Messages area */
+.tc-messages{flex:1;overflow-y:auto;padding:14px 0 8px;min-height:0;}
+.tc-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#9a99ad;font-size:14px;text-align:center;}
+
+/* Individual message */
+.tc-msg{display:grid;grid-template-columns:44px 1fr;gap:12px;padding:10px 24px 10px 24px;position:relative;}
+.tc-msg:not(.cont){border-top:2px solid #e2d9f3;margin-top:4px;padding-top:14px;}
+.tc-msg:hover{background:#faf9ff;}
+.tc-msg.cont{padding-top:2px;padding-bottom:2px;}
+.tc-msg.cont .tc-av-wrap{visibility:hidden;}
+.tc-msg.cont .tc-msg-head{display:none;}
+.tc-msg.mentioned{background:linear-gradient(90deg,rgba(253,224,71,.18) 0%,rgba(253,224,71,.07) 100%);border-left:3px solid #f59e0b;padding-left:21px;}
+.tc-msg.mentioned:hover{background:linear-gradient(90deg,rgba(253,224,71,.28) 0%,rgba(253,224,71,.12) 100%);}
+.tc-msg.cont.mentioned{padding-top:8px;padding-bottom:8px;}
+.tc-av-wrap{padding-top:2px;}
+.tc-av{width:40px;height:40px;border-radius:10px;color:#fff;display:grid;place-items:center;font-weight:700;font-size:14px;flex-shrink:0;box-shadow:0 1px 2px rgba(20,14,60,.04);}
+.tc-av.owner{background:linear-gradient(135deg,#f59e0b,#f97316);}
+.tc-av.support{background:linear-gradient(135deg,#10b981,#059669);}
+.tc-av.order_manager{background:linear-gradient(135deg,#3b82f6,#6366f1);}
+.tc-av.refund_manager{background:linear-gradient(135deg,#ec4899,#f43f5e);}
+.tc-av.vendor_manager{background:linear-gradient(135deg,#f97316,#ef4444);}
+.tc-av.email_manager{background:linear-gradient(135deg,#06b6d4,#0ea5e9);}
+.tc-av.default{background:linear-gradient(135deg,#7c3aed,#a855f7);}
+.tc-msg-body{min-width:0;}
+.tc-msg-head{display:flex;align-items:baseline;gap:8px;margin-bottom:2px;flex-wrap:wrap;}
+.tc-msg-name{color:#0d0d12;font-weight:800;font-size:15px;cursor:pointer;letter-spacing:-.2px;}
+.tc-msg-name:hover{text-decoration:underline;}
+.tc-msg-role{font-size:9.5px;font-weight:800;text-transform:uppercase;padding:2px 7px;border-radius:4px;background:#f1ebfe;color:#7c3aed;letter-spacing:.5px;}
+.tc-msg-role.owner{background:#fdecd0;color:#b45309;}
+.tc-msg-role.bot{background:#d1f0e8;color:#059669;}
+.tc-msg-time{color:#9a99ad;font-size:11.5px;}
+.tc-msg-text{color:#2a2933;font-size:14.5px;line-height:1.55;word-wrap:break-word;}
+.tc-msg-text strong{color:#0d0d12;}
+
+/* Reactions */
+.tc-reactions{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;}
+.tc-reaction{display:flex;align-items:center;gap:5px;padding:3px 9px;background:#fff;border:1px solid #e7e2f5;border-radius:99px;font-size:12px;color:#6b6b7d;cursor:pointer;font-weight:600;transition:all .12s;}
+.tc-reaction:hover{background:#f5f3ff;border-color:#d6cfee;}
+.tc-reaction.mine{background:#f1ebfe;border-color:#d8c5fb;color:#7c3aed;}
+.tc-reaction-em{font-size:14px;}
+.tc-reaction-add{color:#9a99ad;}
+
+/* Thread footer */
+.tc-thread-footer{display:flex;align-items:center;gap:10px;margin-top:8px;padding:5px 12px 5px 5px;border:1px solid transparent;border-radius:10px;cursor:pointer;width:fit-content;background:#faf9ff;transition:all .12s;}
+.tc-thread-footer:hover{background:#fff;border-color:#7c3aed;box-shadow:0 4px 12px rgba(124,58,237,.1);}
+.tc-thread-avs{display:flex;align-items:center;}
+.tc-thread-av{width:22px;height:22px;border-radius:6px;color:#fff;font-size:9px;font-weight:700;display:grid;place-items:center;margin-left:-4px;border:2px solid #faf9ff;}
+.tc-thread-av:first-child{margin-left:0;}
+.tc-thread-footer:hover .tc-thread-av{border-color:#fff;}
+.tc-thread-count{color:#7c3aed;font-size:13px;font-weight:700;}
+.tc-thread-last{color:#9a99ad;font-size:12px;}
+
+/* Hover toolbar */
+.tc-msg-tools{position:absolute;top:-18px;right:28px;display:none;background:#fff;border:1px solid #e7e2f5;border-radius:10px;box-shadow:0 8px 24px rgba(20,14,60,.08);padding:3px;z-index:5;}
+.tc-msg:hover .tc-msg-tools{display:flex;}
+.tc-msg-tools button{width:32px;height:32px;display:grid;place-items:center;color:#6b6b7d;border-radius:7px;font-size:14px;border:none;background:none;cursor:pointer;}
+.tc-msg-tools button:hover{background:#f3f0ff;color:#0d0d12;}
+.tc-msg-tools .tc-sep{width:1px;height:18px;background:#e7e2f5;margin:0 2px;align-self:center;}
 
 /* Day divider */
-.chat-day{display:flex;align-items:center;gap:10px;color:var(--vf-muted,#64748b);font-size:11.5px;font-weight:700;margin:10px 0 4px;}
-.chat-day::before,.chat-day::after{content:'';flex:1;height:1px;background:var(--vf-line,#e3e8f0);}
+.tc-day{display:flex;align-items:center;gap:12px;margin:14px 24px 6px;color:#9a99ad;font-size:11.5px;font-weight:700;}
+.tc-day .tc-day-label{background:#faf9ff;border:1px solid #e7e2f5;padding:4px 14px;border-radius:99px;color:#6b6b7d;font-weight:700;}
+.tc-day::before,.tc-day::after{content:"";flex:1;height:1px;background:#e7e2f5;}
+
+/* Typing */
+.tc-typing{padding:0 28px 6px;color:#9a99ad;font-size:12.5px;height:22px;display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.tc-typing-dots{display:inline-flex;gap:3px;align-items:center;}
+.tc-typing-dots span{width:5px;height:5px;background:#7c3aed;border-radius:99px;animation:tcBounce 1.4s infinite;}
+.tc-typing-dots span:nth-child(2){animation-delay:.15s;}
+.tc-typing-dots span:nth-child(3){animation-delay:.3s;}
+@keyframes tcBounce{0%,60%,100%{transform:translateY(0);opacity:.4;}30%{transform:translateY(-4px);opacity:1;}}
 
 /* Composer */
-.chat-composer{display:flex;align-items:flex-end;gap:10px;padding:12px 16px 16px;border-top:1px solid var(--vf-line,#e3e8f0);flex-shrink:0;}
-.chat-composer textarea{flex:1;padding:11px 14px;border:1px solid var(--vf-line,#e3e8f0);border-radius:12px;font-family:inherit;font-size:14px;resize:none;min-height:42px;max-height:140px;background:var(--vf-surface-2,#f8fafc);color:var(--vf-text,#0f172a);transition:border-color .15s;}
-.chat-composer textarea:focus{outline:none;border-color:#6366f1;background:#fff;box-shadow:0 0 0 3px rgba(99,102,241,.1);}
-.chat-send-btn{height:42px;padding:0 16px;border-radius:12px;border:none;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;transition:all .15s;box-shadow:0 4px 12px rgba(79,70,229,.25);flex-shrink:0;}
-.chat-send-btn:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(79,70,229,.35);}
+.tc-composer-wrap{padding:0 24px 20px;position:relative;flex-shrink:0;}
+.tc-composer{border:1.5px solid #d6cfee;border-radius:14px;background:#fff;overflow:hidden;box-shadow:0 1px 2px rgba(20,14,60,.04);transition:border-color .15s,box-shadow .15s;}
+.tc-composer:focus-within{border-color:#7c3aed;box-shadow:0 0 0 4px rgba(124,58,237,.10);}
+.tc-c-toolbar{display:flex;align-items:center;gap:1px;padding:8px 10px;border-bottom:1px solid #e7e2f5;}
+.tc-c-toolbar button{width:32px;height:32px;display:grid;place-items:center;border-radius:7px;color:#6b6b7d;font-size:13px;border:none;background:none;cursor:pointer;transition:all .12s;}
+.tc-c-toolbar button:hover{background:#f3f0ff;color:#0d0d12;}
+.tc-c-sep{width:1px;height:18px;background:#e7e2f5;margin:0 4px;align-self:center;}
+.tc-ce-input{width:100%;min-height:48px;max-height:180px;padding:14px 16px;background:transparent;border:none;color:#0d0d12;font-size:14.5px;line-height:1.5;outline:none;font-family:'Inter',inherit;overflow-y:auto;box-sizing:border-box;word-break:break-word;white-space:pre-wrap;}
+.tc-ce-input:empty::before{content:attr(data-placeholder);color:#9a99ad;pointer-events:none;}
+.tc-ce-input b,.tc-ce-input strong{font-weight:700;}
+.tc-ce-input i,.tc-ce-input em{font-style:italic;}
+.tc-ce-input s,.tc-ce-input del{text-decoration:line-through;}
+.tc-ce-input code{background:#f3f0ff;color:#7c3aed;padding:1px 5px;border-radius:5px;font-size:12.5px;font-family:monospace;}
+.tc-ce-input a{color:#7c3aed;}
+.tc-ce-input ul{margin:4px 0 4px 18px;padding:0;}
+.tc-ce-input ol{margin:4px 0 4px 18px;padding:0;}
+.tc-c-bottom{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-top:1px solid #e7e2f5;}
+.tc-c-left,.tc-c-right{display:flex;align-items:center;gap:1px;}
+.tc-c-bottom button{width:34px;height:34px;border-radius:7px;color:#6b6b7d;display:grid;place-items:center;font-size:14px;border:none;background:none;cursor:pointer;transition:all .12s;}
+.tc-c-bottom button:hover{background:#f3f0ff;color:#0d0d12;}
+.tc-send-btn{height:34px!important;width:auto!important;padding:0 14px!important;background:linear-gradient(135deg,#7c3aed,#a855f7)!important;color:#fff!important;border-radius:10px!important;display:flex!important;align-items:center;gap:7px;font-size:13.5px;font-weight:700;box-shadow:0 4px 12px rgba(124,58,237,.3);}
+.tc-send-btn:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(124,58,237,.4);color:#fff!important;}
+.tc-send-arrow{border-left:1px solid rgba(255,255,255,.35);margin-left:4px;padding-left:8px;height:16px;display:flex;align-items:center;}
+.tc-c-hint{margin-top:10px;color:#9a99ad;font-size:11.5px;text-align:right;padding:0 4px;}
+.tc-c-hint kbd{background:#fff;border:1px solid #e7e2f5;border-radius:5px;padding:1px 6px;font-size:10.5px;color:#6b6b7d;box-shadow:0 1px 2px rgba(20,14,60,.04);font-weight:600;}
+
+/* Emoji picker */
+.tc-emoji-picker{position:absolute;bottom:calc(100% - 12px);right:24px;width:280px;background:#fff;border:1px solid #e7e2f5;border-radius:14px;box-shadow:0 16px 40px rgba(20,14,60,.12);padding:12px;display:none;z-index:100;}
+.tc-emoji-picker.show{display:block;}
+.tc-ep-cat{color:#9a99ad;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin:4px 4px;}
+.tc-ep-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:2px;}
+.tc-ep-grid button{width:100%;aspect-ratio:1;font-size:18px;border-radius:7px;border:none;background:none;cursor:pointer;}
+.tc-ep-grid button:hover{background:#f3f0ff;}
 
 /* Thread panel */
-#chatThread{background:var(--vf-surface,#fff);border:1px solid var(--vf-line,#e3e8f0);border-radius:18px;display:flex;flex-direction:column;min-height:0;overflow:hidden;}
-.chat-thread-head{padding:16px 18px 14px;border-bottom:1px solid var(--vf-line,#e3e8f0);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
-.chat-thread-parent{padding:14px 18px;border-bottom:1px solid var(--vf-line,#e3e8f0);flex-shrink:0;background:var(--vf-surface-2,#f8fafc);}
-.chat-thread-divider{padding:8px 18px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--vf-muted,#64748b);border-bottom:1px solid var(--vf-line,#e3e8f0);flex-shrink:0;}
-.chat-thread-msgs{flex:1;overflow-y:auto;padding:12px 16px;}
+.tc-thread{background:#fff;border:1px solid #e7e2f5;border-radius:18px;box-shadow:0 1px 3px rgba(20,14,60,.05);display:none;flex-direction:column;overflow:hidden;min-height:0;}
+.tc-app.with-thread .tc-thread{display:flex;}
+.tc-thread-head{padding:18px 20px 16px;display:flex;align-items:flex-start;justify-content:space-between;border-bottom:1px solid #e7e2f5;flex-shrink:0;}
+.tc-thread-head h4{color:#0d0d12;font-size:20px;font-weight:800;letter-spacing:-.4px;}
+.tc-thread-sub{color:#9a99ad;font-size:12.5px;margin-top:3px;}
+.tc-thread-body{flex:1;overflow-y:auto;display:flex;flex-direction:column;}
+.tc-thread-parent-msg{padding:14px 18px;border-bottom:1px solid #e7e2f5;background:#faf9ff;flex-shrink:0;}
+.tc-thread-divider{display:flex;align-items:center;gap:10px;padding:8px 18px;color:#9a99ad;font-size:12px;font-weight:700;flex-shrink:0;}
+.tc-td-line{flex:1;height:1px;background:#e7e2f5;display:block;}
+.tc-thread-replies{flex:1;overflow-y:auto;padding:6px 0;}
+.tc-thread-replies .tc-msg{padding:7px 18px;}
+.tc-thread-composer{padding:0 16px 16px;flex-shrink:0;}
 </style>
 
 <!-- ─── Custom Alert / Confirm Dialog ─────────────────────────────────────── -->
@@ -5644,6 +5870,13 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
     <!-- Permissions — dynamically rendered by JS -->
     <div style="font-size:11px;font-weight:900;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;margin-bottom:16px;">Access Permissions</div>
     <div class="vm-perms" id="empPermsContainer"></div>
+
+    <!-- Store / Project access -->
+    <div style="margin-top:20px;">
+      <div style="font-size:11px;font-weight:900;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">Project Access (Chat Order Links)</div>
+      <div style="font-size:12px;color:#64748b;margin-bottom:10px;">Leave all unchecked = access to all projects. Check specific ones to restrict.</div>
+      <div id="empStoreAccessList" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+    </div>
 
     <div class="vm-actions">
       <button class="vm-save-btn" onclick="createEmployee()">✓ Create Employee</button>
@@ -5867,7 +6100,7 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
       <span class="od-topbar-brand">Drop Sigma</span>
       <span class="od-topbar-sep">/</span>
       <span class="od-topbar-crumb">
-        <span style="cursor:pointer;color:#6b7280;" onclick="closeOrderModal()">Orders</span>
+        <span style="cursor:pointer;color:#6b7280;" id="odBreadcrumbBack" onclick="closeOrderModal()">Orders</span>
         <span style="margin:0 4px;color:#d1d5db;">/</span>
         <span class="cur" id="odTopbarOrderNum">#—</span>
       </span>
@@ -5880,9 +6113,9 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
     <!-- Page header -->
     <div class="od-header">
       <div class="od-header-top">
-        <button class="od-back-btn" onclick="closeOrderModal()">
+        <button class="od-back-btn" id="odBackBtn" onclick="closeOrderModal()">
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
-          Orders
+          <span id="odBackLabel">Orders</span>
         </button>
         <span class="od-page-title" id="odOrderNum">Order #—</span>
         <div class="od-header-badges" id="odStatusRow"></div>
@@ -6189,6 +6422,9 @@ function showSection(section){
     document.getElementById("chatSection").classList.add("active");
     document.getElementById("navChat").classList.add("active");
     loadChatChannels();
+    _tcStartPoll();
+  } else {
+    _tcStopPoll();
   }
 }
 
@@ -8423,6 +8659,25 @@ function openCreateEmpModal(){
   document.querySelector(".emp-desig-chip").classList.add("active");
   renderEmpPerms("support", new Set());
   document.getElementById("createEmpModal").style.display="flex";
+  // Load stores for project access selection
+  _loadEmpStoreAccess();
+}
+
+async function _loadEmpStoreAccess(selectedIds=[]){
+  const container = document.getElementById("empStoreAccessList");
+  container.innerHTML = `<span style="color:#94a3b8;font-size:12px;">Loading stores...</span>`;
+  try{
+    const r = await fetch("/stores/api/");
+    const d = await r.json();
+    const stores = d.stores || d.results || d || [];
+    if(!stores.length){ container.innerHTML=`<span style="color:#94a3b8;font-size:12px;">No stores found.</span>`; return; }
+    container.innerHTML = stores.map(s=>`
+      <label style="display:inline-flex;align-items:center;gap:7px;background:#f8fafc;border:1.5px solid ${selectedIds.includes(String(s.id))?"#6d28d9":"#e2e8f0"};border-radius:10px;padding:7px 12px;cursor:pointer;font-size:13px;font-weight:600;color:#0f172a;transition:border-color .15s;" id="empStoreLabel_${s.id}">
+        <input type="checkbox" name="empStore" value="${s.id}" ${selectedIds.includes(String(s.id))?"checked":""}
+          onchange="this.closest('label').style.borderColor=this.checked?'#6d28d9':'#e2e8f0';" style="accent-color:#6d28d9;">
+        ${escHtml(s.name)}
+      </label>`).join("");
+  }catch(e){ container.innerHTML=`<span style="color:#dc2626;font-size:12px;">Failed to load stores.</span>`; }
 }
 
 function closeCreateEmpModal(){
@@ -8460,6 +8715,9 @@ async function createEmployee(){
 
   const perms={};
   document.querySelectorAll("input[name=empPerm]:checked").forEach(cb=>{ perms[cb.value]=true; });
+  // Store access: collect checked store IDs (empty = all access)
+  const allowedStores = Array.from(document.querySelectorAll("input[name=empStore]:checked")).map(cb=>parseInt(cb.value));
+  if(allowedStores.length) perms.allowed_stores = allowedStores;
 
   msg.style.color="#64748b"; msg.innerText="Creating employee...";
 
@@ -11480,9 +11738,19 @@ async function assignOrder(){
   }
 }
 
+let _odOpenedFromChat = false;
 function closeOrderModal(){
   fireLoader();
   document.getElementById("orderModal").style.display = "none";
+  if(_odOpenedFromChat){
+    _odOpenedFromChat = false;
+    showSection("chat");
+    _resetOrderModalLabels();
+  }
+}
+function _resetOrderModalLabels(){
+  document.getElementById("odBackLabel").textContent = "Orders";
+  document.getElementById("odBreadcrumbBack").textContent = "Orders";
 }
 
 function openComposeModal(){
@@ -12038,6 +12306,78 @@ async function initDashboard(){
     const chip = chipId ? document.getElementById(chipId) : null;
     if(chip) switchEmailView(emailTab, chip);
   }
+
+  // Connect WS in background so notifications arrive on any section
+  if(section !== "chat") _tcWsBackground();
+}
+
+// Track known unread counts per channel for polling-based notifications
+let _tcKnownUnread = {};
+let _tcPollUnreadTimer = null;
+
+async function _tcWsBackground(){
+  // Request notification permission early
+  if("Notification" in window && Notification.permission !== "denied"){
+    Notification.requestPermission().then(p=>{ _tcNotifPerm = p === "granted"; });
+  }
+  try{
+    const r = await fetch("/teamapp/chat/channels/");
+    const d = await r.json();
+    if(!d.success || !d.channels.length) return;
+    const ch = d.channels.find(c=>c.slug==="general") || d.channels[0];
+    if(!_chatCurrentChannelId){ _chatCurrentChannelId = ch.id; _chatCurrentChannelName = ch.name; }
+    // Seed baseline so first poll doesn't fire spurious notifications
+    d.channels.forEach(c=>{ _tcKnownUnread[c.id] = c.unread_count||0; });
+    const rm = await fetch("/teamapp/members/");
+    const dm = await rm.json();
+    if(dm.success){
+      const allM = [...(dm.admin_contacts||[]), ...dm.members];
+      _tcMentionMembers = allM.map(m=>m.name);
+      allM.forEach(m=>{ _tcMentionMap[m.name.toLowerCase()] = m.user; _tcMentionMap[m.name.split(" ")[0].toLowerCase()] = m.user; });
+    }
+    _tcWsConnect();
+    _tcStartUnreadPoll();
+  }catch(e){ console.error("_tcWsBackground:", e); }
+}
+
+function _tcStartUnreadPoll(){
+  if(_tcPollUnreadTimer) return;
+  _tcPollUnreadTimer = setInterval(_tcUnreadPollTick, 8000);
+}
+
+async function _tcUnreadPollTick(){
+  try{
+    const r = await fetch("/teamapp/chat/channels/");
+    const d = await r.json();
+    if(!d.success) return;
+    const chatVisible = document.getElementById("chatSection")?.classList.contains("active");
+    d.channels.forEach(ch=>{
+      const prev = _tcKnownUnread[ch.id] ?? ch.unread_count;
+      const curr = ch.unread_count || 0;
+      if(curr > prev){
+        const isCurrentCh = ch.id === _chatCurrentChannelId;
+        if(isCurrentCh && chatVisible){
+          loadChatMessages();
+        } else {
+          _tcShowInAppNotif(
+            ch.last_sender || "New message",
+            ch.name,
+            ch.last_message || "New message",
+            ()=>{ showSection("chat"); selectChannel(ch.id, ch.name, ""); }
+          );
+          const el = document.getElementById("tcCh_"+ch.id);
+          if(el){
+            el.classList.add("unread");
+            let badge = el.querySelector(".tc-unread-badge");
+            if(!badge){ badge=document.createElement("span"); badge.className="tc-unread-badge"; el.appendChild(badge); }
+            badge.textContent = curr > 99 ? "99+" : curr;
+          }
+          if(document.hidden && _tcNotifPerm) _tcShowBrowserNotif((ch.last_sender||"Someone")+" in #"+ch.name, ch.last_message||"");
+        }
+      }
+      _tcKnownUnread[ch.id] = curr;
+    });
+  }catch(e){}
 }
 
 
@@ -13476,294 +13816,1088 @@ window.addEventListener('resize', function(){
 </script>
 
 <script>
-// ─── Team Chat ───────────────────────────────────────────────────────────────
+// ─── Team Chat (Premium) ──────────────────────────────────────────────────────
 const esc = s => escHtml(s);
+const _tcMyName = "{% if request.user.get_full_name %}{{ request.user.get_full_name|escapejs }}{% else %}{{ request.user.username|escapejs }}{% endif %}";
+let _tcMentionMap = {};
 let _chatCurrentChannelId = null;
 let _chatCurrentChannelName = "general";
 let _chatThreadParentId = null;
-let _chatMembers = [];
+let _tcMsgMap = {};        // msgId → full message object
+let _tcCurrentUserId = null; // logged-in user id from API
 
 const QUICK_EMOJIS = ["👍","❤️","😂","🎉","🚀","😮"];
+const AV_COLORS = {owner:"tc-av owner",support:"tc-av support",order_manager:"tc-av order_manager",refund_manager:"tc-av refund_manager",vendor_manager:"tc-av vendor_manager",email_manager:"tc-av email_manager"};
+const DM_COLORS = ["linear-gradient(135deg,#8b5cf6,#a855f7)","linear-gradient(135deg,#3b82f6,#6366f1)","linear-gradient(135deg,#ec4899,#f43f5e)","linear-gradient(135deg,#10b981,#059669)","linear-gradient(135deg,#f59e0b,#f97316)","linear-gradient(135deg,#06b6d4,#0ea5e9)"];
+const _VERIFIED_SVG = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="12" fill="#1d9bf0"/><path d="M9.5 16.5L5.5 12.5L6.91 11.09L9.5 13.67L17.09 6.08L18.5 7.5L9.5 16.5Z" fill="white"/></svg>`;
 
-function _chatTime(iso){
-  const d = new Date(iso);
-  return d.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
-}
-
+function _chatTime(iso){ const d=new Date(iso); return d.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}); }
 function _chatDateLabel(iso){
-  const d = new Date(iso);
-  const today = new Date();
-  const yesterday = new Date(); yesterday.setDate(today.getDate()-1);
-  if(d.toDateString()===today.toDateString()) return "Today";
-  if(d.toDateString()===yesterday.toDateString()) return "Yesterday";
-  return d.toLocaleDateString([],{month:"long",day:"numeric"});
+  const d=new Date(iso), t=new Date();
+  if(d.toDateString()===t.toDateString()) return "Today";
+  const y=new Date(); y.setDate(t.getDate()-1);
+  if(d.toDateString()===y.toDateString()) return "Yesterday";
+  return d.toLocaleDateString([],{weekday:"long",month:"long",day:"numeric"});
 }
+
+function _avClass(role){ return AV_COLORS[role] || "tc-av default"; }
 
 function _renderReactions(reactions, msgId){
-  if(!reactions || !Object.keys(reactions).length) return "";
-  const items = Object.entries(reactions).map(([emoji, data])=>`
-    <button class="chat-reaction${data.mine?" mine":""}" onclick="toggleReaction(${msgId},'${emoji}')">${emoji} ${data.count}</button>
-  `).join("");
-  return `<div class="chat-reactions">${items}</div>`;
+  if(!reactions||!Object.keys(reactions).length) return "";
+  const btns = Object.entries(reactions).map(([emoji,data])=>
+    `<button class="tc-reaction${data.mine?" mine":""}" onclick="toggleReaction(${msgId},'${emoji}')"><span class="tc-reaction-em">${emoji}</span> ${data.count}</button>`
+  ).join("");
+  const addBtn = `<button class="tc-reaction tc-reaction-add" onclick="toggleReactionPicker(${msgId})" title="Add reaction"><i class="fa-regular fa-face-smile"></i></button>`;
+  return `<div class="tc-reactions">${btns}${addBtn}</div>`;
 }
 
-function _renderQuickReact(msgId){
-  const btns = QUICK_EMOJIS.map(e=>`<button onclick="toggleReaction(${msgId},'${e}')" title="${e}">${e}</button>`).join("");
-  return `<div class="chat-quick-react">${btns}</div>`;
+function _tcIsMentioned(content){
+  if(!_tcMyName || !content) return false;
+  const first = _tcMyName.split(" ")[0];
+  return new RegExp("@"+_tcMyName.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"\\b","i").test(content)
+      || new RegExp("@"+first.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"\\b","i").test(content);
 }
 
-function _renderMessage(msg, showDate, prevSameSender){
-  const isCont = prevSameSender;
-  const contClass = isCont ? " cont" : "";
-  const roleClass = msg.sender_role==="owner" ? " owner" : (" " + (msg.sender_role||""));
-  const dateHtml = showDate ? `<div class="chat-day">${showDate}</div>` : "";
-  const threadHtml = msg.reply_count > 0
-    ? `<div class="chat-thread-footer" onclick="openThread(${msg.id})">${msg.reply_count} ${msg.reply_count===1?"reply":"replies"} →</div>`
-    : "";
+function _renderMsg(msg, showDate, cont){
+  const dateHtml = showDate ? `<div class="tc-day"><div class="tc-day-label">${showDate}</div></div>` : "";
+  const mentioned = !msg.is_mine && _tcIsMentioned(msg.content);
+  const contClass = (cont ? " cont" : "") + (mentioned ? " mentioned" : "");
+  const threadHtml = msg.reply_count > 0 ? `
+    <div class="tc-thread-footer" onclick="tcOpenChatThread(${msg.id})">
+      <div class="tc-thread-avs">
+        <div class="tc-thread-av ${_avClass(msg.sender_role)}" style="font-size:9px;">${esc(msg.sender_initials)}</div>
+      </div>
+      <span class="tc-thread-count">${msg.reply_count} ${msg.reply_count===1?"reply":"replies"}</span>
+      <span class="tc-thread-last">View thread →</span>
+    </div>` : "";
+  const quickReact = QUICK_EMOJIS.map(e=>`<button onclick="toggleReaction(${msg.id},'${e}')" title="${e}">${e}</button>`).join("");
   return `${dateHtml}
-    <div class="chat-msg${contClass}" data-mid="${msg.id}">
-      <div class="chat-msg-av${roleClass}">${msg.sender_initials}</div>
-      <div class="chat-msg-body">
-        <div class="chat-msg-head">
-          <span class="chat-msg-name">${esc(msg.sender_name)}</span>
-          <span class="chat-msg-role ${msg.sender_role||""}">${msg.sender_role||"member"}</span>
-          <span class="chat-msg-time">${_chatTime(msg.created_at)}</span>
+    <div class="tc-msg${contClass}" data-mid="${msg.id}">
+      <div class="tc-av-wrap"><div class="${_avClass(msg.sender_role)}">${esc(msg.sender_initials)}</div></div>
+      <div class="tc-msg-body">
+        <div class="tc-msg-head">
+          <span class="tc-msg-name">${esc(msg.sender_name)}${msg.sender_role==="owner"?`<span class="tc-verified">${_VERIFIED_SVG}</span>`:""}</span>
+          <span class="tc-msg-role${msg.sender_role==="owner"?" owner":""}">${msg.sender_role||"member"}</span>
+          <span class="tc-msg-time">${_chatTime(msg.created_at)}</span>
         </div>
-        <div class="chat-msg-text">${esc(msg.content).replace(/\n/g,"<br>")}</div>
-        ${_renderReactions(msg.reactions, msg.id)}
-        ${_renderQuickReact(msg.id)}
+        <div class="tc-msg-text">${_renderMarkdown(msg.content)}</div>
+        ${_renderReactions(msg.reactions||{}, msg.id)}
         ${threadHtml}
+      </div>
+      <div class="tc-msg-tools">
+        ${quickReact}
+        <div class="tc-sep"></div>
+        <button onclick="tcOpenChatThread(${msg.id})" title="Reply in thread"><i class="fa-regular fa-comment"></i></button>
+        <button onclick="tcShowMsgMenu(${msg.id},this)" title="More"><i class="fa-solid fa-ellipsis"></i></button>
       </div>
     </div>`;
 }
 
-async function loadChatChannels(){
-  try{
-    const r = await fetch("/teamapp/chat/channels/");
-    const d = await r.json();
-    if(!d.success) return;
-
-    // Render channel list
-    const list = document.getElementById("chatChannelList");
-    list.innerHTML = d.channels.map(ch=>`
-      <div class="chat-ch-item${_chatCurrentChannelId===ch.id?" active":""}" onclick="selectChannel(${ch.id},'${esc(ch.name)}','${esc(ch.description||"")}')">
-        <span class="chat-ch-hash">#</span>
-        <span>${esc(ch.name)}</span>
-        ${ch.message_count>0?`<span class="chat-ch-badge" style="display:none;">${ch.message_count}</span>`:""}
-      </div>
-    `).join("");
-
-    // Auto-select general if nothing selected
-    if(!_chatCurrentChannelId && d.channels.length){
-      const gen = d.channels.find(c=>c.slug==="general") || d.channels[0];
-      selectChannel(gen.id, gen.name, gen.description||"");
-    }
-
-    // Load team members into sidebar
-    loadChatMembers();
-  } catch(e){ console.error("chat channels:", e); }
-}
-
-async function loadChatMembers(){
-  try{
-    const r = await fetch("/teamapp/members/");
-    const d = await r.json();
-    if(!d.success) return;
-    _chatMembers = d.members;
-    const ml = document.getElementById("chatMemberList");
-    ml.innerHTML = d.members.slice(0,8).map(m=>{
-      const initials = m.name.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
-      return `<div class="chat-member-item">
-        <div class="chat-member-av">${initials}</div>
-        <span style="font-size:13px;color:var(--vf-text,#0f172a);">${esc(m.name)}</span>
-        <div class="chat-member-dot ${m.status||"offline"}"></div>
-      </div>`;
-    }).join("");
-  } catch(e){}
-}
-
-function selectChannel(id, name, description){
-  _chatCurrentChannelId = id;
-  _chatCurrentChannelName = name;
-  // Update active state
-  document.querySelectorAll(".chat-ch-item").forEach(el=>el.classList.remove("active"));
-  document.querySelectorAll(".chat-ch-item").forEach(el=>{
-    if(el.textContent.trim().includes(name)) el.classList.add("active");
-  });
-  document.getElementById("chatChName").textContent = "# " + name;
-  document.getElementById("chatChDesc").textContent = description || "";
-  document.getElementById("chatInput").placeholder = `Message #${name}…`;
-  closeThread();
-  loadChatMessages();
-}
-
-async function loadChatMessages(){
-  if(!_chatCurrentChannelId) return;
-  try{
-    const r = await fetch(`/teamapp/chat/messages/?channel_id=${_chatCurrentChannelId}`);
-    const d = await r.json();
-    if(!d.success) return;
-    renderMessages(d.messages, "chatMessages");
-  } catch(e){ console.error("chat messages:", e); }
-}
-
-function renderMessages(msgs, containerId){
+function _renderMsgList(msgs, containerId){
   const el = document.getElementById(containerId);
   if(!msgs.length){
-    el.innerHTML = `<div class="chat-empty">No messages yet. Start the conversation!</div>`;
+    el.innerHTML = `<div class="tc-empty"><i class="fa-regular fa-comments" style="font-size:36px;display:block;margin-bottom:12px;color:#d6cfee;"></i>No messages yet. Start the conversation!</div>`;
     return;
   }
-  let html = "";
-  let lastDate = null;
-  let lastSender = null;
-  for(let i=0; i<msgs.length; i++){
-    const msg = msgs[i];
-    const dateLabel = _chatDateLabel(msg.created_at);
-    const showDate = dateLabel !== lastDate ? dateLabel : null;
-    const prevSame = !showDate && lastSender === msg.sender_name;
-    html += _renderMessage(msg, showDate, prevSame);
-    lastDate = dateLabel;
-    lastSender = msg.sender_name;
+  let html="", lastDate=null, lastSender=null;
+  for(const msg of msgs){
+    const dl = _chatDateLabel(msg.created_at);
+    const showDate = dl!==lastDate ? dl : null;
+    const cont = !showDate && lastSender===msg.sender_name;
+    html += _renderMsg(msg, showDate, cont);
+    lastDate=dl; lastSender=msg.sender_name;
   }
   el.innerHTML = html;
   el.scrollTop = el.scrollHeight;
 }
 
-async function sendChatMessage(){
-  if(!_chatCurrentChannelId) return;
-  const input = document.getElementById("chatInput");
-  const content = input.value.trim();
-  if(!content) return;
-  input.value = "";
-  input.style.height = "auto";
+async function loadChatChannels(){
   try{
-    const r = await fetch("/teamapp/chat/send/", {
+    const r=await fetch("/teamapp/chat/channels/");
+    const d=await r.json();
+    if(!d.success) return;
+
+    document.getElementById("tcChannelList").innerHTML = d.channels.map(ch=>{
+      const cnt = ch.unread_count||0;
+      const hasUnread = cnt > 0 && _chatCurrentChannelId!==ch.id;
+      return `<div class="tc-ch${_chatCurrentChannelId===ch.id?" active":""}${hasUnread?" unread":""}" id="tcCh_${ch.id}" onclick="selectChannel(${ch.id},'${esc(ch.name)}','${esc(ch.description||"")}')">
+        <span class="tc-ch-icon"><i class="fa-solid fa-hashtag" style="font-size:11px;"></i></span>
+        <span class="tc-ch-name-txt">${esc(ch.name)}</span>
+        ${hasUnread?`<span class="tc-unread-badge">${cnt>99?"99+":cnt}</span>`:""}
+      </div>`;
+    }).join("");
+
+    if(_chatCurrentChannelId){
+      const ch = d.channels.find(c=>c.id===_chatCurrentChannelId);
+      if(ch){
+        document.getElementById("tcChName").textContent = ch.name;
+        document.getElementById("tcChDesc").textContent = ch.description||"";
+        document.getElementById("chatInput").dataset.placeholder = `Message #${ch.name}…`;
+      }
+      loadChatMessages();
+    }
+
+    // Team members
+    const rm=await fetch("/teamapp/members/");
+    const dm=await rm.json();
+    if(dm.success){
+      const adminContacts = dm.admin_contacts||[];
+      const allM = [...adminContacts, ...dm.members];
+      _tcMentionMembers = allM.map(m=>m.name);
+      allM.forEach(m=>{ _tcMentionMap[m.name.toLowerCase()] = m.user; _tcMentionMap[m.name.split(" ")[0].toLowerCase()] = m.user; });
+      document.getElementById("tcMemberList").innerHTML = dm.members.slice(0,8).map((m,i)=>{
+        const ini=m.name.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
+        const col=DM_COLORS[i%DM_COLORS.length];
+        return `<div class="tc-dm" id="tcDm_${m.user}" onclick="tcOpenDm(${m.user},'${esc(m.name)}')">
+          <div class="tc-dm-av ${m.status||"offline"}" style="background:${col};">${ini}</div>
+          <span class="tc-ch-name-txt">${esc(m.name)}</span>
+        </div>`;
+      }).join("");
+    }
+  } catch(e){ console.error("chat channels:",e); }
+}
+
+async function tcOpenDm(userId, name){
+  try{
+    const r = await fetch("/teamapp/chat/dm/", {
       method:"POST",
       headers:{"Content-Type":"application/json","X-CSRFToken":getCsrfToken()},
-      body: JSON.stringify({channel_id: _chatCurrentChannelId, content})
+      body:JSON.stringify({target_user_id: userId})
     });
     const d = await r.json();
-    if(d.success) loadChatMessages();
-  } catch(e){ console.error("send:", e); }
+    if(!d.success){ console.error("DM error:", d.message); return; }
+    document.querySelectorAll(".tc-dm").forEach(el=>el.classList.remove("active"));
+    document.getElementById("tcDm_"+userId)?.classList.add("active");
+    document.querySelectorAll(".tc-ch").forEach(el=>el.classList.remove("active"));
+    selectChannel(d.channel_id, d.channel_name, "Direct Message");
+  }catch(e){ console.error(e); }
+}
+
+async function tcOpenMentionDm(name){
+  const key = name.toLowerCase();
+  const firstName = key.split(" ")[0];
+  let uid = _tcMentionMap[key] || _tcMentionMap[firstName];
+  if(!uid){
+    try{
+      const r = await fetch("/teamapp/members/");
+      const d = await r.json();
+      if(d.success){
+        [...(d.admin_contacts||[]), ...d.members].forEach(m=>{
+          _tcMentionMap[m.name.toLowerCase()] = m.user;
+          _tcMentionMap[m.name.split(" ")[0].toLowerCase()] = m.user;
+        });
+        uid = _tcMentionMap[key] || _tcMentionMap[firstName];
+      }
+    }catch(e){}
+  }
+  if(!uid) return;
+  showSection("chat");
+  tcOpenDm(uid, name);
+}
+
+let _tcCurrentChannelIsDm = false;
+
+function selectChannel(id, name, desc){
+  _chatCurrentChannelId=id; _chatCurrentChannelName=name;
+  _tcCurrentChannelIsDm = desc === "Direct Message";
+  _tcKnownUnread[id] = 0;
+  fetch("/teamapp/chat/read/",{method:"POST",headers:{"Content-Type":"application/json","X-CSRFToken":getCsrfToken()},body:JSON.stringify({channel_id:id})}).catch(()=>{});
+  _tcTypingUsers = {};
+  _tcRenderTyping();
+  document.querySelectorAll(".tc-ch").forEach(el=>el.classList.remove("active","unread"));
+  const el=document.getElementById("tcCh_"+id);
+  if(el){ el.classList.add("active"); el.querySelector(".tc-unread-badge")?.remove(); }
+  document.getElementById("tcChName").textContent=name;
+  document.getElementById("tcChDesc").textContent=desc==="Direct Message"?"🔒 Private conversation":desc||"";
+  document.getElementById("chatInput").dataset.placeholder=(desc==="Direct Message"?`Message ${name}…`:`Message #${name}…`);
+  const hashEl = document.getElementById("tcChHash");
+  if(hashEl) hashEl.style.display = _tcCurrentChannelIsDm ? "none" : "";
+  const avatarsEl = document.getElementById("tcMembersAvatars");
+  if(avatarsEl) avatarsEl.style.display = _tcCurrentChannelIsDm ? "none" : "flex";
+  closeThread();
+  loadChatMessages();
+  _tcWsConnect();
+  if(!_tcCurrentChannelIsDm) tcRefreshMembersCount();
+}
+
+const _TC_AV_COLORS = ["#7c3aed","#2563eb","#059669","#dc2626","#d97706","#db2777","#0891b2","#65a30d","#7c3aed","#9333ea"];
+function _tcRenderMemberAvatars(members, wrapperId){
+  const wrap = document.getElementById(wrapperId);
+  if(!wrap) return;
+  if(!members.length){ wrap.style.display="none"; return; }
+  const MAX = 4;
+  const shown = members.slice(0, MAX);
+  const extra = members.length - shown.length;
+  let html = shown.map((m, i) =>
+    `<div style="width:26px;height:26px;border-radius:50%;background:${_TC_AV_COLORS[i%_TC_AV_COLORS.length]};color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;border:2px solid #fff;margin-left:${i>0?"-8px":"0"};position:relative;z-index:${10-i};flex-shrink:0;" title="${m.name}">${m.initials}</div>`
+  ).join("");
+  if(extra > 0) html += `<div style="width:26px;height:26px;border-radius:50%;background:#e5e7eb;color:#374151;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;border:2px solid #fff;margin-left:-8px;position:relative;z-index:0;flex-shrink:0;">+${extra}</div>`;
+  html += `<span style="margin-left:7px;font-size:12px;font-weight:700;color:#5b21b6;">${members.length}</span>`;
+  wrap.innerHTML = html;
+  wrap.style.display = "flex";
+}
+
+async function tcRefreshMembersCount(){
+  if(!_chatCurrentChannelId || _tcCurrentChannelIsDm) return;
+  const r = await fetch(`/teamapp/chat/channels/${_chatCurrentChannelId}/members/`);
+  const d = await r.json();
+  if(!d.success) return;
+  _tcRenderMemberAvatars(d.members, "tcMembersAvatars");
+}
+
+let _tcAllMembersForAdd = [];
+
+async function tcOpenMembersModal(){
+  if(!_chatCurrentChannelId) return;
+  const r = await fetch(`/teamapp/chat/channels/${_chatCurrentChannelId}/members/`);
+  const d = await r.json();
+  if(!d.success) return;
+  _tcRenderMemberAvatars(d.members, "tcMembersAvatars");
+  document.getElementById("tcMembersModalChName").textContent = "#" + _chatCurrentChannelName;
+  document.getElementById("tcMembersModalCount").textContent = d.members.length;
+  const list = document.getElementById("tcMembersList");
+  if(!d.members.length){
+    list.innerHTML = `<div style="color:#9ca3af;font-size:13px;text-align:center;padding:20px 0;">No members yet. Add employees below.</div>`;
+  } else {
+    list.innerHTML = d.members.map(m=>`
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f3f0ff;">
+        <div style="width:34px;height:34px;border-radius:50%;background:#ede9fe;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:#7c3aed;flex-shrink:0;">${m.initials}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:600;font-size:13px;color:#1e1b4b;">${m.name}</div>
+          <div style="font-size:11px;color:#9ca3af;">${m.role}</div>
+        </div>
+        <button onclick="tcRemoveChannelMember(${m.user_id})" style="background:none;border:none;cursor:pointer;color:#ef4444;font-size:13px;padding:4px 8px;" title="Remove"><i class="fa-solid fa-user-minus"></i></button>
+      </div>`).join("");
+  }
+  // Populate add-member dropdown
+  const sel = document.getElementById("tcAddMemberSelect");
+  sel.innerHTML = `<option value="">Select employee…</option>`;
+  const existingIds = new Set(d.members.map(m=>m.user_id));
+  // Fetch all team members if not already loaded
+  const rm = await fetch("/teamapp/members/");
+  const dm = await rm.json();
+  if(dm.success){
+    const all = [...(dm.admin_contacts||[]), ...dm.members];
+    all.filter(m=>!existingIds.has(m.user)).forEach(m=>{
+      const opt = document.createElement("option");
+      opt.value = m.user; opt.textContent = m.name + (m.role ? ` (${m.role})` : "");
+      sel.appendChild(opt);
+    });
+  }
+  document.getElementById("tcMembersModal").style.display = "flex";
+}
+
+async function tcAddChannelMember(){
+  const sel = document.getElementById("tcAddMemberSelect");
+  const uid = sel.value;
+  if(!uid || !_chatCurrentChannelId) return;
+  const r = await fetch(`/teamapp/chat/channels/${_chatCurrentChannelId}/members/add/`,{method:"POST",headers:{"Content-Type":"application/json","X-CSRFToken":getCsrfToken()},body:JSON.stringify({user_id:uid})});
+  const d = await r.json();
+  if(!d.success){ alert(d.message||"Failed to add member."); return; }
+  tcOpenMembersModal();
+  tcRefreshMembersCount();
+}
+
+async function tcRemoveChannelMember(userId){
+  if(!_chatCurrentChannelId) return;
+  const r = await fetch(`/teamapp/chat/channels/${_chatCurrentChannelId}/members/${userId}/remove/`,{method:"DELETE",headers:{"X-CSRFToken":getCsrfToken()}});
+  const d = await r.json();
+  if(!d.success){ alert(d.message||"Failed to remove."); return; }
+  tcOpenMembersModal();
+  tcRefreshMembersCount();
+}
+
+async function loadChatMessages(){
+  if(!_chatCurrentChannelId) return;
+  const r=await fetch(`/teamapp/chat/messages/?channel_id=${_chatCurrentChannelId}`);
+  const d=await r.json();
+  if(!d.success) return;
+  if(d.current_user_id) _tcCurrentUserId = d.current_user_id;
+  // Populate message map for menu lookups
+  d.messages.forEach(m=>{ _tcMsgMap[m.id]=m; (m.replies||[]).forEach(r=>{ _tcMsgMap[r.id]=r; }); });
+  _renderMsgList(d.messages,"chatMessages");
+}
+
+function _ceToMarkdown(el){
+  // Serialize contenteditable HTML → markdown text
+  function nodeToMd(node){
+    if(node.nodeType===3) return node.textContent;
+    const tag=node.tagName&&node.tagName.toLowerCase();
+    const inner=Array.from(node.childNodes).map(nodeToMd).join("");
+    if(tag==="b"||tag==="strong") return `**${inner}**`;
+    if(tag==="i"||tag==="em") return `*${inner}*`;
+    if(tag==="s"||tag==="del"||tag==="strike") return `~~${inner}~~`;
+    if(tag==="code") return `\`${inner}\``;
+    if(tag==="a") return `[${inner}](${node.href||""})`;
+    if(tag==="li") return `• ${inner}`;
+    if(tag==="ul"||tag==="ol") return inner+"\n";
+    if(tag==="div"||tag==="p"||tag==="br") return inner+"\n";
+    return inner;
+  }
+  return Array.from(el.childNodes).map(nodeToMd).join("").replace(/\n+$/,"").trim();
+}
+
+async function sendChatMessage(){
+  if(!_chatCurrentChannelId) return;
+  const input=document.getElementById("chatInput");
+  let content=_ceToMarkdown(input);
+  if(_tcAttachFiles.length){
+    const names=_tcAttachFiles.map(f=>`📎 ${f.name}`).join("\n");
+    content = content ? content+"\n"+names : names;
+    _tcAttachFiles=[];
+    document.getElementById("tcAttachPreview").style.display="none";
+  }
+  if(!content) return;
+  input.innerHTML="";
+  closeEmojiPicker();
+  _tcSendTyping(false);
+  clearTimeout(_tcTypingTimer);
+  const r=await fetch("/teamapp/chat/send/",{method:"POST",headers:{"Content-Type":"application/json","X-CSRFToken":getCsrfToken()},body:JSON.stringify({channel_id:_chatCurrentChannelId,content})});
+  const d=await r.json();
+  if(d.success){
+    loadChatMessages();
+    _tcWsBroadcastNew(content);
+  }
 }
 
 function chatKeyDown(e){
-  if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); sendChatMessage(); }
+  if(_tcMentionDropVisible()){
+    if(e.key==="ArrowDown"){ e.preventDefault(); _tcMentionMoveSel(1); return; }
+    if(e.key==="ArrowUp"){ e.preventDefault(); _tcMentionMoveSel(-1); return; }
+    if(e.key==="Enter"||e.key==="Tab"){ e.preventDefault(); _tcMentionConfirm(); return; }
+    if(e.key==="Escape"){ _tcHideMentionDrop(); return; }
+  }
+  if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendChatMessage();}
 }
 
-async function toggleReaction(msgId, emoji){
-  try{
-    const r = await fetch("/teamapp/chat/reaction/", {
-      method:"POST",
-      headers:{"Content-Type":"application/json","X-CSRFToken":getCsrfToken()},
-      body: JSON.stringify({message_id: msgId, emoji})
-    });
-    const d = await r.json();
-    if(d.success){
-      if(_chatThreadParentId){ loadThreadMessages(_chatThreadParentId); }
-      else { loadChatMessages(); }
-    }
-  } catch(e){}
+async function toggleReaction(msgId,emoji){
+  const r = await fetch("/teamapp/chat/reaction/",{method:"POST",headers:{"Content-Type":"application/json","X-CSRFToken":getCsrfToken()},body:JSON.stringify({message_id:msgId,emoji})});
+  const d = await r.json();
+  if(!d.success) return;
+  // Patch only the reaction row — no full reload, no scroll jump
+  const msgEl = document.querySelector(`.tc-msg[data-mid="${msgId}"]`);
+  if(msgEl){
+    const existing = msgEl.querySelector(".tc-reactions");
+    const html = _renderReactions(d.reactions, msgId);
+    if(existing){ existing.outerHTML = html || ""; }
+    else if(html){ msgEl.querySelector(".tc-msg-body").insertAdjacentHTML("beforeend", html); }
+  }
+  if(_chatThreadParentId) loadThreadMessages(_chatThreadParentId);
 }
 
-async function openThread(msgId){
-  _chatThreadParentId = msgId;
-  const layout = document.getElementById("chatLayout");
-  layout.classList.add("with-thread");
-  const thread = document.getElementById("chatThread");
-  thread.style.display = "flex";
-  thread.style.flexDirection = "column";
+function toggleReactionPicker(msgId){
+  // Remove any existing reaction picker
+  document.querySelectorAll(".tc-react-picker").forEach(el=>el.remove());
+  const btn = document.querySelector(`.tc-msg[data-mid="${msgId}"] .tc-reaction-add`);
+  if(!btn) return;
+  const picker = document.createElement("div");
+  picker.className = "tc-react-picker";
+  picker.innerHTML = QUICK_EMOJIS.map(e=>`<button onclick="toggleReaction(${msgId},'${e}');this.closest('.tc-react-picker').remove();">${e}</button>`).join("");
+  picker.style.cssText = "position:absolute;background:#fff;border:1px solid #e7e2f5;border-radius:12px;padding:6px 8px;display:flex;gap:4px;box-shadow:0 4px 20px rgba(20,14,60,.14);z-index:999;";
+  document.body.appendChild(picker);
+  const r = btn.getBoundingClientRect();
+  picker.style.top = (r.top - picker.offsetHeight - 6 + window.scrollY) + "px";
+  picker.style.left = Math.max(4, r.left - 20 + window.scrollX) + "px";
+  // Recalculate after mount
+  requestAnimationFrame(()=>{
+    picker.style.top = (r.top - picker.offsetHeight - 6 + window.scrollY) + "px";
+  });
+  setTimeout(()=>{
+    document.addEventListener("click", function _close(ev){ if(!picker.contains(ev.target)){picker.remove();document.removeEventListener("click",_close);} });
+  }, 10);
+}
+
+async function tcOpenChatThread(msgId){
+  _chatThreadParentId=msgId;
+  document.getElementById("tcApp").classList.add("with-thread");
   loadThreadMessages(msgId);
 }
 
 async function loadThreadMessages(msgId){
-  try{
-    const r = await fetch(`/teamapp/chat/messages/?channel_id=${_chatCurrentChannelId}`);
-    const d = await r.json();
-    if(!d.success) return;
-    const parent = d.messages.find(m=>m.id===msgId);
-    if(!parent) return;
-    // Render parent
-    const parentEl = document.getElementById("chatThreadParent");
-    parentEl.innerHTML = `
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-        <div class="chat-msg-av${parent.sender_role==="owner"?" owner":(" "+parent.sender_role)}" style="width:32px;height:32px;font-size:11px;">${esc(parent.sender_initials)}</div>
-        <div>
-          <span class="chat-msg-name" style="font-size:13px;">${esc(parent.sender_name)}</span>
-          <span class="chat-msg-time" style="margin-left:8px;">${_chatTime(parent.created_at)}</span>
-        </div>
+  const r=await fetch(`/teamapp/chat/messages/?channel_id=${_chatCurrentChannelId}`);
+  const d=await r.json();
+  if(!d.success) return;
+  const parent=d.messages.find(m=>m.id===msgId);
+  if(!parent) return;
+  document.getElementById("tcThreadSub").textContent=`${parent.reply_count} ${parent.reply_count===1?"reply":"replies"}`;
+  document.getElementById("chatThreadParent").innerHTML=`
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+      <div class="${_avClass(parent.sender_role)}" style="width:34px;height:34px;font-size:12px;">${esc(parent.sender_initials)}</div>
+      <div>
+        <div style="font-size:13.5px;font-weight:800;color:#0d0d12;">${esc(parent.sender_name)}</div>
+        <div style="font-size:11px;color:#9a99ad;">${_chatTime(parent.created_at)}</div>
       </div>
-      <div class="chat-msg-text" style="font-size:13.5px;">${esc(parent.content).replace(/\n/g,"<br>")}</div>
-    `;
-    // Render replies
-    renderMessages(parent.replies || [], "chatThreadReplies");
-  } catch(e){}
+    </div>
+    <div class="tc-msg-text">${_renderMarkdown(parent.content)}</div>
+  `;
+  _renderMsgList(parent.replies||[],"chatThreadReplies");
 }
 
 async function sendThreadReply(){
-  if(!_chatCurrentChannelId || !_chatThreadParentId) return;
-  const input = document.getElementById("chatThreadInput");
-  const content = input.value.trim();
+  if(!_chatCurrentChannelId||!_chatThreadParentId) return;
+  const input=document.getElementById("chatThreadInput");
+  const content=_ceToMarkdown(input);
   if(!content) return;
-  input.value = "";
-  input.style.height = "auto";
-  try{
-    const r = await fetch("/teamapp/chat/send/", {
-      method:"POST",
-      headers:{"Content-Type":"application/json","X-CSRFToken":getCsrfToken()},
-      body: JSON.stringify({channel_id: _chatCurrentChannelId, content, parent_id: _chatThreadParentId})
-    });
-    const d = await r.json();
-    if(d.success){ loadThreadMessages(_chatThreadParentId); loadChatMessages(); }
-  } catch(e){}
+  input.innerHTML="";
+  await fetch("/teamapp/chat/send/",{method:"POST",headers:{"Content-Type":"application/json","X-CSRFToken":getCsrfToken()},body:JSON.stringify({channel_id:_chatCurrentChannelId,content,parent_id:_chatThreadParentId})});
+  loadThreadMessages(_chatThreadParentId);
+  loadChatMessages();
+  _tcWsBroadcastNew(content);
 }
 
-function chatThreadKeyDown(e){
-  if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); sendThreadReply(); }
-}
+function chatThreadKeyDown(e){ if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendThreadReply();} }
 
 function closeThread(){
-  _chatThreadParentId = null;
-  document.getElementById("chatLayout").classList.remove("with-thread");
-  const thread = document.getElementById("chatThread");
-  thread.style.display = "none";
+  _chatThreadParentId=null;
+  document.getElementById("tcApp").classList.remove("with-thread");
+}
+
+function toggleEmojiPicker(){
+  document.getElementById("tcEmojiPicker").classList.toggle("show");
+}
+function closeEmojiPicker(){
+  document.getElementById("tcEmojiPicker")?.classList.remove("show");
+}
+function insertEmoji(e){
+  document.getElementById("chatInput").focus();
+  document.execCommand("insertText", false, e);
+  closeEmojiPicker();
+}
+function insertMention(){
+  const input = document.getElementById("chatInput");
+  input.focus();
+  document.execCommand("insertText", false, "@");
+  _tcCheckMentionTrigger(input);
 }
 
 function openNewChannelModal(){
-  const m = document.getElementById("newChannelModal");
-  m.style.display = "flex";
-  document.getElementById("newChName").value = "";
-  document.getElementById("newChDesc").value = "";
+  const m=document.getElementById("newChannelModal");
+  m.style.display="flex";
+  document.getElementById("newChName").value="";
+  document.getElementById("newChDesc").value="";
   document.getElementById("newChName").focus();
 }
-
-function closeNewChannelModal(){
-  document.getElementById("newChannelModal").style.display = "none";
-}
-
+function closeNewChannelModal(){ document.getElementById("newChannelModal").style.display="none"; }
 async function submitNewChannel(){
-  const name = document.getElementById("newChName").value.trim();
-  const description = document.getElementById("newChDesc").value.trim();
+  const name=document.getElementById("newChName").value.trim();
+  const description=document.getElementById("newChDesc").value.trim();
   if(!name) return;
-  try{
-    const r = await fetch("/teamapp/chat/channels/", {
-      method:"POST",
-      headers:{"Content-Type":"application/json","X-CSRFToken":getCsrfToken()},
-      body: JSON.stringify({name, description})
-    });
-    const d = await r.json();
-    if(d.success){
-      closeNewChannelModal();
-      loadChatChannels();
-      selectChannel(d.channel.id, d.channel.name, d.channel.description);
-    }
-  } catch(e){}
+  const r=await fetch("/teamapp/chat/channels/",{method:"POST",headers:{"Content-Type":"application/json","X-CSRFToken":getCsrfToken()},body:JSON.stringify({name,description})});
+  const d=await r.json();
+  if(d.success){ closeNewChannelModal(); loadChatChannels(); selectChannel(d.channel.id,d.channel.name,d.channel.description||""); }
 }
 
-function getCsrfToken(){
-  const m = document.cookie.match(/csrftoken=([^;]+)/);
-  return m ? m[1] : "";
+// ── Markdown renderer ────────────────────────────────────────────────────────
+function _renderMarkdown(text){
+  let s = escHtml(text);
+  // Code blocks (must run before inline code)
+  s = s.replace(/```([\s\S]*?)```/g, (_,c)=>`<pre style="background:#f3f0ff;border-radius:8px;padding:10px 14px;font-size:12.5px;overflow-x:auto;"><code>${c.trim()}</code></pre>`);
+  // Inline code
+  s = s.replace(/`([^`]+)`/g, '<code style="background:#f3f0ff;color:#7c3aed;padding:1px 5px;border-radius:5px;font-size:12.5px;">$1</code>');
+  // Bold
+  s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  // Italic
+  s = s.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+  // Strikethrough
+  s = s.replace(/~~([^~]+)~~/g, '<del>$1</del>');
+  // Links
+  s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener" style="color:#7c3aed;">$1</a>');
+  // Order numbers: #NNNNN (4+ digits) → clickable chip
+  s = s.replace(/#(\d{4,})/g, (_,num)=>
+    `<button onclick="tcOpenOrderFromChat('${num}')" style="display:inline-flex;align-items:center;gap:5px;background:#f5f3ff;border:1.5px solid #ddd5f3;border-radius:8px;padding:2px 9px;font-size:13px;font-weight:700;color:#6d28d9;cursor:pointer;vertical-align:middle;transition:background .15s;" onmouseenter="this.style.background='#ede9fe'" onmouseleave="this.style.background='#f5f3ff'"><i class='fa-solid fa-box' style='font-size:11px;'></i> #${num}</button>`
+  );
+  // Bullet list (lines starting with - or *)
+  s = s.replace(/^[*\-] (.+)$/gm, '<li>$1</li>').replace(/(<li>.*<\/li>)/gs, '<ul style="margin:4px 0 4px 18px;padding:0;">$1</ul>');
+  // Numbered list
+  s = s.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
+  // @mentions → styled chip (amber if it's you, purple+clickable otherwise)
+  s = s.replace(/@([A-Za-z][A-Za-z]*(?:\s[A-Za-z][A-Za-z]*)?)/g, (_, name) => {
+    const key = name.toLowerCase();
+    const isMe = _tcMyName && (key === _tcMyName.toLowerCase() || key === _tcMyName.split(" ")[0].toLowerCase());
+    if(isMe) return `<span style="background:#fde68a;color:#92400e;font-weight:700;border-radius:5px;padding:1px 6px;white-space:nowrap;">@${name}</span>`;
+    return `<span data-mention="${name.replace(/"/g,'&quot;')}" onclick="tcOpenMentionDm(this.dataset.mention)" style="background:#ede9fe;color:#6d28d9;font-weight:700;border-radius:5px;padding:1px 6px;white-space:nowrap;cursor:pointer;" onmouseenter="this.style.background='#ddd5f3'" onmouseleave="this.style.background='#ede9fe'">@${name}</span>`;
+  });
+  // Newlines
+  s = s.replace(/\n/g, "<br>");
+  return s;
 }
+
+// ── Open order from chat ──────────────────────────────────────────────────────
+async function tcOpenOrderFromChat(orderNum){
+  const r = await fetch(`/orders/api/lookup/?q=${encodeURIComponent(orderNum)}`);
+  const d = await r.json();
+  if(!d.success){
+    if(d.error === "no_access"){
+      _tcToast(`🔒 No access to orders from «${d.store_name || "this project"}»`);
+    } else {
+      _tcToast(`⚠️ Order #${orderNum} not found`);
+    }
+    return;
+  }
+  _odOpenedFromChat = true;
+  document.getElementById("odBackLabel").textContent = "Back to Chat";
+  document.getElementById("odBreadcrumbBack").textContent = "Team Chat";
+  openOrderDetail(d.id);
+}
+
+// ── Formatting toolbar (WYSIWYG via execCommand) ─────────────────────────────
+function tcFormat(type){
+  const el = document.getElementById("chatInput");
+  el.focus();
+  if(type==="bold")   { document.execCommand("bold"); }
+  else if(type==="italic") { document.execCommand("italic"); }
+  else if(type==="strike") { document.execCommand("strikeThrough"); }
+  else if(type==="bullet") { document.execCommand("insertUnorderedList"); }
+  else if(type==="numbered"){ document.execCommand("insertOrderedList"); }
+  else if(type==="code"){
+    const sel = window.getSelection();
+    if(sel&&sel.rangeCount){
+      const range = sel.getRangeAt(0);
+      const text = range.toString()||"code";
+      const code = document.createElement("code");
+      code.textContent = text;
+      range.deleteContents();
+      range.insertNode(code);
+      // Move cursor after the code element
+      range.setStartAfter(code); range.collapse(true);
+      sel.removeAllRanges(); sel.addRange(range);
+    }
+  }
+  else if(type==="link"){
+    const url = prompt("Enter URL:","https://");
+    if(url) document.execCommand("createLink", false, url);
+  }
+}
+
+// ── File attachment ───────────────────────────────────────────────────────────
+let _tcAttachFiles = [];
+function tcHandleAttach(input){
+  _tcAttachFiles = Array.from(input.files);
+  const prev = document.getElementById("tcAttachPreview");
+  if(!_tcAttachFiles.length){ prev.style.display="none"; return; }
+  prev.style.display="flex";
+  prev.innerHTML = _tcAttachFiles.map((f,i)=>`
+    <div style="display:flex;align-items:center;gap:6px;background:#f3f0ff;border:1px solid #ddd5f3;border-radius:8px;padding:5px 10px;font-size:12px;color:#5b21b6;">
+      <i class="fa-solid fa-paperclip"></i>
+      <span>${escHtml(f.name)}</span>
+      <button onclick="_tcRemoveAttach(${i})" style="background:none;border:none;cursor:pointer;color:#9a7fd4;margin-left:4px;">✕</button>
+    </div>`).join("");
+  input.value="";
+}
+function _tcRemoveAttach(i){
+  _tcAttachFiles.splice(i,1);
+  if(!_tcAttachFiles.length){ document.getElementById("tcAttachPreview").style.display="none"; return; }
+  document.getElementById("tcAttachPreview").innerHTML = _tcAttachFiles.map((f,j)=>`
+    <div style="display:flex;align-items:center;gap:6px;background:#f3f0ff;border:1px solid #ddd5f3;border-radius:8px;padding:5px 10px;font-size:12px;color:#5b21b6;">
+      <i class="fa-solid fa-paperclip"></i>
+      <span>${escHtml(f.name)}</span>
+      <button onclick="_tcRemoveAttach(${j})" style="background:none;border:none;cursor:pointer;color:#9a7fd4;margin-left:4px;">✕</button>
+    </div>`).join("");
+}
+
+// ── Message More menu ─────────────────────────────────────────────────────────
+const _tcMenuStyle = "display:flex;align-items:center;gap:10px;width:100%;padding:9px 14px;border:none;background:none;cursor:pointer;font-size:13px;color:#0d0d12;border-radius:9px;text-align:left;transition:background .1s;";
+const _tcMenuStyleRed = _tcMenuStyle + "color:#dc2626;";
+const _tcMenuDivider = `<div style="height:1px;background:#f0edf9;margin:3px 8px;"></div>`;
+
+function tcShowMsgMenu(msgId, btn){
+  document.querySelectorAll(".tc-msg-menu").forEach(el=>el.remove());
+  const msg = _tcMsgMap[msgId];
+  const isMine = msg && (msg.is_mine || msg.sender_id === _tcCurrentUserId);
+  const content = msg ? msg.content : "";
+
+  const menu = document.createElement("div");
+  menu.className = "tc-msg-menu";
+  menu.style.cssText = "position:fixed;background:#fff;border:1px solid #e7e2f5;border-radius:14px;padding:5px;box-shadow:0 8px 32px rgba(20,14,60,.16);z-index:99999;min-width:210px;";
+
+  const items = [];
+
+  // Reply in thread
+  items.push(`<button style="${_tcMenuStyle}" onmouseenter="this.style.background='#f5f3ff'" onmouseleave="this.style.background='none'"
+    onclick="_tcMenuDo(()=>tcOpenChatThread(${msgId}))">
+    <i class="fa-regular fa-comment" style="color:#7c3aed;width:16px;"></i> Reply in thread
+  </button>`);
+
+  // Add reaction
+  items.push(`<button style="${_tcMenuStyle}" onmouseenter="this.style.background='#f5f3ff'" onmouseleave="this.style.background='none'"
+    onclick="_tcMenuDo(()=>toggleReactionPicker(${msgId}))">
+    <i class="fa-regular fa-face-smile" style="color:#7c3aed;width:16px;"></i> Add reaction
+  </button>`);
+
+  items.push(_tcMenuDivider);
+
+  // Edit (own messages only)
+  if(isMine){
+    items.push(`<button style="${_tcMenuStyle}" onmouseenter="this.style.background='#f5f3ff'" onmouseleave="this.style.background='none'"
+      onclick="_tcMenuDo(()=>tcEditMsg(${msgId}))">
+      <i class="fa-regular fa-pen-to-square" style="color:#7c3aed;width:16px;"></i> Edit message
+    </button>`);
+  }
+
+  // Pin message
+  items.push(`<button style="${_tcMenuStyle}" onmouseenter="this.style.background='#f5f3ff'" onmouseleave="this.style.background='none'"
+    onclick="_tcMenuDo(()=>tcPinMsg(${msgId}))">
+    <i class="fa-solid fa-thumbtack" style="color:#7c3aed;width:16px;"></i> Pin to channel
+  </button>`);
+
+  // Save / Bookmark
+  items.push(`<button style="${_tcMenuStyle}" onmouseenter="this.style.background='#f5f3ff'" onmouseleave="this.style.background='none'"
+    onclick="_tcMenuDo(()=>tcBookmarkMsg(${msgId}))">
+    <i class="fa-regular fa-bookmark" style="color:#7c3aed;width:16px;"></i> Save message
+  </button>`);
+
+  items.push(_tcMenuDivider);
+
+  // Copy text
+  items.push(`<button style="${_tcMenuStyle}" onmouseenter="this.style.background='#f5f3ff'" onmouseleave="this.style.background='none'"
+    onclick="_tcMenuDo(()=>tcCopyMsg(${JSON.stringify(content)}))">
+    <i class="fa-regular fa-copy" style="color:#9a99ad;width:16px;"></i> Copy message text
+  </button>`);
+
+  // Copy link (message reference)
+  items.push(`<button style="${_tcMenuStyle}" onmouseenter="this.style.background='#f5f3ff'" onmouseleave="this.style.background='none'"
+    onclick="_tcMenuDo(()=>tcCopyLink(${msgId}))">
+    <i class="fa-solid fa-link" style="color:#9a99ad;width:16px;"></i> Copy link
+  </button>`);
+
+  // Delete (own or admin)
+  if(isMine){
+    items.push(_tcMenuDivider);
+    items.push(`<button style="${_tcMenuStyleRed}" onmouseenter="this.style.background='#fff0f0'" onmouseleave="this.style.background='none'"
+      onclick="_tcMenuDo(()=>tcDeleteMsg(${msgId}))">
+      <i class="fa-regular fa-trash-can" style="width:16px;"></i> Delete message
+    </button>`);
+  }
+
+  menu.innerHTML = items.join("");
+  document.body.appendChild(menu);
+
+  const r = btn.getBoundingClientRect();
+  // Position below the button, right-aligned
+  menu.style.top = (r.bottom + 6) + "px";
+  menu.style.left = Math.max(6, r.right - 216) + "px";
+  // Clamp to viewport bottom
+  requestAnimationFrame(()=>{
+    const mb = menu.getBoundingClientRect();
+    if(mb.bottom > window.innerHeight - 10){
+      menu.style.top = (r.top - mb.height - 6) + "px";
+    }
+  });
+
+  setTimeout(()=>{
+    document.addEventListener("click", function _cm(ev){
+      if(!menu.contains(ev.target)){ menu.remove(); document.removeEventListener("click",_cm); }
+    });
+  }, 10);
+}
+
+function _tcMenuDo(fn){
+  document.querySelectorAll(".tc-msg-menu").forEach(el=>el.remove());
+  fn();
+}
+
+function tcCopyMsg(content){
+  navigator.clipboard.writeText(content).then(()=>_tcToast("📋 Message copied!"));
+}
+
+async function tcDeleteMsg(msgId){
+  if(!confirm("Delete this message?")) return;
+  const r=await fetch(`/teamapp/chat/messages/${msgId}/delete/`,{method:"DELETE",headers:{"X-CSRFToken":getCsrfToken()}});
+  const d=await r.json();
+  if(d.success){
+    if(_chatThreadParentId===msgId) closeThread();
+    loadChatMessages();
+    if(_chatThreadParentId) loadThreadMessages(_chatThreadParentId);
+  } else {
+    alert(d.error||"Could not delete message.");
+  }
+}
+
+// ── Inline edit ───────────────────────────────────────────────────────────────
+function tcEditMsg(msgId){
+  const msgEl = document.querySelector(`.tc-msg[data-mid="${msgId}"]`);
+  if(!msgEl) return;
+  const textEl = msgEl.querySelector(".tc-msg-text");
+  const original = (_tcMsgMap[msgId]||{}).content || textEl.innerText;
+  textEl.setAttribute("data-original", original);
+  textEl.contentEditable = "true";
+  textEl.style.cssText = "outline:none;border:1.5px solid #7c3aed;border-radius:10px;padding:8px 10px;min-height:36px;background:#faf9ff;";
+  textEl.focus();
+  // Move cursor to end
+  const sel=window.getSelection(), range=document.createRange();
+  range.selectNodeContents(textEl); range.collapse(false);
+  sel.removeAllRanges(); sel.addRange(range);
+  // Show save/cancel bar
+  const bar = document.createElement("div");
+  bar.className = "tc-edit-bar";
+  bar.style.cssText = "display:flex;gap:7px;margin-top:6px;align-items:center;";
+  bar.innerHTML = `
+    <span style="font-size:11.5px;color:#9a99ad;">Escape to <b onclick="tcEditCancel(${msgId})" style="cursor:pointer;color:#7c3aed;">cancel</b> &nbsp;·&nbsp; Enter to <b onclick="tcEditSave(${msgId})" style="cursor:pointer;color:#7c3aed;">save</b></span>
+    <button onclick="tcEditSave(${msgId})" style="background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:5px 14px;font-size:12px;font-weight:700;cursor:pointer;">Save</button>
+    <button onclick="tcEditCancel(${msgId})" style="background:#f3f0ff;color:#7c3aed;border:none;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;">Cancel</button>`;
+  textEl.insertAdjacentElement("afterend", bar);
+  textEl.addEventListener("keydown", function _ek(e){
+    if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); tcEditSave(msgId); textEl.removeEventListener("keydown",_ek); }
+    if(e.key==="Escape"){ tcEditCancel(msgId); textEl.removeEventListener("keydown",_ek); }
+  });
+}
+
+async function tcEditSave(msgId){
+  const msgEl = document.querySelector(`.tc-msg[data-mid="${msgId}"]`);
+  if(!msgEl) return;
+  const textEl = msgEl.querySelector(".tc-msg-text");
+  const newContent = (textEl.innerText||"").trim();
+  if(!newContent){ tcEditCancel(msgId); return; }
+  const r = await fetch(`/teamapp/chat/messages/${msgId}/edit/`,{
+    method:"PATCH",
+    headers:{"Content-Type":"application/json","X-CSRFToken":getCsrfToken()},
+    body:JSON.stringify({content:newContent})
+  });
+  const d = await r.json();
+  if(d.success){
+    if(_tcMsgMap[msgId]) _tcMsgMap[msgId].content = d.content;
+    _tcEditCleanup(msgEl, textEl);
+    textEl.innerHTML = _renderMarkdown(d.content);
+  } else {
+    alert(d.message||"Could not save edit.");
+    tcEditCancel(msgId);
+  }
+}
+
+function tcEditCancel(msgId){
+  const msgEl = document.querySelector(`.tc-msg[data-mid="${msgId}"]`);
+  if(!msgEl) return;
+  const textEl = msgEl.querySelector(".tc-msg-text");
+  const original = textEl.getAttribute("data-original") || "";
+  _tcEditCleanup(msgEl, textEl);
+  textEl.innerHTML = _renderMarkdown(original);
+}
+
+function _tcEditCleanup(msgEl, textEl){
+  textEl.contentEditable = "false";
+  textEl.style.cssText = "";
+  msgEl.querySelector(".tc-edit-bar")?.remove();
+}
+
+// ── Pin message (localStorage-based) ─────────────────────────────────────────
+function tcPinMsg(msgId){
+  const msg = _tcMsgMap[msgId];
+  const pins = JSON.parse(localStorage.getItem("tc_pins")||"[]");
+  if(!pins.includes(msgId)){
+    pins.push(msgId);
+    localStorage.setItem("tc_pins", JSON.stringify(pins));
+    _tcToast(`📌 Message pinned to #${_chatCurrentChannelName}`);
+  } else {
+    _tcToast("Already pinned!");
+  }
+}
+
+// ── Bookmark / Save ───────────────────────────────────────────────────────────
+function tcBookmarkMsg(msgId){
+  const msg = _tcMsgMap[msgId];
+  const saves = JSON.parse(localStorage.getItem("tc_saved")||"[]");
+  const idx = saves.findIndex(s=>s.id===msgId);
+  if(idx===-1){
+    saves.push({id:msgId, content:(msg||{}).content||"", channel:_chatCurrentChannelName, at:new Date().toISOString()});
+    localStorage.setItem("tc_saved", JSON.stringify(saves));
+    _tcToast("🔖 Message saved to bookmarks");
+  } else {
+    _tcToast("Already saved!");
+  }
+}
+
+// ── Copy link ─────────────────────────────────────────────────────────────────
+function tcCopyLink(msgId){
+  const text = `#${_chatCurrentChannelName} — message #${msgId}`;
+  navigator.clipboard.writeText(text).then(()=>_tcToast("🔗 Link copied!"));
+}
+
+// ── Toast helper ──────────────────────────────────────────────────────────────
+function _tcToast(msg){
+  const t=document.createElement("div");
+  t.textContent=msg;
+  t.style.cssText="position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:#0f172a;color:#fff;padding:9px 22px;border-radius:999px;font-size:13px;font-weight:600;z-index:99999;pointer-events:none;white-space:nowrap;";
+  document.body.appendChild(t);
+  setTimeout(()=>{t.style.transition="opacity .4s";t.style.opacity="0";setTimeout(()=>t.remove(),400);},1800);
+}
+
+// ── Group collapse ────────────────────────────────────────────────────────────
+function tcToggleGroup(headEl){
+  const group = headEl.closest(".tc-group");
+  const list = group.querySelector("[id^='tc']"); // tcChannelList / tcMemberList
+  const caret = headEl.querySelector(".tc-caret");
+  const collapsed = list.style.display === "none";
+  list.style.display = collapsed ? "" : "none";
+  if(caret) caret.style.transform = collapsed ? "" : "rotate(-90deg)";
+  const addRow = group.querySelector(".tc-add-row");
+  if(addRow) addRow.style.display = collapsed ? "" : "none";
+}
+
+// ── WebSocket real-time layer ─────────────────────────────────────────────────
+let _tcWs = null;
+let _tcTypingTimer = null;
+let _tcTypingUsers = {};
+let _tcWsRetryDelay = 1000;
+let _tcNotifPerm = false;
+let _tcMentionMembers = [];
+let _tcMentionSelIdx = 0;
+
+function _tcStartPoll(){ _tcWsConnect(); }
+function _tcStopPoll(){ _tcWsClose(); }
+
+function _tcWsConnect(){
+  _tcWsClose();
+  if(!_chatCurrentChannelId) return;
+  const proto = location.protocol === "https:" ? "wss" : "ws";
+  _tcWs = new WebSocket(`${proto}://${location.host}/ws/chat/${_chatCurrentChannelId}/`);
+  _tcWs.onopen = () => { _tcWsRetryDelay=1000; _tcUpdateConnBadge(true); _tcRequestNotifPerm(); };
+  _tcWs.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    if(msg.type === "new_message"){
+      loadChatMessages();
+      const chatVisible = document.getElementById("chatSection")?.classList.contains("active");
+      if(!chatVisible){
+        _tcShowInAppNotif(msg.sender_name, _chatCurrentChannelName, msg.preview||"New message", ()=>showSection("chat"));
+        const chEl = document.getElementById("tcCh_"+_chatCurrentChannelId);
+        if(chEl && !chEl.classList.contains("active")){
+          chEl.classList.add("unread");
+          let badge = chEl.querySelector(".tc-unread-badge");
+          if(!badge){ badge=document.createElement("span"); badge.className="tc-unread-badge"; chEl.appendChild(badge); }
+          badge.textContent = Math.min((parseInt(badge.textContent)||0)+1, 99);
+        }
+      }
+      if(document.hidden && _tcNotifPerm) _tcShowBrowserNotif(msg.sender_name, msg.preview||`New message in #${_chatCurrentChannelName}`);
+    } else if(msg.type === "typing"){
+      _tcHandleTypingIndicator(msg.username, msg.typing);
+    }
+  };
+  _tcWs.onclose = () => {
+    _tcUpdateConnBadge(false);
+    if(_chatCurrentChannelId){
+      setTimeout(()=>{ if(_chatCurrentChannelId) _tcWsConnect(); }, _tcWsRetryDelay);
+      _tcWsRetryDelay = Math.min(_tcWsRetryDelay * 2, 15000);
+    }
+  };
+  _tcWs.onerror = () => _tcWs.close();
+}
+
+function _tcWsClose(){
+  if(_tcWs){ _tcWs.onclose=null; _tcWs.close(); _tcWs=null; }
+  _tcUpdateConnBadge(false);
+}
+
+// ── Typing indicator ──────────────────────────────────────────────────────────
+function _tcSendTyping(isTyping){
+  if(_tcWs && _tcWs.readyState === WebSocket.OPEN)
+    _tcWs.send(JSON.stringify({type:"typing", typing:isTyping}));
+}
+
+function _tcHandleTypingIndicator(username, isTyping){
+  clearTimeout(_tcTypingUsers[username]);
+  if(isTyping){
+    _tcTypingUsers[username] = setTimeout(()=>{ delete _tcTypingUsers[username]; _tcRenderTyping(); }, 4000);
+  } else { delete _tcTypingUsers[username]; }
+  _tcRenderTyping();
+}
+
+function _tcRenderTyping(){
+  const el = document.getElementById("tcTypingBar");
+  if(!el) return;
+  const users = Object.keys(_tcTypingUsers);
+  if(!users.length){ el.style.display="none"; return; }
+  const names = users.length===1 ? users[0] : users.length===2 ? `${users[0]} and ${users[1]}` : `${users[0]} and ${users.length-1} others`;
+  el.style.display = "flex";
+  el.querySelector(".tc-typing-text").textContent = `${names} ${users.length===1?"is":"are"} typing…`;
+}
+
+function _tcOnComposerInput(){
+  _tcSendTyping(true);
+  clearTimeout(_tcTypingTimer);
+  _tcTypingTimer = setTimeout(()=>_tcSendTyping(false), 2000);
+  _tcCheckMentionTrigger(document.getElementById("chatInput"));
+}
+
+// ── In-app notification banner ────────────────────────────────────────────────
+function _tcShowInAppNotif(sender, channel, preview, onClick){
+  document.querySelectorAll(".tc-inapp-notif").forEach(el=>el.remove());
+  const ini = sender.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
+  const el = document.createElement("div");
+  el.className = "tc-inapp-notif";
+  el.innerHTML = `
+    <div style="display:flex;align-items:flex-start;gap:10px;">
+      <div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;font-size:13px;font-weight:700;display:grid;place-items:center;flex-shrink:0;">${escHtml(ini)}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:11.5px;color:#9a99ad;font-weight:600;margin-bottom:1px;"># ${escHtml(channel)}</div>
+        <div style="font-size:13.5px;font-weight:800;color:#0d0d12;margin-bottom:3px;">${escHtml(sender)}</div>
+        <div style="font-size:12.5px;color:#6b6b7d;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.4;">${escHtml(preview)}</div>
+      </div>
+      <button onclick="event.stopPropagation();this.closest('.tc-inapp-notif').remove()" style="width:22px;height:22px;border-radius:6px;border:1px solid #e7e2f5;background:#faf9ff;color:#9a99ad;font-size:14px;cursor:pointer;display:grid;place-items:center;flex-shrink:0;line-height:1;">✕</button>
+    </div>`;
+  el.style.cssText = "position:fixed;bottom:24px;right:20px;background:#fff;border:1px solid #e7e2f5;border-radius:16px;padding:14px 16px;width:320px;box-shadow:0 8px 32px rgba(20,14,60,.20);z-index:99998;cursor:pointer;transform:translateX(130%);transition:transform .32s cubic-bezier(.16,1,.3,1);";
+  el.onclick = () => { el.remove(); if(onClick) onClick(); };
+  document.body.appendChild(el);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{ el.style.transform="translateX(0)"; }));
+  setTimeout(()=>{ el.style.transition="transform .3s ease,opacity .3s ease"; el.style.opacity="0"; el.style.transform="translateX(130%)"; setTimeout(()=>el.remove(),300); }, 5000);
+}
+
+// ── Browser notifications ─────────────────────────────────────────────────────
+function _tcRequestNotifPerm(){
+  if(!("Notification" in window)) return;
+  if(Notification.permission==="granted"){ _tcNotifPerm=true; return; }
+  if(Notification.permission!=="denied") Notification.requestPermission().then(p=>{ _tcNotifPerm=p==="granted"; });
+}
+
+function _tcShowBrowserNotif(title, body){
+  if(!_tcNotifPerm) return;
+  const n = new Notification(`Drop Sigma · ${title}`, {body, icon:"/static/favicon.ico", tag:"chat-msg", renotify:true});
+  n.onclick = ()=>{ window.focus(); showSection("chat"); n.close(); };
+  setTimeout(()=>n.close(), 6000);
+}
+
+// ── Broadcast new message over WS after send ──────────────────────────────────
+function _tcWsBroadcastNew(content){
+  if(_tcWs && _tcWs.readyState === WebSocket.OPEN)
+    _tcWs.send(JSON.stringify({type:"new_message", content: content||""}));
+}
+
+// ── Connection badge ──────────────────────────────────────────────────────────
+function _tcUpdateConnBadge(connected){
+  const el = document.getElementById("tcConnBadge");
+  if(!el) return;
+  el.title = connected ? "Live — connected" : "Reconnecting…";
+  el.style.color = connected ? "#22c55e" : "#f59e0b";
+}
+
+// ── @Mention autocomplete ─────────────────────────────────────────────────────
+function _tcGetTextBeforeCursor(container){
+  const sel = window.getSelection();
+  if(!sel||!sel.rangeCount) return "";
+  const range = sel.getRangeAt(0).cloneRange();
+  range.setStart(container, 0);
+  return range.toString();
+}
+
+function _tcCheckMentionTrigger(inputEl){
+  if(!inputEl) return;
+  const text = _tcGetTextBeforeCursor(inputEl);
+  const match = text.match(/@(\w*)$/);
+  if(!match){ _tcHideMentionDrop(); return; }
+  const query = match[1].toLowerCase();
+  const filtered = _tcMentionMembers.filter(n=>n.toLowerCase().includes(query)).slice(0,6);
+  if(!filtered.length){ _tcHideMentionDrop(); return; }
+  _tcMentionSelIdx = 0;
+  _tcShowMentionDrop(filtered, inputEl);
+}
+
+function _tcShowMentionDrop(members, inputEl){
+  let drop = document.getElementById("tcMentionDrop");
+  if(!drop){
+    drop = document.createElement("div");
+    drop.id = "tcMentionDrop";
+    drop.style.cssText = "position:fixed;background:#fff;border:1px solid #e7e2f5;border-radius:12px;padding:5px;box-shadow:0 8px 28px rgba(20,14,60,.16);z-index:99999;min-width:220px;max-width:280px;";
+    document.body.appendChild(drop);
+  }
+  drop.innerHTML = members.map((name,i)=>{
+    const ini = name.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
+    return `<div class="tc-mention-opt" data-idx="${i}" data-name="${escHtml(name)}"
+      style="display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:13px;color:#0d0d12;font-weight:600;${i===0?"background:#f5f3ff;":""}"
+      onmouseenter="_tcMentionSelIdx=${i};_tcMentionUpdateSel()"
+      onclick="_tcInsertMention('${escHtml(name)}','chatInput')">
+      <div style="width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;font-size:10px;font-weight:700;display:grid;place-items:center;flex-shrink:0;">${escHtml(ini)}</div>
+      <span>@${escHtml(name)}</span>
+    </div>`;
+  }).join("");
+  // Position above input
+  const sel = window.getSelection();
+  if(sel&&sel.rangeCount){
+    const r = sel.getRangeAt(0).getBoundingClientRect();
+    requestAnimationFrame(()=>{
+      const h = drop.offsetHeight;
+      const top = r.top - h - 8 + window.scrollY;
+      drop.style.top = Math.max(4, top) + "px";
+      drop.style.left = Math.max(4, Math.min(r.left + window.scrollX, window.innerWidth - drop.offsetWidth - 8)) + "px";
+    });
+  }
+  drop.style.display = "block";
+}
+
+function _tcHideMentionDrop(){
+  const d = document.getElementById("tcMentionDrop");
+  if(d) d.style.display = "none";
+}
+
+function _tcMentionDropVisible(){
+  const d = document.getElementById("tcMentionDrop");
+  return d && d.style.display !== "none";
+}
+
+function _tcMentionUpdateSel(){
+  document.querySelectorAll("#tcMentionDrop .tc-mention-opt").forEach((el,i)=>{
+    el.style.background = i===_tcMentionSelIdx ? "#f5f3ff" : "";
+  });
+}
+
+function _tcMentionMoveSel(dir){
+  const opts = document.querySelectorAll("#tcMentionDrop .tc-mention-opt");
+  _tcMentionSelIdx = Math.max(0, Math.min(opts.length-1, _tcMentionSelIdx+dir));
+  _tcMentionUpdateSel();
+}
+
+function _tcMentionConfirm(){
+  const opts = document.querySelectorAll("#tcMentionDrop .tc-mention-opt");
+  const opt = opts[_tcMentionSelIdx];
+  if(opt) _tcInsertMention(opt.dataset.name, "chatInput");
+}
+
+function _tcInsertMention(name, inputId){
+  _tcHideMentionDrop();
+  const input = document.getElementById(inputId);
+  if(!input) return;
+  input.focus();
+  const sel = window.getSelection();
+  if(sel&&sel.rangeCount){
+    const anchor = sel.anchorNode;
+    const anchorOff = sel.anchorOffset;
+    // Find and delete the @query text
+    if(anchor.nodeType===3){
+      const before = anchor.textContent.slice(0, anchorOff);
+      const match = before.match(/@\w*$/);
+      if(match){
+        const start = anchorOff - match[0].length;
+        const range = document.createRange();
+        range.setStart(anchor, start);
+        range.setEnd(anchor, anchorOff);
+        range.deleteContents();
+        sel.removeAllRanges(); sel.addRange(range);
+      }
+    }
+  }
+  // Insert styled mention span
+  const mention = document.createElement("span");
+  mention.className = "tc-mention-chip";
+  mention.contentEditable = "false";
+  mention.textContent = "@" + name;
+  mention.style.cssText = "color:#7c3aed;font-weight:700;background:#f1ebfe;border-radius:4px;padding:1px 4px;cursor:default;user-select:all;";
+  const sel2 = window.getSelection();
+  if(sel2&&sel2.rangeCount){
+    const r = sel2.getRangeAt(0);
+    r.insertNode(mention);
+    const space = document.createTextNode(" ");
+    mention.after(space);
+    r.setStartAfter(space); r.collapse(true);
+    sel2.removeAllRanges(); sel2.addRange(r);
+  }
+  input.dispatchEvent(new Event("input"));
+}
+
+function getCsrfToken(){ const m=document.cookie.match(/csrftoken=([^;]+)/); return m?m[1]:""; }
+
+// Close emoji picker on outside click
+document.addEventListener("click",e=>{
+  const picker=document.getElementById("tcEmojiPicker");
+  if(picker&&picker.classList.contains("show")&&!picker.contains(e.target)&&!e.target.closest("[onclick='toggleEmojiPicker()']"))
+    picker.classList.remove("show");
+});
 </script>
 </body>
 </html>

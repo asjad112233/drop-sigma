@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Employee Portal — VendorFlow AI</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
 <style>
 :root{
   --bg:#f4f7fb;
@@ -34,6 +35,7 @@ body{font-family:'Inter','Segoe UI',sans-serif;background:var(--bg);color:var(--
   background:var(--surface);border-right:1px solid var(--border);
   padding:24px 14px;display:flex;flex-direction:column;
   position:sticky;top:0;height:100vh;overflow-y:auto;
+  position:relative;
 }
 .brand{display:flex;align-items:center;gap:11px;padding:6px 10px 22px;border-bottom:1px solid var(--border);margin-bottom:16px;}
 .brand-logo{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:grid;place-items:center;color:#fff;font-weight:800;font-size:13px;box-shadow:0 4px 12px rgba(99,102,241,.3);}
@@ -245,6 +247,18 @@ body{font-family:'Inter','Segoe UI',sans-serif;background:var(--bg);color:var(--
 .btn-ghost{background:var(--surface);color:var(--text);border-color:var(--border);}
 .btn-ghost:hover{border-color:#d4d7e3;}
 
+.ec-sb-toggle{position:absolute;top:18px;right:14px;width:28px;height:28px;padding:0;background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.18);border-radius:8px;color:rgba(15,23,42,.45);cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:20;transition:background .15s,color .15s;flex-shrink:0;}
+.ec-sb-toggle:hover{background:rgba(99,102,241,.18);color:#3b0764;}
+.layout.ec-sb-collapsed{grid-template-columns:64px 1fr;}
+.layout.ec-sb-collapsed .sidebar{padding:14px 8px;align-items:center;overflow:visible;}
+.layout.ec-sb-collapsed .brand{justify-content:center;padding:4px 0 18px;}
+.layout.ec-sb-collapsed .brand>div{display:none;}
+.layout.ec-sb-collapsed .ec-sb-toggle{position:relative;top:auto;right:auto;width:40px;height:40px;margin:0 0 8px;border-radius:12px;}
+.layout.ec-sb-collapsed .ec-sb-toggle svg{transform:rotate(180deg);}
+.layout.ec-sb-collapsed .nav-item{font-size:0;width:40px;height:40px;padding:0;justify-content:center;gap:0;border-radius:12px;margin-bottom:4px;}
+.layout.ec-sb-collapsed .nav-item .nav-icon{font-size:18px;}
+.layout.ec-sb-collapsed .sidebar-profile{display:none;}
+
 @media(max-width:900px){
   .layout{grid-template-columns:1fr;}
   .sidebar{display:none;}
@@ -252,6 +266,145 @@ body{font-family:'Inter','Segoe UI',sans-serif;background:var(--bg);color:var(--
   .kpi-grid{grid-template-columns:repeat(2,1fr);}
   .profile-grid{grid-template-columns:1fr;}
 }
+
+/* ── Team Chat Premium ───────────────────────────────────────────────────────── */
+#secChat.active{display:flex!important;flex-direction:column;height:calc(100vh - 64px);min-height:0;padding:0!important;}
+.tc-app{flex:1;display:grid;grid-template-columns:280px 1fr;grid-template-rows:1fr;min-height:0;overflow:hidden;padding:14px;gap:14px;background:linear-gradient(180deg,#f6f4ff 0%,#eee9ff 100%);}
+.tc-app.with-thread{grid-template-columns:280px 1fr 380px;}
+.tc-sidebar{background:#fff;border:1px solid #e7e2f5;border-radius:18px;box-shadow:0 1px 3px rgba(20,14,60,.05);display:flex;flex-direction:column;overflow:hidden;}
+.tc-sb-head{padding:16px 16px 14px;display:flex;align-items:center;gap:12px;border-bottom:1px solid #f0ecfb;}
+.tc-logo{width:40px;height:40px;border-radius:11px;background:linear-gradient(135deg,#3b82f6,#8b5cf6);color:#fff;font-weight:800;font-size:12px;display:grid;place-items:center;letter-spacing:-.5px;box-shadow:0 4px 12px rgba(124,58,237,.3);flex-shrink:0;}
+.tc-br-text{flex:1;min-width:0;}
+.tc-br-name{font-weight:800;color:#0d0d12;font-size:15px;letter-spacing:-.2px;}
+.tc-br-sub{color:#9a99ad;font-size:11px;margin-top:1px;}
+.tc-channels{flex:1;overflow-y:auto;padding:10px;}
+.tc-group{margin-bottom:16px;}
+.tc-group-head{display:flex;align-items:center;justify-content:space-between;padding:6px 8px;color:#9a99ad;font-size:12px;font-weight:600;cursor:pointer;text-transform:uppercase;letter-spacing:.4px;}
+.tc-group-head:hover{color:#0d0d12;}
+.tc-caret{font-size:10px;margin-right:4px;}
+.tc-ch,.tc-dm{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;color:#6b6b7d;font-size:13.5px;cursor:pointer;transition:background .1s;margin-bottom:1px;}
+.tc-ch:hover,.tc-dm:hover{background:#f5f3ff;}
+.tc-ch.active,.tc-dm.active{background:#f3f0ff;color:#0d0d12;font-weight:600;box-shadow:inset 0 1px 2px rgba(20,14,60,.06);}
+.tc-ch.unread .tc-ch-name-txt{font-weight:700;color:#0d0d12;}
+.tc-dm.unread .tc-ch-name-txt{font-weight:700;color:#0d0d12;}
+.ec-unread-badge{margin-left:auto;background:#6366f1;color:#fff;font-size:11px;font-weight:800;border-radius:999px;min-width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;padding:0 6px;flex-shrink:0;line-height:1;}
+.tc-verified{display:inline-flex;align-items:center;margin-left:3px;vertical-align:middle;}
+.tc-verified svg{width:15px;height:15px;}
+.tc-admin-pin{font-size:10px;font-weight:800;background:linear-gradient(135deg,#1d4ed8,#3b82f6);color:#fff;padding:1px 6px;border-radius:999px;letter-spacing:.3px;margin-left:4px;}
+.tc-ch-icon{width:16px;text-align:center;color:#9a99ad;font-size:13px;}
+.tc-ch-name-txt{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tc-dm-av{width:24px;height:24px;border-radius:6px;color:#fff;display:grid;place-items:center;font-size:10px;font-weight:700;position:relative;flex-shrink:0;}
+.tc-dm-av::after{content:"";position:absolute;bottom:-1px;right:-1px;width:8px;height:8px;border-radius:99px;border:2px solid #fff;}
+.tc-dm-av.available::after{background:#10b981;}
+.tc-dm-av.busy::after{background:#ef4444;}
+.tc-dm-av.offline::after,.tc-dm-av.limited::after{background:#9a99ad;}
+.tc-main{background:#fff;border:1px solid #e7e2f5;border-radius:18px;box-shadow:0 1px 3px rgba(20,14,60,.05);display:flex;flex-direction:column;overflow:hidden;min-height:0;}
+.tc-ch-header{padding:16px 24px 14px;display:flex;align-items:flex-end;justify-content:space-between;border-bottom:1px solid #e7e2f5;gap:16px;flex-shrink:0;}
+.tc-ch-title-block{display:flex;flex-direction:column;gap:4px;min-width:0;}
+.tc-ch-title{display:flex;align-items:center;gap:6px;font-weight:900;color:#0d0d12;font-size:22px;letter-spacing:-.5px;line-height:1.05;}
+.tc-hash{color:#9a99ad;font-weight:700;}
+.tc-ch-meta{display:flex;align-items:center;gap:8px;color:#9a99ad;font-size:12.5px;}
+.tc-h-actions{display:flex;align-items:center;gap:6px;}
+.tc-icon-btn{width:36px;height:36px;display:grid;place-items:center;border-radius:10px;color:#6b6b7d;background:#faf9ff;border:1px solid #e7e2f5;font-size:14px;cursor:pointer;transition:all .12s;}
+.tc-icon-btn:hover{background:#f3f0ff;color:#0d0d12;border-color:#d6cfee;}
+.tc-messages{flex:1;overflow-y:auto;padding:14px 0 8px;min-height:0;}
+.tc-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#9a99ad;font-size:14px;text-align:center;}
+.tc-msg{display:grid;grid-template-columns:44px 1fr;gap:12px;padding:10px 24px 10px 24px;position:relative;}
+.tc-msg:not(.cont){border-top:2px solid #e2d9f3;margin-top:4px;padding-top:14px;}
+.tc-msg:hover{background:#faf9ff;}
+.tc-msg.cont{padding-top:2px;padding-bottom:2px;}
+.tc-msg.cont .tc-av-wrap{visibility:hidden;}
+.tc-msg.mentioned{background:linear-gradient(90deg,rgba(253,224,71,.18) 0%,rgba(253,224,71,.07) 100%);border-left:3px solid #f59e0b;padding-left:21px;}
+.tc-msg.mentioned:hover{background:linear-gradient(90deg,rgba(253,224,71,.28) 0%,rgba(253,224,71,.12) 100%);}
+.tc-msg.cont.mentioned{padding-top:8px;padding-bottom:8px;}
+.tc-msg.cont .tc-msg-head{display:none;}
+.tc-av-wrap{padding-top:2px;}
+.tc-av{width:40px;height:40px;border-radius:10px;color:#fff;display:grid;place-items:center;font-weight:700;font-size:14px;flex-shrink:0;box-shadow:0 1px 2px rgba(20,14,60,.04);}
+.tc-av.owner{background:linear-gradient(135deg,#f59e0b,#f97316);}
+.tc-av.support{background:linear-gradient(135deg,#10b981,#059669);}
+.tc-av.order_manager{background:linear-gradient(135deg,#3b82f6,#6366f1);}
+.tc-av.refund_manager{background:linear-gradient(135deg,#ec4899,#f43f5e);}
+.tc-av.vendor_manager{background:linear-gradient(135deg,#f97316,#ef4444);}
+.tc-av.email_manager{background:linear-gradient(135deg,#06b6d4,#0ea5e9);}
+.tc-av.vendor{background:linear-gradient(135deg,#06b6d4,#0ea5e9);}
+.tc-av.default{background:linear-gradient(135deg,#7c3aed,#a855f7);}
+.tc-msg-body{min-width:0;}
+.tc-msg-head{display:flex;align-items:baseline;gap:8px;margin-bottom:2px;flex-wrap:wrap;}
+.tc-msg-name{color:#0d0d12;font-weight:800;font-size:15px;letter-spacing:-.2px;}
+.tc-msg-role{font-size:9.5px;font-weight:800;text-transform:uppercase;padding:2px 7px;border-radius:4px;background:#f1ebfe;color:#7c3aed;letter-spacing:.5px;}
+.tc-msg-role.owner{background:#fdecd0;color:#b45309;}
+.tc-msg-time{color:#9a99ad;font-size:11.5px;}
+.tc-msg-text{color:#2a2933;font-size:14.5px;line-height:1.55;word-wrap:break-word;}
+.tc-msg-text strong{color:#0d0d12;}
+.tc-reactions{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;}
+.tc-reaction{display:flex;align-items:center;gap:5px;padding:3px 9px;background:#fff;border:1px solid #e7e2f5;border-radius:99px;font-size:12px;color:#6b6b7d;cursor:pointer;font-weight:600;transition:all .12s;}
+.tc-reaction:hover{background:#f5f3ff;border-color:#d6cfee;}
+.tc-reaction.mine{background:#f1ebfe;border-color:#d8c5fb;color:#7c3aed;}
+.tc-reaction-em{font-size:14px;}
+.tc-reaction-add{color:#9a99ad;}
+.tc-thread-footer{display:flex;align-items:center;gap:10px;margin-top:8px;padding:5px 12px 5px 5px;border:1px solid transparent;border-radius:10px;cursor:pointer;width:fit-content;background:#faf9ff;transition:all .12s;}
+.tc-thread-footer:hover{background:#fff;border-color:#7c3aed;box-shadow:0 4px 12px rgba(124,58,237,.1);}
+.tc-thread-avs{display:flex;align-items:center;}
+.tc-thread-av{width:22px;height:22px;border-radius:6px;color:#fff;font-size:9px;font-weight:700;display:grid;place-items:center;margin-left:-4px;border:2px solid #faf9ff;}
+.tc-thread-av:first-child{margin-left:0;}
+.tc-thread-count{color:#7c3aed;font-size:13px;font-weight:700;}
+.tc-thread-last{color:#9a99ad;font-size:12px;}
+.tc-msg-tools{position:absolute;top:-18px;right:28px;display:none;background:#fff;border:1px solid #e7e2f5;border-radius:10px;box-shadow:0 8px 24px rgba(20,14,60,.08);padding:3px;z-index:5;}
+.tc-msg:hover .tc-msg-tools{display:flex;}
+.tc-msg-tools button{width:32px;height:32px;display:grid;place-items:center;color:#6b6b7d;border-radius:7px;font-size:14px;border:none;background:none;cursor:pointer;}
+.tc-msg-tools button:hover{background:#f3f0ff;color:#0d0d12;}
+.tc-msg-tools .tc-sep{width:1px;height:18px;background:#e7e2f5;margin:0 2px;align-self:center;}
+.tc-day{display:flex;align-items:center;gap:12px;margin:14px 24px 6px;color:#9a99ad;font-size:11.5px;font-weight:700;}
+.tc-day .tc-day-label{background:#faf9ff;border:1px solid #e7e2f5;padding:4px 14px;border-radius:99px;color:#6b6b7d;font-weight:700;}
+.tc-day::before,.tc-day::after{content:"";flex:1;height:1px;background:#e7e2f5;}
+.tc-typing-dots{display:inline-flex;gap:3px;align-items:center;}
+.tc-typing-dots span{width:5px;height:5px;background:#7c3aed;border-radius:99px;animation:tcBounce 1.4s infinite;}
+.tc-typing-dots span:nth-child(2){animation-delay:.15s;}
+.tc-typing-dots span:nth-child(3){animation-delay:.3s;}
+@keyframes tcBounce{0%,60%,100%{transform:translateY(0);opacity:.4;}30%{transform:translateY(-4px);opacity:1;}}
+.tc-composer-wrap{padding:0 24px 20px;position:relative;flex-shrink:0;}
+.tc-composer{border:1.5px solid #d6cfee;border-radius:14px;background:#fff;overflow:hidden;box-shadow:0 1px 2px rgba(20,14,60,.04);transition:border-color .15s,box-shadow .15s;}
+.tc-composer:focus-within{border-color:#7c3aed;box-shadow:0 0 0 4px rgba(124,58,237,.10);}
+.tc-c-toolbar{display:flex;align-items:center;gap:1px;padding:8px 10px;border-bottom:1px solid #e7e2f5;}
+.tc-c-toolbar button{width:32px;height:32px;display:grid;place-items:center;border-radius:7px;color:#6b6b7d;font-size:13px;border:none;background:none;cursor:pointer;transition:all .12s;}
+.tc-c-toolbar button:hover{background:#f3f0ff;color:#0d0d12;}
+.tc-c-sep{width:1px;height:18px;background:#e7e2f5;margin:0 4px;align-self:center;}
+.tc-ce-input{width:100%;min-height:48px;max-height:180px;padding:14px 16px;background:transparent;border:none;color:#0d0d12;font-size:14.5px;line-height:1.5;outline:none;font-family:'Inter',inherit;overflow-y:auto;box-sizing:border-box;word-break:break-word;white-space:pre-wrap;}
+.tc-ce-input:empty::before{content:attr(data-placeholder);color:#9a99ad;pointer-events:none;}
+.tc-ce-input b,.tc-ce-input strong{font-weight:700;}
+.tc-ce-input i,.tc-ce-input em{font-style:italic;}
+.tc-ce-input s,.tc-ce-input del{text-decoration:line-through;}
+.tc-ce-input code{background:#f3f0ff;color:#7c3aed;padding:1px 5px;border-radius:5px;font-size:12.5px;font-family:monospace;}
+.tc-ce-input a{color:#7c3aed;}
+.tc-ce-input ul{margin:4px 0 4px 18px;padding:0;}
+.tc-ce-input ol{margin:4px 0 4px 18px;padding:0;}
+.tc-c-bottom{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-top:1px solid #e7e2f5;}
+.tc-c-left,.tc-c-right{display:flex;align-items:center;gap:1px;}
+.tc-c-bottom button{width:34px;height:34px;border-radius:7px;color:#6b6b7d;display:grid;place-items:center;font-size:14px;border:none;background:none;cursor:pointer;transition:all .12s;}
+.tc-c-bottom button:hover{background:#f3f0ff;color:#0d0d12;}
+.tc-send-btn{height:34px!important;width:auto!important;padding:0 14px!important;background:linear-gradient(135deg,#7c3aed,#a855f7)!important;color:#fff!important;border-radius:10px!important;display:flex!important;align-items:center;gap:7px;font-size:13.5px;font-weight:700;box-shadow:0 4px 12px rgba(124,58,237,.3);}
+.tc-send-btn:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(124,58,237,.4);color:#fff!important;}
+.tc-send-arrow{border-left:1px solid rgba(255,255,255,.35);margin-left:4px;padding-left:8px;height:16px;display:flex;align-items:center;}
+.tc-c-hint{margin-top:10px;color:#9a99ad;font-size:11.5px;text-align:right;padding:0 4px;}
+.tc-c-hint kbd{background:#fff;border:1px solid #e7e2f5;border-radius:5px;padding:1px 6px;font-size:10.5px;color:#6b6b7d;box-shadow:0 1px 2px rgba(20,14,60,.04);font-weight:600;}
+.tc-emoji-picker{position:absolute;bottom:calc(100% - 12px);right:24px;width:280px;background:#fff;border:1px solid #e7e2f5;border-radius:14px;box-shadow:0 16px 40px rgba(20,14,60,.12);padding:12px;display:none;z-index:100;}
+.tc-emoji-picker.show{display:block;}
+.tc-ep-cat{color:#9a99ad;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin:4px 4px;}
+.tc-ep-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:2px;}
+.tc-ep-grid button{width:100%;aspect-ratio:1;font-size:18px;border-radius:7px;border:none;background:none;cursor:pointer;}
+.tc-ep-grid button:hover{background:#f3f0ff;}
+.tc-thread{background:#fff;border:1px solid #e7e2f5;border-radius:18px;box-shadow:0 1px 3px rgba(20,14,60,.05);display:none;flex-direction:column;overflow:hidden;min-height:0;}
+.tc-app.with-thread .tc-thread{display:flex;}
+.tc-thread-head{padding:18px 20px 16px;display:flex;align-items:flex-start;justify-content:space-between;border-bottom:1px solid #e7e2f5;flex-shrink:0;}
+.tc-thread-head h4{color:#0d0d12;font-size:20px;font-weight:800;letter-spacing:-.4px;}
+.tc-thread-sub{color:#9a99ad;font-size:12.5px;margin-top:3px;}
+.tc-thread-body{flex:1;overflow-y:auto;display:flex;flex-direction:column;}
+.tc-thread-parent-msg{padding:14px 18px;border-bottom:1px solid #e7e2f5;background:#faf9ff;flex-shrink:0;}
+.tc-thread-divider{display:flex;align-items:center;gap:10px;padding:8px 18px;color:#9a99ad;font-size:12px;font-weight:700;flex-shrink:0;}
+.tc-td-line{flex:1;height:1px;background:#e7e2f5;display:block;}
+.tc-thread-replies{flex:1;overflow-y:auto;padding:6px 0;}
+.tc-thread-replies .tc-msg{padding:7px 18px;}
+.tc-thread-composer{padding:0 16px 16px;flex-shrink:0;}
 </style>
 </head>
 <body>
@@ -350,39 +503,143 @@ body{font-family:'Inter','Segoe UI',sans-serif;background:var(--bg);color:var(--
       </div>
     </section>
 
-    <!-- ── Team Chat ── -->
+    <!-- ── Team Chat (Premium) ── -->
     <section class="section" id="secChat" style="height:calc(100vh - 64px);display:none;flex-direction:column;padding:0;">
-      <div id="empChatLayout" style="flex:1;display:grid;grid-template-columns:220px 1fr;gap:14px;min-height:0;overflow:hidden;padding:20px 24px 24px;">
-        <!-- Channel sidebar -->
-        <div style="background:#fff;border:1px solid var(--border);border-radius:16px;display:flex;flex-direction:column;overflow:hidden;padding:14px 10px;">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding:0 4px;">
-            <div style="font-size:15px;font-weight:800;color:var(--text);">Team Chat</div>
-          </div>
-          <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--soft);padding:0 8px;margin-bottom:4px;">CHANNELS</div>
-          <div id="empChatChannelList"></div>
-          <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--soft);padding:0 8px;margin-top:14px;margin-bottom:4px;">TEAM</div>
-          <div id="empChatMemberList"></div>
-        </div>
-        <!-- Main messages -->
-        <div style="background:#fff;border:1px solid var(--border);border-radius:16px;display:flex;flex-direction:column;min-height:0;overflow:hidden;">
-          <div style="padding:14px 18px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
-            <div>
-              <div id="empChatChName" style="font-size:17px;font-weight:800;color:var(--text);"># general</div>
-              <div id="empChatChDesc" style="font-size:12px;color:var(--muted);margin-top:2px;">General team discussion</div>
+      <div class="tc-app" id="ecApp">
+        <!-- Sidebar -->
+        <aside class="tc-sidebar">
+          <div class="tc-sb-head">
+            <div class="tc-logo">DS</div>
+            <div class="tc-br-text">
+              <div class="tc-br-name">Team Chat</div>
+              <div class="tc-br-sub">Drop Sigma</div>
             </div>
-            <button onclick="empChatLoad()" style="width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:#f8fafc;color:var(--muted);font-size:14px;cursor:pointer;">↻</button>
           </div>
-          <div id="empChatMessages" style="flex:1;overflow-y:auto;padding:12px 18px;display:flex;flex-direction:column;gap:2px;min-height:0;">
-            <div style="color:var(--soft);text-align:center;margin:auto;font-size:14px;">Select a channel to start chatting</div>
+          <div class="tc-channels">
+            <div class="tc-group">
+              <div class="tc-group-head" onclick="ecToggleGroup(this)">
+                <span><i class="fa-solid fa-caret-down tc-caret"></i> Channels</span>
+              </div>
+              <div id="ecChannelList"></div>
+            </div>
+            <div class="tc-group">
+              <div class="tc-group-head" onclick="ecToggleGroup(this)">
+                <span><i class="fa-solid fa-caret-down tc-caret"></i> Team Members</span>
+              </div>
+              <div id="ecMemberList"></div>
+            </div>
           </div>
-          <div style="display:flex;align-items:flex-end;gap:10px;padding:10px 14px 14px;border-top:1px solid var(--border);flex-shrink:0;">
-            <textarea id="empChatInput" placeholder="Message #general…" rows="1"
-              style="flex:1;padding:10px 13px;border:1px solid var(--border);border-radius:11px;font-family:inherit;font-size:13.5px;resize:none;min-height:40px;max-height:130px;background:#f8fafc;color:var(--text);outline:none;transition:border-color .15s;"
-              onfocus="this.style.borderColor='var(--accent)';this.style.background='#fff';"
-              onblur="this.style.borderColor='var(--border)';this.style.background='#f8fafc';"
-              onkeydown="empChatKeyDown(event)"
-              oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,130)+'px'"></textarea>
-            <button onclick="empChatSend()" style="height:40px;padding:0 16px;border-radius:11px;border:none;background:linear-gradient(135deg,#6366f1,#06b6d4);color:#fff;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">Send ↑</button>
+        </aside>
+        <!-- Main -->
+        <main class="tc-main">
+          <div class="tc-ch-header">
+            <div class="tc-ch-title-block">
+              <div class="tc-ch-title"><span class="tc-hash" id="ecChHash" style="display:none;">#</span><span id="ecChName"></span></div>
+              <div class="tc-ch-meta" id="ecChDesc"></div>
+            </div>
+            <div class="tc-h-actions">
+              <i class="fa-solid fa-circle" id="ecConnBadge" title="Connecting…" style="font-size:8px;color:#f59e0b;margin-right:4px;"></i>
+              <div id="ecMembersAvatars" onclick="ecOpenMembersModal()" title="View members" style="display:none;cursor:pointer;align-items:center;gap:0;padding:3px 6px 3px 3px;border-radius:20px;border:1px solid #e8e2f8;background:#faf8ff;transition:background .15s;" onmouseenter="this.style.background='#ede9fe'" onmouseleave="this.style.background='#faf8ff'"></div>
+              <button class="tc-icon-btn" onclick="ecLoadMessages()" title="Refresh"><i class="fa-solid fa-rotate"></i></button>
+            </div>
+          </div>
+
+          <!-- Members Modal -->
+          <div id="ecMembersModal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.45);align-items:center;justify-content:center;">
+            <div style="background:#fff;border-radius:14px;width:400px;max-width:94vw;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(109,40,217,.18);">
+              <div style="padding:18px 20px 14px;border-bottom:1px solid #ede9fe;display:flex;align-items:center;justify-content:space-between;">
+                <div>
+                  <div style="font-weight:700;font-size:15px;color:#3b0764;">Members of <span id="ecMembersModalChName">#general</span></div>
+                  <div style="font-size:12px;color:#7c3aed;margin-top:2px;"><span id="ecMembersModalCount">0</span> members</div>
+                </div>
+                <button onclick="document.getElementById('ecMembersModal').style.display='none';" style="background:none;border:none;cursor:pointer;color:#7c3aed;font-size:18px;padding:4px;"><i class="fa-solid fa-xmark"></i></button>
+              </div>
+              <div id="ecMembersList" style="overflow-y:auto;flex:1;padding:12px 20px;"></div>
+            </div>
+          </div>
+
+          <div class="tc-messages" id="ecMessages">
+            <div class="tc-empty"><i class="fa-regular fa-comments" style="font-size:36px;display:block;margin-bottom:12px;color:#d6cfee;"></i>Select a channel to start chatting</div>
+          </div>
+          <div id="ecTypingBar" style="display:none;align-items:center;gap:8px;padding:4px 24px 2px;min-height:22px;">
+            <div class="tc-typing-dots"><span></span><span></span><span></span></div>
+            <span class="ec-typing-text" style="font-size:12.5px;color:#7c3aed;font-weight:500;font-style:italic;"></span>
+          </div>
+          <div class="tc-composer-wrap">
+            <div class="tc-composer">
+              <div class="tc-c-toolbar">
+                <button title="Bold" onclick="ecFormat('bold')"><i class="fa-solid fa-bold"></i></button>
+                <button title="Italic" onclick="ecFormat('italic')"><i class="fa-solid fa-italic"></i></button>
+                <button title="Strikethrough" onclick="ecFormat('strike')"><i class="fa-solid fa-strikethrough"></i></button>
+                <div class="tc-c-sep"></div>
+                <button title="Link" onclick="ecFormat('link')"><i class="fa-solid fa-link"></i></button>
+                <button title="Code" onclick="ecFormat('code')"><i class="fa-solid fa-code"></i></button>
+                <div class="tc-c-sep"></div>
+                <button title="Bullet list" onclick="ecFormat('bullet')"><i class="fa-solid fa-list-ul"></i></button>
+                <button title="Numbered list" onclick="ecFormat('numbered')"><i class="fa-solid fa-list-ol"></i></button>
+              </div>
+              <div id="ecChatInput" contenteditable="true" data-placeholder="Select a channel…"
+                onkeydown="ecKeyDown(event)" oninput="ecOnInput()" class="tc-ce-input"></div>
+              <div class="tc-c-bottom">
+                <div class="tc-c-left">
+                  <button title="Emoji" onclick="ecToggleEmoji()"><i class="fa-regular fa-face-smile"></i></button>
+                  <button title="Mention" onclick="ecInsertMention()"><i class="fa-solid fa-at"></i></button>
+                </div>
+                <div class="tc-c-right">
+                  <button class="tc-send-btn" onclick="ecSend()">
+                    <span>Send</span>
+                    <span class="tc-send-arrow"><i class="fa-solid fa-paper-plane"></i></span>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="tc-emoji-picker" id="ecEmojiPicker">
+              <div class="tc-ep-cat">Quick Reactions</div>
+              <div class="tc-ep-grid">
+                <button onclick="ecInsertEmoji('👍')">👍</button><button onclick="ecInsertEmoji('❤️')">❤️</button>
+                <button onclick="ecInsertEmoji('😂')">😂</button><button onclick="ecInsertEmoji('🎉')">🎉</button>
+                <button onclick="ecInsertEmoji('🚀')">🚀</button><button onclick="ecInsertEmoji('😮')">😮</button>
+                <button onclick="ecInsertEmoji('🔥')">🔥</button><button onclick="ecInsertEmoji('✅')">✅</button>
+              </div>
+              <div class="tc-ep-cat" style="margin-top:8px;">People</div>
+              <div class="tc-ep-grid">
+                <button onclick="ecInsertEmoji('😊')">😊</button><button onclick="ecInsertEmoji('😍')">😍</button>
+                <button onclick="ecInsertEmoji('🤔')">🤔</button><button onclick="ecInsertEmoji('😅')">😅</button>
+                <button onclick="ecInsertEmoji('🙏')">🙏</button><button onclick="ecInsertEmoji('💪')">💪</button>
+                <button onclick="ecInsertEmoji('👀')">👀</button><button onclick="ecInsertEmoji('🤝')">🤝</button>
+              </div>
+            </div>
+            <div class="tc-c-hint"><kbd>Enter</kbd> to send · <kbd>Shift+Enter</kbd> for newline</div>
+          </div>
+        </main>
+        <!-- Thread Panel -->
+        <div class="tc-thread" id="ecThread">
+          <div class="tc-thread-head">
+            <div>
+              <h4>Thread</h4>
+              <div class="tc-thread-sub" id="ecThreadSub">replies</div>
+            </div>
+            <button class="tc-icon-btn" onclick="ecCloseThread()"><i class="fa-solid fa-xmark"></i></button>
+          </div>
+          <div class="tc-thread-body">
+            <div class="tc-thread-parent-msg" id="ecThreadParent"></div>
+            <div class="tc-thread-divider"><span class="tc-td-line"></span><span>Replies</span><span class="tc-td-line"></span></div>
+            <div class="tc-thread-replies" id="ecThreadReplies"></div>
+          </div>
+          <div class="tc-thread-composer">
+            <div class="tc-composer">
+              <div id="ecThreadInput" contenteditable="true" data-placeholder="Reply in thread…"
+                onkeydown="ecThreadKeyDown(event)" class="tc-ce-input"></div>
+              <div class="tc-c-bottom">
+                <div class="tc-c-left"></div>
+                <div class="tc-c-right">
+                  <button class="tc-send-btn" onclick="ecSendReply()">
+                    <span>Reply</span>
+                    <span class="tc-send-arrow"><i class="fa-solid fa-paper-plane"></i></span>
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -529,13 +786,82 @@ async function boot(){
     if(!d.success){ window.location="/employee/login/"; return; }
     empMember = d.member;
     empPerms  = empMember.permissions || {};
+    _ecMyName = empMember.name || "";
     buildSidebar();
+    try{ if(localStorage.getItem("ecSbCollapsed")==="1"){ document.querySelector(".layout")?.classList.add("ec-sb-collapsed"); } }catch(e){}
     renderOverview();
     if(perm("view_orders")) loadMyOrders();
     if(perm("view_emails")) loadMyEmails();
+    _ecWsBackground();
   }catch(e){
     document.body.innerHTML = `<div style="text-align:center;padding:80px;color:#ef4444;font-family:sans-serif;">Failed to load. <a href="/employee/login/">Login again</a></div>`;
   }
+}
+
+// Track known unread counts per channel for polling-based notifications
+let _ecKnownUnread = {};
+let _ecPollTimer = null;
+
+async function _ecWsBackground(){
+  // Request notification permission early
+  if("Notification" in window && Notification.permission !== "denied"){
+    Notification.requestPermission().then(p=>{ _ecNotifPerm = p === "granted"; });
+  }
+  try{
+    const r = await fetch("/teamapp/chat/channels/");
+    const d = await r.json();
+    if(!d.success || !d.channels.length) return;
+    // Seed baseline so first poll doesn't fire spurious notifications
+    d.channels.forEach(c=>{ _ecKnownUnread[c.id] = c.unread_count||0; });
+    const rm = await fetch("/teamapp/members/");
+    const dm = await rm.json();
+    if(dm.success){
+      const allM = [...(dm.admin_contacts||[]), ...dm.members];
+      _ecMentionMembers = allM.map(m=>m.name);
+      allM.forEach(m=>{ _ecMentionMap[m.name.toLowerCase()] = m.user; _ecMentionMap[m.name.split(" ")[0].toLowerCase()] = m.user; });
+    }
+    _ecWsConnect();
+    _ecStartPoll();
+  }catch(e){ console.error("_ecWsBackground:", e); }
+}
+
+function _ecStartPoll(){
+  if(_ecPollTimer) return;
+  _ecPollTimer = setInterval(_ecPollTick, 8000);
+}
+
+async function _ecPollTick(){
+  try{
+    const r = await fetch("/teamapp/chat/channels/");
+    const d = await r.json();
+    if(!d.success) return;
+    const chatActive = document.getElementById("secChat")?.classList.contains("active");
+    d.channels.forEach(ch=>{
+      const prev = _ecKnownUnread[ch.id] ?? ch.unread_count;
+      const curr = ch.unread_count || 0;
+      if(curr > prev){
+        const isCurrentCh = ch.id === _ecChannelId;
+        if(isCurrentCh && chatActive){
+          ecLoadMessages();
+        } else {
+          _ecShowInAppNotif(
+            ch.last_sender || "New message",
+            ch.name,
+            ch.last_message || "New message",
+            ()=>{ switchSection("secChat"); ecSelectChannel(ch.id, ch.name); }
+          );
+          const el = document.getElementById("ecCh_"+ch.id);
+          if(el){
+            let badge = el.querySelector(".ec-unread-badge");
+            if(!badge){ badge=document.createElement("span"); badge.className="ec-unread-badge"; el.appendChild(badge); }
+            badge.textContent = curr > 99 ? "99+" : curr;
+          }
+          if(document.hidden && _ecNotifPerm) _ecShowBrowserNotif((ch.last_sender||"Someone")+" in #"+ch.name, ch.last_message||"");
+        }
+      }
+      _ecKnownUnread[ch.id] = curr;
+    });
+  }catch(e){}
 }
 
 // ── Sidebar ──
@@ -559,6 +885,13 @@ function buildSidebar(){
     </button>`).join("");
 
   document.getElementById("sidebar").innerHTML = `
+    <button class="ec-sb-toggle" id="ecSbToggleBtn" onclick="ecToggleSidebar()" title="Collapse sidebar">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="0.75" y="0.75" width="14.5" height="14.5" rx="2.25" stroke="currentColor" stroke-width="1.4"/>
+        <line x1="5" y1="1" x2="5" y2="15" stroke="currentColor" stroke-width="1.4"/>
+        <path d="M10.5 6L8 8.5L10.5 11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
     <div class="brand">
       <div class="brand-logo">VF</div>
       <div>
@@ -582,6 +915,16 @@ function buildSidebar(){
     </div>`;
 }
 
+// ── Sidebar Toggle ──
+function ecToggleSidebar(){
+  const layout = document.querySelector(".layout");
+  if(!layout) return;
+  const collapsed = layout.classList.toggle("ec-sb-collapsed");
+  const btn = document.getElementById("ecSbToggleBtn");
+  if(btn) btn.title = collapsed ? "Expand sidebar" : "Collapse sidebar";
+  try{ localStorage.setItem("ecSbCollapsed", collapsed ? "1" : "0"); }catch(e){}
+}
+
 // ── Section Switch ──
 function switchSection(id){
   fireLoader();
@@ -590,7 +933,7 @@ function switchSection(id){
   const el = document.getElementById(id);
   if(el){ el.classList.add("active"); if(id==="secChat") el.style.display="flex"; }
   document.getElementById("nav_"+id)?.classList.add("active");
-  if(id==="secChat") empChatInit();
+  if(id==="secChat") ecChatInit();
 }
 
 // ── Overview ──
@@ -1088,182 +1431,834 @@ async function etSendReply(){
 // ── Init ──
 boot();
 
-// ── Team Chat ─────────────────────────────────────────────────────────────
+// ── Team Chat (Premium) ──────────────────────────────────────────────────────
+let _ecMyName = ""; // set after boot() loads empMember
+let _ecMentionMap = {}; // name.toLowerCase() → user_id for clickable @mentions
 let _ecChannelId = null;
-let _ecChannelName = "general";
-const EC_EMOJIS = ["👍","❤️","😂","🎉","🚀"];
+let _ecChannelName = "";
+let _ecThreadParentId = null;
+let _ecMsgMap = {};
+let _ecCurrentUserId = null;
+let _ecMentionMembers = [];
+let _ecMentionSelIdx = 0;
+
+const EC_EMOJIS = ["👍","❤️","😂","🎉","🚀","😮"];
+const _EC_AV_COLORS = {owner:"tc-av owner",support:"tc-av support",order_manager:"tc-av order_manager",refund_manager:"tc-av refund_manager",vendor_manager:"tc-av vendor_manager",email_manager:"tc-av email_manager",vendor:"tc-av vendor"};
+const _EC_DM_COLORS = ["linear-gradient(135deg,#8b5cf6,#a855f7)","linear-gradient(135deg,#3b82f6,#6366f1)","linear-gradient(135deg,#ec4899,#f43f5e)","linear-gradient(135deg,#10b981,#059669)","linear-gradient(135deg,#f59e0b,#f97316)","linear-gradient(135deg,#06b6d4,#0ea5e9)"];
+const _VERIFIED_SVG = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="12" fill="#1d9bf0"/><path d="M9.5 16.5L5.5 12.5L6.91 11.09L9.5 13.67L17.09 6.08L18.5 7.5L9.5 16.5Z" fill="white"/></svg>`;
 
 function _ecTime(iso){ const d=new Date(iso); return d.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}); }
-function _ecDate(iso){
+function _ecDateLabel(iso){
   const d=new Date(iso), t=new Date();
   if(d.toDateString()===t.toDateString()) return "Today";
   const y=new Date(); y.setDate(t.getDate()-1);
   if(d.toDateString()===y.toDateString()) return "Yesterday";
-  return d.toLocaleDateString([],{month:"long",day:"numeric"});
+  return d.toLocaleDateString([],{weekday:"long",month:"long",day:"numeric"});
+}
+function _ecAvClass(role){ return _EC_AV_COLORS[role] || "tc-av default"; }
+
+function _ecRenderReactions(reactions, msgId){
+  if(!reactions||!Object.keys(reactions).length) return "";
+  const btns = Object.entries(reactions).map(([emoji,data])=>
+    `<button class="tc-reaction${data.mine?" mine":""}" onclick="ecToggleReaction(${msgId},'${emoji}')"><span class="tc-reaction-em">${emoji}</span> ${data.count}</button>`
+  ).join("");
+  const addBtn = `<button class="tc-reaction tc-reaction-add" onclick="ecToggleReactionPicker(${msgId})" title="Add reaction"><i class="fa-regular fa-face-smile"></i></button>`;
+  return `<div class="tc-reactions">${btns}${addBtn}</div>`;
 }
 
-function _ecRoleColor(role){
-  const m={owner:"linear-gradient(135deg,#f59e0b,#ef4444)",support:"linear-gradient(135deg,#10b981,#059669)",order_manager:"linear-gradient(135deg,#3b82f6,#6366f1)",refund_manager:"linear-gradient(135deg,#ec4899,#f43f5e)",vendor_manager:"linear-gradient(135deg,#f97316,#ef4444)",email_manager:"linear-gradient(135deg,#06b6d4,#0ea5e9)"};
-  return m[role]||"linear-gradient(135deg,#6366f1,#8b5cf6)";
+function _ecIsMentioned(content){
+  if(!_ecMyName || !content) return false;
+  const first = _ecMyName.split(" ")[0];
+  return new RegExp("@"+_ecMyName.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"\\b","i").test(content)
+      || new RegExp("@"+first.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"\\b","i").test(content);
 }
 
 function _ecRenderMsg(msg, showDate, cont){
-  const dateHtml = showDate ? `<div style="display:flex;align-items:center;gap:8px;color:#94a3b8;font-size:11px;font-weight:700;margin:10px 0 4px;"><span style="flex:1;height:1px;background:#e8eaf2;display:block;"></span><span>${showDate}</span><span style="flex:1;height:1px;background:#e8eaf2;display:block;"></span></div>` : "";
-  const avatarVis = cont ? "visibility:hidden;" : "";
-  const headHide  = cont ? "display:none;" : "";
-  const reactions = Object.entries(msg.reactions||{}).map(([e,d])=>`<button onclick="empChatReact(${msg.id},'${e}')" style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border:1px solid ${d.mine?"#c7d2fe":"#e8eaf2"};border-radius:99px;font-size:11.5px;cursor:pointer;font-weight:600;background:${d.mine?"#eef2ff":"#fff"};color:${d.mine?"#4338ca":"#64748b"};">${e} ${d.count}</button>`).join("");
-  const quickReact = EC_EMOJIS.map(e=>`<button onclick="empChatReact(${msg.id},'${e}')" style="width:26px;height:26px;border-radius:6px;border:1px solid transparent;background:#f1f5f9;font-size:13px;cursor:pointer;" title="${e}">${e}</button>`).join("");
+  const dateHtml = showDate ? `<div class="tc-day"><div class="tc-day-label">${showDate}</div></div>` : "";
+  const mentioned = !msg.is_mine && _ecIsMentioned(msg.content);
+  const contClass = (cont ? " cont" : "") + (mentioned ? " mentioned" : "");
+  const threadHtml = msg.reply_count > 0 ? `
+    <div class="tc-thread-footer" onclick="ecOpenThread(${msg.id})">
+      <div class="tc-thread-avs">
+        <div class="${_ecAvClass(msg.sender_role)}" style="font-size:9px;">${esc(msg.sender_initials)}</div>
+      </div>
+      <span class="tc-thread-count">${msg.reply_count} ${msg.reply_count===1?"reply":"replies"}</span>
+      <span class="tc-thread-last">View thread →</span>
+    </div>` : "";
+  const quickReact = EC_EMOJIS.map(e=>`<button onclick="ecToggleReaction(${msg.id},'${e}')" title="${e}">${e}</button>`).join("");
   return `${dateHtml}
-    <div style="display:grid;grid-template-columns:36px 1fr;gap:8px;padding:4px 0;" onmouseover="this.style.background='#f8fafc';this.style.borderRadius='10px';this.style.margin='0 -8px';this.style.padding='4px 8px';" onmouseout="this.style.background='';this.style.margin='';this.style.padding='4px 0';">
-      <div style="${avatarVis}width:36px;height:36px;border-radius:9px;background:${_ecRoleColor(msg.sender_role)};color:#fff;font-size:12px;font-weight:700;display:grid;place-items:center;flex-shrink:0;">${esc(msg.sender_initials)}</div>
-      <div>
-        <div style="${headHide}display:flex;align-items:baseline;gap:7px;margin-bottom:2px;">
-          <span style="font-size:13.5px;font-weight:800;color:#0f172a;">${esc(msg.sender_name)}</span>
-          <span style="font-size:9px;font-weight:800;text-transform:uppercase;padding:2px 6px;border-radius:4px;background:#eef2ff;color:#4338ca;">${msg.sender_role||"member"}</span>
-          <span style="font-size:11px;color:#94a3b8;">${_ecTime(msg.created_at)}</span>
+    <div class="tc-msg${contClass}" data-mid="${msg.id}">
+      <div class="tc-av-wrap"><div class="${_ecAvClass(msg.sender_role)}">${esc(msg.sender_initials)}</div></div>
+      <div class="tc-msg-body">
+        <div class="tc-msg-head">
+          <span class="tc-msg-name">${esc(msg.sender_name)}${msg.sender_role==="owner"?`<span class="tc-verified">${_VERIFIED_SVG}</span>`:""}</span>
+          <span class="tc-msg-role${msg.sender_role==="owner"?" owner":""}">${msg.sender_role||"member"}</span>
+          <span class="tc-msg-time">${_ecTime(msg.created_at)}</span>
         </div>
-        <div style="font-size:13.5px;line-height:1.55;color:#334155;">${esc(msg.content).replace(/\n/g,"<br>")}</div>
-        ${reactions?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:5px;">${reactions}</div>`:""}
-        <div style="display:flex;gap:2px;margin-top:4px;">${quickReact}</div>
-        ${msg.reply_count>0?`<button onclick="empChatOpenThread(${msg.id})" style="display:inline-flex;align-items:center;gap:6px;margin-top:4px;padding:3px 10px 3px 4px;border:1px solid transparent;border-radius:8px;background:#f1f5f9;font-size:12px;font-weight:700;color:#4338ca;cursor:pointer;">${msg.reply_count} ${msg.reply_count===1?"reply":"replies"} →</button>`:""}
+        <div class="tc-msg-text">${_ecRenderMarkdown(msg.content)}</div>
+        ${_ecRenderReactions(msg.reactions||{}, msg.id)}
+        ${threadHtml}
+      </div>
+      <div class="tc-msg-tools">
+        ${quickReact}
+        <div class="tc-sep"></div>
+        <button onclick="ecOpenThread(${msg.id})" title="Reply in thread"><i class="fa-regular fa-comment"></i></button>
+        <button onclick="ecShowMsgMenu(${msg.id},this)" title="More"><i class="fa-solid fa-ellipsis"></i></button>
       </div>
     </div>`;
 }
 
-async function empChatInit(){
-  const r = await fetch("/teamapp/chat/channels/");
-  const d = await r.json();
-  if(!d.success) return;
-
-  document.getElementById("empChatChannelList").innerHTML = d.channels.map(ch=>`
-    <div onclick="empChatSelectChannel(${ch.id},'${esc(ch.name)}','${esc(ch.description||"")}')"
-      style="display:flex;align-items:center;gap:7px;padding:7px 10px;border-radius:9px;cursor:pointer;font-size:13px;font-weight:600;color:${_ecChannelId===ch.id?"#4338ca":"#64748b"};background:${_ecChannelId===ch.id?"#eef2ff":"transparent"};"
-      id="empChatCh_${ch.id}"
-      onmouseover="if(${_ecChannelId}!==${ch.id})this.style.background='#f1f5f9';"
-      onmouseout="if(${_ecChannelId}!==${ch.id})this.style.background='';">
-      <span style="color:#94a3b8;">#</span>${esc(ch.name)}
-    </div>`).join("");
-
-  // Team members
-  const rm = await fetch("/teamapp/members/");
-  const dm = await rm.json();
-  if(dm.success){
-    const statusColors={available:"#10b981",busy:"#ef4444",limited:"#f59e0b",offline:"#94a3b8"};
-    document.getElementById("empChatMemberList").innerHTML = dm.members.slice(0,6).map(m=>{
-      const ini=m.name.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
-      return `<div style="display:flex;align-items:center;gap:7px;padding:6px 10px;border-radius:9px;font-size:12.5px;color:#64748b;">
-        <div style="width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;font-size:9px;font-weight:700;display:grid;place-items:center;flex-shrink:0;">${ini}</div>
-        <span style="flex:1;">${esc(m.name)}</span>
-        <div style="width:7px;height:7px;border-radius:99px;background:${statusColors[m.status]||"#94a3b8"};flex-shrink:0;"></div>
-      </div>`;
-    }).join("");
+function _ecRenderMsgList(msgs, containerId){
+  const el = document.getElementById(containerId);
+  if(!msgs.length){
+    el.innerHTML = `<div class="tc-empty"><i class="fa-regular fa-comments" style="font-size:36px;display:block;margin-bottom:12px;color:#d6cfee;"></i>No messages yet. Start the conversation!</div>`;
+    return;
   }
-
-  if(!_ecChannelId && d.channels.length){
-    const gen = d.channels.find(c=>c.slug==="general")||d.channels[0];
-    empChatSelectChannel(gen.id, gen.name, gen.description||"");
-  } else if(_ecChannelId){
-    empChatLoad();
-  }
-}
-
-function empChatSelectChannel(id, name, desc){
-  _ecChannelId = id;
-  _ecChannelName = name;
-  document.getElementById("empChatChName").textContent = "# " + name;
-  document.getElementById("empChatChDesc").textContent = desc;
-  document.getElementById("empChatInput").placeholder = `Message #${name}…`;
-  // re-render sidebar active states
-  document.querySelectorAll("[id^='empChatCh_']").forEach(el=>{
-    const active = el.id === "empChatCh_"+id;
-    el.style.color = active?"#4338ca":"#64748b";
-    el.style.background = active?"#eef2ff":"";
-  });
-  empChatLoad();
-}
-
-async function empChatLoad(){
-  if(!_ecChannelId) return;
-  const r = await fetch(`/teamapp/chat/messages/?channel_id=${_ecChannelId}`);
-  const d = await r.json();
-  if(!d.success) return;
-  const el = document.getElementById("empChatMessages");
-  if(!d.messages.length){ el.innerHTML=`<div style="color:#94a3b8;text-align:center;margin:auto;font-size:14px;">No messages yet. Start the conversation!</div>`; return; }
   let html="", lastDate=null, lastSender=null;
-  for(const msg of d.messages){
-    const dl=_ecDate(msg.created_at);
-    html += _ecRenderMsg(msg, dl!==lastDate?dl:null, !lastSender||lastDate!==dl?false:lastSender===msg.sender_name);
+  for(const msg of msgs){
+    const dl = _ecDateLabel(msg.created_at);
+    const showDate = dl!==lastDate ? dl : null;
+    const cont = !showDate && lastSender===msg.sender_name;
+    html += _ecRenderMsg(msg, showDate, cont);
     lastDate=dl; lastSender=msg.sender_name;
   }
-  el.innerHTML=html;
-  el.scrollTop=el.scrollHeight;
+  el.innerHTML = html;
+  el.scrollTop = el.scrollHeight;
 }
 
-async function empChatSend(){
+async function ecChatInit(){
+  try{
+    const r=await fetch("/teamapp/chat/channels/");
+    const d=await r.json();
+    if(!d.success) return;
+
+    document.getElementById("ecChannelList").innerHTML = d.channels.map(ch=>{
+      const cnt = ch.unread_count||0;
+      const hasUnread = cnt > 0 && _ecChannelId!==ch.id;
+      return `<div class="tc-ch${_ecChannelId===ch.id?" active":""}${hasUnread?" unread":""}" id="ecCh_${ch.id}" onclick="ecSelectChannel(${ch.id},'${esc(ch.name)}','${esc(ch.description||"")}')">
+        <span class="tc-ch-icon"><i class="fa-solid fa-hashtag" style="font-size:11px;"></i></span>
+        <span class="tc-ch-name-txt">${esc(ch.name)}</span>
+        ${hasUnread?`<span class="ec-unread-badge">${cnt>99?"99+":cnt}</span>`:""}
+      </div>`;
+    }).join("");
+
+    if(_ecChannelId){
+      const ch = d.channels.find(c=>c.id===_ecChannelId);
+      if(ch){
+        document.getElementById("ecChName").textContent = ch.name;
+        document.getElementById("ecChDesc").textContent = ch.description||"";
+        document.getElementById("ecChatInput").dataset.placeholder = `Message #${ch.name}…`;
+      }
+      ecLoadMessages();
+    }
+
+    const rm=await fetch("/teamapp/members/");
+    const dm=await rm.json();
+    if(dm.success){
+      const adminContacts = dm.admin_contacts||[];
+      const allM = [...adminContacts, ...dm.members];
+      _ecMentionMembers = allM.map(m=>m.name);
+      allM.forEach(m=>{ _ecMentionMap[m.name.toLowerCase()] = m.user; _ecMentionMap[m.name.split(" ")[0].toLowerCase()] = m.user; });
+      document.getElementById("ecMemberList").innerHTML = allM.slice(0,10).map((m,i)=>{
+        const ini=m.name.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
+        const col=m.is_admin?"linear-gradient(135deg,#1d4ed8,#3b82f6)":_EC_DM_COLORS[i%_EC_DM_COLORS.length];
+        const tick=m.is_admin?`<span class="tc-verified">${_VERIFIED_SVG}</span>`:"";
+        return `<div class="tc-dm" id="ecDm_${m.user}" onclick="ecOpenDm(${m.user},'${esc(m.name)}')">
+          <div class="tc-dm-av ${m.status||"available"}" style="background:${col};">${ini}</div>
+          <span class="tc-ch-name-txt">${esc(m.name)}${tick}</span>
+        </div>`;
+      }).join("");
+    }
+  } catch(e){ console.error("ec chat init:",e); }
+}
+
+async function ecOpenDm(userId, name){
+  try{
+    const r = await fetch("/teamapp/chat/dm/", {
+      method:"POST",
+      headers:{"Content-Type":"application/json","X-CSRFToken":_ecCsrf()},
+      body:JSON.stringify({target_user_id: userId})
+    });
+    const d = await r.json();
+    if(!d.success){ console.error("DM error:", d.message); return; }
+    document.querySelectorAll(".tc-dm").forEach(el=>el.classList.remove("active"));
+    document.getElementById("ecDm_"+userId)?.classList.add("active");
+    document.querySelectorAll("#ecChannelList .tc-ch").forEach(el=>el.classList.remove("active"));
+    ecSelectChannel(d.channel_id, d.channel_name, "Direct Message");
+  }catch(e){ console.error(e); }
+}
+
+async function ecOpenMentionDm(name){
+  const key = name.toLowerCase();
+  const firstName = key.split(" ")[0];
+  let uid = _ecMentionMap[key] || _ecMentionMap[firstName];
+  if(!uid){
+    try{
+      const r = await fetch("/teamapp/members/");
+      const d = await r.json();
+      if(d.success){
+        [...(d.admin_contacts||[]), ...d.members].forEach(m=>{
+          _ecMentionMap[m.name.toLowerCase()] = m.user;
+          _ecMentionMap[m.name.split(" ")[0].toLowerCase()] = m.user;
+        });
+        uid = _ecMentionMap[key] || _ecMentionMap[firstName];
+      }
+    }catch(e){}
+  }
+  if(!uid) return;
+  switchSection("secChat");
+  ecOpenDm(uid, name);
+}
+
+let _ecCurrentChannelIsDm = false;
+
+function ecSelectChannel(id, name, desc){
+  _ecChannelId=id; _ecChannelName=name;
+  _ecCurrentChannelIsDm = desc === "Direct Message";
+  _ecKnownUnread[id] = 0;
+  fetch("/teamapp/chat/read/",{method:"POST",headers:{"Content-Type":"application/json","X-CSRFToken":_ecCsrf()},body:JSON.stringify({channel_id:id})}).catch(()=>{});
+  _ecTypingUsers = {};
+  _ecRenderTyping();
+  document.querySelectorAll("#ecChannelList .tc-ch").forEach(el=>el.classList.remove("active","unread"));
+  const el=document.getElementById("ecCh_"+id);
+  if(el){ el.classList.add("active"); el.querySelector(".ec-unread-badge")?.remove(); }
+  document.getElementById("ecChName").textContent=name;
+  document.getElementById("ecChDesc").textContent=desc==="Direct Message"?"🔒 Private conversation":desc||"";
+  document.getElementById("ecChatInput").dataset.placeholder=(desc==="Direct Message"?`Message ${name}…`:`Message #${name}…`);
+  const hashEl = document.getElementById("ecChHash");
+  if(hashEl) hashEl.style.display = _ecCurrentChannelIsDm ? "none" : "";
+  const avatarsEl = document.getElementById("ecMembersAvatars");
+  if(avatarsEl) avatarsEl.style.display = _ecCurrentChannelIsDm ? "none" : "flex";
+  ecCloseThread();
+  ecLoadMessages();
+  _ecWsConnect();
+  if(!_ecCurrentChannelIsDm) ecRefreshMembersCount();
+}
+
+const _EC_AV_COLORS = ["#7c3aed","#2563eb","#059669","#dc2626","#d97706","#db2777","#0891b2","#65a30d","#9333ea","#0f766e"];
+function _ecRenderMemberAvatars(members){
+  const wrap = document.getElementById("ecMembersAvatars");
+  if(!wrap) return;
+  if(!members.length){ wrap.style.display="none"; return; }
+  const MAX = 4;
+  const shown = members.slice(0, MAX);
+  const extra = members.length - shown.length;
+  let html = shown.map((m, i) =>
+    `<div style="width:26px;height:26px;border-radius:50%;background:${_EC_AV_COLORS[i%_EC_AV_COLORS.length]};color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;border:2px solid #fff;margin-left:${i>0?"-8px":"0"};position:relative;z-index:${10-i};flex-shrink:0;" title="${m.name}">${m.initials}</div>`
+  ).join("");
+  if(extra > 0) html += `<div style="width:26px;height:26px;border-radius:50%;background:#e5e7eb;color:#374151;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;border:2px solid #fff;margin-left:-8px;position:relative;z-index:0;flex-shrink:0;">+${extra}</div>`;
+  html += `<span style="margin-left:7px;font-size:12px;font-weight:700;color:#5b21b6;">${members.length}</span>`;
+  wrap.innerHTML = html;
+  wrap.style.display = "flex";
+}
+
+async function ecRefreshMembersCount(){
+  if(!_ecChannelId || _ecCurrentChannelIsDm) return;
+  const r = await fetch(`/teamapp/chat/channels/${_ecChannelId}/members/`);
+  const d = await r.json();
+  if(!d.success) return;
+  _ecRenderMemberAvatars(d.members);
+}
+
+async function ecOpenMembersModal(){
   if(!_ecChannelId) return;
-  const input=document.getElementById("empChatInput");
-  const content=input.value.trim();
+  const r = await fetch(`/teamapp/chat/channels/${_ecChannelId}/members/`);
+  const d = await r.json();
+  if(!d.success) return;
+  _ecRenderMemberAvatars(d.members);
+  document.getElementById("ecMembersModalChName").textContent = "#" + _ecChannelName;
+  document.getElementById("ecMembersModalCount").textContent = d.members.length;
+  const list = document.getElementById("ecMembersList");
+  if(!d.members.length){
+    list.innerHTML = `<div style="color:#9ca3af;font-size:13px;text-align:center;padding:20px 0;">No members yet.</div>`;
+  } else {
+    list.innerHTML = d.members.map(m=>`
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f3f0ff;">
+        <div style="width:34px;height:34px;border-radius:50%;background:#ede9fe;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:#7c3aed;flex-shrink:0;">${m.initials}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:600;font-size:13px;color:#1e1b4b;">${m.name}</div>
+          <div style="font-size:11px;color:#9ca3af;">${m.role}</div>
+        </div>
+      </div>`).join("");
+  }
+  document.getElementById("ecMembersModal").style.display = "flex";
+}
+
+async function ecLoadMessages(){
+  if(!_ecChannelId) return;
+  const r=await fetch(`/teamapp/chat/messages/?channel_id=${_ecChannelId}`);
+  const d=await r.json();
+  if(!d.success) return;
+  if(d.current_user_id) _ecCurrentUserId = d.current_user_id;
+  d.messages.forEach(m=>{ _ecMsgMap[m.id]=m; (m.replies||[]).forEach(r=>{ _ecMsgMap[r.id]=r; }); });
+  _ecRenderMsgList(d.messages,"ecMessages");
+}
+
+function _ecCeToMarkdown(el){
+  function nodeToMd(node){
+    if(node.nodeType===3) return node.textContent;
+    const tag=node.tagName&&node.tagName.toLowerCase();
+    const inner=Array.from(node.childNodes).map(nodeToMd).join("");
+    if(tag==="b"||tag==="strong") return `**${inner}**`;
+    if(tag==="i"||tag==="em") return `*${inner}*`;
+    if(tag==="s"||tag==="del"||tag==="strike") return `~~${inner}~~`;
+    if(tag==="code") return `\`${inner}\``;
+    if(tag==="a") return `[${inner}](${node.href||""})`;
+    if(tag==="li") return `• ${inner}`;
+    if(tag==="ul"||tag==="ol") return inner+"\n";
+    if(tag==="div"||tag==="p"||tag==="br") return inner+"\n";
+    return inner;
+  }
+  return Array.from(el.childNodes).map(nodeToMd).join("").replace(/\n+$/,"").trim();
+}
+
+async function ecSend(){
+  if(!_ecChannelId) return;
+  const input=document.getElementById("ecChatInput");
+  const content=_ecCeToMarkdown(input);
   if(!content) return;
-  input.value=""; input.style.height="auto";
+  input.innerHTML="";
+  ecCloseEmojiPicker();
+  _ecSendTyping(false);
+  clearTimeout(_ecTypingTimer);
   const r=await fetch("/teamapp/chat/send/",{method:"POST",headers:{"Content-Type":"application/json","X-CSRFToken":_ecCsrf()},body:JSON.stringify({channel_id:_ecChannelId,content})});
   const d=await r.json();
-  if(d.success) empChatLoad();
+  if(d.success){ ecLoadMessages(); _ecWsBroadcastNew(content); }
 }
 
-function empChatKeyDown(e){if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();empChatSend();}}
-
-async function empChatReact(msgId, emoji){
-  await fetch("/teamapp/chat/reaction/",{method:"POST",headers:{"Content-Type":"application/json","X-CSRFToken":_ecCsrf()},body:JSON.stringify({message_id:msgId,emoji})});
-  empChatLoad();
+function ecKeyDown(e){
+  if(_ecMentionDropVisible()){
+    if(e.key==="ArrowDown"){ e.preventDefault(); _ecMentionMoveSel(1); return; }
+    if(e.key==="ArrowUp"){ e.preventDefault(); _ecMentionMoveSel(-1); return; }
+    if(e.key==="Enter"||e.key==="Tab"){ e.preventDefault(); _ecMentionConfirm(); return; }
+    if(e.key==="Escape"){ _ecHideMentionDrop(); return; }
+  }
+  if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();ecSend();}
 }
 
-// Inline thread view (simple alert for now, full thread reuse)
-async function empChatOpenThread(msgId){
+async function ecToggleReaction(msgId,emoji){
+  const r = await fetch("/teamapp/chat/reaction/",{method:"POST",headers:{"Content-Type":"application/json","X-CSRFToken":_ecCsrf()},body:JSON.stringify({message_id:msgId,emoji})});
+  const d = await r.json();
+  if(!d.success) return;
+  // Patch only the reaction row — no full reload, no scroll jump
+  const msgEl = document.querySelector(`.tc-msg[data-mid="${msgId}"]`);
+  if(msgEl){
+    const existing = msgEl.querySelector(".tc-reactions");
+    const html = _ecRenderReactions(d.reactions, msgId);
+    if(existing){ existing.outerHTML = html || ""; }
+    else if(html){ msgEl.querySelector(".tc-msg-body").insertAdjacentHTML("beforeend", html); }
+  }
+  if(_ecThreadParentId) ecLoadThreadMessages(_ecThreadParentId);
+}
+
+function ecToggleReactionPicker(msgId){
+  document.querySelectorAll(".tc-react-picker").forEach(el=>el.remove());
+  const btn = document.querySelector(`.tc-msg[data-mid="${msgId}"] .tc-reaction-add`);
+  if(!btn) return;
+  const picker = document.createElement("div");
+  picker.className = "tc-react-picker";
+  picker.innerHTML = EC_EMOJIS.map(e=>`<button onclick="ecToggleReaction(${msgId},'${e}');this.closest('.tc-react-picker').remove();">${e}</button>`).join("");
+  picker.style.cssText = "position:absolute;background:#fff;border:1px solid #e7e2f5;border-radius:12px;padding:6px 8px;display:flex;gap:4px;box-shadow:0 4px 20px rgba(20,14,60,.14);z-index:999;";
+  document.body.appendChild(picker);
+  const r = btn.getBoundingClientRect();
+  picker.style.top = (r.top - picker.offsetHeight - 6 + window.scrollY) + "px";
+  picker.style.left = Math.max(4, r.left - 20 + window.scrollX) + "px";
+  requestAnimationFrame(()=>{ picker.style.top = (r.top - picker.offsetHeight - 6 + window.scrollY) + "px"; });
+  setTimeout(()=>{
+    document.addEventListener("click", function _close(ev){ if(!picker.contains(ev.target)){picker.remove();document.removeEventListener("click",_close);} });
+  }, 10);
+}
+
+async function ecOpenThread(msgId){
+  _ecThreadParentId=msgId;
+  document.getElementById("ecApp").classList.add("with-thread");
+  ecLoadThreadMessages(msgId);
+}
+
+async function ecLoadThreadMessages(msgId){
   const r=await fetch(`/teamapp/chat/messages/?channel_id=${_ecChannelId}`);
   const d=await r.json();
   if(!d.success) return;
   const parent=d.messages.find(m=>m.id===msgId);
   if(!parent) return;
-  const replies=(parent.replies||[]);
-  let html=`<div style="font-size:14px;line-height:1.55;color:#334155;padding:12px;background:#f8fafc;border-radius:10px;margin-bottom:12px;"><b>${esc(parent.sender_name)}</b>: ${esc(parent.content).replace(/\n/g,"<br>")}</div>`;
-  if(replies.length){
-    html+=`<div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#94a3b8;margin-bottom:8px;">REPLIES</div>`;
-    html+=replies.map(rep=>`<div style="display:flex;gap:8px;padding:6px 0;"><div style="width:28px;height:28px;border-radius:7px;background:${_ecRoleColor(rep.sender_role)};color:#fff;font-size:10px;font-weight:700;display:grid;place-items:center;flex-shrink:0;">${esc(rep.sender_initials)}</div><div><b style="font-size:13px;">${esc(rep.sender_name)}</b><div style="font-size:13px;color:#334155;">${esc(rep.content).replace(/\n/g,"<br>")}</div></div></div>`).join("");
-  } else { html+=`<div style="color:#94a3b8;font-size:13px;">No replies yet.</div>`; }
-
-  // Simple inline overlay
-  let overlay=document.getElementById("_ecThreadOverlay");
-  if(!overlay){
-    overlay=document.createElement("div");
-    overlay.id="_ecThreadOverlay";
-    overlay.style.cssText="position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.45);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:20px;";
-    overlay.onclick=e=>{if(e.target===overlay)overlay.remove();};
-    document.body.appendChild(overlay);
-  }
-  overlay.innerHTML=`<div style="background:#fff;border-radius:18px;width:500px;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(15,23,42,.18);">
-    <div style="padding:18px 20px;border-bottom:1px solid #e8eaf2;display:flex;align-items:center;justify-content:space-between;">
-      <span style="font-size:16px;font-weight:800;">Thread</span>
-      <button onclick="document.getElementById('_ecThreadOverlay').remove()" style="width:30px;height:30px;border-radius:8px;border:1px solid #e8eaf2;background:#f8fafc;cursor:pointer;font-size:15px;">✕</button>
+  document.getElementById("ecThreadSub").textContent=`${parent.reply_count} ${parent.reply_count===1?"reply":"replies"}`;
+  document.getElementById("ecThreadParent").innerHTML=`
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+      <div class="${_ecAvClass(parent.sender_role)}" style="width:34px;height:34px;font-size:12px;">${esc(parent.sender_initials)}</div>
+      <div>
+        <div style="font-size:13.5px;font-weight:800;color:#0d0d12;">${esc(parent.sender_name)}</div>
+        <div style="font-size:11px;color:#9a99ad;">${_ecTime(parent.created_at)}</div>
+      </div>
     </div>
-    <div style="flex:1;overflow-y:auto;padding:16px 20px;">${html}</div>
-    <div style="padding:12px 16px 16px;border-top:1px solid #e8eaf2;display:flex;gap:8px;">
-      <textarea id="_ecThreadReplyInput" placeholder="Reply…" rows="1" style="flex:1;padding:9px 12px;border:1px solid #e8eaf2;border-radius:10px;font-family:inherit;font-size:13px;resize:none;outline:none;" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();_ecSendReply(${msgId});}"></textarea>
-      <button onclick="_ecSendReply(${msgId})" style="padding:0 14px;border-radius:10px;border:none;background:linear-gradient(135deg,#6366f1,#06b6d4);color:#fff;font-size:13px;font-weight:700;cursor:pointer;">Reply</button>
-    </div>
-  </div>`;
+    <div class="tc-msg-text">${_ecRenderMarkdown(parent.content)}</div>`;
+  _ecRenderMsgList(parent.replies||[],"ecThreadReplies");
 }
 
-async function _ecSendReply(parentId){
-  const input=document.getElementById("_ecThreadReplyInput");
-  const content=input.value.trim();
+async function ecSendReply(){
+  if(!_ecChannelId||!_ecThreadParentId) return;
+  const input=document.getElementById("ecThreadInput");
+  const content=_ecCeToMarkdown(input);
   if(!content) return;
-  input.value="";
-  await fetch("/teamapp/chat/send/",{method:"POST",headers:{"Content-Type":"application/json","X-CSRFToken":_ecCsrf()},body:JSON.stringify({channel_id:_ecChannelId,content,parent_id:parentId})});
-  empChatOpenThread(parentId);
-  empChatLoad();
+  input.innerHTML="";
+  await fetch("/teamapp/chat/send/",{method:"POST",headers:{"Content-Type":"application/json","X-CSRFToken":_ecCsrf()},body:JSON.stringify({channel_id:_ecChannelId,content,parent_id:_ecThreadParentId})});
+  ecLoadThreadMessages(_ecThreadParentId);
+  ecLoadMessages();
+  _ecWsBroadcastNew(content);
+}
+
+function ecThreadKeyDown(e){ if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();ecSendReply();} }
+
+function ecCloseThread(){
+  _ecThreadParentId=null;
+  document.getElementById("ecApp").classList.remove("with-thread");
+}
+
+function ecToggleEmoji(){ document.getElementById("ecEmojiPicker").classList.toggle("show"); }
+function ecCloseEmojiPicker(){ document.getElementById("ecEmojiPicker")?.classList.remove("show"); }
+function ecInsertEmoji(e){ document.getElementById("ecChatInput").focus(); document.execCommand("insertText",false,e); ecCloseEmojiPicker(); }
+function ecInsertMention(){ const inp=document.getElementById("ecChatInput"); inp.focus(); document.execCommand("insertText",false,"@"); _ecCheckMentionTrigger(inp); }
+
+function ecToggleGroup(headEl){
+  const group = headEl.closest(".tc-group");
+  const list = group.querySelector("[id^='ec']");
+  const caret = headEl.querySelector(".tc-caret");
+  const collapsed = list.style.display === "none";
+  list.style.display = collapsed ? "" : "none";
+  if(caret) caret.style.transform = collapsed ? "" : "rotate(-90deg)";
+}
+
+function ecFormat(type){
+  const el = document.getElementById("ecChatInput");
+  el.focus();
+  if(type==="bold") document.execCommand("bold");
+  else if(type==="italic") document.execCommand("italic");
+  else if(type==="strike") document.execCommand("strikeThrough");
+  else if(type==="bullet") document.execCommand("insertUnorderedList");
+  else if(type==="numbered") document.execCommand("insertOrderedList");
+  else if(type==="code"){
+    const sel=window.getSelection();
+    if(sel&&sel.rangeCount){
+      const range=sel.getRangeAt(0);
+      const text=range.toString()||"code";
+      const code=document.createElement("code");
+      code.textContent=text;
+      range.deleteContents(); range.insertNode(code);
+      range.setStartAfter(code); range.collapse(true);
+      sel.removeAllRanges(); sel.addRange(range);
+    }
+  }
+  else if(type==="link"){
+    const url=prompt("Enter URL:","https://");
+    if(url) document.execCommand("createLink",false,url);
+  }
+}
+
+// ── Markdown renderer ─────────────────────────────────────────────────────────
+function _ecRenderMarkdown(text){
+  let s = esc(text);
+  s = s.replace(/```([\s\S]*?)```/g, (_,c)=>`<pre style="background:#f3f0ff;border-radius:8px;padding:10px 14px;font-size:12.5px;overflow-x:auto;"><code>${c.trim()}</code></pre>`);
+  s = s.replace(/`([^`]+)`/g, '<code style="background:#f3f0ff;color:#7c3aed;padding:1px 5px;border-radius:5px;font-size:12.5px;">$1</code>');
+  s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  s = s.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+  s = s.replace(/~~([^~]+)~~/g, '<del>$1</del>');
+  s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener" style="color:#7c3aed;">$1</a>');
+  s = s.replace(/#(\d{4,})/g, (_,num)=>
+    `<button onclick="ecOpenOrderFromChat('${num}')" style="display:inline-flex;align-items:center;gap:5px;background:#f5f3ff;border:1.5px solid #ddd5f3;border-radius:8px;padding:2px 9px;font-size:13px;font-weight:700;color:#6d28d9;cursor:pointer;vertical-align:middle;" onmouseenter="this.style.background='#ede9fe'" onmouseleave="this.style.background='#f5f3ff'"><i class='fa-solid fa-box' style='font-size:11px;'></i> #${num}</button>`
+  );
+  s = s.replace(/^[*\-] (.+)$/gm, '<li>$1</li>').replace(/(<li>.*<\/li>)/gs, '<ul style="margin:4px 0 4px 18px;padding:0;">$1</ul>');
+  s = s.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
+  // @mentions → styled chip (amber if it's you, purple+clickable otherwise)
+  s = s.replace(/@([A-Za-z][A-Za-z]*(?:\s[A-Za-z][A-Za-z]*)?)/g, (_, name) => {
+    const key = name.toLowerCase();
+    const isMe = _ecMyName && (key === _ecMyName.toLowerCase() || key === _ecMyName.split(" ")[0].toLowerCase());
+    if(isMe) return `<span style="background:#fde68a;color:#92400e;font-weight:700;border-radius:5px;padding:1px 6px;white-space:nowrap;">@${name}</span>`;
+    return `<span data-mention="${name.replace(/"/g,'&quot;')}" onclick="ecOpenMentionDm(this.dataset.mention)" style="background:#ede9fe;color:#6d28d9;font-weight:700;border-radius:5px;padding:1px 6px;white-space:nowrap;cursor:pointer;" onmouseenter="this.style.background='#ddd5f3'" onmouseleave="this.style.background='#ede9fe'">@${name}</span>`;
+  });
+  s = s.replace(/\n/g, "<br>");
+  return s;
+}
+
+// ── Open order from chat ──────────────────────────────────────────────────────
+async function ecOpenOrderFromChat(orderNum){
+  const r = await fetch(`/orders/api/lookup/?q=${encodeURIComponent(orderNum)}`);
+  const d = await r.json();
+  if(!d.success){
+    if(d.error === "no_access")
+      _ecToast(`🔒 No access to orders from «${d.store_name || "this project"}»`);
+    else
+      _ecToast(`⚠️ Order #${orderNum} not found`);
+    return;
+  }
+  // Try to find in loaded orders list
+  const order = (typeof myOrders !== "undefined") && myOrders.find(o=>String(o.order_number)===String(d.order_number));
+  if(order){
+    openOrderDetail(order.id);
+  } else {
+    _ecToast(`📦 Order #${d.order_number} found — search for it in the Orders section`);
+  }
+}
+
+// ── Message More menu ─────────────────────────────────────────────────────────
+const _ecMenuStyle = "display:flex;align-items:center;gap:10px;width:100%;padding:9px 14px;border:none;background:none;cursor:pointer;font-size:13px;color:#0d0d12;border-radius:9px;text-align:left;transition:background .1s;";
+const _ecMenuStyleRed = _ecMenuStyle + "color:#dc2626;";
+const _ecMenuDivider = `<div style="height:1px;background:#f0edf9;margin:3px 8px;"></div>`;
+
+function ecShowMsgMenu(msgId, btn){
+  document.querySelectorAll(".tc-msg-menu").forEach(el=>el.remove());
+  const msg = _ecMsgMap[msgId];
+  const isMine = msg && (msg.is_mine || msg.sender_id === _ecCurrentUserId);
+  const content = msg ? msg.content : "";
+  const menu = document.createElement("div");
+  menu.className = "tc-msg-menu";
+  menu.style.cssText = "position:fixed;background:#fff;border:1px solid #e7e2f5;border-radius:14px;padding:5px;box-shadow:0 8px 32px rgba(20,14,60,.16);z-index:99999;min-width:210px;";
+  const items = [];
+  items.push(`<button style="${_ecMenuStyle}" onmouseenter="this.style.background='#f5f3ff'" onmouseleave="this.style.background='none'" onclick="_ecMenuDo(()=>ecOpenThread(${msgId}))"><i class="fa-regular fa-comment" style="color:#7c3aed;width:16px;"></i> Reply in thread</button>`);
+  items.push(`<button style="${_ecMenuStyle}" onmouseenter="this.style.background='#f5f3ff'" onmouseleave="this.style.background='none'" onclick="_ecMenuDo(()=>ecToggleReactionPicker(${msgId}))"><i class="fa-regular fa-face-smile" style="color:#7c3aed;width:16px;"></i> Add reaction</button>`);
+  items.push(_ecMenuDivider);
+  if(isMine) items.push(`<button style="${_ecMenuStyle}" onmouseenter="this.style.background='#f5f3ff'" onmouseleave="this.style.background='none'" onclick="_ecMenuDo(()=>ecEditMsg(${msgId}))"><i class="fa-regular fa-pen-to-square" style="color:#7c3aed;width:16px;"></i> Edit message</button>`);
+  items.push(`<button style="${_ecMenuStyle}" onmouseenter="this.style.background='#f5f3ff'" onmouseleave="this.style.background='none'" onclick="_ecMenuDo(()=>ecPinMsg(${msgId}))"><i class="fa-solid fa-thumbtack" style="color:#7c3aed;width:16px;"></i> Pin to channel</button>`);
+  items.push(`<button style="${_ecMenuStyle}" onmouseenter="this.style.background='#f5f3ff'" onmouseleave="this.style.background='none'" onclick="_ecMenuDo(()=>ecBookmarkMsg(${msgId}))"><i class="fa-regular fa-bookmark" style="color:#7c3aed;width:16px;"></i> Save message</button>`);
+  items.push(_ecMenuDivider);
+  items.push(`<button style="${_ecMenuStyle}" onmouseenter="this.style.background='#f5f3ff'" onmouseleave="this.style.background='none'" onclick="_ecMenuDo(()=>ecCopyMsg(${JSON.stringify(content)}))"><i class="fa-regular fa-copy" style="color:#9a99ad;width:16px;"></i> Copy message text</button>`);
+  items.push(`<button style="${_ecMenuStyle}" onmouseenter="this.style.background='#f5f3ff'" onmouseleave="this.style.background='none'" onclick="_ecMenuDo(()=>ecCopyLink(${msgId}))"><i class="fa-solid fa-link" style="color:#9a99ad;width:16px;"></i> Copy link</button>`);
+  menu.innerHTML = items.join("");
+  document.body.appendChild(menu);
+  const r = btn.getBoundingClientRect();
+  menu.style.top = (r.bottom + 6) + "px";
+  menu.style.left = Math.max(6, r.right - 216) + "px";
+  requestAnimationFrame(()=>{
+    const mb = menu.getBoundingClientRect();
+    if(mb.bottom > window.innerHeight - 10) menu.style.top = (r.top - mb.height - 6) + "px";
+  });
+  setTimeout(()=>{
+    document.addEventListener("click", function _cm(ev){ if(!menu.contains(ev.target)){ menu.remove(); document.removeEventListener("click",_cm); } });
+  }, 10);
+}
+
+function _ecMenuDo(fn){ document.querySelectorAll(".tc-msg-menu").forEach(el=>el.remove()); fn(); }
+function ecCopyMsg(content){ navigator.clipboard.writeText(content).then(()=>_ecToast("📋 Message copied!")); }
+
+async function ecDeleteMsg(msgId){
+  if(!confirm("Delete this message?")) return;
+  const r=await fetch(`/teamapp/chat/messages/${msgId}/delete/`,{method:"DELETE",headers:{"X-CSRFToken":_ecCsrf()}});
+  const d=await r.json();
+  if(d.success){
+    if(_ecThreadParentId===msgId) ecCloseThread();
+    ecLoadMessages();
+    if(_ecThreadParentId) ecLoadThreadMessages(_ecThreadParentId);
+  } else { alert(d.error||"Could not delete message."); }
+}
+
+function ecEditMsg(msgId){
+  const msgEl = document.querySelector(`.tc-msg[data-mid="${msgId}"]`);
+  if(!msgEl) return;
+  const textEl = msgEl.querySelector(".tc-msg-text");
+  const original = (_ecMsgMap[msgId]||{}).content || textEl.innerText;
+  textEl.setAttribute("data-original", original);
+  textEl.contentEditable = "true";
+  textEl.style.cssText = "outline:none;border:1.5px solid #7c3aed;border-radius:10px;padding:8px 10px;min-height:36px;background:#faf9ff;";
+  textEl.focus();
+  const sel=window.getSelection(), range=document.createRange();
+  range.selectNodeContents(textEl); range.collapse(false);
+  sel.removeAllRanges(); sel.addRange(range);
+  const bar = document.createElement("div");
+  bar.className = "tc-edit-bar";
+  bar.style.cssText = "display:flex;gap:7px;margin-top:6px;align-items:center;";
+  bar.innerHTML = `<span style="font-size:11.5px;color:#9a99ad;">Escape to <b onclick="ecEditCancel(${msgId})" style="cursor:pointer;color:#7c3aed;">cancel</b> &nbsp;·&nbsp; Enter to <b onclick="ecEditSave(${msgId})" style="cursor:pointer;color:#7c3aed;">save</b></span>
+    <button onclick="ecEditSave(${msgId})" style="background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:5px 14px;font-size:12px;font-weight:700;cursor:pointer;">Save</button>
+    <button onclick="ecEditCancel(${msgId})" style="background:#f3f0ff;color:#7c3aed;border:none;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;">Cancel</button>`;
+  textEl.insertAdjacentElement("afterend", bar);
+  textEl.addEventListener("keydown", function _ek(e){
+    if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); ecEditSave(msgId); textEl.removeEventListener("keydown",_ek); }
+    if(e.key==="Escape"){ ecEditCancel(msgId); textEl.removeEventListener("keydown",_ek); }
+  });
+}
+
+async function ecEditSave(msgId){
+  const msgEl = document.querySelector(`.tc-msg[data-mid="${msgId}"]`);
+  if(!msgEl) return;
+  const textEl = msgEl.querySelector(".tc-msg-text");
+  const newContent = (textEl.innerText||"").trim();
+  if(!newContent){ ecEditCancel(msgId); return; }
+  const r = await fetch(`/teamapp/chat/messages/${msgId}/edit/`,{method:"PATCH",headers:{"Content-Type":"application/json","X-CSRFToken":_ecCsrf()},body:JSON.stringify({content:newContent})});
+  const d = await r.json();
+  if(d.success){
+    if(_ecMsgMap[msgId]) _ecMsgMap[msgId].content = d.content;
+    _ecEditCleanup(msgEl, textEl);
+    textEl.innerHTML = _ecRenderMarkdown(d.content);
+  } else { alert(d.message||"Could not save edit."); ecEditCancel(msgId); }
+}
+
+function ecEditCancel(msgId){
+  const msgEl = document.querySelector(`.tc-msg[data-mid="${msgId}"]`);
+  if(!msgEl) return;
+  const textEl = msgEl.querySelector(".tc-msg-text");
+  const original = textEl.getAttribute("data-original") || "";
+  _ecEditCleanup(msgEl, textEl);
+  textEl.innerHTML = _ecRenderMarkdown(original);
+}
+
+function _ecEditCleanup(msgEl, textEl){
+  textEl.contentEditable = "false";
+  textEl.style.cssText = "";
+  msgEl.querySelector(".tc-edit-bar")?.remove();
+}
+
+function ecPinMsg(msgId){
+  const pins = JSON.parse(localStorage.getItem("tc_pins")||"[]");
+  if(!pins.includes(msgId)){
+    pins.push(msgId); localStorage.setItem("tc_pins", JSON.stringify(pins));
+    _ecToast(`📌 Message pinned to #${_ecChannelName}`);
+  } else { _ecToast("Already pinned!"); }
+}
+
+function ecBookmarkMsg(msgId){
+  const msg = _ecMsgMap[msgId];
+  const saves = JSON.parse(localStorage.getItem("tc_saved")||"[]");
+  const idx = saves.findIndex(s=>s.id===msgId);
+  if(idx===-1){
+    saves.push({id:msgId, content:(msg||{}).content||"", channel:_ecChannelName, at:new Date().toISOString()});
+    localStorage.setItem("tc_saved", JSON.stringify(saves));
+    _ecToast("🔖 Message saved to bookmarks");
+  } else { _ecToast("Already saved!"); }
+}
+
+function ecCopyLink(msgId){
+  navigator.clipboard.writeText(`#${_ecChannelName} — message #${msgId}`).then(()=>_ecToast("🔗 Link copied!"));
+}
+
+function _ecToast(msg){
+  const t=document.createElement("div");
+  t.textContent=msg;
+  t.style.cssText="position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:#0f172a;color:#fff;padding:9px 22px;border-radius:999px;font-size:13px;font-weight:600;z-index:99999;pointer-events:none;white-space:nowrap;";
+  document.body.appendChild(t);
+  setTimeout(()=>{t.style.transition="opacity .4s";t.style.opacity="0";setTimeout(()=>t.remove(),400);},1800);
+}
+
+// ── WebSocket real-time ───────────────────────────────────────────────────────
+let _ecWs = null;
+let _ecTypingTimer = null;
+let _ecTypingUsers = {};
+let _ecWsRetryDelay = 1000;
+let _ecNotifPerm = false;
+
+function _ecWsConnect(){
+  _ecWsClose();
+  if(!_ecChannelId) return;
+  const proto = location.protocol === "https:" ? "wss" : "ws";
+  _ecWs = new WebSocket(`${proto}://${location.host}/ws/chat/${_ecChannelId}/`);
+  _ecWs.onopen = () => { _ecWsRetryDelay=1000; _ecUpdateConnBadge(true); _ecRequestNotifPerm(); };
+  _ecWs.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    if(msg.type==="new_message"){
+      ecLoadMessages();
+      const chatVisible = document.getElementById("secChat")?.classList.contains("active");
+      if(!chatVisible){
+        _ecShowInAppNotif(msg.sender_name, _ecChannelName, msg.preview||"New message", ()=>switchSection("secChat"));
+        // Show unread dot on channel in sidebar
+        const chEl = document.getElementById("ecCh_"+_ecChannelId);
+        if(chEl && !chEl.classList.contains("active")){
+          chEl.classList.add("unread");
+          let badge = chEl.querySelector(".ec-unread-badge");
+          if(!badge){ badge=document.createElement("span"); badge.className="ec-unread-badge"; chEl.appendChild(badge); }
+          badge.textContent = Math.min((parseInt(badge.textContent)||0)+1, 99);
+        }
+      }
+      if(document.hidden && _ecNotifPerm) _ecShowBrowserNotif(msg.sender_name, msg.preview||`New message in #${_ecChannelName}`);
+    } else if(msg.type==="typing"){
+      _ecHandleTypingIndicator(msg.username, msg.typing);
+    }
+  };
+  _ecWs.onclose = () => {
+    _ecUpdateConnBadge(false);
+    if(_ecChannelId){
+      setTimeout(()=>{ if(_ecChannelId) _ecWsConnect(); }, _ecWsRetryDelay);
+      _ecWsRetryDelay = Math.min(_ecWsRetryDelay * 2, 15000);
+    }
+  };
+  _ecWs.onerror = () => _ecWs.close();
+}
+
+function _ecWsClose(){
+  if(_ecWs){ _ecWs.onclose=null; _ecWs.close(); _ecWs=null; }
+  _ecUpdateConnBadge(false);
+}
+
+function _ecSendTyping(isTyping){
+  if(_ecWs && _ecWs.readyState === WebSocket.OPEN)
+    _ecWs.send(JSON.stringify({type:"typing", typing:isTyping}));
+}
+
+function _ecHandleTypingIndicator(username, isTyping){
+  clearTimeout(_ecTypingUsers[username]);
+  if(isTyping){
+    _ecTypingUsers[username] = setTimeout(()=>{ delete _ecTypingUsers[username]; _ecRenderTyping(); }, 4000);
+  } else { delete _ecTypingUsers[username]; }
+  _ecRenderTyping();
+}
+
+function _ecRenderTyping(){
+  const el = document.getElementById("ecTypingBar");
+  if(!el) return;
+  const users = Object.keys(_ecTypingUsers);
+  if(!users.length){ el.style.display="none"; return; }
+  const names = users.length===1 ? users[0]
+    : users.length===2 ? `${users[0]} and ${users[1]}`
+    : `${users[0]} and ${users.length-1} others`;
+  el.style.display = "flex";
+  el.querySelector(".ec-typing-text").textContent = `${names} ${users.length===1?"is":"are"} typing…`;
+}
+
+function ecOnInput(){
+  _ecSendTyping(true);
+  clearTimeout(_ecTypingTimer);
+  _ecTypingTimer = setTimeout(()=>_ecSendTyping(false), 2000);
+  _ecCheckMentionTrigger(document.getElementById("ecChatInput"));
+}
+
+function _ecRequestNotifPerm(){
+  if(!("Notification" in window)) return;
+  if(Notification.permission==="granted"){ _ecNotifPerm=true; return; }
+  if(Notification.permission!=="denied") Notification.requestPermission().then(p=>{ _ecNotifPerm=p==="granted"; });
+}
+
+function _ecShowBrowserNotif(title, body){
+  if(!_ecNotifPerm) return;
+  const n = new Notification(`Drop Sigma · ${title}`, {body, icon:"/static/favicon.ico", tag:"chat-msg", renotify:true});
+  n.onclick = ()=>{ window.focus(); switchSection("secChat"); n.close(); };
+  setTimeout(()=>n.close(), 6000);
+}
+
+function _ecWsBroadcastNew(content){
+  if(_ecWs && _ecWs.readyState === WebSocket.OPEN)
+    _ecWs.send(JSON.stringify({type:"new_message", content: content||""}));
+}
+
+function _ecUpdateConnBadge(connected){
+  const el = document.getElementById("ecConnBadge");
+  if(!el) return;
+  el.title = connected ? "Live — connected" : "Reconnecting…";
+  el.style.color = connected ? "#22c55e" : "#f59e0b";
 }
 
 function _ecCsrf(){ const m=document.cookie.match(/csrftoken=([^;]+)/); return m?m[1]:""; }
+
+// ── In-app notification banner ────────────────────────────────────────────────
+function _ecShowInAppNotif(sender, channel, preview, onClick){
+  document.querySelectorAll(".ec-inapp-notif").forEach(n=>n.remove());
+  const n=document.createElement("div");
+  n.className="ec-inapp-notif";
+  n.style.cssText="position:fixed;bottom:24px;right:24px;background:#1e1b4b;color:#fff;border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.35);padding:14px 18px;max-width:320px;z-index:99999;cursor:pointer;display:flex;gap:12px;align-items:flex-start;animation:ecNotifSlide .3s ease;";
+  n.innerHTML=`<div style="width:36px;height:36px;border-radius:50%;background:#6366f1;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">💬</div>
+    <div style="min-width:0;">
+      <div style="font-weight:700;font-size:13px;margin-bottom:2px;">${sender} <span style="color:#a5b4fc;font-weight:400;">in #${channel}</span></div>
+      <div style="font-size:12px;color:#c7d2fe;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;">${preview}</div>
+    </div>
+    <div onclick="event.stopPropagation();this.closest('.ec-inapp-notif').remove();" style="margin-left:auto;color:#818cf8;font-size:16px;line-height:1;padding:2px 0 0 4px;">✕</div>`;
+  const style=document.createElement("style");
+  style.textContent="@keyframes ecNotifSlide{from{transform:translateX(120%);opacity:0}to{transform:translateX(0);opacity:1}}";
+  document.head.appendChild(style);
+  n.addEventListener("click",()=>{ onClick&&onClick(); n.remove(); });
+  document.body.appendChild(n);
+  setTimeout(()=>{ n.style.transition="opacity .4s,transform .4s"; n.style.opacity="0"; n.style.transform="translateX(120%)"; setTimeout(()=>n.remove(),400); },5000);
+}
+
+// ── @mention autocomplete ─────────────────────────────────────────────────────
+function _ecGetTextBeforeCursor(container){
+  const sel=window.getSelection();
+  if(!sel||!sel.rangeCount) return "";
+  const range=sel.getRangeAt(0).cloneRange();
+  range.setStart(container,0);
+  return range.toString();
+}
+
+function _ecCheckMentionTrigger(inputEl){
+  if(!inputEl) return;
+  const text=_ecGetTextBeforeCursor(inputEl);
+  const m=text.match(/@(\w*)$/);
+  if(m){ _ecShowMentionDrop(_ecMentionMembers.filter(n=>n.toLowerCase().startsWith(m[1].toLowerCase())), inputEl); }
+  else { _ecHideMentionDrop(); }
+}
+
+function _ecShowMentionDrop(members, inputEl){
+  _ecHideMentionDrop();
+  if(!members.length) return;
+  _ecMentionSelIdx=0;
+  const rect=inputEl.getBoundingClientRect();
+  const drop=document.createElement("div");
+  drop.id="ecMentionDrop";
+  drop.style.cssText=`position:fixed;bottom:${window.innerHeight-rect.top+6}px;left:${rect.left}px;background:#1e1b4b;border:1px solid #3730a3;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.4);z-index:99999;min-width:200px;max-height:200px;overflow-y:auto;padding:4px 0;`;
+  members.slice(0,8).forEach((name,i)=>{
+    const item=document.createElement("div");
+    item.textContent="@"+name;
+    item.dataset.name=name;
+    item.style.cssText=`padding:8px 14px;cursor:pointer;font-size:13px;font-weight:600;color:#c7d2fe;transition:background .15s;`;
+    if(i===0) item.style.background="#312e81";
+    item.addEventListener("mouseenter",()=>{ _ecMentionSelIdx=i; _ecMentionUpdateSel(); });
+    item.addEventListener("mousedown",e=>{ e.preventDefault(); _ecInsertMention(name,"ecChatInput"); });
+    drop.appendChild(item);
+  });
+  drop.dataset.members=JSON.stringify(members.slice(0,8).map(m=>m));
+  document.body.appendChild(drop);
+}
+
+function _ecHideMentionDrop(){ document.getElementById("ecMentionDrop")?.remove(); }
+function _ecMentionDropVisible(){ return !!document.getElementById("ecMentionDrop"); }
+
+function _ecMentionUpdateSel(){
+  const items=document.getElementById("ecMentionDrop")?.querySelectorAll("div[data-name]");
+  if(!items) return;
+  items.forEach((el,i)=>{ el.style.background=i===_ecMentionSelIdx?"#312e81":""; });
+}
+
+function _ecMentionMoveSel(dir){
+  const items=document.getElementById("ecMentionDrop")?.querySelectorAll("div[data-name]");
+  if(!items) return;
+  _ecMentionSelIdx=(_ecMentionSelIdx+dir+items.length)%items.length;
+  _ecMentionUpdateSel();
+}
+
+function _ecMentionConfirm(){
+  const items=document.getElementById("ecMentionDrop")?.querySelectorAll("div[data-name]");
+  if(!items||!items[_ecMentionSelIdx]) return;
+  _ecInsertMention(items[_ecMentionSelIdx].dataset.name,"ecChatInput");
+}
+
+function _ecInsertMention(name, inputId){
+  _ecHideMentionDrop();
+  const inputEl=document.getElementById(inputId);
+  if(!inputEl) return;
+  inputEl.focus();
+  const sel=window.getSelection();
+  if(!sel||!sel.rangeCount) return;
+  const range=sel.getRangeAt(0);
+  const text=_ecGetTextBeforeCursor(inputEl);
+  const m=text.match(/@\w*$/);
+  if(m){
+    range.setStart(range.startContainer, range.startOffset-m[0].length);
+    range.deleteContents();
+  }
+  const chip=document.createElement("span");
+  chip.className="tc-mention-chip";
+  chip.contentEditable="false";
+  chip.textContent="@"+name;
+  chip.style.cssText="display:inline-block;background:#312e81;color:#a5b4fc;border-radius:5px;padding:0 5px;font-weight:700;font-size:13px;margin:0 1px;";
+  range.insertNode(chip);
+  const after=document.createTextNode(" ");
+  chip.after(after);
+  const newRange=document.createRange();
+  newRange.setStartAfter(after);
+  newRange.collapse(true);
+  sel.removeAllRanges();
+  sel.addRange(newRange);
+}
+
+document.addEventListener("click",e=>{
+  if(!e.target.closest("#ecMentionDrop")&&!e.target.closest("[onclick*='ecInsertMention']")) _ecHideMentionDrop();
+  const picker=document.getElementById("ecEmojiPicker");
+  if(picker&&picker.classList.contains("show")&&!picker.contains(e.target)&&!e.target.closest("[onclick='ecToggleEmoji()']"))
+    picker.classList.remove("show");
+});
 </script>
 </body>
 </html>

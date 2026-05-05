@@ -63,10 +63,13 @@ class AssignmentRule(models.Model):
 # ─── Team Chat ────────────────────────────────────────────────────────────────
 
 class ChatChannel(models.Model):
-    name        = models.CharField(max_length=100)
-    slug        = models.SlugField(unique=True)
-    description = models.CharField(max_length=255, blank=True)
-    created_at  = models.DateTimeField(auto_now_add=True)
+    name         = models.CharField(max_length=100)
+    slug         = models.SlugField(unique=True)
+    description  = models.CharField(max_length=255, blank=True)
+    is_dm        = models.BooleanField(default=False)
+    participants = models.ManyToManyField(User, blank=True, related_name="dm_channels")
+    members      = models.ManyToManyField(User, blank=True, related_name="channel_memberships")
+    created_at   = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"#{self.name}"
@@ -93,3 +96,12 @@ class ChatReaction(models.Model):
 
     class Meta:
         unique_together = ("message", "sender", "emoji")
+
+
+class ChatReadReceipt(models.Model):
+    user        = models.ForeignKey(User, on_delete=models.CASCADE, related_name="chat_read_receipts")
+    channel     = models.ForeignKey(ChatChannel, on_delete=models.CASCADE, related_name="read_receipts")
+    last_read_at = models.DateTimeField()
+
+    class Meta:
+        unique_together = ("user", "channel")

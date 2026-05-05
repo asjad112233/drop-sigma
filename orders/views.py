@@ -624,3 +624,47 @@ def update_order_status_api(request, order_id):
     if new_status.lower() != old_status.lower():
         _fire_auto_email(order, new_status)
     return Response({"success": True, "fulfillment_status": new_status})
+
+@api_view(["GET"])
+def order_lookup_by_number_api(request):
+    """Look up an order by external_order_id, enforcing per-store access for team members."""
+    if not request.user.is_authenticated:
+        return Response({"success": False}, status=401)
+
+    q = request.GET.get("q", "").strip().lstrip("#")
+    if not q:
+        return Response({"success": False, "message": "q required."}, status=400)
+
+    # Find the order (any store)
+    try:
+        order = Order.objects.select_related("store").get(external_order_id=q)
+    except Order.DoesNotExist:
+        return Response({"success": False, "error": "not_found",
+                         "message": f"Order #{q} not found."}, status=404)
+    except Order.MultipleObjectsReturned:
+        order = Order.objects.select_related("store").filter(external_order_id=q).first()
+
+    # Admins/superusers always have access
+    if request.user.is_superuser or request.user.is_staff:
+        return Response({"success": True, "id": order.id,
+                         "order_number": order.external_order_id,
+                         "store_name": order.store.name})
+
+    # Team member — check allowed_stores
+    from teamapp.models import TeamMember
+    try:
+        member = TeamMember.objects.get(user=request.user, is_active=True)
+    except TeamMember.DoesNotExist:
+        return Response({"success": False, "error": "no_access",
+                         "message": "You don't have access to this order."}, status=403)
+
+    allowed = member.permissions.get("allowed_stores", [])
+    # Empty list means no restriction was set (full access)
+    if allowed and str(order.store_id) not in [str(s) for s in allowed]:
+        return Response({"success": False, "error": "no_access",
+                         "message": f"You don't have access to orders from «{order.store.name}».",
+                         "store_name": order.store.name}, status=403)
+
+    return Response({"success": True, "id": order.id,
+                     "order_number": order.external_order_id,
+                     "store_name": order.store.name})

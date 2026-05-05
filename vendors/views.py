@@ -128,6 +128,17 @@ def vendor_create(request):
         vendor.password_plain = password
         vendor.save()
 
+        from teamapp.models import ChatChannel, ChatMessage
+        general, _ = ChatChannel.objects.get_or_create(slug="general", is_dm=False, defaults={"name": "general", "description": "General team discussion"})
+        if general:
+            general.members.add(user)
+            added_by = request.user.get_full_name() or request.user.username if request.user.is_authenticated else "Admin"
+            ChatMessage.objects.create(
+                channel=general,
+                sender=request.user if request.user.is_authenticated else user,
+                content=f"📢 {vendor.name} has been added to #general. Welcome!",
+            )
+
     return Response({"success": True, "vendor": VendorSerializer(vendor).data})
 
 

@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Vendor Portal — Drop Sigma</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
 <style>
 :root{
   --vf-bg:#eef2ff;
@@ -21,7 +22,17 @@
 body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:var(--vf-bg);min-height:100vh;display:flex;color:var(--vf-text);}
 
 /* ── Sidebar ── */
-.vp-sidebar{width:260px;background:#f8fafc;border-right:1px solid #e2e8f0;display:flex;flex-direction:column;padding:22px 16px;flex-shrink:0;min-height:100vh;}
+.vp-sidebar{width:260px;background:#f8fafc;border-right:1px solid #e2e8f0;display:flex;flex-direction:column;padding:22px 16px;flex-shrink:0;min-height:100vh;position:relative;transition:width .2s;}
+.vp-sb-toggle{position:absolute;top:18px;right:14px;width:28px;height:28px;padding:0;background:rgba(37,99,235,.07);border:1px solid rgba(37,99,235,.15);border-radius:8px;color:rgba(15,23,42,.4);cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:20;transition:background .15s,color .15s;flex-shrink:0;}
+.vp-sb-toggle:hover{background:rgba(37,99,235,.16);color:#0f172a;}
+.vp-sidebar.collapsed{width:64px;padding:22px 8px;}
+.vp-sidebar.collapsed .vp-sb-toggle{position:relative;top:auto;right:auto;width:40px;height:40px;margin:0 0 12px;border-radius:12px;}
+.vp-sidebar.collapsed .vp-sb-toggle svg{transform:rotate(180deg);}
+.vp-sidebar.collapsed .vp-brand-text{display:none;}
+.vp-sidebar.collapsed .vp-brand{justify-content:center;margin-bottom:12px;}
+.vp-sidebar.collapsed .vp-nav button{font-size:0;width:40px;height:40px;padding:0;display:flex;align-items:center;justify-content:center;margin-bottom:4px;border-radius:12px;}
+.vp-sidebar.collapsed .vp-nav button::before{font-size:18px;margin:0;}
+.vp-sidebar.collapsed .vp-sidebar-bottom{display:none;}
 .vp-brand{display:flex;align-items:center;gap:12px;margin-bottom:36px;padding:4px 0;}
 .vp-brand-icon{width:44px;height:44px;border-radius:14px;background:linear-gradient(135deg,#2563eb,#4f46e5);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;color:#fff;flex-shrink:0;}
 .vp-brand-text h2{font-size:15px;font-weight:800;color:#0f172a;line-height:1;}
@@ -268,12 +279,160 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
 .cc-logo{width:22px;height:22px;object-fit:contain;border-radius:5px;border:1px solid var(--vf-line);background:#f8fafc;flex-shrink:0;}
 .cc-icon-letter{width:22px;height:22px;border-radius:5px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;font-size:9px;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .cc-custom-row{margin-top:6px;}
+
+/* ── Chat nav button ── */
+.vp-nav button[data-tab="chat"]::before{content:"💬";}
+.vp-main.chat-mode{padding:0;overflow:hidden;}
+
+/* ── Team Chat Premium ───────────────────────────────────────────────────────── */
+#tabChat.active{display:flex!important;flex-direction:column;height:100vh;min-height:0;padding:0;}
+.tc-app{flex:1;display:grid;grid-template-columns:280px 1fr;grid-template-rows:1fr;min-height:0;overflow:hidden;padding:14px;gap:14px;background:linear-gradient(180deg,#f6f4ff 0%,#eee9ff 100%);}
+.tc-app.with-thread{grid-template-columns:280px 1fr 380px;}
+.tc-sidebar{background:#fff;border:1px solid #e7e2f5;border-radius:18px;box-shadow:0 1px 3px rgba(20,14,60,.05);display:flex;flex-direction:column;overflow:hidden;}
+.tc-sb-head{padding:16px 16px 14px;display:flex;align-items:center;gap:12px;border-bottom:1px solid #f0ecfb;}
+.tc-logo{width:40px;height:40px;border-radius:11px;background:linear-gradient(135deg,#3b82f6,#8b5cf6);color:#fff;font-weight:800;font-size:12px;display:grid;place-items:center;letter-spacing:-.5px;box-shadow:0 4px 12px rgba(124,58,237,.3);flex-shrink:0;}
+.tc-br-text{flex:1;min-width:0;}
+.tc-br-name{font-weight:800;color:#0d0d12;font-size:15px;letter-spacing:-.2px;}
+.tc-br-sub{color:#9a99ad;font-size:11px;margin-top:1px;}
+.tc-channels{flex:1;overflow-y:auto;padding:10px;}
+.tc-group{margin-bottom:16px;}
+.tc-group-head{display:flex;align-items:center;justify-content:space-between;padding:6px 8px;color:#9a99ad;font-size:12px;font-weight:600;cursor:pointer;text-transform:uppercase;letter-spacing:.4px;}
+.tc-group-head:hover{color:#0d0d12;}
+.tc-caret{font-size:10px;margin-right:4px;}
+.tc-ch,.tc-dm{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;color:#6b6b7d;font-size:13.5px;cursor:pointer;transition:background .1s;margin-bottom:1px;}
+.tc-ch:hover,.tc-dm:hover{background:#f5f3ff;}
+.tc-ch.active,.tc-dm.active{background:#f3f0ff;color:#0d0d12;font-weight:600;box-shadow:inset 0 1px 2px rgba(20,14,60,.06);}
+.tc-ch.unread .tc-ch-name-txt,.tc-dm.unread .tc-ch-name-txt{font-weight:700;color:#0d0d12;}
+.vc-unread-badge{margin-left:auto;background:#6366f1;color:#fff;font-size:11px;font-weight:800;border-radius:999px;min-width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;padding:0 6px;flex-shrink:0;line-height:1;}
+.tc-verified{display:inline-flex;align-items:center;margin-left:3px;vertical-align:middle;}
+.tc-verified svg{width:15px;height:15px;}
+.tc-ch-icon{width:16px;text-align:center;color:#9a99ad;font-size:13px;}
+.tc-ch-name-txt{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tc-dm-av{width:24px;height:24px;border-radius:6px;color:#fff;display:grid;place-items:center;font-size:10px;font-weight:700;position:relative;flex-shrink:0;}
+.tc-dm-av::after{content:"";position:absolute;bottom:-1px;right:-1px;width:8px;height:8px;border-radius:99px;border:2px solid #fff;}
+.tc-dm-av.available::after{background:#10b981;}
+.tc-dm-av.busy::after{background:#ef4444;}
+.tc-dm-av.offline::after,.tc-dm-av.limited::after{background:#9a99ad;}
+.tc-main{background:#fff;border:1px solid #e7e2f5;border-radius:18px;box-shadow:0 1px 3px rgba(20,14,60,.05);display:flex;flex-direction:column;overflow:hidden;min-height:0;}
+.tc-ch-header{padding:16px 24px 14px;display:flex;align-items:flex-end;justify-content:space-between;border-bottom:1px solid #e7e2f5;gap:16px;flex-shrink:0;}
+.tc-ch-title-block{display:flex;flex-direction:column;gap:4px;min-width:0;}
+.tc-ch-title{display:flex;align-items:center;gap:6px;font-weight:900;color:#0d0d12;font-size:22px;letter-spacing:-.5px;line-height:1.05;}
+.tc-hash{color:#9a99ad;font-weight:700;}
+.tc-ch-meta{display:flex;align-items:center;gap:8px;color:#9a99ad;font-size:12.5px;}
+.tc-h-actions{display:flex;align-items:center;gap:6px;}
+.tc-icon-btn{width:36px;height:36px;display:grid;place-items:center;border-radius:10px;color:#6b6b7d;background:#faf9ff;border:1px solid #e7e2f5;font-size:14px;cursor:pointer;transition:all .12s;}
+.tc-icon-btn:hover{background:#f3f0ff;color:#0d0d12;border-color:#d6cfee;}
+.tc-messages{flex:1;overflow-y:auto;padding:14px 0 8px;min-height:0;}
+.tc-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#9a99ad;font-size:14px;text-align:center;}
+.tc-msg{display:grid;grid-template-columns:44px 1fr;gap:12px;padding:10px 24px 10px 24px;position:relative;}
+.tc-msg:not(.cont){border-top:2px solid #e2d9f3;margin-top:4px;padding-top:14px;}
+.tc-msg:hover{background:#faf9ff;}
+.tc-msg.cont{padding-top:2px;padding-bottom:2px;}
+.tc-msg.cont .tc-av-wrap{visibility:hidden;}
+.tc-msg.mentioned{background:linear-gradient(90deg,rgba(253,224,71,.18) 0%,rgba(253,224,71,.07) 100%);border-left:3px solid #f59e0b;padding-left:21px;}
+.tc-msg.mentioned:hover{background:linear-gradient(90deg,rgba(253,224,71,.28) 0%,rgba(253,224,71,.12) 100%);}
+.tc-msg.cont.mentioned{padding-top:8px;padding-bottom:8px;}
+.tc-msg.cont .tc-msg-head{display:none;}
+.tc-av-wrap{padding-top:2px;}
+.tc-av{width:40px;height:40px;border-radius:10px;color:#fff;display:grid;place-items:center;font-weight:700;font-size:14px;flex-shrink:0;box-shadow:0 1px 2px rgba(20,14,60,.04);}
+.tc-av.owner{background:linear-gradient(135deg,#f59e0b,#f97316);}
+.tc-av.support{background:linear-gradient(135deg,#10b981,#059669);}
+.tc-av.order_manager{background:linear-gradient(135deg,#3b82f6,#6366f1);}
+.tc-av.refund_manager{background:linear-gradient(135deg,#ec4899,#f43f5e);}
+.tc-av.vendor_manager{background:linear-gradient(135deg,#f97316,#ef4444);}
+.tc-av.email_manager{background:linear-gradient(135deg,#06b6d4,#0ea5e9);}
+.tc-av.vendor{background:linear-gradient(135deg,#06b6d4,#0ea5e9);}
+.tc-av.default{background:linear-gradient(135deg,#7c3aed,#a855f7);}
+.tc-msg-body{min-width:0;}
+.tc-msg-head{display:flex;align-items:baseline;gap:8px;margin-bottom:2px;flex-wrap:wrap;}
+.tc-msg-name{color:#0d0d12;font-weight:800;font-size:15px;letter-spacing:-.2px;}
+.tc-msg-role{font-size:9.5px;font-weight:800;text-transform:uppercase;padding:2px 7px;border-radius:4px;background:#f1ebfe;color:#7c3aed;letter-spacing:.5px;}
+.tc-msg-role.owner{background:#fdecd0;color:#b45309;}
+.tc-msg-time{color:#9a99ad;font-size:11.5px;}
+.tc-msg-text{color:#2a2933;font-size:14.5px;line-height:1.55;word-wrap:break-word;}
+.tc-msg-text strong{color:#0d0d12;}
+.tc-reactions{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;}
+.tc-reaction{display:flex;align-items:center;gap:5px;padding:3px 9px;background:#fff;border:1px solid #e7e2f5;border-radius:99px;font-size:12px;color:#6b6b7d;cursor:pointer;font-weight:600;transition:all .12s;}
+.tc-reaction:hover{background:#f5f3ff;border-color:#d6cfee;}
+.tc-reaction.mine{background:#f1ebfe;border-color:#d8c5fb;color:#7c3aed;}
+.tc-reaction-em{font-size:14px;}
+.tc-reaction-add{color:#9a99ad;}
+.tc-thread-footer{display:flex;align-items:center;gap:10px;margin-top:8px;padding:5px 12px 5px 5px;border:1px solid transparent;border-radius:10px;cursor:pointer;width:fit-content;background:#faf9ff;transition:all .12s;}
+.tc-thread-footer:hover{background:#fff;border-color:#7c3aed;box-shadow:0 4px 12px rgba(124,58,237,.1);}
+.tc-thread-avs{display:flex;align-items:center;}
+.tc-thread-av{width:22px;height:22px;border-radius:6px;color:#fff;font-size:9px;font-weight:700;display:grid;place-items:center;margin-left:-4px;border:2px solid #faf9ff;}
+.tc-thread-av:first-child{margin-left:0;}
+.tc-thread-count{color:#7c3aed;font-size:13px;font-weight:700;}
+.tc-thread-last{color:#9a99ad;font-size:12px;}
+.tc-msg-tools{position:absolute;top:-18px;right:28px;display:none;background:#fff;border:1px solid #e7e2f5;border-radius:10px;box-shadow:0 8px 24px rgba(20,14,60,.08);padding:3px;z-index:5;}
+.tc-msg:hover .tc-msg-tools{display:flex;}
+.tc-msg-tools button{width:32px;height:32px;display:grid;place-items:center;color:#6b6b7d;border-radius:7px;font-size:14px;border:none;background:none;cursor:pointer;}
+.tc-msg-tools button:hover{background:#f3f0ff;color:#0d0d12;}
+.tc-msg-tools .tc-sep{width:1px;height:18px;background:#e7e2f5;margin:0 2px;align-self:center;}
+.tc-day{display:flex;align-items:center;gap:12px;margin:14px 24px 6px;color:#9a99ad;font-size:11.5px;font-weight:700;}
+.tc-day .tc-day-label{background:#faf9ff;border:1px solid #e7e2f5;padding:4px 14px;border-radius:99px;color:#6b6b7d;font-weight:700;}
+.tc-day::before,.tc-day::after{content:"";flex:1;height:1px;background:#e7e2f5;}
+.tc-typing-dots{display:inline-flex;gap:3px;align-items:center;}
+.tc-typing-dots span{width:5px;height:5px;background:#7c3aed;border-radius:99px;animation:tcBounce 1.4s infinite;}
+.tc-typing-dots span:nth-child(2){animation-delay:.15s;}
+.tc-typing-dots span:nth-child(3){animation-delay:.3s;}
+@keyframes tcBounce{0%,60%,100%{transform:translateY(0);opacity:.4;}30%{transform:translateY(-4px);opacity:1;}}
+.tc-composer-wrap{padding:0 24px 20px;position:relative;flex-shrink:0;}
+.tc-composer{border:1.5px solid #d6cfee;border-radius:14px;background:#fff;overflow:hidden;box-shadow:0 1px 2px rgba(20,14,60,.04);transition:border-color .15s,box-shadow .15s;}
+.tc-composer:focus-within{border-color:#7c3aed;box-shadow:0 0 0 4px rgba(124,58,237,.10);}
+.tc-c-toolbar{display:flex;align-items:center;gap:1px;padding:8px 10px;border-bottom:1px solid #e7e2f5;}
+.tc-c-toolbar button{width:32px;height:32px;display:grid;place-items:center;border-radius:7px;color:#6b6b7d;font-size:13px;border:none;background:none;cursor:pointer;transition:all .12s;}
+.tc-c-toolbar button:hover{background:#f3f0ff;color:#0d0d12;}
+.tc-c-sep{width:1px;height:18px;background:#e7e2f5;margin:0 4px;align-self:center;}
+.tc-ce-input{width:100%;min-height:48px;max-height:180px;padding:14px 16px;background:transparent;border:none;color:#0d0d12;font-size:14.5px;line-height:1.5;outline:none;font-family:'Inter',inherit;overflow-y:auto;box-sizing:border-box;word-break:break-word;white-space:pre-wrap;}
+.tc-ce-input:empty::before{content:attr(data-placeholder);color:#9a99ad;pointer-events:none;}
+.tc-ce-input b,.tc-ce-input strong{font-weight:700;}
+.tc-ce-input i,.tc-ce-input em{font-style:italic;}
+.tc-ce-input s,.tc-ce-input del{text-decoration:line-through;}
+.tc-ce-input code{background:#f3f0ff;color:#7c3aed;padding:1px 5px;border-radius:5px;font-size:12.5px;font-family:monospace;}
+.tc-ce-input a{color:#7c3aed;}
+.tc-ce-input ul{margin:4px 0 4px 18px;padding:0;}
+.tc-ce-input ol{margin:4px 0 4px 18px;padding:0;}
+.tc-c-bottom{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-top:1px solid #e7e2f5;}
+.tc-c-left,.tc-c-right{display:flex;align-items:center;gap:1px;}
+.tc-c-bottom button{width:34px;height:34px;border-radius:7px;color:#6b6b7d;display:grid;place-items:center;font-size:14px;border:none;background:none;cursor:pointer;transition:all .12s;}
+.tc-c-bottom button:hover{background:#f3f0ff;color:#0d0d12;}
+.tc-send-btn{height:34px!important;width:auto!important;padding:0 14px!important;background:linear-gradient(135deg,#7c3aed,#a855f7)!important;color:#fff!important;border-radius:10px!important;display:flex!important;align-items:center;gap:7px;font-size:13.5px;font-weight:700;box-shadow:0 4px 12px rgba(124,58,237,.3);}
+.tc-send-btn:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(124,58,237,.4);color:#fff!important;}
+.tc-send-arrow{border-left:1px solid rgba(255,255,255,.35);margin-left:4px;padding-left:8px;height:16px;display:flex;align-items:center;}
+.tc-c-hint{margin-top:10px;color:#9a99ad;font-size:11.5px;text-align:right;padding:0 4px;}
+.tc-c-hint kbd{background:#fff;border:1px solid #e7e2f5;border-radius:5px;padding:1px 6px;font-size:10.5px;color:#6b6b7d;box-shadow:0 1px 2px rgba(20,14,60,.04);font-weight:600;}
+.tc-emoji-picker{position:absolute;bottom:calc(100% - 12px);right:24px;width:280px;background:#fff;border:1px solid #e7e2f5;border-radius:14px;box-shadow:0 16px 40px rgba(20,14,60,.12);padding:12px;display:none;z-index:100;}
+.tc-emoji-picker.show{display:block;}
+.tc-ep-cat{color:#9a99ad;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin:4px 4px;}
+.tc-ep-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:2px;}
+.tc-ep-grid button{width:100%;aspect-ratio:1;font-size:18px;border-radius:7px;border:none;background:none;cursor:pointer;}
+.tc-ep-grid button:hover{background:#f3f0ff;}
+.tc-thread{background:#fff;border:1px solid #e7e2f5;border-radius:18px;box-shadow:0 1px 3px rgba(20,14,60,.05);display:none;flex-direction:column;overflow:hidden;min-height:0;}
+.tc-app.with-thread .tc-thread{display:flex;}
+.tc-thread-head{padding:18px 20px 16px;display:flex;align-items:flex-start;justify-content:space-between;border-bottom:1px solid #e7e2f5;flex-shrink:0;}
+.tc-thread-head h4{color:#0d0d12;font-size:20px;font-weight:800;letter-spacing:-.4px;}
+.tc-thread-sub{color:#9a99ad;font-size:12.5px;margin-top:3px;}
+.tc-thread-body{flex:1;overflow-y:auto;display:flex;flex-direction:column;}
+.tc-thread-parent-msg{padding:14px 18px;border-bottom:1px solid #e7e2f5;background:#faf9ff;flex-shrink:0;}
+.tc-thread-divider{display:flex;align-items:center;gap:10px;padding:8px 18px;color:#9a99ad;font-size:12px;font-weight:700;flex-shrink:0;}
+.tc-td-line{flex:1;height:1px;background:#e7e2f5;display:block;}
+.tc-thread-replies{flex:1;overflow-y:auto;padding:6px 0;}
+.tc-thread-replies .tc-msg{padding:7px 18px;}
+.tc-thread-composer{padding:0 16px 16px;flex-shrink:0;}
 </style>
 </head>
 <body>
 
 <!-- Sidebar -->
-<div class="vp-sidebar">
+<div class="vp-sidebar" id="vpSidebar">
+  <button class="vp-sb-toggle" id="vpSbToggleBtn" onclick="vpToggleSidebar()" title="Collapse sidebar">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="0.75" y="0.75" width="14.5" height="14.5" rx="2.25" stroke="currentColor" stroke-width="1.4"/>
+      <line x1="5" y1="1" x2="5" y2="15" stroke="currentColor" stroke-width="1.4"/>
+      <path d="M10.5 6L8 8.5L10.5 11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </button>
   <div class="vp-brand">
     <div class="vp-brand-icon">DS</div>
     <div class="vp-brand-text">
@@ -286,6 +445,7 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
     <button data-tab="orders" class="active" onclick="switchTab('orders', this)">My Orders</button>
     <button data-tab="tracking" onclick="switchTab('tracking', this)">Tracking History</button>
     <button data-tab="profile" onclick="switchTab('profile', this)">Profile</button>
+    <button data-tab="chat" onclick="switchTab('chat', this)">Team Chat</button>
   </nav>
 
   <div class="vp-sidebar-bottom">
@@ -383,6 +543,148 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
         {% if vendor.password_plain %}
         <div class="row"><label>Password</label><span>{{ vendor.password_plain }}</span></div>
         {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Chat Tab -->
+  <div id="tabChat" class="vp-tab" style="display:none;">
+    <div class="tc-app" id="vcApp">
+      <!-- Sidebar -->
+      <aside class="tc-sidebar">
+        <div class="tc-sb-head">
+          <div class="tc-logo">DS</div>
+          <div class="tc-br-text">
+            <div class="tc-br-name">Team Chat</div>
+            <div class="tc-br-sub">Drop Sigma</div>
+          </div>
+        </div>
+        <div class="tc-channels">
+          <div class="tc-group">
+            <div class="tc-group-head" onclick="vcToggleGroup(this)">
+              <span><i class="fa-solid fa-caret-down tc-caret"></i> Channels</span>
+            </div>
+            <div id="vcChannelList"></div>
+          </div>
+          <div class="tc-group">
+            <div class="tc-group-head" onclick="vcToggleGroup(this)">
+              <span><i class="fa-solid fa-caret-down tc-caret"></i> Team Members</span>
+            </div>
+            <div id="vcMemberList"></div>
+          </div>
+        </div>
+      </aside>
+      <!-- Main -->
+      <main class="tc-main">
+        <div class="tc-ch-header">
+          <div class="tc-ch-title-block">
+            <div class="tc-ch-title"><span class="tc-hash">#</span><span id="vcChName">general</span></div>
+            <div class="tc-ch-meta" id="vcChDesc">General team discussion</div>
+          </div>
+          <div class="tc-h-actions">
+            <i class="fa-solid fa-circle" id="vcConnBadge" title="Connecting…" style="font-size:8px;color:#f59e0b;margin-right:4px;"></i>
+            <div id="vcMembersAvatars" onclick="vcOpenMembersModal()" title="View members" style="display:none;cursor:pointer;align-items:center;gap:0;padding:3px 6px 3px 3px;border-radius:20px;border:1px solid #e8e2f8;background:#faf8ff;transition:background .15s;" onmouseenter="this.style.background='#ede9fe'" onmouseleave="this.style.background='#faf8ff'"></div>
+            <button class="tc-icon-btn" onclick="vcLoadMessages()" title="Refresh"><i class="fa-solid fa-rotate"></i></button>
+          </div>
+        </div>
+
+        <!-- Members Modal -->
+        <div id="vcMembersModal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.45);align-items:center;justify-content:center;">
+          <div style="background:#fff;border-radius:14px;width:400px;max-width:94vw;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(109,40,217,.18);">
+            <div style="padding:18px 20px 14px;border-bottom:1px solid #ede9fe;display:flex;align-items:center;justify-content:space-between;">
+              <div>
+                <div style="font-weight:700;font-size:15px;color:#3b0764;">Members of <span id="vcMembersModalChName">#general</span></div>
+                <div style="font-size:12px;color:#7c3aed;margin-top:2px;"><span id="vcMembersModalCount">0</span> members</div>
+              </div>
+              <button onclick="document.getElementById('vcMembersModal').style.display='none';" style="background:none;border:none;cursor:pointer;color:#7c3aed;font-size:18px;padding:4px;"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="vcMembersList" style="overflow-y:auto;flex:1;padding:12px 20px;"></div>
+          </div>
+        </div>
+
+        <div class="tc-messages" id="vcMessages">
+          <div class="tc-empty"><i class="fa-regular fa-comments" style="font-size:36px;display:block;margin-bottom:12px;color:#d6cfee;"></i>Select a channel to start chatting</div>
+        </div>
+        <div id="vcTypingBar" style="display:none;align-items:center;gap:8px;padding:4px 24px 2px;min-height:22px;">
+          <div class="tc-typing-dots"><span></span><span></span><span></span></div>
+          <span class="vc-typing-text" style="font-size:12.5px;color:#7c3aed;font-weight:500;font-style:italic;"></span>
+        </div>
+        <div class="tc-composer-wrap">
+          <div class="tc-composer">
+            <div class="tc-c-toolbar">
+              <button title="Bold" onclick="vcFormat('bold')"><i class="fa-solid fa-bold"></i></button>
+              <button title="Italic" onclick="vcFormat('italic')"><i class="fa-solid fa-italic"></i></button>
+              <button title="Strikethrough" onclick="vcFormat('strike')"><i class="fa-solid fa-strikethrough"></i></button>
+              <div class="tc-c-sep"></div>
+              <button title="Link" onclick="vcFormat('link')"><i class="fa-solid fa-link"></i></button>
+              <button title="Code" onclick="vcFormat('code')"><i class="fa-solid fa-code"></i></button>
+              <div class="tc-c-sep"></div>
+              <button title="Bullet list" onclick="vcFormat('bullet')"><i class="fa-solid fa-list-ul"></i></button>
+              <button title="Numbered list" onclick="vcFormat('numbered')"><i class="fa-solid fa-list-ol"></i></button>
+            </div>
+            <div id="vcChatInput" contenteditable="true" data-placeholder="Message #general…"
+              onkeydown="vcKeyDown(event)" oninput="vcOnInput()" class="tc-ce-input"></div>
+            <div class="tc-c-bottom">
+              <div class="tc-c-left">
+                <button title="Emoji" onclick="vcToggleEmoji()"><i class="fa-regular fa-face-smile"></i></button>
+                <button title="Mention" onclick="vcInsertMention()"><i class="fa-solid fa-at"></i></button>
+              </div>
+              <div class="tc-c-right">
+                <button class="tc-send-btn" onclick="vcSend()">
+                  <span>Send</span>
+                  <span class="tc-send-arrow"><i class="fa-solid fa-paper-plane"></i></span>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="tc-emoji-picker" id="vcEmojiPicker">
+            <div class="tc-ep-cat">Quick Reactions</div>
+            <div class="tc-ep-grid">
+              <button onclick="vcInsertEmoji('👍')">👍</button><button onclick="vcInsertEmoji('❤️')">❤️</button>
+              <button onclick="vcInsertEmoji('😂')">😂</button><button onclick="vcInsertEmoji('🎉')">🎉</button>
+              <button onclick="vcInsertEmoji('🚀')">🚀</button><button onclick="vcInsertEmoji('😮')">😮</button>
+              <button onclick="vcInsertEmoji('🔥')">🔥</button><button onclick="vcInsertEmoji('✅')">✅</button>
+            </div>
+            <div class="tc-ep-cat" style="margin-top:8px;">People</div>
+            <div class="tc-ep-grid">
+              <button onclick="vcInsertEmoji('😊')">😊</button><button onclick="vcInsertEmoji('😍')">😍</button>
+              <button onclick="vcInsertEmoji('🤔')">🤔</button><button onclick="vcInsertEmoji('😅')">😅</button>
+              <button onclick="vcInsertEmoji('🙏')">🙏</button><button onclick="vcInsertEmoji('💪')">💪</button>
+              <button onclick="vcInsertEmoji('👀')">👀</button><button onclick="vcInsertEmoji('🤝')">🤝</button>
+            </div>
+          </div>
+          <div class="tc-c-hint"><kbd>Enter</kbd> to send · <kbd>Shift+Enter</kbd> for newline</div>
+        </div>
+      </main>
+      <!-- Thread Panel -->
+      <div class="tc-thread" id="vcThread">
+        <div class="tc-thread-head">
+          <div>
+            <h4>Thread</h4>
+            <div class="tc-thread-sub" id="vcThreadSub">replies</div>
+          </div>
+          <button class="tc-icon-btn" onclick="vcCloseThread()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="tc-thread-body">
+          <div class="tc-thread-parent-msg" id="vcThreadParent"></div>
+          <div class="tc-thread-divider"><span class="tc-td-line"></span><span>Replies</span><span class="tc-td-line"></span></div>
+          <div class="tc-thread-replies" id="vcThreadReplies"></div>
+        </div>
+        <div class="tc-thread-composer">
+          <div class="tc-composer">
+            <div id="vcThreadInput" contenteditable="true" data-placeholder="Reply in thread…"
+              onkeydown="vcThreadKeyDown(event)" class="tc-ce-input"></div>
+            <div class="tc-c-bottom">
+              <div class="tc-c-left"></div>
+              <div class="tc-c-right">
+                <button class="tc-send-btn" onclick="vcSendReply()">
+                  <span>Reply</span>
+                  <span class="tc-send-arrow"><i class="fa-solid fa-paper-plane"></i></span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -568,12 +870,25 @@ function runLoader(cb, delay=520){
 }
 function fireLoader(){runLoader(null,400);}
 
+function vpToggleSidebar(){
+  const sb = document.getElementById("vpSidebar");
+  if(!sb) return;
+  const collapsed = sb.classList.toggle("collapsed");
+  const btn = document.getElementById("vpSbToggleBtn");
+  if(btn) btn.title = collapsed ? "Expand sidebar" : "Collapse sidebar";
+  try{ localStorage.setItem("vpSbCollapsed", collapsed ? "1" : "0"); }catch(e){}
+}
+
 function switchTab(tab, btn){
   fireLoader();
-  document.querySelectorAll(".vp-tab").forEach(t=>t.classList.remove("active"));
+  document.querySelectorAll(".vp-tab").forEach(t=>{ t.classList.remove("active"); t.style.display=""; });
   document.querySelectorAll(".vp-nav button").forEach(b=>b.classList.remove("active"));
-  document.getElementById("tab"+tab.charAt(0).toUpperCase()+tab.slice(1)).classList.add("active");
+  const tabEl = document.getElementById("tab"+tab.charAt(0).toUpperCase()+tab.slice(1));
+  if(tabEl){ tabEl.classList.add("active"); if(tab==="chat") tabEl.style.display="flex"; }
   btn.classList.add("active");
+  const main = document.querySelector(".vp-main");
+  if(tab==="chat"){ main.classList.add("chat-mode"); vcChatInit(); }
+  else { main.classList.remove("chat-mode"); }
   if(tab==="tracking") loadTrackingHistory();
 }
 
@@ -1036,8 +1351,871 @@ function getCsrf(){
   return c?c.split("=")[1].trim():"";
 }
 
+// ── Vendor Chat (Premium) ─────────────────────────────────────────────────────
+const _vcMyName = "{{ vendor.name|escapejs }}";
+let _vcMentionMap = {};
+let _vcChannelId = null;
+let _vcChannelName = "general";
+let _vcThreadParentId = null;
+let _vcMsgMap = {};
+let _vcCurrentUserId = null;
+let _vcMentionMembers = [];
+let _vcMentionSelIdx = 0;
+
+const VC_EMOJIS = ["👍","❤️","😂","🎉","🚀","😮"];
+const _VC_AV_COLORS = {owner:"tc-av owner",support:"tc-av support",order_manager:"tc-av order_manager",refund_manager:"tc-av refund_manager",vendor_manager:"tc-av vendor_manager",email_manager:"tc-av email_manager",vendor:"tc-av vendor"};
+const _VC_DM_COLORS = ["linear-gradient(135deg,#8b5cf6,#a855f7)","linear-gradient(135deg,#3b82f6,#6366f1)","linear-gradient(135deg,#ec4899,#f43f5e)","linear-gradient(135deg,#10b981,#059669)","linear-gradient(135deg,#f59e0b,#f97316)","linear-gradient(135deg,#06b6d4,#0ea5e9)"];
+const _VERIFIED_SVG = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="12" fill="#1d9bf0"/><path d="M9.5 16.5L5.5 12.5L6.91 11.09L9.5 13.67L17.09 6.08L18.5 7.5L9.5 16.5Z" fill="white"/></svg>`;
+
+function _vcTime(iso){ const d=new Date(iso); return d.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}); }
+function _vcDateLabel(iso){
+  const d=new Date(iso), t=new Date();
+  if(d.toDateString()===t.toDateString()) return "Today";
+  const y=new Date(); y.setDate(t.getDate()-1);
+  if(d.toDateString()===y.toDateString()) return "Yesterday";
+  return d.toLocaleDateString([],{weekday:"long",month:"long",day:"numeric"});
+}
+function _vcAvClass(role){ return _VC_AV_COLORS[role] || "tc-av default"; }
+
+function _vcRenderReactions(reactions, msgId){
+  if(!reactions||!Object.keys(reactions).length) return "";
+  const btns = Object.entries(reactions).map(([emoji,data])=>
+    `<button class="tc-reaction${data.mine?" mine":""}" onclick="vcToggleReaction(${msgId},'${emoji}')"><span class="tc-reaction-em">${emoji}</span> ${data.count}</button>`
+  ).join("");
+  const addBtn = `<button class="tc-reaction tc-reaction-add" onclick="vcToggleReactionPicker(${msgId})" title="Add reaction"><i class="fa-regular fa-face-smile"></i></button>`;
+  return `<div class="tc-reactions">${btns}${addBtn}</div>`;
+}
+
+function _vcIsMentioned(content){
+  if(!_vcMyName || !content) return false;
+  const first = _vcMyName.split(" ")[0];
+  return new RegExp("@"+_vcMyName.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"\\b","i").test(content)
+      || new RegExp("@"+first.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"\\b","i").test(content);
+}
+
+function _vcRenderMsg(msg, showDate, cont){
+  const dateHtml = showDate ? `<div class="tc-day"><div class="tc-day-label">${showDate}</div></div>` : "";
+  const mentioned = !msg.is_mine && _vcIsMentioned(msg.content);
+  const contClass = (cont ? " cont" : "") + (mentioned ? " mentioned" : "");
+  const threadHtml = msg.reply_count > 0 ? `
+    <div class="tc-thread-footer" onclick="vcOpenThread(${msg.id})">
+      <div class="tc-thread-avs">
+        <div class="${_vcAvClass(msg.sender_role)}" style="font-size:9px;">${esc(msg.sender_initials)}</div>
+      </div>
+      <span class="tc-thread-count">${msg.reply_count} ${msg.reply_count===1?"reply":"replies"}</span>
+      <span class="tc-thread-last">View thread →</span>
+    </div>` : "";
+  const quickReact = VC_EMOJIS.map(e=>`<button onclick="vcToggleReaction(${msg.id},'${e}')" title="${e}">${e}</button>`).join("");
+  return `${dateHtml}
+    <div class="tc-msg${contClass}" data-mid="${msg.id}">
+      <div class="tc-av-wrap"><div class="${_vcAvClass(msg.sender_role)}">${esc(msg.sender_initials)}</div></div>
+      <div class="tc-msg-body">
+        <div class="tc-msg-head">
+          <span class="tc-msg-name">${esc(msg.sender_name)}${msg.sender_role==="owner"?`<span class="tc-verified">${_VERIFIED_SVG}</span>`:""}</span>
+          <span class="tc-msg-role${msg.sender_role==="owner"?" owner":""}">${msg.sender_role||"member"}</span>
+          <span class="tc-msg-time">${_vcTime(msg.created_at)}</span>
+        </div>
+        <div class="tc-msg-text">${_vcRenderMarkdown(msg.content)}</div>
+        ${_vcRenderReactions(msg.reactions||{}, msg.id)}
+        ${threadHtml}
+      </div>
+      <div class="tc-msg-tools">
+        ${quickReact}
+        <div class="tc-sep"></div>
+        <button onclick="vcOpenThread(${msg.id})" title="Reply in thread"><i class="fa-regular fa-comment"></i></button>
+        <button onclick="vcShowMsgMenu(${msg.id},this)" title="More"><i class="fa-solid fa-ellipsis"></i></button>
+      </div>
+    </div>`;
+}
+
+function _vcRenderMsgList(msgs, containerId){
+  const el = document.getElementById(containerId);
+  if(!msgs.length){
+    el.innerHTML = `<div class="tc-empty"><i class="fa-regular fa-comments" style="font-size:36px;display:block;margin-bottom:12px;color:#d6cfee;"></i>No messages yet. Start the conversation!</div>`;
+    return;
+  }
+  let html="", lastDate=null, lastSender=null;
+  for(const msg of msgs){
+    const dl = _vcDateLabel(msg.created_at);
+    const showDate = dl!==lastDate ? dl : null;
+    const cont = !showDate && lastSender===msg.sender_name;
+    html += _vcRenderMsg(msg, showDate, cont);
+    lastDate=dl; lastSender=msg.sender_name;
+  }
+  el.innerHTML = html;
+  el.scrollTop = el.scrollHeight;
+}
+
+async function vcChatInit(){
+  try{
+    const r=await fetch("/teamapp/chat/channels/");
+    const d=await r.json();
+    if(!d.success) return;
+
+    document.getElementById("vcChannelList").innerHTML = d.channels.map(ch=>{
+      const cnt = ch.unread_count||0;
+      const hasUnread = cnt > 0 && _vcChannelId!==ch.id;
+      return `<div class="tc-ch${_vcChannelId===ch.id?" active":""}${hasUnread?" unread":""}" id="vcCh_${ch.id}" onclick="vcSelectChannel(${ch.id},'${esc(ch.name)}','${esc(ch.description||"")}')">
+        <span class="tc-ch-icon"><i class="fa-solid fa-hashtag" style="font-size:11px;"></i></span>
+        <span class="tc-ch-name-txt">${esc(ch.name)}</span>
+        ${hasUnread?`<span class="vc-unread-badge">${cnt>99?"99+":cnt}</span>`:""}
+      </div>`;
+    }).join("");
+
+    if(_vcChannelId){
+      const ch = d.channels.find(c=>c.id===_vcChannelId);
+      if(ch){
+        document.getElementById("vcChName").textContent = ch.name;
+        document.getElementById("vcChDesc").textContent = ch.description||"";
+        document.getElementById("vcChatInput").dataset.placeholder = `Message #${ch.name}…`;
+      }
+      vcLoadMessages();
+    } else if(d.channels.length){
+      const gen = d.channels.find(c=>c.slug==="general")||d.channels[0];
+      vcSelectChannel(gen.id, gen.name, gen.description||"");
+    }
+
+    const rm=await fetch("/teamapp/members/");
+    const dm=await rm.json();
+    if(dm.success){
+      const adminContacts = dm.admin_contacts||[];
+      const allM = [...adminContacts, ...dm.members];
+      _vcMentionMembers = allM.map(m=>m.name);
+      allM.forEach(m=>{ _vcMentionMap[m.name.toLowerCase()] = m.user; _vcMentionMap[m.name.split(" ")[0].toLowerCase()] = m.user; });
+      document.getElementById("vcMemberList").innerHTML = allM.slice(0,10).map((m,i)=>{
+        const ini=m.name.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
+        const col=m.is_admin?"linear-gradient(135deg,#1d4ed8,#3b82f6)":_VC_DM_COLORS[i%_VC_DM_COLORS.length];
+        const tick=m.is_admin?`<span class="tc-verified">${_VERIFIED_SVG}</span>`:"";
+        return `<div class="tc-dm" id="vcDm_${m.user}" onclick="vcOpenDm(${m.user},'${esc(m.name)}')">
+          <div class="tc-dm-av ${m.status||"available"}" style="background:${col};">${ini}</div>
+          <span class="tc-ch-name-txt">${esc(m.name)}${tick}</span>
+        </div>`;
+      }).join("");
+    }
+  } catch(e){ console.error("vc chat init:",e); }
+}
+
+async function vcOpenDm(userId, name){
+  try{
+    const r = await fetch("/teamapp/chat/dm/", {
+      method:"POST",
+      headers:{"Content-Type":"application/json","X-CSRFToken":getCsrf()},
+      body:JSON.stringify({target_user_id: userId})
+    });
+    const d = await r.json();
+    if(!d.success){ console.error("DM error:", d.message); return; }
+    document.querySelectorAll(".tc-dm").forEach(el=>el.classList.remove("active"));
+    document.getElementById("vcDm_"+userId)?.classList.add("active");
+    document.querySelectorAll("#vcChannelList .tc-ch").forEach(el=>el.classList.remove("active"));
+    vcSelectChannel(d.channel_id, d.channel_name, "Direct Message");
+  }catch(e){ console.error(e); }
+}
+
+async function vcOpenMentionDm(name){
+  const key = name.toLowerCase();
+  const firstName = key.split(" ")[0];
+  let uid = _vcMentionMap[key] || _vcMentionMap[firstName];
+  if(!uid){
+    try{
+      const r = await fetch("/teamapp/members/");
+      const d = await r.json();
+      if(d.success){
+        [...(d.admin_contacts||[]), ...d.members].forEach(m=>{
+          _vcMentionMap[m.name.toLowerCase()] = m.user;
+          _vcMentionMap[m.name.split(" ")[0].toLowerCase()] = m.user;
+        });
+        uid = _vcMentionMap[key] || _vcMentionMap[firstName];
+      }
+    }catch(e){}
+  }
+  if(!uid) return;
+  document.querySelector('.vp-nav button[data-tab="chat"]')?.click();
+  vcOpenDm(uid, name);
+}
+
+let _vcCurrentChannelIsDm = false;
+
+function vcSelectChannel(id, name, desc){
+  _vcChannelId=id; _vcChannelName=name;
+  _vcCurrentChannelIsDm = desc === "Direct Message";
+  _vcKnownUnread[id] = 0;
+  fetch("/teamapp/chat/read/",{method:"POST",headers:{"Content-Type":"application/json","X-CSRFToken":getCsrf()},body:JSON.stringify({channel_id:id})}).catch(()=>{});
+  _vcTypingUsers = {};
+  _vcRenderTyping();
+  document.querySelectorAll("#vcChannelList .tc-ch").forEach(el=>el.classList.remove("active","unread"));
+  const el=document.getElementById("vcCh_"+id);
+  if(el){ el.classList.add("active"); el.querySelector(".vc-unread-badge")?.remove(); }
+  document.getElementById("vcChName").textContent=name;
+  document.getElementById("vcChDesc").textContent=desc==="Direct Message"?"🔒 Private conversation":desc||"";
+  document.getElementById("vcChatInput").dataset.placeholder=(desc==="Direct Message"?`Message ${name}…`:`Message #${name}…`);
+  const avatarsEl = document.getElementById("vcMembersAvatars");
+  if(avatarsEl) avatarsEl.style.display = _vcCurrentChannelIsDm ? "none" : "flex";
+  vcCloseThread();
+  vcLoadMessages();
+  _vcWsConnect();
+  if(!_vcCurrentChannelIsDm) vcRefreshMembersCount();
+}
+
+const _VC_AV_COLORS = ["#7c3aed","#2563eb","#059669","#dc2626","#d97706","#db2777","#0891b2","#65a30d","#9333ea","#0f766e"];
+function _vcRenderMemberAvatars(members){
+  const wrap = document.getElementById("vcMembersAvatars");
+  if(!wrap) return;
+  if(!members.length){ wrap.style.display="none"; return; }
+  const MAX = 4;
+  const shown = members.slice(0, MAX);
+  const extra = members.length - shown.length;
+  let html = shown.map((m, i) =>
+    `<div style="width:26px;height:26px;border-radius:50%;background:${_VC_AV_COLORS[i%_VC_AV_COLORS.length]};color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;border:2px solid #fff;margin-left:${i>0?"-8px":"0"};position:relative;z-index:${10-i};flex-shrink:0;" title="${m.name}">${m.initials}</div>`
+  ).join("");
+  if(extra > 0) html += `<div style="width:26px;height:26px;border-radius:50%;background:#e5e7eb;color:#374151;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;border:2px solid #fff;margin-left:-8px;position:relative;z-index:0;flex-shrink:0;">+${extra}</div>`;
+  html += `<span style="margin-left:7px;font-size:12px;font-weight:700;color:#5b21b6;">${members.length}</span>`;
+  wrap.innerHTML = html;
+  wrap.style.display = "flex";
+}
+
+async function vcRefreshMembersCount(){
+  if(!_vcChannelId || _vcCurrentChannelIsDm) return;
+  const r = await fetch(`/teamapp/chat/channels/${_vcChannelId}/members/`);
+  const d = await r.json();
+  if(!d.success) return;
+  _vcRenderMemberAvatars(d.members);
+}
+
+async function vcOpenMembersModal(){
+  if(!_vcChannelId) return;
+  const r = await fetch(`/teamapp/chat/channels/${_vcChannelId}/members/`);
+  const d = await r.json();
+  if(!d.success) return;
+  _vcRenderMemberAvatars(d.members);
+  document.getElementById("vcMembersModalChName").textContent = "#" + _vcChannelName;
+  document.getElementById("vcMembersModalCount").textContent = d.members.length;
+  const list = document.getElementById("vcMembersList");
+  if(!d.members.length){
+    list.innerHTML = `<div style="color:#9ca3af;font-size:13px;text-align:center;padding:20px 0;">No members yet.</div>`;
+  } else {
+    list.innerHTML = d.members.map(m=>`
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f3f0ff;">
+        <div style="width:34px;height:34px;border-radius:50%;background:#ede9fe;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:#7c3aed;flex-shrink:0;">${m.initials}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:600;font-size:13px;color:#1e1b4b;">${m.name}</div>
+          <div style="font-size:11px;color:#9ca3af;">${m.role}</div>
+        </div>
+      </div>`).join("");
+  }
+  document.getElementById("vcMembersModal").style.display = "flex";
+}
+
+async function vcLoadMessages(){
+  if(!_vcChannelId) return;
+  const r=await fetch(`/teamapp/chat/messages/?channel_id=${_vcChannelId}`);
+  const d=await r.json();
+  if(!d.success) return;
+  if(d.current_user_id) _vcCurrentUserId = d.current_user_id;
+  d.messages.forEach(m=>{ _vcMsgMap[m.id]=m; (m.replies||[]).forEach(r=>{ _vcMsgMap[r.id]=r; }); });
+  _vcRenderMsgList(d.messages,"vcMessages");
+}
+
+function _vcCeToMarkdown(el){
+  function nodeToMd(node){
+    if(node.nodeType===3) return node.textContent;
+    const tag=node.tagName&&node.tagName.toLowerCase();
+    const inner=Array.from(node.childNodes).map(nodeToMd).join("");
+    if(tag==="b"||tag==="strong") return `**${inner}**`;
+    if(tag==="i"||tag==="em") return `*${inner}*`;
+    if(tag==="s"||tag==="del"||tag==="strike") return `~~${inner}~~`;
+    if(tag==="code") return `\`${inner}\``;
+    if(tag==="a") return `[${inner}](${node.href||""})`;
+    if(tag==="li") return `• ${inner}`;
+    if(tag==="ul"||tag==="ol") return inner+"\n";
+    if(tag==="div"||tag==="p"||tag==="br") return inner+"\n";
+    return inner;
+  }
+  return Array.from(el.childNodes).map(nodeToMd).join("").replace(/\n+$/,"").trim();
+}
+
+async function vcSend(){
+  if(!_vcChannelId) return;
+  const input=document.getElementById("vcChatInput");
+  const content=_vcCeToMarkdown(input);
+  if(!content) return;
+  input.innerHTML="";
+  vcCloseEmojiPicker();
+  _vcSendTyping(false);
+  clearTimeout(_vcTypingTimer);
+  const r=await fetch("/teamapp/chat/send/",{method:"POST",headers:{"Content-Type":"application/json","X-CSRFToken":getCsrf()},body:JSON.stringify({channel_id:_vcChannelId,content})});
+  const d=await r.json();
+  if(d.success){ vcLoadMessages(); _vcWsBroadcastNew(content); }
+}
+
+function vcKeyDown(e){
+  if(_vcMentionDropVisible()){
+    if(e.key==="ArrowDown"){ e.preventDefault(); _vcMentionMoveSel(1); return; }
+    if(e.key==="ArrowUp"){ e.preventDefault(); _vcMentionMoveSel(-1); return; }
+    if(e.key==="Enter"||e.key==="Tab"){ e.preventDefault(); _vcMentionConfirm(); return; }
+    if(e.key==="Escape"){ _vcHideMentionDrop(); return; }
+  }
+  if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();vcSend();}
+}
+
+async function vcToggleReaction(msgId,emoji){
+  const r = await fetch("/teamapp/chat/reaction/",{method:"POST",headers:{"Content-Type":"application/json","X-CSRFToken":getCsrf()},body:JSON.stringify({message_id:msgId,emoji})});
+  const d = await r.json();
+  if(!d.success) return;
+  // Patch only the reaction row — no full reload, no scroll jump
+  const msgEl = document.querySelector(`.tc-msg[data-mid="${msgId}"]`);
+  if(msgEl){
+    const existing = msgEl.querySelector(".tc-reactions");
+    const html = _vcRenderReactions(d.reactions, msgId);
+    if(existing){ existing.outerHTML = html || ""; }
+    else if(html){ msgEl.querySelector(".tc-msg-body").insertAdjacentHTML("beforeend", html); }
+  }
+  if(_vcThreadParentId) vcLoadThreadMessages(_vcThreadParentId);
+}
+
+function vcToggleReactionPicker(msgId){
+  document.querySelectorAll(".tc-react-picker").forEach(el=>el.remove());
+  const btn = document.querySelector(`.tc-msg[data-mid="${msgId}"] .tc-reaction-add`);
+  if(!btn) return;
+  const picker = document.createElement("div");
+  picker.className = "tc-react-picker";
+  picker.innerHTML = VC_EMOJIS.map(e=>`<button onclick="vcToggleReaction(${msgId},'${e}');this.closest('.tc-react-picker').remove();">${e}</button>`).join("");
+  picker.style.cssText = "position:absolute;background:#fff;border:1px solid #e7e2f5;border-radius:12px;padding:6px 8px;display:flex;gap:4px;box-shadow:0 4px 20px rgba(20,14,60,.14);z-index:999;";
+  document.body.appendChild(picker);
+  const r = btn.getBoundingClientRect();
+  picker.style.top = (r.top - picker.offsetHeight - 6 + window.scrollY) + "px";
+  picker.style.left = Math.max(4, r.left - 20 + window.scrollX) + "px";
+  requestAnimationFrame(()=>{ picker.style.top = (r.top - picker.offsetHeight - 6 + window.scrollY) + "px"; });
+  setTimeout(()=>{
+    document.addEventListener("click", function _close(ev){ if(!picker.contains(ev.target)){picker.remove();document.removeEventListener("click",_close);} });
+  }, 10);
+}
+
+async function vcOpenThread(msgId){
+  _vcThreadParentId=msgId;
+  document.getElementById("vcApp").classList.add("with-thread");
+  vcLoadThreadMessages(msgId);
+}
+
+async function vcLoadThreadMessages(msgId){
+  const r=await fetch(`/teamapp/chat/messages/?channel_id=${_vcChannelId}`);
+  const d=await r.json();
+  if(!d.success) return;
+  const parent=d.messages.find(m=>m.id===msgId);
+  if(!parent) return;
+  document.getElementById("vcThreadSub").textContent=`${parent.reply_count} ${parent.reply_count===1?"reply":"replies"}`;
+  document.getElementById("vcThreadParent").innerHTML=`
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+      <div class="${_vcAvClass(parent.sender_role)}" style="width:34px;height:34px;font-size:12px;">${esc(parent.sender_initials)}</div>
+      <div>
+        <div style="font-size:13.5px;font-weight:800;color:#0d0d12;">${esc(parent.sender_name)}</div>
+        <div style="font-size:11px;color:#9a99ad;">${_vcTime(parent.created_at)}</div>
+      </div>
+    </div>
+    <div class="tc-msg-text">${_vcRenderMarkdown(parent.content)}</div>`;
+  _vcRenderMsgList(parent.replies||[],"vcThreadReplies");
+}
+
+async function vcSendReply(){
+  if(!_vcChannelId||!_vcThreadParentId) return;
+  const input=document.getElementById("vcThreadInput");
+  const content=_vcCeToMarkdown(input);
+  if(!content) return;
+  input.innerHTML="";
+  await fetch("/teamapp/chat/send/",{method:"POST",headers:{"Content-Type":"application/json","X-CSRFToken":getCsrf()},body:JSON.stringify({channel_id:_vcChannelId,content,parent_id:_vcThreadParentId})});
+  vcLoadThreadMessages(_vcThreadParentId);
+  vcLoadMessages();
+  _vcWsBroadcastNew(content);
+}
+
+function vcThreadKeyDown(e){ if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();vcSendReply();} }
+
+function vcCloseThread(){
+  _vcThreadParentId=null;
+  document.getElementById("vcApp").classList.remove("with-thread");
+}
+
+function vcToggleEmoji(){ document.getElementById("vcEmojiPicker").classList.toggle("show"); }
+function vcCloseEmojiPicker(){ document.getElementById("vcEmojiPicker")?.classList.remove("show"); }
+function vcInsertEmoji(e){ document.getElementById("vcChatInput").focus(); document.execCommand("insertText",false,e); vcCloseEmojiPicker(); }
+function vcInsertMention(){ const inp=document.getElementById("vcChatInput"); inp.focus(); document.execCommand("insertText",false,"@"); _vcCheckMentionTrigger(inp); }
+
+function vcToggleGroup(headEl){
+  const group = headEl.closest(".tc-group");
+  const list = group.querySelector("[id^='vc']");
+  const caret = headEl.querySelector(".tc-caret");
+  const collapsed = list.style.display === "none";
+  list.style.display = collapsed ? "" : "none";
+  if(caret) caret.style.transform = collapsed ? "" : "rotate(-90deg)";
+}
+
+function vcFormat(type){
+  const el = document.getElementById("vcChatInput");
+  el.focus();
+  if(type==="bold") document.execCommand("bold");
+  else if(type==="italic") document.execCommand("italic");
+  else if(type==="strike") document.execCommand("strikeThrough");
+  else if(type==="bullet") document.execCommand("insertUnorderedList");
+  else if(type==="numbered") document.execCommand("insertOrderedList");
+  else if(type==="code"){
+    const sel=window.getSelection();
+    if(sel&&sel.rangeCount){
+      const range=sel.getRangeAt(0);
+      const text=range.toString()||"code";
+      const code=document.createElement("code");
+      code.textContent=text;
+      range.deleteContents(); range.insertNode(code);
+      range.setStartAfter(code); range.collapse(true);
+      sel.removeAllRanges(); sel.addRange(range);
+    }
+  }
+  else if(type==="link"){
+    const url=prompt("Enter URL:","https://");
+    if(url) document.execCommand("createLink",false,url);
+  }
+}
+
+function _vcRenderMarkdown(text){
+  let s = esc(text);
+  s = s.replace(/```([\s\S]*?)```/g, (_,c)=>`<pre style="background:#f3f0ff;border-radius:8px;padding:10px 14px;font-size:12.5px;overflow-x:auto;"><code>${c.trim()}</code></pre>`);
+  s = s.replace(/`([^`]+)`/g, '<code style="background:#f3f0ff;color:#7c3aed;padding:1px 5px;border-radius:5px;font-size:12.5px;">$1</code>');
+  s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  s = s.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+  s = s.replace(/~~([^~]+)~~/g, '<del>$1</del>');
+  s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener" style="color:#7c3aed;">$1</a>');
+  s = s.replace(/#(\d{4,})/g, (_,num)=>
+    `<button style="display:inline-flex;align-items:center;gap:5px;background:#f5f3ff;border:1.5px solid #ddd5f3;border-radius:8px;padding:2px 9px;font-size:13px;font-weight:700;color:#6d28d9;cursor:default;vertical-align:middle;"><i class='fa-solid fa-box' style='font-size:11px;'></i> #${num}</button>`
+  );
+  s = s.replace(/^[*\-] (.+)$/gm, '<li>$1</li>').replace(/(<li>.*<\/li>)/gs, '<ul style="margin:4px 0 4px 18px;padding:0;">$1</ul>');
+  s = s.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
+  // @mentions → styled chip (amber if it's you, purple+clickable otherwise)
+  s = s.replace(/@([A-Za-z][A-Za-z]*(?:\s[A-Za-z][A-Za-z]*)?)/g, (_, name) => {
+    const key = name.toLowerCase();
+    const isMe = _vcMyName && (key === _vcMyName.toLowerCase() || key === _vcMyName.split(" ")[0].toLowerCase());
+    if(isMe) return `<span style="background:#fde68a;color:#92400e;font-weight:700;border-radius:5px;padding:1px 6px;white-space:nowrap;">@${name}</span>`;
+    return `<span data-mention="${name.replace(/"/g,'&quot;')}" onclick="vcOpenMentionDm(this.dataset.mention)" style="background:#ede9fe;color:#6d28d9;font-weight:700;border-radius:5px;padding:1px 6px;white-space:nowrap;cursor:pointer;" onmouseenter="this.style.background='#ddd5f3'" onmouseleave="this.style.background='#ede9fe'">@${name}</span>`;
+  });
+  s = s.replace(/\n/g, "<br>");
+  return s;
+}
+
+// ── Message More menu ─────────────────────────────────────────────────────────
+const _vcMenuStyle = "display:flex;align-items:center;gap:10px;width:100%;padding:9px 14px;border:none;background:none;cursor:pointer;font-size:13px;color:#0d0d12;border-radius:9px;text-align:left;transition:background .1s;";
+const _vcMenuStyleRed = _vcMenuStyle + "color:#dc2626;";
+const _vcMenuDivider = `<div style="height:1px;background:#f0edf9;margin:3px 8px;"></div>`;
+
+function vcShowMsgMenu(msgId, btn){
+  document.querySelectorAll(".tc-msg-menu").forEach(el=>el.remove());
+  const msg = _vcMsgMap[msgId];
+  const isMine = msg && (msg.is_mine || msg.sender_id === _vcCurrentUserId);
+  const content = msg ? msg.content : "";
+  const menu = document.createElement("div");
+  menu.className = "tc-msg-menu";
+  menu.style.cssText = "position:fixed;background:#fff;border:1px solid #e7e2f5;border-radius:14px;padding:5px;box-shadow:0 8px 32px rgba(20,14,60,.16);z-index:99999;min-width:210px;";
+  const items = [];
+  items.push(`<button style="${_vcMenuStyle}" onmouseenter="this.style.background='#f5f3ff'" onmouseleave="this.style.background='none'" onclick="_vcMenuDo(()=>vcOpenThread(${msgId}))"><i class="fa-regular fa-comment" style="color:#7c3aed;width:16px;"></i> Reply in thread</button>`);
+  items.push(`<button style="${_vcMenuStyle}" onmouseenter="this.style.background='#f5f3ff'" onmouseleave="this.style.background='none'" onclick="_vcMenuDo(()=>vcToggleReactionPicker(${msgId}))"><i class="fa-regular fa-face-smile" style="color:#7c3aed;width:16px;"></i> Add reaction</button>`);
+  items.push(_vcMenuDivider);
+  if(isMine) items.push(`<button style="${_vcMenuStyle}" onmouseenter="this.style.background='#f5f3ff'" onmouseleave="this.style.background='none'" onclick="_vcMenuDo(()=>vcEditMsg(${msgId}))"><i class="fa-regular fa-pen-to-square" style="color:#7c3aed;width:16px;"></i> Edit message</button>`);
+  items.push(`<button style="${_vcMenuStyle}" onmouseenter="this.style.background='#f5f3ff'" onmouseleave="this.style.background='none'" onclick="_vcMenuDo(()=>vcBookmarkMsg(${msgId}))"><i class="fa-regular fa-bookmark" style="color:#7c3aed;width:16px;"></i> Save message</button>`);
+  items.push(_vcMenuDivider);
+  items.push(`<button style="${_vcMenuStyle}" onmouseenter="this.style.background='#f5f3ff'" onmouseleave="this.style.background='none'" onclick="_vcMenuDo(()=>vcCopyMsg(${JSON.stringify(content)}))"><i class="fa-regular fa-copy" style="color:#9a99ad;width:16px;"></i> Copy message text</button>`);
+  menu.innerHTML = items.join("");
+  document.body.appendChild(menu);
+  const r = btn.getBoundingClientRect();
+  menu.style.top = (r.bottom + 6) + "px";
+  menu.style.left = Math.max(6, r.right - 216) + "px";
+  requestAnimationFrame(()=>{
+    const mb = menu.getBoundingClientRect();
+    if(mb.bottom > window.innerHeight - 10) menu.style.top = (r.top - mb.height - 6) + "px";
+  });
+  setTimeout(()=>{
+    document.addEventListener("click", function _cm(ev){ if(!menu.contains(ev.target)){ menu.remove(); document.removeEventListener("click",_cm); } });
+  }, 10);
+}
+
+function _vcMenuDo(fn){ document.querySelectorAll(".tc-msg-menu").forEach(el=>el.remove()); fn(); }
+function vcCopyMsg(content){ navigator.clipboard.writeText(content).then(()=>_vcToast("📋 Message copied!")); }
+
+async function vcDeleteMsg(msgId){
+  if(!confirm("Delete this message?")) return;
+  const r=await fetch(`/teamapp/chat/messages/${msgId}/delete/`,{method:"DELETE",headers:{"X-CSRFToken":getCsrf()}});
+  const d=await r.json();
+  if(d.success){
+    if(_vcThreadParentId===msgId) vcCloseThread();
+    vcLoadMessages();
+    if(_vcThreadParentId) vcLoadThreadMessages(_vcThreadParentId);
+  } else { alert(d.error||"Could not delete message."); }
+}
+
+function vcEditMsg(msgId){
+  const msgEl = document.querySelector(`.tc-msg[data-mid="${msgId}"]`);
+  if(!msgEl) return;
+  const textEl = msgEl.querySelector(".tc-msg-text");
+  const original = (_vcMsgMap[msgId]||{}).content || textEl.innerText;
+  textEl.setAttribute("data-original", original);
+  textEl.contentEditable = "true";
+  textEl.style.cssText = "outline:none;border:1.5px solid #7c3aed;border-radius:10px;padding:8px 10px;min-height:36px;background:#faf9ff;";
+  textEl.focus();
+  const sel=window.getSelection(), range=document.createRange();
+  range.selectNodeContents(textEl); range.collapse(false);
+  sel.removeAllRanges(); sel.addRange(range);
+  const bar = document.createElement("div");
+  bar.className = "tc-edit-bar";
+  bar.style.cssText = "display:flex;gap:7px;margin-top:6px;align-items:center;";
+  bar.innerHTML = `<span style="font-size:11.5px;color:#9a99ad;">Escape to <b onclick="vcEditCancel(${msgId})" style="cursor:pointer;color:#7c3aed;">cancel</b> &nbsp;·&nbsp; Enter to <b onclick="vcEditSave(${msgId})" style="cursor:pointer;color:#7c3aed;">save</b></span>
+    <button onclick="vcEditSave(${msgId})" style="background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:5px 14px;font-size:12px;font-weight:700;cursor:pointer;">Save</button>
+    <button onclick="vcEditCancel(${msgId})" style="background:#f3f0ff;color:#7c3aed;border:none;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;">Cancel</button>`;
+  textEl.insertAdjacentElement("afterend", bar);
+  textEl.addEventListener("keydown", function _ek(e){
+    if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); vcEditSave(msgId); textEl.removeEventListener("keydown",_ek); }
+    if(e.key==="Escape"){ vcEditCancel(msgId); textEl.removeEventListener("keydown",_ek); }
+  });
+}
+
+async function vcEditSave(msgId){
+  const msgEl = document.querySelector(`.tc-msg[data-mid="${msgId}"]`);
+  if(!msgEl) return;
+  const textEl = msgEl.querySelector(".tc-msg-text");
+  const newContent = (textEl.innerText||"").trim();
+  if(!newContent){ vcEditCancel(msgId); return; }
+  const r = await fetch(`/teamapp/chat/messages/${msgId}/edit/`,{method:"PATCH",headers:{"Content-Type":"application/json","X-CSRFToken":getCsrf()},body:JSON.stringify({content:newContent})});
+  const d = await r.json();
+  if(d.success){
+    if(_vcMsgMap[msgId]) _vcMsgMap[msgId].content = d.content;
+    _vcEditCleanup(msgEl, textEl);
+    textEl.innerHTML = _vcRenderMarkdown(d.content);
+  } else { alert(d.message||"Could not save edit."); vcEditCancel(msgId); }
+}
+
+function vcEditCancel(msgId){
+  const msgEl = document.querySelector(`.tc-msg[data-mid="${msgId}"]`);
+  if(!msgEl) return;
+  const textEl = msgEl.querySelector(".tc-msg-text");
+  const original = textEl.getAttribute("data-original") || "";
+  _vcEditCleanup(msgEl, textEl);
+  textEl.innerHTML = _vcRenderMarkdown(original);
+}
+
+function _vcEditCleanup(msgEl, textEl){
+  textEl.contentEditable = "false";
+  textEl.style.cssText = "";
+  msgEl.querySelector(".tc-edit-bar")?.remove();
+}
+
+function vcBookmarkMsg(msgId){
+  const msg = _vcMsgMap[msgId];
+  const saves = JSON.parse(localStorage.getItem("tc_saved")||"[]");
+  const idx = saves.findIndex(s=>s.id===msgId);
+  if(idx===-1){
+    saves.push({id:msgId, content:(msg||{}).content||"", channel:_vcChannelName, at:new Date().toISOString()});
+    localStorage.setItem("tc_saved", JSON.stringify(saves));
+    _vcToast("🔖 Message saved to bookmarks");
+  } else { _vcToast("Already saved!"); }
+}
+
+function _vcToast(msg){
+  const t=document.createElement("div");
+  t.textContent=msg;
+  t.style.cssText="position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:#0f172a;color:#fff;padding:9px 22px;border-radius:999px;font-size:13px;font-weight:600;z-index:99999;pointer-events:none;white-space:nowrap;";
+  document.body.appendChild(t);
+  setTimeout(()=>{t.style.transition="opacity .4s";t.style.opacity="0";setTimeout(()=>t.remove(),400);},1800);
+}
+
+// ── WebSocket real-time ───────────────────────────────────────────────────────
+let _vcWs = null;
+let _vcTypingTimer = null;
+let _vcTypingUsers = {};
+let _vcWsRetryDelay = 1000;
+let _vcNotifPerm = false;
+
+function _vcWsConnect(){
+  _vcWsClose();
+  if(!_vcChannelId) return;
+  const proto = location.protocol === "https:" ? "wss" : "ws";
+  _vcWs = new WebSocket(`${proto}://${location.host}/ws/chat/${_vcChannelId}/`);
+  _vcWs.onopen = () => { _vcWsRetryDelay=1000; _vcUpdateConnBadge(true); _vcRequestNotifPerm(); };
+  _vcWs.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    if(msg.type==="new_message"){
+      vcLoadMessages();
+      const chatVisible = document.getElementById("tabChat")?.classList.contains("active");
+      if(!chatVisible){
+        _vcShowInAppNotif(msg.sender_name, _vcChannelName, msg.preview||"New message", ()=>{ document.querySelector('.vp-nav button[data-tab="chat"]')?.click(); });
+        const chEl = document.getElementById("vcCh_"+_vcChannelId);
+        if(chEl && !chEl.classList.contains("active")){
+          chEl.classList.add("unread");
+          let badge = chEl.querySelector(".vc-unread-badge");
+          if(!badge){ badge=document.createElement("span"); badge.className="vc-unread-badge"; chEl.appendChild(badge); }
+          badge.textContent = Math.min((parseInt(badge.textContent)||0)+1, 99);
+        }
+      }
+      if(document.hidden && _vcNotifPerm) _vcShowBrowserNotif(msg.sender_name, msg.preview||`New message in #${_vcChannelName}`);
+    } else if(msg.type==="typing"){
+      _vcHandleTypingIndicator(msg.username, msg.typing);
+    }
+  };
+  _vcWs.onclose = () => {
+    _vcUpdateConnBadge(false);
+    if(_vcChannelId){
+      setTimeout(()=>{ if(_vcChannelId) _vcWsConnect(); }, _vcWsRetryDelay);
+      _vcWsRetryDelay = Math.min(_vcWsRetryDelay * 2, 15000);
+    }
+  };
+  _vcWs.onerror = () => _vcWs.close();
+}
+
+function _vcWsClose(){
+  if(_vcWs){ _vcWs.onclose=null; _vcWs.close(); _vcWs=null; }
+  _vcUpdateConnBadge(false);
+}
+
+function _vcSendTyping(isTyping){
+  if(_vcWs && _vcWs.readyState === WebSocket.OPEN)
+    _vcWs.send(JSON.stringify({type:"typing", typing:isTyping}));
+}
+
+function _vcHandleTypingIndicator(username, isTyping){
+  clearTimeout(_vcTypingUsers[username]);
+  if(isTyping){
+    _vcTypingUsers[username] = setTimeout(()=>{ delete _vcTypingUsers[username]; _vcRenderTyping(); }, 4000);
+  } else { delete _vcTypingUsers[username]; }
+  _vcRenderTyping();
+}
+
+function _vcRenderTyping(){
+  const el = document.getElementById("vcTypingBar");
+  if(!el) return;
+  const users = Object.keys(_vcTypingUsers);
+  if(!users.length){ el.style.display="none"; return; }
+  const names = users.length===1 ? users[0]
+    : users.length===2 ? `${users[0]} and ${users[1]}`
+    : `${users[0]} and ${users.length-1} others`;
+  el.style.display = "flex";
+  el.querySelector(".vc-typing-text").textContent = `${names} ${users.length===1?"is":"are"} typing…`;
+}
+
+function vcOnInput(){
+  _vcSendTyping(true);
+  clearTimeout(_vcTypingTimer);
+  _vcTypingTimer = setTimeout(()=>_vcSendTyping(false), 2000);
+  _vcCheckMentionTrigger(document.getElementById("vcChatInput"));
+}
+
+function _vcRequestNotifPerm(){
+  if(!("Notification" in window)) return;
+  if(Notification.permission==="granted"){ _vcNotifPerm=true; return; }
+  if(Notification.permission!=="denied") Notification.requestPermission().then(p=>{ _vcNotifPerm=p==="granted"; });
+}
+
+function _vcShowBrowserNotif(title, body){
+  if(!_vcNotifPerm) return;
+  const n = new Notification(`Drop Sigma · ${title}`, {body, icon:"/static/favicon.ico", tag:"chat-msg", renotify:true});
+  n.onclick = ()=>{ window.focus(); n.close(); };
+  setTimeout(()=>n.close(), 6000);
+}
+
+function _vcWsBroadcastNew(content){
+  if(_vcWs && _vcWs.readyState === WebSocket.OPEN)
+    _vcWs.send(JSON.stringify({type:"new_message", content: content||""}));
+}
+
+function _vcUpdateConnBadge(connected){
+  const el = document.getElementById("vcConnBadge");
+  if(!el) return;
+  el.title = connected ? "Live — connected" : "Reconnecting…";
+  el.style.color = connected ? "#22c55e" : "#f59e0b";
+}
+
+// ── In-app notification banner ────────────────────────────────────────────────
+function _vcShowInAppNotif(sender, channel, preview, onClick){
+  document.querySelectorAll(".vc-inapp-notif").forEach(n=>n.remove());
+  const n=document.createElement("div");
+  n.className="vc-inapp-notif";
+  n.style.cssText="position:fixed;bottom:24px;right:24px;background:#1e1b4b;color:#fff;border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.35);padding:14px 18px;max-width:320px;z-index:99999;cursor:pointer;display:flex;gap:12px;align-items:flex-start;animation:vcNotifSlide .3s ease;";
+  n.innerHTML=`<div style="width:36px;height:36px;border-radius:50%;background:#6366f1;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">💬</div>
+    <div style="min-width:0;">
+      <div style="font-weight:700;font-size:13px;margin-bottom:2px;">${sender} <span style="color:#a5b4fc;font-weight:400;">in #${channel}</span></div>
+      <div style="font-size:12px;color:#c7d2fe;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;">${preview}</div>
+    </div>
+    <div onclick="event.stopPropagation();this.closest('.vc-inapp-notif').remove();" style="margin-left:auto;color:#818cf8;font-size:16px;line-height:1;padding:2px 0 0 4px;">✕</div>`;
+  const style=document.createElement("style");
+  style.textContent="@keyframes vcNotifSlide{from{transform:translateX(120%);opacity:0}to{transform:translateX(0);opacity:1}}";
+  document.head.appendChild(style);
+  n.addEventListener("click",()=>{ onClick&&onClick(); n.remove(); });
+  document.body.appendChild(n);
+  setTimeout(()=>{ n.style.transition="opacity .4s,transform .4s"; n.style.opacity="0"; n.style.transform="translateX(120%)"; setTimeout(()=>n.remove(),400); },5000);
+}
+
+// ── @mention autocomplete ─────────────────────────────────────────────────────
+function _vcGetTextBeforeCursor(container){
+  const sel=window.getSelection();
+  if(!sel||!sel.rangeCount) return "";
+  const range=sel.getRangeAt(0).cloneRange();
+  range.setStart(container,0);
+  return range.toString();
+}
+
+function _vcCheckMentionTrigger(inputEl){
+  if(!inputEl) return;
+  const text=_vcGetTextBeforeCursor(inputEl);
+  const m=text.match(/@(\w*)$/);
+  if(m){ _vcShowMentionDrop(_vcMentionMembers.filter(n=>n.toLowerCase().startsWith(m[1].toLowerCase())), inputEl); }
+  else { _vcHideMentionDrop(); }
+}
+
+function _vcShowMentionDrop(members, inputEl){
+  _vcHideMentionDrop();
+  if(!members.length) return;
+  _vcMentionSelIdx=0;
+  const rect=inputEl.getBoundingClientRect();
+  const drop=document.createElement("div");
+  drop.id="vcMentionDrop";
+  drop.style.cssText=`position:fixed;bottom:${window.innerHeight-rect.top+6}px;left:${rect.left}px;background:#1e1b4b;border:1px solid #3730a3;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.4);z-index:99999;min-width:200px;max-height:200px;overflow-y:auto;padding:4px 0;`;
+  members.slice(0,8).forEach((name,i)=>{
+    const item=document.createElement("div");
+    item.textContent="@"+name;
+    item.dataset.name=name;
+    item.style.cssText=`padding:8px 14px;cursor:pointer;font-size:13px;font-weight:600;color:#c7d2fe;transition:background .15s;`;
+    if(i===0) item.style.background="#312e81";
+    item.addEventListener("mouseenter",()=>{ _vcMentionSelIdx=i; _vcMentionUpdateSel(); });
+    item.addEventListener("mousedown",e=>{ e.preventDefault(); _vcInsertMention(name,"vcChatInput"); });
+    drop.appendChild(item);
+  });
+  document.body.appendChild(drop);
+}
+
+function _vcHideMentionDrop(){ document.getElementById("vcMentionDrop")?.remove(); }
+function _vcMentionDropVisible(){ return !!document.getElementById("vcMentionDrop"); }
+
+function _vcMentionUpdateSel(){
+  const items=document.getElementById("vcMentionDrop")?.querySelectorAll("div[data-name]");
+  if(!items) return;
+  items.forEach((el,i)=>{ el.style.background=i===_vcMentionSelIdx?"#312e81":""; });
+}
+
+function _vcMentionMoveSel(dir){
+  const items=document.getElementById("vcMentionDrop")?.querySelectorAll("div[data-name]");
+  if(!items) return;
+  _vcMentionSelIdx=(_vcMentionSelIdx+dir+items.length)%items.length;
+  _vcMentionUpdateSel();
+}
+
+function _vcMentionConfirm(){
+  const items=document.getElementById("vcMentionDrop")?.querySelectorAll("div[data-name]");
+  if(!items||!items[_vcMentionSelIdx]) return;
+  _vcInsertMention(items[_vcMentionSelIdx].dataset.name,"vcChatInput");
+}
+
+function _vcInsertMention(name, inputId){
+  _vcHideMentionDrop();
+  const inputEl=document.getElementById(inputId);
+  if(!inputEl) return;
+  inputEl.focus();
+  const sel=window.getSelection();
+  if(!sel||!sel.rangeCount) return;
+  const range=sel.getRangeAt(0);
+  const text=_vcGetTextBeforeCursor(inputEl);
+  const m=text.match(/@\w*$/);
+  if(m){
+    range.setStart(range.startContainer, range.startOffset-m[0].length);
+    range.deleteContents();
+  }
+  const chip=document.createElement("span");
+  chip.className="tc-mention-chip";
+  chip.contentEditable="false";
+  chip.textContent="@"+name;
+  chip.style.cssText="display:inline-block;background:#312e81;color:#a5b4fc;border-radius:5px;padding:0 5px;font-weight:700;font-size:13px;margin:0 1px;";
+  range.insertNode(chip);
+  const after=document.createTextNode(" ");
+  chip.after(after);
+  const newRange=document.createRange();
+  newRange.setStartAfter(after);
+  newRange.collapse(true);
+  sel.removeAllRanges();
+  sel.addRange(newRange);
+}
+
+document.addEventListener("click",e=>{
+  if(!e.target.closest("#vcMentionDrop")&&!e.target.closest("[onclick*='vcInsertMention']")) _vcHideMentionDrop();
+  const picker=document.getElementById("vcEmojiPicker");
+  if(picker&&picker.classList.contains("show")&&!picker.contains(e.target)&&!e.target.closest("[onclick='vcToggleEmoji()']"))
+    picker.classList.remove("show");
+});
+
+try{ if(localStorage.getItem("vpSbCollapsed")==="1"){ document.getElementById("vpSidebar")?.classList.add("collapsed"); } }catch(e){}
+
+// Track known unread counts per channel for polling-based notifications
+let _vcKnownUnread = {};
+let _vcPollTimer = null;
+
+async function _vcWsBackground(){
+  // Request notification permission early
+  if("Notification" in window && Notification.permission !== "denied"){
+    Notification.requestPermission().then(p=>{ _vcNotifPerm = p === "granted"; });
+  }
+  try{
+    const r = await fetch("/teamapp/chat/channels/");
+    const d = await r.json();
+    if(!d.success || !d.channels.length) return;
+    const ch = d.channels.find(c=>c.slug==="general") || d.channels[0];
+    if(!_vcChannelId){ _vcChannelId = ch.id; _vcChannelName = ch.name; }
+    // Seed baseline so first poll doesn't fire spurious notifications
+    d.channels.forEach(c=>{ _vcKnownUnread[c.id] = c.unread_count||0; });
+    const rm = await fetch("/teamapp/members/");
+    const dm = await rm.json();
+    if(dm.success){
+      const allM = [...(dm.admin_contacts||[]), ...dm.members];
+      _vcMentionMembers = allM.map(m=>m.name);
+      allM.forEach(m=>{ _vcMentionMap[m.name.toLowerCase()] = m.user; _vcMentionMap[m.name.split(" ")[0].toLowerCase()] = m.user; });
+    }
+    _vcWsConnect();
+    _vcStartPoll();
+  }catch(e){ console.error("_vcWsBackground:", e); }
+}
+
+function _vcStartPoll(){
+  if(_vcPollTimer) return;
+  _vcPollTimer = setInterval(_vcPollTick, 8000);
+}
+
+async function _vcPollTick(){
+  try{
+    const r = await fetch("/teamapp/chat/channels/");
+    const d = await r.json();
+    if(!d.success) return;
+    const chatBtn = document.querySelector('.vp-nav button[data-tab="chat"]');
+    const chatActive = chatBtn && chatBtn.classList.contains("active");
+    d.channels.forEach(ch=>{
+      const prev = _vcKnownUnread[ch.id] ?? ch.unread_count;
+      const curr = ch.unread_count || 0;
+      if(curr > prev){
+        const isCurrentCh = ch.id === _vcChannelId;
+        if(isCurrentCh && chatActive){
+          vcLoadMessages();
+        } else {
+          _vcShowInAppNotif(
+            ch.last_sender || "New message",
+            ch.name,
+            ch.last_message || "New message",
+            ()=>{ chatBtn?.click(); vcSelectChannel(ch.id, ch.name); }
+          );
+          const el = document.getElementById("vcCh_"+ch.id);
+          if(el){
+            let badge = el.querySelector(".vc-unread-badge");
+            if(!badge){ badge=document.createElement("span"); badge.className="vc-unread-badge"; el.appendChild(badge); }
+            badge.textContent = curr > 99 ? "99+" : curr;
+          }
+          if(document.hidden && _vcNotifPerm) _vcShowBrowserNotif((ch.last_sender||"Someone")+" in #"+ch.name, ch.last_message||"");
+        }
+      }
+      _vcKnownUnread[ch.id] = curr;
+    });
+  }catch(e){}
+}
+
 // Init
 loadVendorOrders();
+_vcWsBackground();
 </script>
 
 </body>
