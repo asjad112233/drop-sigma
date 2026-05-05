@@ -5566,6 +5566,7 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
 .tc-msg-role.bot{background:#d1f0e8;color:#059669;}
 .tc-msg-time{color:#9a99ad;font-size:11.5px;}
 .tc-msg-text{color:#2a2933;font-size:14.5px;line-height:1.55;word-wrap:break-word;}
+.tc-msg-img{display:block;max-width:360px;max-height:300px;border-radius:10px;margin-top:6px;cursor:zoom-in;border:1px solid #ede8f8;object-fit:contain;background:#f8f6ff;}
 .tc-msg-text strong{color:#0d0d12;}
 
 /* Reactions */
@@ -13872,7 +13873,8 @@ function _renderMsg(msg, showDate, cont){
           <span class="tc-msg-role${msg.sender_role==="owner"?" owner":""}">${msg.sender_role||"member"}</span>
           <span class="tc-msg-time">${_chatTime(msg.created_at)}</span>
         </div>
-        <div class="tc-msg-text">${_renderMarkdown(msg.content)}</div>
+        ${msg.content ? `<div class="tc-msg-text">${_renderMarkdown(msg.content)}</div>` : ""}
+        ${msg.image_url ? `<img class="tc-msg-img" src="${msg.image_url}" alt="image" onclick="window.open('${msg.image_url}','_blank')" loading="lazy">` : ""}
         ${_renderReactions(msg.reactions||{}, msg.id)}
         ${threadHtml}
       </div>
@@ -14132,24 +14134,30 @@ function _ceToMarkdown(el){
 async function sendChatMessage(){
   if(!_chatCurrentChannelId) return;
   const input=document.getElementById("chatInput");
-  let content=_ceToMarkdown(input);
-  if(_tcAttachFiles.length){
-    const names=_tcAttachFiles.map(f=>`📎 ${f.name}`).join("\n");
-    content = content ? content+"\n"+names : names;
-    _tcAttachFiles=[];
-    document.getElementById("tcAttachPreview").style.display="none";
-  }
-  if(!content) return;
+  const content=_ceToMarkdown(input);
+  const files=[..._tcAttachFiles];
+  if(!content && !files.length) return;
   input.innerHTML="";
+  _tcAttachFiles=[];
+  document.getElementById("tcAttachPreview").style.display="none";
+  document.getElementById("tcAttachPreview").innerHTML="";
   closeEmojiPicker();
   _tcSendTyping(false);
   clearTimeout(_tcTypingTimer);
-  const r=await fetch("/teamapp/chat/send/",{method:"POST",headers:{"Content-Type":"application/json","X-CSRFToken":getCsrfToken()},body:JSON.stringify({channel_id:_chatCurrentChannelId,content})});
-  const d=await r.json();
-  if(d.success){
-    loadChatMessages();
-    _tcWsBroadcastNew(content);
+  // Send text message first (if any)
+  if(content){
+    const r=await fetch("/teamapp/chat/send/",{method:"POST",headers:{"Content-Type":"application/json","X-CSRFToken":getCsrfToken()},body:JSON.stringify({channel_id:_chatCurrentChannelId,content})});
+    const d=await r.json();
+    if(d.success) _tcWsBroadcastNew(content);
   }
+  // Upload each image file as a separate message
+  for(const file of files){
+    const fd=new FormData();
+    fd.append("channel_id",_chatCurrentChannelId);
+    fd.append("image",file);
+    await fetch("/teamapp/chat/upload-image/",{method:"POST",headers:{"X-CSRFToken":getCsrfToken()},body:fd});
+  }
+  loadChatMessages();
 }
 
 function tcHandlePaste(e){

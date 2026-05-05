@@ -78,7 +78,8 @@ class ChatChannel(models.Model):
 class ChatMessage(models.Model):
     channel    = models.ForeignKey(ChatChannel, on_delete=models.CASCADE, related_name="messages")
     sender     = models.ForeignKey(User, on_delete=models.CASCADE, related_name="chat_messages")
-    content    = models.TextField()
+    content    = models.TextField(blank=True, default="")
+    image      = models.FileField(upload_to="chat_images/", null=True, blank=True)
     parent     = models.ForeignKey("self", null=True, blank=True, on_delete=models.CASCADE, related_name="replies")
     created_at = models.DateTimeField(auto_now_add=True)
 

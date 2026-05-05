@@ -440,6 +440,7 @@ def _serialize_message(msg, current_user_id, include_replies=True):
     return {
         "id":             msg.id,
         "content":        msg.content,
+        "image_url":      msg.image.url if msg.image else None,
         "sender_id":      msg.sender_id,
         "sender_name":    info["name"],
         "sender_role":    info["role"],
@@ -608,8 +609,8 @@ def chat_send_api(request):
     content    = request.data.get("content", "").strip()
     parent_id  = request.data.get("parent_id")
 
-    if not channel_id or not content:
-        return Response({"success": False, "message": "channel_id and content required."}, status=400)
+    if not channel_id:
+        return Response({"success": False, "message": "channel_id required."}, status=400)
 
     try:
         ch = ChatChannel.objects.get(id=channel_id)
@@ -621,6 +622,22 @@ def chat_send_api(request):
         parent = ChatMessage.objects.filter(id=parent_id, channel=ch).first()
 
     msg = ChatMessage.objects.create(channel=ch, sender=request.user, content=content, parent=parent)
+    return Response({"success": True, "message": _serialize_message(msg, request.user.id)})
+
+
+@api_view(["POST"])
+def chat_upload_image_api(request):
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Not authenticated"}, status=401)
+    channel_id = request.data.get("channel_id")
+    image_file = request.FILES.get("image")
+    if not channel_id or not image_file:
+        return Response({"success": False, "message": "channel_id and image required."}, status=400)
+    try:
+        ch = ChatChannel.objects.get(id=channel_id)
+    except ChatChannel.DoesNotExist:
+        return Response({"success": False, "message": "Channel not found."}, status=404)
+    msg = ChatMessage.objects.create(channel=ch, sender=request.user, content="", image=image_file)
     return Response({"success": True, "message": _serialize_message(msg, request.user.id)})
 
 

@@ -16,6 +16,7 @@ urlpatterns = [
     path("chat/channels/<int:channel_id>/members/<int:user_id>/remove/", views.chat_channel_members_remove_api),
     path("chat/messages/", views.chat_messages_api),
     path("chat/send/", views.chat_send_api),
+    path("chat/upload-image/", views.chat_upload_image_api),
     path("chat/reaction/", views.chat_reaction_api),
     path("chat/messages/<int:msg_id>/delete/", views.chat_delete_message_api),
     path("chat/messages/<int:msg_id>/edit/", views.chat_edit_message_api),
