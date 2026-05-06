@@ -8,6 +8,7 @@ class StockProduct(models.Model):
     store        = models.ForeignKey(Store, on_delete=models.CASCADE, related_name="stock_products")
     product_id   = models.CharField(max_length=200)
     product_name = models.CharField(max_length=500)
+    image_url    = models.URLField(max_length=1000, blank=True, default="")
     is_active    = models.BooleanField(default=True)
     synced_at    = models.DateTimeField(auto_now=True)
 
@@ -50,6 +51,37 @@ class StockEntry(models.Model):
 
     def __str__(self):
         return f"{self.variant} — qty:{self.quantity} res:{self.reserved}"
+
+
+class StockOrderAssignment(models.Model):
+    """Links an order line item to a specific stock variant."""
+    order      = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="stock_assignments")
+    variant    = models.ForeignKey(StockVariant, on_delete=models.CASCADE, related_name="order_assignments")
+    product_id = models.CharField(max_length=200, blank=True, default="")
+    quantity   = models.IntegerField(default=1)
+    assigned_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("order", "product_id")
+        ordering = ["-assigned_at"]
+
+    def __str__(self):
+        return f"Order#{self.order_id} → {self.variant}"
+
+
+class StockAutoRule(models.Model):
+    """Permanent rule: auto-assign a stock variant whenever a product is ordered."""
+    store      = models.ForeignKey(Store, on_delete=models.CASCADE, related_name="stock_auto_rules")
+    product_id = models.CharField(max_length=200)
+    variant    = models.ForeignKey(StockVariant, on_delete=models.CASCADE, related_name="auto_rules")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("store", "product_id")
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"AutoRule {self.product_id} → {self.variant}"
 
 
 class StockAuditLog(models.Model):

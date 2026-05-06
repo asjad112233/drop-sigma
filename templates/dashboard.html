@@ -2097,6 +2097,7 @@ body{font-family:Inter,Arial,sans-serif!important;background:var(--vf-gradient)!
 .sidebar{height:100vh!important;overflow-y:auto!important;padding:22px 16px!important;box-sizing:border-box!important;backdrop-filter:blur(22px)!important;}
 .sidebar::-webkit-scrollbar,.main::-webkit-scrollbar,.table-scroll::-webkit-scrollbar,.premium-orders-table-wrap::-webkit-scrollbar{width:8px;height:8px}.sidebar::-webkit-scrollbar-thumb,.main::-webkit-scrollbar-thumb,.table-scroll::-webkit-scrollbar-thumb,.premium-orders-table-wrap::-webkit-scrollbar-thumb{background:rgba(148,163,184,.55);border-radius:999px}
 .main{height:100vh!important;overflow-y:auto!important;overflow-x:hidden!important;display:block!important;padding:24px!important;box-sizing:border-box!important;background:transparent!important;scroll-behavior:smooth!important;}
+.main.orders-mode{overflow:hidden!important;}
 .section{display:none!important;min-height:calc(100vh - 48px)!important;padding-bottom:70px!important;overflow:visible!important;animation:vfFade .24s ease both;}.section.active{display:block!important}@keyframes vfFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 .global-store-switcher{position:sticky!important;top:0!important;z-index:60!important;margin:-8px 0 18px!important;padding:8px 0!important;background:linear-gradient(to bottom,var(--vf-app-bg),rgba(255,255,255,0))!important;}body.vf-dark-mode .global-store-switcher{background:linear-gradient(to bottom,#050712,rgba(5,7,18,0))!important}.global-store-switcher-inner{border-radius:22px!important;padding:11px!important;box-shadow:var(--vf-shadow)!important;backdrop-filter:blur(18px)!important}#projectSwitcher,.global-store-switcher .btn{height:46px!important;border-radius:15px!important;}
 .sidebar h2{position:relative!important;font-size:21px!important;line-height:1.1!important;margin:0 0 34px 0!important;padding-left:58px!important;color:var(--vf-text)!important;letter-spacing:-.4px!important}.sidebar h2:before{content:'AI';position:absolute;left:0;top:-4px;width:46px;height:46px;border-radius:17px;background:linear-gradient(135deg,var(--vf-cyan),var(--vf-purple));display:grid;place-items:center;color:#06101f;font-weight:950;box-shadow:0 12px 36px rgba(53,207,255,.25)}.sidebar h2:after{content:'Ecommerce OS';display:block;font-size:12px;font-weight:600;color:var(--vf-muted);margin-top:5px;letter-spacing:0}
@@ -2658,6 +2659,11 @@ body.vf-dark-mode{background:#eef7ff!important;color:#0f172a!important;}
 #ordersSection .pox-filter-row{flex:0 0 auto!important;}
 .pox-table-panel{flex:1!important;min-height:0!important;display:flex!important;flex-direction:column!important;overflow:hidden!important;}
 .pox-table-wrap{flex:1!important;min-height:0!important;overflow:auto!important;max-height:none!important;}
+/* frozen column header */
+#ordersSection.active .pox-table-wrap{max-height:calc(100vh - 290px)!important;overflow-y:auto!important;}
+/* override global table{overflow:hidden} so sticky works relative to the wrap, not the table itself */
+#ordersSection .pox-table{overflow:visible!important;}
+#ordersSection .pox-table thead th{position:sticky!important;top:0!important;z-index:30!important;background:var(--vf-surface-2)!important;box-shadow:0 2px 6px rgba(15,23,42,.1)!important;}
 
 /* ===== POX: Premium Orders Redesign ===== */
 .pox-topbar{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;}
@@ -2706,13 +2712,13 @@ body.vf-dark-mode .pox-stat4{background:var(--vf-surface);border-color:var(--vf-
 .pox-chip:not(.pox-chip-active) .pox-chip-count{background:var(--vf-surface-2);color:var(--vf-muted);border:1px solid var(--vf-line);}
 .pox-filter-extras{display:flex;gap:8px;align-items:center;margin-left:auto;}
 .pox-filter-extras select{height:38px !important;border-radius:12px !important;font-size:12px !important;padding:0 10px !important;font-weight:700;width:auto !important;}
-.pox-table-panel{background:var(--vf-surface);border:1px solid var(--vf-line);border-radius:24px;box-shadow:var(--vf-shadow);overflow:hidden;backdrop-filter:blur(18px);}
+.pox-table-panel{background:var(--vf-surface);border:1px solid var(--vf-line);border-radius:24px;box-shadow:var(--vf-shadow);overflow:hidden;}
 .pox-table-wrap{overflow:auto;}
 .pox-table-wrap::-webkit-scrollbar{width:6px;height:6px;}
 .pox-table-wrap::-webkit-scrollbar-thumb{background:rgba(148,163,184,.4);border-radius:999px;}
 .pox-table{width:100%;border-collapse:separate;border-spacing:0;background:transparent;min-width:1050px;}
-.pox-table thead{position:sticky;top:0;background:var(--vf-surface-2);z-index:5;}
-.pox-table thead th{padding:12px;text-align:left;font-size:10.5px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid var(--vf-line);}
+.pox-table thead{background:var(--vf-surface-2);}
+.pox-table thead th{position:sticky;top:0;background:var(--vf-surface-2);z-index:20;padding:12px;text-align:left;font-size:10.5px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.6px;border-bottom:2px solid var(--vf-line);box-shadow:0 2px 6px rgba(15,23,42,.07);}
 .pox-table tbody td{padding:13px 12px;border-bottom:1px solid var(--vf-line);font-size:12.5px;vertical-align:middle;color:var(--vf-text);}
 .pox-table tbody tr{cursor:pointer;transition:background .12s;}
 .pox-table tbody tr:hover{background:rgba(53,207,255,.06) !important;}
@@ -3325,9 +3331,11 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
 .sk-search{flex:1;min-width:180px;padding:10px 14px;border:1px solid var(--vf-line);border-radius:14px;background:var(--vf-surface);color:var(--vf-text);font-size:13px;outline:none;}
 .sk-tab{padding:8px 18px;border-radius:14px;border:1px solid var(--vf-line);background:var(--vf-surface);color:var(--vf-muted);font-size:12px;font-weight:800;cursor:pointer;transition:.15s;}
 .sk-tab.active{background:linear-gradient(135deg,#35cfff,#8b5cf6);color:#fff;border-color:transparent;}
-.sk-table-wrap{border-radius:22px;overflow:auto;background:var(--vf-surface);border:1px solid var(--vf-line);box-shadow:var(--vf-shadow);}
+.sk-table-wrap{border-radius:22px;overflow:auto;background:var(--vf-surface);border:1px solid var(--vf-line);box-shadow:var(--vf-shadow);max-height:calc(100vh - 340px);min-height:200px;}
+.sk-table-wrap::-webkit-scrollbar{width:6px;height:6px;}
+.sk-table-wrap::-webkit-scrollbar-thumb{background:rgba(148,163,184,.4);border-radius:999px;}
 .sk-table{width:100%;border-collapse:collapse;font-size:13px;}
-.sk-table th{padding:12px 16px;text-align:left;font-size:11px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--vf-line);}
+.sk-table th{padding:12px 16px;text-align:left;font-size:11px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--vf-line);position:sticky;top:0;background:var(--vf-surface-2);z-index:2;}
 .sk-table td{padding:12px 16px;border-bottom:1px solid var(--vf-line);color:var(--vf-text);vertical-align:middle;}
 .sk-table tr:last-child td{border-bottom:none;}
 .sk-table tr:hover td{background:var(--vf-surface-2);}
@@ -3819,11 +3827,12 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
                 <th>Amount</th>
                 <th>Status</th>
                 <th>Vendor</th>
+                <th>Stock</th>
                 <th>Tracking</th>
                 <th></th>
               </tr>
             </thead>
-            <tbody id="ordersTable"><tr><td colspan="10">Loading...</td></tr></tbody>
+            <tbody id="ordersTable"><tr><td colspan="11">Loading...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -3922,7 +3931,6 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
       <!-- Sub-tabs -->
       <div id="vendorsSubTabs" style="display:flex;gap:8px;margin-bottom:18px;">
         <button id="vTabVendors" class="btn" style="font-weight:900;" onclick="switchVendorTab('vendors')">Vendors</button>
-        <button id="vTabQueue" class="btn dark" onclick="switchVendorTab('queue')">Tracking Queue <span id="queueBadge" style="display:none;background:#dc2626;color:#fff;border-radius:999px;padding:1px 7px;font-size:10px;margin-left:4px;">0</span></button>
       </div>
 
       <!-- Vendors panel -->
@@ -5453,13 +5461,23 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
           <p>Track inventory levels, sync products, and manage stock across stores.</p>
         </div>
         <div class="actions" style="margin-top:0;display:flex;gap:10px;flex-wrap:wrap;">
-          <select id="skStoreFilter" onchange="loadStock()" style="padding:9px 14px;border-radius:14px;border:1px solid var(--vf-line);background:var(--vf-surface);color:var(--vf-text);font-size:13px;font-weight:700;cursor:pointer;outline:none;">
-            <option value="">All Stores</option>
-          </select>
-          <button class="btn" onclick="skSyncFromOrders()">⟳ Sync from Orders</button>
+          <button class="btn" style="background:linear-gradient(135deg,#35cfff,#8b5cf6);color:#fff;border:none;" onclick="openSkImportModal()">⬇ Import from Store</button>
           <button class="btn green" onclick="openSkAddModal()">+ Add Stock</button>
-          <button class="btn" onclick="openSkBulkModal()" style="background:var(--vf-surface-2);">⬆ Bulk CSV</button>
-          <button class="btn" onclick="loadStock()" style="background:var(--vf-surface-2);">Refresh</button>
+          <div style="position:relative;display:inline-block;" id="skImportFileWrap">
+            <button class="btn" onclick="skToggleImportFileMenu()" style="background:var(--vf-surface-2);">⬆ Import ▾</button>
+            <div id="skImportFileMenu" style="display:none;position:absolute;top:calc(100% + 6px);left:0;background:var(--vf-panel);border:1px solid var(--vf-line);border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,.12);min-width:180px;overflow:hidden;z-index:999;">
+              <button onclick="openSkBulkModal('csv')" style="display:block;width:100%;padding:11px 16px;text-align:left;background:none;border:none;font-size:13px;font-weight:700;color:var(--vf-text);cursor:pointer;" onmouseover="this.style.background='var(--vf-surface-2)'" onmouseout="this.style.background=''">📄 Import CSV</button>
+              <button onclick="openSkBulkModal('xlsx')" style="display:block;width:100%;padding:11px 16px;text-align:left;background:none;border:none;font-size:13px;font-weight:700;color:var(--vf-text);cursor:pointer;" onmouseover="this.style.background='var(--vf-surface-2)'" onmouseout="this.style.background=''">📊 Import Excel (.xlsx)</button>
+            </div>
+          </div>
+          <div style="position:relative;display:inline-block;" id="skExportWrap">
+            <button class="btn" onclick="skToggleExportMenu()" style="background:var(--vf-surface-2);">⬇ Export ▾</button>
+            <div id="skExportMenu" style="display:none;position:absolute;top:calc(100% + 6px);right:0;background:var(--vf-panel);border:1px solid var(--vf-line);border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,.12);min-width:160px;overflow:hidden;z-index:999;">
+              <button onclick="skExport('csv')" style="display:block;width:100%;padding:11px 16px;text-align:left;background:none;border:none;font-size:13px;font-weight:700;color:var(--vf-text);cursor:pointer;" onmouseover="this.style.background='var(--vf-surface-2)'" onmouseout="this.style.background=''">📄 Export as CSV</button>
+              <button onclick="skExport('xlsx')" style="display:block;width:100%;padding:11px 16px;text-align:left;background:none;border:none;font-size:13px;font-weight:700;color:var(--vf-text);cursor:pointer;" onmouseover="this.style.background='var(--vf-surface-2)'" onmouseout="this.style.background=''">📊 Export as Excel</button>
+            </div>
+          </div>
+          <button class="btn" onclick="skRefresh()" style="background:var(--vf-surface-2);">↻ Refresh</button>
         </div>
       </div>
 
@@ -5474,12 +5492,20 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
 
       <!-- Sub-tabs -->
       <div style="display:flex;gap:8px;margin-bottom:18px;">
-        <button class="sk-tab active" id="skTabProducts" onclick="skSwitchTab('products')">Products</button>
+        <button class="sk-tab active" id="skTabOrders" onclick="skSwitchTab('orders')">Stock Orders</button>
+        <button class="sk-tab" id="skTabProducts" onclick="skSwitchTab('products')">Products</button>
         <button class="sk-tab" id="skTabAudit" onclick="skSwitchTab('audit')">Audit Log</button>
       </div>
 
+      <!-- Bulk action bar (appears when rows selected) -->
+      <div id="skBulkBar" style="display:none;position:sticky;top:0;z-index:10;background:linear-gradient(135deg,#35cfff22,#8b5cf622);border:1.5px solid #8b5cf6;border-radius:16px;padding:12px 18px;margin-bottom:14px;align-items:center;gap:14px;flex-wrap:wrap;">
+        <span id="skBulkCount" style="font-weight:900;font-size:13px;color:#6d28d9;"></span>
+        <button class="btn" onclick="openSkBulkUpdateModal()" style="background:#7c3aed;color:#fff;border:none;font-size:12px;padding:7px 16px;">✏ Update Quantity</button>
+        <button class="btn" onclick="skDeselectAll()" style="background:var(--vf-surface-2);font-size:12px;padding:7px 14px;">✕ Deselect All</button>
+      </div>
+
       <!-- Products panel -->
-      <div id="skPanelProducts">
+      <div id="skPanelProducts" style="display:none;">
         <div class="sk-toolbar">
           <input class="sk-search" id="skSearch" type="text" placeholder="Search product name or SKU…" oninput="skFilterProducts()">
           <div style="display:flex;gap:6px;">
@@ -5493,7 +5519,9 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
           <table class="sk-table">
             <thead>
               <tr>
+                <th style="width:36px;"><input type="checkbox" id="skSelectAll" onchange="skToggleSelectAll(this.checked)" style="width:15px;height:15px;cursor:pointer;"></th>
                 <th>Product</th>
+                <th>SKU</th>
                 <th>Store</th>
                 <th>Variants</th>
                 <th>Total Units</th>
@@ -5502,7 +5530,39 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
               </tr>
             </thead>
             <tbody id="skProductsBody">
-              <tr><td colspan="6" style="text-align:center;padding:40px;color:var(--vf-muted);">Loading…</td></tr>
+              <tr><td colspan="8" style="text-align:center;padding:40px;color:var(--vf-muted);">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Stock Orders panel -->
+      <div id="skPanelOrders">
+        <!-- toolbar -->
+        <div class="sk-toolbar" style="margin-bottom:14px;">
+          <input class="sk-search" id="soSearch" type="text" placeholder="Search order #, customer, product…" oninput="soFilterOrders()">
+          <div style="display:flex;gap:6px;">
+            <button class="sk-tab" id="soF_all"          onclick="soSetFilter('all',this)">All <span id="soCntAll" style="margin-left:4px;background:rgba(100,116,139,.15);border-radius:20px;padding:1px 7px;font-size:10px;"></span></button>
+            <button class="sk-tab active" id="soF_no_tracking" onclick="soSetFilter('no_tracking',this)" style="color:#f59e0b;">No Tracking <span id="soCntNoTrack" style="margin-left:4px;background:rgba(245,158,11,.15);border-radius:20px;padding:1px 7px;font-size:10px;"></span></button>
+            <button class="sk-tab" id="soF_completed"   onclick="soSetFilter('completed',this)"  style="color:#22c55e;">✅ Completed <span id="soCntCompleted" style="margin-left:4px;background:rgba(34,197,94,.15);border-radius:20px;padding:1px 7px;font-size:10px;"></span></button>
+          </div>
+        </div>
+
+        <div class="sk-table-wrap">
+          <table class="sk-table" style="min-width:900px;">
+            <thead>
+              <tr>
+                <th>Order</th>
+                <th>Customer</th>
+                <th>Assigned Stock</th>
+                <th>Order Status</th>
+                <th>Tracking</th>
+                <th>Auto Rule</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="soOrdersBody">
+              <tr><td colspan="7" style="text-align:center;padding:40px;color:var(--vf-muted);">Loading…</td></tr>
             </tbody>
           </table>
         </div>
@@ -5511,12 +5571,21 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
       <!-- Audit Log panel -->
       <div id="skPanelAudit" style="display:none;">
         <div class="sk-table-wrap">
-          <div style="display:grid;grid-template-columns:160px 1fr 90px 90px 90px 130px;gap:0;padding:10px 16px;border-bottom:1px solid var(--vf-line);font-size:10px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.06em;">
-            <span>Time</span><span>Product / Variant</span><span>Action</span><span>Before</span><span>After</span><span>Actor</span>
-          </div>
-          <div id="skAuditBody" style="max-height:520px;overflow-y:auto;">
-            <div style="text-align:center;padding:40px;color:var(--vf-muted);">Loading audit log…</div>
-          </div>
+          <table class="sk-table" style="min-width:780px;">
+            <thead>
+              <tr>
+                <th style="width:140px;">Time</th>
+                <th>Product / Variant</th>
+                <th style="width:130px;">Action</th>
+                <th style="width:130px;">Qty Change</th>
+                <th style="width:130px;">Actor</th>
+                <th>Note</th>
+              </tr>
+            </thead>
+            <tbody id="skAuditBody">
+              <tr><td colspan="6" style="text-align:center;padding:40px;color:var(--vf-muted);">Loading audit log…</td></tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </section>
@@ -5525,17 +5594,134 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
   </main>
 </div>
 
+<!-- ── Add Tracking Modal (Stock Orders) ── -->
+<div id="soTrackModal" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(13,13,18,.65);backdrop-filter:blur(8px);align-items:center;justify-content:center;">
+  <div style="background:var(--vf-panel);border-radius:22px;width:100%;max-width:460px;padding:28px;box-shadow:0 32px 80px rgba(0,0,0,.3);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <div>
+        <div style="font-size:16px;font-weight:900;color:var(--vf-text);">🚚 Add Tracking</div>
+        <div id="soTrackOrderNum" style="font-size:12px;color:var(--vf-muted);margin-top:3px;"></div>
+      </div>
+      <button onclick="closeSoTrackModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--vf-muted);">✕</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div>
+        <label style="font-size:11px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px;">Tracking Number *</label>
+        <input id="soTrackNumber" type="text" placeholder="e.g. 1Z999AA1012345678" style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--vf-line);background:var(--vf-surface);color:var(--vf-text);font-size:13px;">
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px;">Courier / Company</label>
+        <div style="position:relative;">
+          <input id="soTrackCompany" type="text" placeholder="Type or select courier…" autocomplete="off" style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--vf-line);background:var(--vf-surface);color:var(--vf-text);font-size:13px;">
+          <!-- .cc-drop injected here by initCourierCombo -->
+        </div>
+        <div class="cc-custom-row" id="soTrackCustomUrlRow" style="display:none;">
+          <label style="font-size:11px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px;margin-top:10px;">Tracking URL</label>
+          <input id="soTrackUrl" type="text" placeholder="https://track.yourcourier.com/..." style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--vf-line);background:var(--vf-surface);color:var(--vf-text);font-size:13px;">
+        </div>
+      </div>
+      <!-- hidden URL field used by preset couriers (no custom row needed) -->
+      <input id="soTrackUrlPreset" type="hidden">
+    </div>
+    <div style="display:flex;gap:10px;margin-top:22px;">
+      <button id="soTrackConfirmBtn" onclick="confirmSoTracking()" style="flex:1;padding:12px;border-radius:12px;background:#6366f1;color:#fff;border:none;font-size:14px;font-weight:800;cursor:pointer;">✔ Save Tracking</button>
+      <button onclick="closeSoTrackModal()" style="padding:12px 20px;border-radius:12px;background:var(--vf-surface-2);border:1px solid var(--vf-line);color:var(--vf-text);font-size:14px;font-weight:700;cursor:pointer;">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Assign Stock to Order Modal ── -->
+<div id="soAssignModal" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(13,13,18,.65);backdrop-filter:blur(8px);align-items:center;justify-content:center;">
+  <div style="background:var(--vf-panel);border-radius:26px;width:100%;max-width:680px;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 32px 80px rgba(0,0,0,.35);position:relative;overflow:hidden;">
+    <!-- head -->
+    <div style="padding:22px 26px 16px;border-bottom:1px solid var(--vf-line);display:flex;align-items:flex-start;justify-content:space-between;flex-shrink:0;">
+      <div>
+        <div id="soModalTitle" style="font-size:17px;font-weight:900;color:var(--vf-text);">Assign Stock — Order</div>
+        <div id="soModalSub" style="font-size:12px;color:var(--vf-muted);margin-top:4px;"></div>
+      </div>
+      <button onclick="closeSoModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--vf-muted);">✕</button>
+    </div>
+    <!-- body -->
+    <div id="soModalBody" style="padding:20px 26px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:14px;"></div>
+    <!-- permanent toggle -->
+    <div style="padding:14px 26px;border-top:1px solid var(--vf-line);border-bottom:1px solid var(--vf-line);background:var(--vf-surface-2);flex-shrink:0;">
+      <label style="display:flex;align-items:center;gap:12px;cursor:pointer;">
+        <input type="checkbox" id="soPermToggle" style="width:16px;height:16px;accent-color:#7c3aed;">
+        <div>
+          <div style="font-size:13px;font-weight:800;color:var(--vf-text);">🔁 Permanent Assign</div>
+          <div style="font-size:11px;color:var(--vf-muted);margin-top:2px;">Next time same product is ordered, stock auto-assigns from the same variant</div>
+        </div>
+      </label>
+    </div>
+    <!-- footer -->
+    <div style="padding:16px 26px;display:flex;gap:10px;flex-shrink:0;">
+      <button id="soConfirmBtn" onclick="confirmSoAssign()" style="flex:1;padding:12px;border-radius:14px;background:#6366f1;color:#fff;border:none;font-size:14px;font-weight:800;cursor:pointer;">✔ Confirm Stock Assignment</button>
+      <button onclick="closeSoModal()" style="padding:12px 22px;border-radius:14px;background:var(--vf-surface-2);border:1px solid var(--vf-line);color:var(--vf-text);font-size:14px;font-weight:700;cursor:pointer;">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <!-- New Channel Modal -->
+<!-- ── Bulk Update Stock Modal ── -->
+<div id="skBulkUpdateModal" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(13,13,18,.6);backdrop-filter:blur(8px);align-items:center;justify-content:center;">
+  <div style="background:var(--vf-panel);border-radius:26px;padding:32px;width:100%;max-width:440px;box-shadow:0 30px 80px rgba(0,0,0,.3);position:relative;">
+    <button onclick="closeSkBulkUpdateModal()" style="position:absolute;top:16px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--vf-muted);">✕</button>
+    <h2 style="margin:0 0 6px;font-size:20px;font-weight:900;color:var(--vf-text);">Bulk Update Stock</h2>
+    <p id="skBulkUpdateLabel" style="margin:0 0 20px;font-size:13px;color:var(--vf-muted);"></p>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div>
+        <label style="font-size:11px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.06em;">New Quantity (applied to all selected)</label>
+        <input id="skBulkUpdateQty" type="number" min="0" placeholder="e.g. 10" style="width:100%;margin-top:4px;padding:12px 14px;border:1px solid var(--vf-line);border-radius:12px;background:var(--vf-surface);color:var(--vf-text);font-size:20px;font-weight:900;text-align:center;box-sizing:border-box;">
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.06em;">Note (optional)</label>
+        <input id="skBulkUpdateNote" type="text" placeholder="Reason for update…" style="width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--vf-line);border-radius:12px;background:var(--vf-surface);color:var(--vf-text);font-size:13px;box-sizing:border-box;">
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:20px;">
+      <button class="btn green" id="skBulkUpdateBtn" onclick="submitSkBulkUpdate()" style="flex:1;">✏ Update All Selected</button>
+      <button class="btn" onclick="closeSkBulkUpdateModal()" style="flex:0.4;">Cancel</button>
+    </div>
+    <div id="skBulkUpdateResult" style="display:none;margin-top:12px;font-size:12px;font-weight:700;"></div>
+  </div>
+</div>
+
+<!-- ── Import from Store Modal ── -->
+<div id="skImportModal" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(13,13,18,.6);backdrop-filter:blur(8px);align-items:flex-start;justify-content:center;overflow-y:auto;padding:40px 16px;">
+  <div style="background:var(--vf-panel);border-radius:26px;padding:28px;width:100%;max-width:680px;box-shadow:0 30px 80px rgba(0,0,0,.3);position:relative;">
+    <button onclick="closeSkImportModal()" style="position:absolute;top:16px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--vf-muted);">✕</button>
+    <h2 style="margin:0 0 4px;font-size:20px;font-weight:900;color:var(--vf-text);">Import from Store</h2>
+    <p style="margin:0 0 18px;font-size:12px;color:var(--vf-muted);">Fetch live products from your store and select which ones to import into stock.</p>
+
+    <div id="skImportLoading" style="text-align:center;padding:40px;color:var(--vf-muted);display:none;">
+      <div style="font-size:28px;margin-bottom:8px;">⏳</div>Fetching products from store…
+    </div>
+    <div id="skImportError" style="display:none;padding:14px;background:#fef2f2;border-radius:14px;color:#dc2626;font-size:13px;font-weight:700;margin-bottom:16px;"></div>
+
+    <div id="skImportList" style="display:none;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;cursor:pointer;">
+          <input type="checkbox" id="skImportSelectAll" onchange="skImportToggleAll(this.checked)" style="width:16px;height:16px;">
+          Select All
+        </label>
+        <span id="skImportCount" style="font-size:12px;color:var(--vf-muted);margin-left:auto;"></span>
+      </div>
+      <div id="skImportProductList" style="max-height:420px;overflow-y:auto;border:1px solid var(--vf-line);border-radius:16px;"></div>
+      <div style="display:flex;gap:10px;margin-top:16px;">
+        <button class="btn green" onclick="submitSkImport()" id="skImportBtn" style="flex:1;font-size:14px;">⬇ Import Selected</button>
+        <button class="btn" onclick="closeSkImportModal()" style="flex:0.4;">Cancel</button>
+      </div>
+      <div id="skImportResult" style="display:none;margin-top:10px;font-size:12px;font-weight:700;"></div>
+    </div>
+  </div>
+</div>
+
 <!-- ── Add Stock Modal ── -->
 <div id="skAddModal" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(13,13,18,.6);backdrop-filter:blur(8px);align-items:center;justify-content:center;">
   <div style="background:var(--vf-panel);border-radius:26px;padding:32px;width:100%;max-width:480px;box-shadow:0 30px 80px rgba(0,0,0,.3);position:relative;">
     <button onclick="closeSkAddModal()" style="position:absolute;top:16px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--vf-muted);">✕</button>
     <h2 style="margin:0 0 20px;font-size:20px;font-weight:900;color:var(--vf-text);">Add / Update Stock</h2>
     <div style="display:flex;flex-direction:column;gap:12px;">
-      <div>
-        <label style="font-size:11px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.06em;">Store *</label>
-        <select id="skAddStore" style="width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--vf-line);border-radius:12px;background:var(--vf-surface);color:var(--vf-text);font-size:13px;"></select>
-      </div>
       <div>
         <label style="font-size:11px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.06em;">Product Name *</label>
         <input id="skAddProductName" type="text" placeholder="e.g. Blue Hoodie" style="width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--vf-line);border-radius:12px;background:var(--vf-surface);color:var(--vf-text);font-size:13px;box-sizing:border-box;">
@@ -5577,15 +5763,11 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
 <div id="skBulkModal" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(13,13,18,.6);backdrop-filter:blur(8px);align-items:center;justify-content:center;">
   <div style="background:var(--vf-panel);border-radius:26px;padding:32px;width:100%;max-width:480px;box-shadow:0 30px 80px rgba(0,0,0,.3);position:relative;">
     <button onclick="closeSkBulkModal()" style="position:absolute;top:16px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--vf-muted);">✕</button>
-    <h2 style="margin:0 0 6px;font-size:20px;font-weight:900;color:var(--vf-text);">Bulk CSV Upload</h2>
-    <p style="margin:0 0 20px;font-size:12px;color:var(--vf-muted);">CSV columns: <b>product_name, color, size, sku, quantity</b> (optional: product_id)</p>
+    <h2 id="skBulkModalTitle" style="margin:0 0 6px;font-size:20px;font-weight:900;color:var(--vf-text);">Bulk Import</h2>
+    <p style="margin:0 0 20px;font-size:12px;color:var(--vf-muted);">Columns: <b>product_name, color, size, sku, quantity</b> (optional: product_id)</p>
     <div style="display:flex;flex-direction:column;gap:12px;">
       <div>
-        <label style="font-size:11px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.06em;">Store *</label>
-        <select id="skBulkStore" style="width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--vf-line);border-radius:12px;background:var(--vf-surface);color:var(--vf-text);font-size:13px;"></select>
-      </div>
-      <div>
-        <label style="font-size:11px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.06em;">CSV File *</label>
+        <label id="skBulkFileLabel" style="font-size:11px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.06em;">CSV File *</label>
         <input id="skBulkFile" type="file" accept=".csv" style="margin-top:4px;width:100%;font-size:13px;color:var(--vf-text);">
       </div>
     </div>
@@ -6190,7 +6372,7 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
       <span style="font-size:20px;flex-shrink:0;">⚡</span>
       <div style="font-size:13px;line-height:1.6;color:#713f12;">
         <b>Auto-Assignment Active</b><br>
-        Is store k <b>tamam naye orders</b> automatically is vendor ko assign ho jaenge. Aap kabhi bhi yeh assignment hata sakte hain.
+        All <b>new orders</b> from this store will automatically be assigned to this vendor. You can remove this assignment at any time.
       </div>
     </div>
     <label style="font-size:12px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.05em;">Select Vendor</label>
@@ -6574,6 +6756,10 @@ function showSection(section){
   }
   document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
   document.querySelectorAll(".sidebar button").forEach(b => b.classList.remove("active"));
+  // Clean up frozen header when leaving orders
+  if(section !== 'orders' && _frozenHdrCleanup){ _frozenHdrCleanup(); _frozenHdrCleanup=null; }
+  const mainEl = document.querySelector('.main');
+  if(mainEl) mainEl.classList.toggle('orders-mode', section === 'orders');
 
   if(section === "overview"){
     document.getElementById("overviewSection").classList.add("active");
@@ -6592,6 +6778,7 @@ function showSection(section){
     document.getElementById("navOrders").classList.add("active");
     loadOrders();
     _startOrdersPolling();
+    setTimeout(_fixOrdersWrapHeight, 80);
   }
 
   if(section === "team"){
@@ -6637,6 +6824,7 @@ function showSection(section){
     document.getElementById("stockSection").classList.add("active");
     document.getElementById("navStock").classList.add("active");
     loadStock();
+    skSwitchTab('orders');
   }
 }
 
@@ -6860,7 +7048,7 @@ function _setStep(n, done){
     card.style.background  = "#f0fdf4";
     card.style.borderColor = "#86efac";
     card.style.cursor      = "default";
-    card.onmouseover = card.onmouseout = null;
+    card.onclick = card.onmouseover = card.onmouseout = null;
     if(check){ check.style.display = "grid"; }
     if(num)  { num.style.display   = "none";  }
     const arrow = card.querySelector("div[style*='2563eb']");
@@ -7089,9 +7277,14 @@ function toggleOrdersStats() {
   }
 })();
 
+/* ── Frozen Orders Header – CSS sticky handles this now ── */
+let _frozenHdrCleanup = null;
+function _initFrozenOrdersHeader(){ /* no-op: CSS position:sticky handles freezing */ }
+function _fixOrdersWrapHeight(){ /* no-op */ }
+
 async function loadOrders(){
   const table = document.getElementById("ordersTable");
-  if(table) table.innerHTML = `<tr><td colspan="10">Loading orders...</td></tr>`;
+  if(table) table.innerHTML = `<tr><td colspan="11">Loading orders...</td></tr>`;
   // update store name label in top bar
   const switcher = document.getElementById("projectSwitcher");
   const lbl = document.getElementById("poxStoreNameLabel");
@@ -7115,6 +7308,8 @@ async function loadOrders(){
     fillOrderVendorFilters();
     renderPremiumOrders();
     autoFetchMissingTrackingStatuses(data.orders);
+    loadStockAssignments(selectedStoreId);
+    setTimeout(_initFrozenOrdersHeader, 150);
   }catch(error){
     currentOrders = [];
     if(table) table.innerHTML = `<tr><td colspan="11">Error: ${escapeHtml(error.message)}</td></tr>`;
@@ -7159,7 +7354,7 @@ function poxGetAvatarClass(initials){const c=(initials.charCodeAt(0)||65)+(initi
 function renderPremiumOrders(){
   const table=document.getElementById("ordersTable"); if(!table)return;
   const orders=getFilteredOrders(); renderPremiumOrderStats();
-  if(!orders.length){table.innerHTML=`<tr><td colspan="10" style="text-align:center;padding:32px;color:var(--vf-muted);">No matching orders found</td></tr>`;return;}
+  if(!orders.length){table.innerHTML=`<tr><td colspan="11" style="text-align:center;padding:32px;color:var(--vf-muted);">No matching orders found</td></tr>`;return;}
   table.innerHTML=orders.map(order=>{
     const initials=String(order.customer_name||"NA").split(" ").map(x=>x[0]).join("").slice(0,2).toUpperCase();
     const avClass=poxGetAvatarClass(initials);
@@ -7171,14 +7366,17 @@ function renderPremiumOrders(){
     const vendorName=order.assigned_vendor_name||order.vendor_name||getVendorNameById(order.assigned_vendor)||"";
     const vendorVI=vendorName?vendorName.slice(0,2).toUpperCase():"";
     const isAutoAssigned=order.assignment_type==="permanent_auto";
+    const hasStockAssignment = !!_soOrderAssignments[String(order.id)];
     const vendorHtml=vendorName
       ?`<div class="pox-vendor-cell"><div class="pox-avatar pox-av4" style="width:26px;height:26px;font-size:9px;">${escapeHtml(vendorVI)}</div><div style="display:flex;flex-direction:column;gap:2px;"><span class="pox-vendor-name">${escapeHtml(vendorName)}</span>${isAutoAssigned?`<span style="font-size:9px;font-weight:800;color:#7c3aed;letter-spacing:.3px;">⚡ Auto Assigned</span>`:""}</div></div>`
-      :`<span class="pox-vendor-unassigned" onclick="poxOpenVendorAssign(event,${order.id})">＋ Assign vendor</span>`;
+      : hasStockAssignment
+        ? `<span style="font-size:11px;color:var(--vf-muted);padding:4px 0;display:inline-block;" title="Remove stock assignment first">📦 Stock assigned</span>`
+        : `<span class="pox-vendor-unassigned" onclick="poxOpenVendorAssign(event,${order.id})">＋ Assign vendor</span>`;
     const hasTracking=order.tracking_number&&!String(order.tracking_number).toLowerCase().includes("no tracking")&&String(order.tracking_number).toLowerCase()!=="pending";
     const tId=escapeHtml(String(order.tracking_number||"").slice(0,16));
     const _tc=String(order.tracking_company||"");
     const tCompany=(_tc&&!_tc.toLowerCase().startsWith("http"))?escapeHtml(_tc.slice(0,18)):"";
-    const tUrl=order.tracking_url?escapeHtml(order.tracking_url):"";
+    const tUrl=escapeHtml(buildTrackUrl(order.tracking_company,order.tracking_number,order.tracking_url));
     const tLive=order.live_tracking_status?escapeHtml(String(order.live_tracking_status).slice(0,40)):"";
     const tLiveLow=(tLive||"").toLowerCase();
     const tLiveClass=tLiveLow.includes("deliver")||tLiveLow.includes("complet")?"pox-tracking-eta delivered":tLiveLow.includes("error")||tLiveLow.includes("fail")||tLiveLow.includes("exception")?"pox-tracking-eta pox-tracking-rejected":"pox-tracking-eta";
@@ -7207,6 +7405,7 @@ function renderPremiumOrders(){
   <td><span class="pox-amount">${escapeHtml(getCurrencySymbol(order.currency))}${escapeHtml(order.total_price||"0")}</span></td>
   <td><div class="pox-status-stack"><span class="pox-pill ${payClass}"><span class="pox-dot"></span>${payLabel}</span><span class="pox-pill ${fulClass}"><span class="pox-dot"></span>${fulLabel}</span></div></td>
   <td onclick="event.stopPropagation()">${vendorHtml}</td>
+  <td onclick="event.stopPropagation()">${buildStockAssignCell(order)}</td>
   <td onmouseenter="poxShowTrackTip(event,this,${order.id})" onmouseleave="poxHideTrackTip()">${trackingHtml}</td>
   <td onclick="event.stopPropagation()"><div class="pox-actions-cell"><button class="pox-row-action" onclick="openOrderDetail(${order.id})">👁</button><button class="pox-row-action" onclick="toggleOrderActionMenu(event,${order.id})">⋯</button></div></td>
 </tr>`;
@@ -7397,6 +7596,11 @@ function updateSelectedOrdersCount(){
 let _poxVaOrderId = null;
 async function poxOpenVendorAssign(event, orderId){
   event.stopPropagation();
+  // Block if stock is assigned to this order
+  if(_soOrderAssignments[String(orderId)]){
+    await _alert('This order already has stock assigned. Remove the stock assignment first before assigning a vendor.', 'Cannot Assign Vendor', '⛔');
+    return;
+  }
   _poxVaOrderId = orderId;
   const pop = document.getElementById("poxVaPopover");
   const sel = document.getElementById("poxVaSelect");
@@ -8260,7 +8464,7 @@ async function openOrderDetail(orderId){
               <div>
                 <div class="od-tn-label">${o.tracking_company?escapeHtml(o.tracking_company):"Tracking Number"}</div>
                 <div class="od-tn-value">${escapeHtml(o.tracking_number)}</div>
-                ${o.tracking_url?`<a href="${escapeHtml(o.tracking_url)}" target="_blank" style="font-size:11.5px;color:var(--vf-primary);font-weight:600;text-decoration:none;">Track shipment ↗</a>`:""}
+                ${(()=>{const u=buildTrackUrl(o.tracking_company,o.tracking_number,o.tracking_url);return u?`<a href="${escapeHtml(u)}" target="_blank" style="font-size:11.5px;color:var(--vf-primary);font-weight:600;text-decoration:none;">Track shipment ↗</a>`:"";})()}
               </div>
             </div>
             <div class="od-divider"></div>` : `<p style="font-size:12.5px;color:#6b7280;margin-bottom:12px;">No tracking number added yet. Submit one below:</p>`}
@@ -8421,7 +8625,28 @@ const COURIER_DOMAINS = {
   "Australia Post":"auspost.com.au","4PX":"4px.com","China Post":"chinapost.com.cn",
   "Cainiao":"cainiao.com","TCS Pakistan":"tcs.com.pk","Leopards":"leopardscourier.com",
 };
+const COURIER_TRACK_URLS = {
+  "Yuntrack":       "https://www.yuntrack.com/parcelTracking?id={number}",
+  "DHL":            "https://www.dhl.com/en/express/tracking.html?AWB={number}",
+  "FedEx":          "https://www.fedex.com/fedextrack/?trknbr={number}",
+  "UPS":            "https://www.ups.com/track?tracknum={number}",
+  "PostNL":         "https://postnl.nl/tracktrace/?B={number}",
+  "Royal Mail":     "https://www.royalmail.com/track-your-item#/tracking-results/{number}",
+  "USPS":           "https://tools.usps.com/go/TrackConfirmAction?tLabels={number}",
+  "Australia Post": "https://auspost.com.au/mypost/track/#/details/{number}",
+  "4PX":            "https://track.4px.com/#/result/0/{number}",
+  "China Post":     "https://www.chinapost.com.cn/english/serviceguide/intlmail/tracking/?number={number}",
+  "Cainiao":        "https://global.cainiao.com/detail.htm?mailNoList={number}",
+  "TCS Pakistan":   "https://t.17track.net/en#nums={number}",
+  "Leopards":       "https://t.17track.net/en#nums={number}",
+};
+function buildTrackUrl(company, number, storedUrl){
+  const tpl = company && COURIER_TRACK_URLS[company];
+  if(tpl && number) return tpl.replace('{number}', encodeURIComponent(number));
+  return storedUrl || '';
+}
 function courierLogoHtml(name){
+  if(!name || !name.trim()) return '';
   const domain = COURIER_DOMAINS[name];
   if(!domain) return `<span class="cc-icon-letter">${escapeHtml(name.slice(0,2).toUpperCase())}</span>`;
   const clr = `https://logo.clearbit.com/${domain}`;
@@ -8501,7 +8726,7 @@ function poxShowTrackTip(e, el, orderId){
   if(!tip) return;
 
   const company = order.tracking_company||"";
-  const tUrl = order.tracking_url||"";
+  const tUrl = buildTrackUrl(order.tracking_company, order.tracking_number, order.tracking_url);
   const liveStatus = order.live_tracking_status||"";
   const liveLow = liveStatus.toLowerCase();
   const isDelivered = liveLow.includes("deliver")||liveLow.includes("complet");
@@ -15154,46 +15379,481 @@ document.addEventListener("click",e=>{
 // ══════════════════════════════════════════════════════════════
 let _skProducts = [];
 let _skStockFilter = "all";
-let _skActiveTab = "products";
-let _skStores = [];
+let _skActiveTab = "orders";
+let _skImportProducts = [];
+
+// ── Stock → Order Assignment ──────────────────────────────────────────────────
+let _soOrderAssignments = {};   // { order_id: {assigned, items:[]} }
+let _soAutoRules = {};          // { product_id: {rule_id, variant_id, ...} }
+let _soActiveOrder = null;      // current order object in modal
+let _soSelections = {};         // { product_id: variant_id }
+let _soStockProducts = [];      // cache of stock products for this store
+
+function buildStockAssignCell(order){
+  const a = _soOrderAssignments[String(order.id)];
+  const orderId = order.id;
+  const hasVendor = !!(order.assigned_vendor_name || order.vendor_name || getVendorNameById(order.assigned_vendor));
+
+  if(!a){
+    // Block if vendor already assigned
+    if(hasVendor){
+      return `<span style="font-size:11px;color:var(--vf-muted);white-space:nowrap;" title="Remove vendor assignment first">👤 Vendor assigned</span>`;
+    }
+    return `<button onclick="openSoModal(${orderId})" style="padding:4px 11px;border-radius:8px;background:var(--vf-surface-2);border:1px dashed var(--vf-line);color:var(--vf-muted);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;" onmouseover="this.style.borderColor='#6366f1';this.style.color='#6366f1';" onmouseout="this.style.borderColor='';this.style.color='';">📦 Assign Stock</button>`;
+  }
+
+  // Check if tracking has been added → show Shipped
+  const hasTracking = order.tracking_number
+    && !['', 'pending', 'no tracking'].includes(String(order.tracking_number).toLowerCase());
+  if(hasTracking){
+    return `<button onclick="openSoModal(${orderId})" style="padding:4px 11px;border-radius:8px;background:#eff6ff;border:1px solid #bfdbfe;color:#2563eb;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">🚚 Shipped</button>`;
+  }
+
+  const allItems = a.items || [];
+  const lowStock = allItems.some(i => (i.stock_left || 0) < i.quantity);
+  if(lowStock){
+    return `<button onclick="openSoModal(${orderId})" style="padding:4px 11px;border-radius:8px;background:#fff7ed;border:1px solid #fed7aa;color:#ea580c;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">⚠ Low Stock</button>`;
+  }
+  return `<button onclick="openSoModal(${orderId})" style="padding:4px 11px;border-radius:8px;background:#f0fdf4;border:1px solid #bbf7d0;color:#16a34a;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">✔ Stock Ready</button>`;
+}
+
+async function loadStockAssignments(storeId){
+  if(!storeId) return;
+  try{
+    const res = await fetch(`/stock/order-assignments/?store_id=${storeId}`);
+    const data = await res.json();
+    if(data.success){
+      _soOrderAssignments = data.assignments || {};
+      _soAutoRules = data.auto_rules || {};
+      renderPremiumOrders(); // re-render with stock status
+    }
+  }catch(e){}
+}
+
+async function openSoModal(orderId){
+  const order = (currentOrders||[]).find(o=>String(o.id)===String(orderId));
+  if(!order) return;
+  // Block if vendor is already assigned
+  const hasVendor = !!(order.assigned_vendor_name || order.vendor_name || getVendorNameById(order.assigned_vendor));
+  if(hasVendor && !_soOrderAssignments[String(orderId)]){
+    await _alert('This order is already assigned to a vendor. Remove the vendor assignment first before assigning stock.', 'Cannot Assign Stock', '⛔');
+    return;
+  }
+  _soActiveOrder = order;
+  _soSelections = {};
+  const existingAssign = _soOrderAssignments[String(orderId)];
+
+  document.getElementById('soModalTitle').textContent = `Assign Stock — Order #${order.external_order_id||order.id}`;
+  document.getElementById('soModalSub').textContent = `${order.customer_name||''} · ${getLineItemsFromRaw(order).length || 1} line item(s)`;
+  document.getElementById('soPermToggle').checked = false;
+  document.getElementById('soConfirmBtn').textContent = existingAssign ? '✔ Update Assignment' : '✔ Confirm Stock Assignment';
+  document.getElementById('soModalBody').innerHTML = '<div style="color:var(--vf-muted);font-size:13px;padding:20px 0;">Loading stock...</div>';
+  document.getElementById('soAssignModal').style.display = 'flex';
+
+  // Load stock variants if not cached for this store
+  if(!_soStockProducts.length || _soStockProducts[0]?._storeId !== selectedStoreId){
+    try{
+      const res = await fetch(`/stock/dashboard/?store_id=${selectedStoreId}`);
+      const data = await res.json();
+      _soStockProducts = (data.products||[]).map(p=>({...p, _storeId:selectedStoreId}));
+    }catch(e){ _soStockProducts = []; }
+  }
+
+  _soRenderBody(order, existingAssign);
+}
+
+function _soRenderBody(order, existingAssign){
+  const items = getLineItemsFromRaw(order);
+  // Fallback to single product if no line items
+  const lineItems = items.length ? items : [{
+    name: order.product_name||'Product',
+    quantity: 1,
+    product_id: order.product_id||'',
+    meta_data: []
+  }];
+
+  let html = '';
+  lineItems.forEach((item, idx)=>{
+    const productId = String(item.product_id || item.id || idx);
+    const itemName = item.name || item.title || 'Product';
+    const qty = item.quantity || 1;
+    const existingItem = existingAssign ? existingAssign.items.find(i=>i.product_id===productId) : null;
+
+    // Match by product_id first (exact), fallback to nothing
+    const exactProd = _soStockProducts.find(p => String(p.product_id) === String(productId));
+    const variants = exactProd
+      ? (exactProd.variants||[]).map(v=>({
+          variantId: v.id,
+          name: [v.color, v.size].filter(Boolean).join(' / ') || exactProd.product_name,
+          sku: v.sku||'',
+          stock: v.quantity??0
+        }))
+      : [];
+
+    const autoRule = _soAutoRules[productId];
+
+    html += `<div style="border:1px solid var(--vf-line);border-radius:14px;overflow:hidden;">
+      <div style="background:var(--vf-surface-2);padding:12px 16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--vf-line);">
+        <div style="width:38px;height:38px;border-radius:8px;background:var(--vf-surface);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">📦</div>
+        <div style="flex:1;">
+          <div style="font-weight:800;font-size:13px;color:var(--vf-text);">${escapeHtml(itemName)}</div>
+          <div style="font-size:11px;color:var(--vf-muted);">Product ID: ${escapeHtml(productId)} &nbsp;·&nbsp; Ordered: ${qty} units</div>
+        </div>
+        <span style="background:var(--vf-text);color:var(--vf-bg);border-radius:999px;padding:3px 11px;font-size:11px;font-weight:800;">× ${qty}</span>
+      </div>
+      <div style="padding:12px 16px;display:flex;flex-direction:column;gap:8px;">
+        ${autoRule ? `<div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:10px;padding:9px 13px;font-size:12px;color:#6d28d9;font-weight:600;display:flex;align-items:center;gap:8px;">⚡ Auto-rule active: <b>${escapeHtml(autoRule.variant_name)}</b> &nbsp;<button onclick="deleteSoAutoRule('${autoRule.rule_id}','${productId}')" style="margin-left:auto;background:none;border:none;color:#dc2626;font-size:11px;cursor:pointer;font-weight:700;">Remove</button></div>` : ''}
+        ${existingItem ? `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:9px 13px;font-size:12px;color:#16a34a;font-weight:600;">✔ Currently assigned: <b>${escapeHtml(existingItem.variant_name)}</b></div>` : ''}
+        ${variants.map(v=>{
+          const cls = v.stock<=0?'#fee2e2:#dc2626:Out of stock':v.stock<qty?'#fff7ed:#ea580c:Only '+v.stock+' left':'#dcfce7:#16a34a:'+v.stock+' in stock';
+          const [bg,col,label] = cls.split(':');
+          const disabled = v.stock<=0;
+          const isSelected = _soSelections[productId]===v.variantId || (existingItem&&existingItem.variant_id===v.variantId&&!_soSelections[productId]);
+          return `<div id="soVrow-${idx}-${v.variantId}" onclick="${disabled?'':''}" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;border:1px solid ${isSelected?'#6366f1':'var(--vf-line)'};background:${isSelected?'rgba(99,102,241,.06)':'transparent'};cursor:${disabled?'not-allowed':'pointer'};opacity:${disabled?.5:1};transition:.15s;" ${disabled?'':'onclick="soPickVariant(\''+productId+'\','+v.variantId+','+idx+')"'}>
+            <input type="radio" name="soV-${idx}" value="${v.variantId}" style="accent-color:#6366f1;width:15px;height:15px;" ${isSelected?'checked':''} ${disabled?'disabled':''}>
+            <div style="flex:1;">
+              <div style="font-weight:700;font-size:12.5px;color:var(--vf-text);">${escapeHtml(v.name)}</div>
+              <div style="font-size:11px;color:var(--vf-muted);">SKU: ${escapeHtml(v.sku)}</div>
+            </div>
+            <span style="padding:3px 10px;border-radius:999px;font-size:11px;font-weight:800;background:${bg};color:${col};">${escapeHtml(label)}</span>
+          </div>`;
+        }).join('')}
+        ${variants.length===0?`<div style="font-size:12px;color:var(--vf-muted);padding:10px;background:var(--vf-surface-2);border-radius:10px;">⚠ No stock variants found for Product ID <b>${escapeHtml(productId)}</b>. Import this product in the Stock section first.</div>`:''}
+
+      </div>
+    </div>`;
+  });
+
+  document.getElementById('soModalBody').innerHTML = html || '<div style="color:var(--vf-muted);font-size:13px;">No line items found in this order.</div>';
+
+  // Attach radio change handlers
+  lineItems.forEach((item,idx)=>{
+    const productId = String(item.product_id||item.id||idx);
+    document.querySelectorAll(`input[name="soV-${idx}"]`).forEach(radio=>{
+      radio.addEventListener('change',function(){
+        soPickVariant(productId, parseInt(this.value), idx);
+      });
+    });
+  });
+}
+
+function soPickVariant(productId, variantId, rowIdx){
+  _soSelections[productId] = variantId;
+  // Highlight rows
+  document.querySelectorAll(`[id^="soVrow-${rowIdx}-"]`).forEach(row=>{
+    const isThis = row.id === `soVrow-${rowIdx}-${variantId}`;
+    row.style.borderColor = isThis ? '#6366f1' : 'var(--vf-line)';
+    row.style.background  = isThis ? 'rgba(99,102,241,.06)' : 'transparent';
+    const radio = row.querySelector('input[type=radio]');
+    if(radio) radio.checked = isThis;
+  });
+}
+
+async function confirmSoAssign(){
+  if(!_soActiveOrder) return;
+  const order = _soActiveOrder;
+  const permanent = document.getElementById('soPermToggle').checked;
+  const items = getLineItemsFromRaw(order);
+  const lineItems = items.length ? items : [{name:order.product_name||'Product',quantity:1,product_id:order.product_id||'',meta_data:[]}];
+
+  const assignments = [];
+  for(let idx=0; idx<lineItems.length; idx++){
+    const item = lineItems[idx];
+    const productId = String(item.product_id||item.id||idx);
+    const variantId = _soSelections[productId];
+    if(!variantId){
+      // check if already assigned
+      const existing = _soOrderAssignments[String(order.id)];
+      const existingItem = existing ? existing.items.find(i=>i.product_id===productId) : null;
+      if(!existingItem){ alert(`Please select a stock variant for: ${item.name||'Product'}`); return; }
+      continue; // keep existing assignment unchanged
+    }
+    assignments.push({ product_id: productId, variant_id: variantId, quantity: item.quantity||1 });
+  }
+
+  if(!assignments.length && !Object.keys(_soSelections).length){
+    alert('Please select at least one stock variant.');
+    return;
+  }
+
+  const btn = document.getElementById('soConfirmBtn');
+  btn.disabled = true; btn.textContent = 'Assigning...';
+
+  try{
+    const res = await fetch('/stock/assign-order/', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-CSRFToken':getCSRFToken()},
+      body: JSON.stringify({ order_id: order.id, assignments, permanent, store_id: selectedStoreId })
+    });
+    const data = await res.json();
+    if(!data.success){ alert(data.error||'Assignment failed'); btn.disabled=false; btn.textContent='✔ Confirm Stock Assignment'; return; }
+
+    closeSoModal();
+    await loadStockAssignments(selectedStoreId);
+  }catch(e){
+    alert('Error: '+e.message);
+    btn.disabled=false; btn.textContent='✔ Confirm Stock Assignment';
+  }
+}
+
+async function deleteSoAutoRule(ruleId, productId){
+  if(!confirm('Remove permanent auto-assign rule for this product?')) return;
+  try{
+    await fetch(`/stock/order-assignments/?rule_id=${ruleId}`, { method:'DELETE', headers:{'X-CSRFToken':getCSRFToken()} });
+    delete _soAutoRules[productId];
+    _soRenderBody(_soActiveOrder, _soOrderAssignments[String(_soActiveOrder?.id)]);
+  }catch(e){}
+}
+
+function closeSoModal(){
+  document.getElementById('soAssignModal').style.display = 'none';
+  _soActiveOrder = null; _soSelections = {};
+}
+document.addEventListener('keydown', e=>{ if(e.key==='Escape' && document.getElementById('soAssignModal')?.style.display==='flex') closeSoModal(); });
+
+// ── Stock Orders Management Tab ───────────────────────────────────────────────
+let _soAllOrders = [];
+let _soFilter = 'no_tracking';
+
+async function soLoadOrders(){
+  const body = document.getElementById('soOrdersBody');
+  body.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--vf-muted);">Loading…</td></tr>`;
+  try{
+    const r = await fetch(`/stock/orders/?store_id=${selectedStoreId||''}`);
+    const d = await r.json();
+    if(!d.success){ body.innerHTML=`<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--vf-muted);">Failed to load.</td></tr>`; return; }
+    _soAllOrders = d.orders || [];
+    soRenderOrders();
+  }catch(e){
+    body.innerHTML=`<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--vf-muted);">Error: ${escapeHtml(e.message)}</td></tr>`;
+  }
+}
+
+function soSetFilter(f, btn){
+  _soFilter = f;
+  document.querySelectorAll('#skPanelOrders .sk-tab').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  soRenderOrders();
+}
+
+function soFilterOrders(){
+  soRenderOrders();
+}
+
+function soOpenOrder(orderId){
+  const lbl = document.getElementById('odBackLabel');
+  if(lbl) lbl.textContent = 'Stock Orders';
+  openOrderDetail(orderId);
+}
+
+function soRenderOrders(){
+  const body = document.getElementById('soOrdersBody');
+  const search = (document.getElementById('soSearch')?.value||'').toLowerCase();
+  let rows = _soAllOrders;
+
+  // update count badges
+  const cntAll       = _soAllOrders.length;
+  const cntNoTrack   = _soAllOrders.filter(o=>!o.has_tracking).length;
+  const cntCompleted = _soAllOrders.filter(o=>o.has_tracking).length;
+  const _setBadge = (id, n) => { const el = document.getElementById(id); if(el) el.textContent = n; };
+  _setBadge('soCntAll', cntAll);
+  _setBadge('soCntNoTrack', cntNoTrack);
+  _setBadge('soCntCompleted', cntCompleted);
+
+  if(_soFilter === 'no_tracking') rows = rows.filter(o=>!o.has_tracking);
+  if(_soFilter === 'tracked' || _soFilter === 'completed') rows = rows.filter(o=>o.has_tracking);
+
+  if(search) rows = rows.filter(o=>
+    String(o.order_number).toLowerCase().includes(search) ||
+    (o.customer_name||'').toLowerCase().includes(search) ||
+    (o.items||[]).some(i=>(i.variant_name||'').toLowerCase().includes(search))
+  );
+
+  if(!rows.length){
+    body.innerHTML=`<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--vf-muted);">No stock orders found.</td></tr>`;
+    return;
+  }
+
+  body.innerHTML = rows.map(order=>{
+    const fulLabel = order.fulfillment_status || 'processing';
+    const fulLow = fulLabel.toLowerCase();
+    const fulBg = fulLow.includes('ship') ? '#dcfce7;color:#16a34a'
+      : fulLow.includes('fulfill') ? '#dcfce7;color:#16a34a'
+      : fulLow.includes('cancel') ? '#fee2e2;color:#dc2626'
+      : '#fff7ed;color:#ea580c';
+    const statusHtml = `<span style="padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;background:${fulBg};display:inline-flex;align-items:center;gap:4px;"><span style="width:5px;height:5px;border-radius:50%;background:currentColor;"></span>${escapeHtml(fulLabel)}</span>`;
+
+    const itemsHtml = (order.items||[]).map(item=>{
+      const stockColor = item.stock_left <= 0 ? '#dc2626' : item.stock_left < item.quantity ? '#ea580c' : '#16a34a';
+      return `<div style="display:flex;align-items:center;gap:7px;margin-bottom:5px;flex-wrap:wrap;">
+        <span style="font-size:12px;font-weight:700;color:var(--vf-text);">${escapeHtml(item.variant_name)}</span>
+        <span style="font-size:11px;color:var(--vf-muted);">× ${item.quantity}</span>
+        <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:999px;background:rgba(${item.stock_left<=0?'220,38,38':item.stock_left<item.quantity?'234,88,12':'34,197,94'},.12);color:${stockColor};">${item.stock_left} left</span>
+        ${item.sku ? `<span style="font-size:10px;color:var(--vf-muted);">SKU: ${escapeHtml(item.sku)}</span>` : ''}
+      </div>`;
+    }).join('');
+
+    const _tUrl  = buildTrackUrl(order.tracking_company, order.tracking_number, order.tracking_url);
+    const _tStat = (order.tracking_status||'').toLowerCase();
+    const _tStatColor = _tStat.includes('deliver')||_tStat.includes('complet') ? '#059669'
+      : _tStat.includes('ship')||_tStat.includes('transit') ? '#6366f1'
+      : _tStat.includes('fail')||_tStat.includes('error')   ? '#dc2626'
+      : '#ea580c';
+    const _tStatBg = _tStat.includes('deliver')||_tStat.includes('complet') ? 'rgba(5,150,105,.1)'
+      : _tStat.includes('ship')||_tStat.includes('transit') ? 'rgba(99,102,241,.1)'
+      : _tStat.includes('fail')||_tStat.includes('error')   ? 'rgba(220,38,38,.1)'
+      : 'rgba(234,88,12,.1)';
+    const _tStatBadge = order.has_tracking
+      ? `<span style="display:inline-block;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:800;background:${_tStatBg};color:${_tStatColor};margin-top:5px;">${escapeHtml(_tStat||'pending')}</span>`
+      : '';
+    const trackHtml = order.has_tracking
+      ? `<div>
+          <div style="display:flex;align-items:center;gap:5px;">
+            ${courierLogoHtml(order.tracking_company||'')}
+            <div>
+              <div style="font-weight:700;font-size:12px;color:var(--vf-text);">${escapeHtml(order.tracking_company||'')} <span style="font-family:monospace;font-size:11px;">${escapeHtml(order.tracking_number)}</span></div>
+              ${_tStatBadge}
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;margin-top:5px;flex-wrap:wrap;">
+            <button onclick="window.open('${_tUrl}','_blank')" style="font-size:11px;color:#6366f1;font-weight:700;background:none;border:none;cursor:pointer;padding:0;">Track ↗</button>
+            <button onclick="soOpenTrackModal(${order.order_id})" style="font-size:11px;color:var(--vf-muted);background:none;border:none;cursor:pointer;padding:0;">✏ Edit</button>
+          </div>
+         </div>`
+      : `<button onclick="soOpenTrackModal(${order.order_id})" style="padding:5px 12px;border-radius:8px;background:#fff7ed;border:1px solid #fed7aa;color:#ea580c;font-size:11px;font-weight:700;cursor:pointer;">+ Add Tracking</button>`;
+
+    const autoHtml = (order.items||[]).some(i=>i.has_auto_rule)
+      ? `<span style="font-size:11px;font-weight:700;color:#7c3aed;background:#f5f3ff;border:1px solid #ddd6fe;padding:3px 9px;border-radius:999px;">⚡ Auto</span>`
+      : `<span style="font-size:11px;color:var(--vf-muted);">—</span>`;
+
+    const dateText = order.created_at ? new Date(order.created_at).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'2-digit'}) : '—';
+
+    return `<tr>
+      <td>
+        <div style="font-weight:800;font-size:13px;color:#6366f1;cursor:pointer;" onclick="soOpenOrder(${order.order_id})">#${escapeHtml(order.order_number)}</div>
+        <div style="font-size:11px;color:var(--vf-muted);">${dateText}</div>
+      </td>
+      <td>
+        <div style="font-weight:700;font-size:12.5px;">${escapeHtml(order.customer_name)}</div>
+        <div style="font-size:11px;color:var(--vf-muted);">${escapeHtml(order.customer_email)}</div>
+        ${order.vendor_name ? `<div style="font-size:10px;color:#7c3aed;font-weight:700;margin-top:2px;">🏭 ${escapeHtml(order.vendor_name)}</div>` : ''}
+      </td>
+      <td>${itemsHtml||'—'}</td>
+      <td>${statusHtml}</td>
+      <td>${trackHtml}</td>
+      <td>${autoHtml}</td>
+      <td>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button onclick="soOpenTrackModal(${order.order_id})" title="Add/Edit Tracking" style="width:28px;height:28px;border-radius:8px;border:1px solid var(--vf-line);background:var(--vf-surface);font-size:13px;cursor:pointer;">🚚</button>
+          <button onclick="soRemoveAssignment(${order.order_id})" title="Remove Stock Assignment" style="width:28px;height:28px;border-radius:8px;border:1px solid #fee2e2;background:#fff5f5;font-size:13px;cursor:pointer;">🗑</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// Tracking modal state
+let _soTrackOrderId = null;
+
+function soOpenTrackModal(orderId){
+  _soTrackOrderId = orderId;
+  const order = _soAllOrders.find(o=>o.order_id===orderId);
+  if(!order) return;
+  document.getElementById('soTrackOrderNum').textContent = `#${order.order_number}`;
+  document.getElementById('soTrackNumber').value  = order.tracking_number || '';
+  document.getElementById('soTrackUrl').value     = order.tracking_url || '';
+  document.getElementById('soTrackUrlPreset').value = order.tracking_url || '';
+  document.getElementById('soTrackModal').style.display = 'flex';
+  // Reinit courier combo each open (clears old dropdown state)
+  const oldDrop = document.querySelector('#soTrackModal .cc-drop');
+  if(oldDrop) oldDrop.remove();
+  initCourierCombo('soTrackCompany', 'soTrackUrlPreset', 'soTrackCustomUrlRow', order.tracking_company||'', order.tracking_url||'');
+  document.getElementById('soTrackNumber').focus();
+}
+
+function closeSoTrackModal(){
+  document.getElementById('soTrackModal').style.display = 'none';
+  _soTrackOrderId = null;
+}
+
+async function confirmSoTracking(){
+  if(!_soTrackOrderId) return;
+  const btn = document.getElementById('soTrackConfirmBtn');
+  btn.disabled=true; btn.textContent='Saving…';
+  try{
+    const res = await fetch('/stock/orders/', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-CSRFToken':getCSRFToken()},
+      body: JSON.stringify({
+        action: 'add_tracking',
+        order_id: _soTrackOrderId,
+        tracking_number:  document.getElementById('soTrackNumber').value.trim(),
+        tracking_company: document.getElementById('soTrackCompany').value.trim(),
+        tracking_url:     (document.getElementById('soTrackUrlPreset').value || document.getElementById('soTrackUrl').value).trim(),
+      })
+    });
+    const d = await res.json();
+    if(!d.success){ alert(d.error||'Failed'); btn.disabled=false; btn.textContent='✔ Save Tracking'; return; }
+    closeSoTrackModal();
+    await soLoadOrders();
+    // Auto-switch to Completed tab so user sees the order moved there
+    soSetFilter('completed', document.getElementById('soF_completed'));
+    // Update currentOrders tracking so Orders page stock cell shows Shipped
+    const tracked = _soAllOrders.find(o=>o.order_id===_soTrackOrderId);
+    if(tracked){
+      const liveOrder = (currentOrders||[]).find(o=>String(o.id)===String(tracked.order_id));
+      if(liveOrder){
+        liveOrder.tracking_number  = document.getElementById('soTrackNumber')?.value.trim() || tracked.tracking_number;
+        liveOrder.tracking_company = document.getElementById('soTrackCompany')?.value.trim() || tracked.tracking_company;
+        liveOrder.tracking_status  = 'shipped';
+      }
+    }
+    renderPremiumOrders();
+  }catch(e){ alert(e.message); btn.disabled=false; btn.textContent='✔ Save Tracking'; }
+}
+
+async function soRemoveAssignment(orderId){
+  const order = _soAllOrders.find(o=>o.order_id===orderId);
+  if(!order) return;
+  if(!await _confirm(`Remove stock assignment for Order #${order.order_number}? Stock will be restored.`, {title:'Remove Assignment', icon:'🗑', danger:true, confirmText:'Remove'})) return;
+  try{
+    // Remove all items for this order
+    for(const item of order.items){
+      await fetch('/stock/orders/', {
+        method:'POST',
+        headers:{'Content-Type':'application/json','X-CSRFToken':getCSRFToken()},
+        body: JSON.stringify({action:'remove_assignment', assignment_id: item.assignment_id})
+      });
+    }
+    await soLoadOrders();
+    loadStockAssignments(selectedStoreId);
+  }catch(e){ alert(e.message); }
+}
 
 async function loadStock(){
-  await _skLoadStores();
-  const storeId = document.getElementById("skStoreFilter")?.value || "";
+  const storeId = selectedStoreId || "";
   try{
     const r = await fetch(`/stock/dashboard/?store_id=${storeId}`);
     const d = await r.json();
     if(!d.success) return;
     _skProducts = d.products || [];
-    // Stats
     document.getElementById("skStatProducts").textContent = d.stats.total_products;
     document.getElementById("skStatVariants").textContent = d.stats.total_variants;
     document.getElementById("skStatQty").textContent = d.stats.total_qty;
     document.getElementById("skStatLow").textContent = d.stats.low_stock;
     document.getElementById("skStatOut").textContent = d.stats.out_of_stock;
     skRenderProducts();
+    skDeselectAll();
     if(_skActiveTab === "audit") skLoadAudit();
   }catch(e){ console.error("loadStock error", e); }
 }
 
-async function _skLoadStores(){
-  if(_skStores.length) return;
+async function _skGetStores(){
   try{
     const r = await fetch("/stores/");
     const d = await r.json();
-    _skStores = d.stores || [];
-    const filterSel = document.getElementById("skStoreFilter");
-    const addSel = document.getElementById("skAddStore");
-    const bulkSel = document.getElementById("skBulkStore");
-    filterSel.innerHTML = '<option value="">All Stores</option>';
-    addSel && (addSel.innerHTML = "");
-    bulkSel && (bulkSel.innerHTML = "");
-    _skStores.forEach(s => {
-      filterSel.innerHTML += `<option value="${s.id}">${s.name}</option>`;
-      if(addSel) addSel.innerHTML += `<option value="${s.id}">${s.name}</option>`;
-      if(bulkSel) bulkSel.innerHTML += `<option value="${s.id}">${s.name}</option>`;
-    });
-  }catch(e){}
+    return d.stores || [];
+  }catch(e){ return []; }
 }
 
 function skRenderProducts(){
@@ -15208,7 +15868,7 @@ function skRenderProducts(){
 
   const tbody = document.getElementById("skProductsBody");
   if(!list.length){
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--vf-muted);">No products found.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--vf-muted);">No products found.</td></tr>`;
     return;
   }
 
@@ -15219,8 +15879,15 @@ function skRenderProducts(){
       : avail <= 5
         ? `<span class="sk-badge low">Low (${avail})</span>`
         : `<span class="sk-badge ok">In Stock</span>`;
-    return `<tr>
-      <td style="font-weight:800;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${p.product_name}">${p.product_name}</td>
+    const imgHtml = p.image_url
+      ? `<img src="${p.image_url}" style="width:36px;height:36px;border-radius:8px;object-fit:cover;border:1px solid var(--vf-line);flex-shrink:0;" loading="lazy" onerror="this.style.display='none'">`
+      : `<div style="width:36px;height:36px;border-radius:8px;background:var(--vf-surface-2);border:1px solid var(--vf-line);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:16px;">📦</div>`;
+    const sku = (p.variants||[]).map(v=>v.sku).filter(Boolean)[0] || p.product_id || "—";
+    const variantIds = (p.variants||[]).map(v=>v.id).join(",");
+    return `<tr data-product-id="${p.id}" data-variant-ids="${variantIds}">
+      <td style="width:36px;"><input type="checkbox" class="skRowCheck" data-product-id="${p.id}" data-variant-ids="${variantIds}" onchange="skOnRowCheck()" style="width:15px;height:15px;cursor:pointer;"></td>
+      <td><div style="display:flex;align-items:center;gap:10px;">${imgHtml}<span style="font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${p.product_name}">${p.product_name}</span></div></td>
+      <td style="font-family:monospace;font-size:12px;color:var(--vf-muted);">${sku}</td>
       <td style="color:var(--vf-muted);font-size:12px;">${p.store_name}</td>
       <td style="color:var(--vf-muted);">${p.variant_count}</td>
       <td style="font-weight:900;font-size:15px;">${p.total_qty}</td>
@@ -15230,7 +15897,7 @@ function skRenderProducts(){
       </td>
     </tr>
     <tr id="skVarRow_${p.id}" style="display:none;">
-      <td colspan="6" style="padding:0 0 0 32px;background:var(--vf-surface-2);">
+      <td colspan="8" style="padding:0 0 0 32px;background:var(--vf-surface-2);">
         <table class="sk-variant-table">
           <thead><tr><th>Color</th><th>Size</th><th>SKU</th><th>Quantity</th><th>Available</th><th></th></tr></thead>
           <tbody>
@@ -15264,47 +15931,79 @@ function skSetStockFilter(filter, btn){
   skRenderProducts();
 }
 
+function skRefresh(){
+  loadStock();
+  if(_skActiveTab === 'orders') soLoadOrders();
+  if(_skActiveTab === 'audit')  skLoadAudit();
+}
+
 function skSwitchTab(tab){
   _skActiveTab = tab;
   document.getElementById("skPanelProducts").style.display = tab === "products" ? "block" : "none";
-  document.getElementById("skPanelAudit").style.display = tab === "audit" ? "block" : "none";
+  document.getElementById("skPanelOrders").style.display  = tab === "orders"   ? "block" : "none";
+  document.getElementById("skPanelAudit").style.display   = tab === "audit"    ? "block" : "none";
   document.getElementById("skTabProducts").classList.toggle("active", tab === "products");
-  document.getElementById("skTabAudit").classList.toggle("active", tab === "audit");
-  if(tab === "audit") skLoadAudit();
+  document.getElementById("skTabOrders").classList.toggle("active",   tab === "orders");
+  document.getElementById("skTabAudit").classList.toggle("active",    tab === "audit");
+  // Always hide bulk bar when switching tabs
+  const bulkBar = document.getElementById("skBulkBar");
+  if(bulkBar && tab !== "products") { bulkBar.style.display = "none"; skDeselectAll(); }
+  if(tab === "audit")    skLoadAudit();
+  if(tab === "orders")   soLoadOrders();
+  if(tab === "products" && !_skProducts.length) loadStock();
 }
 
+const _AUDIT_ICONS = {add:"➕",deduct:"➖",reserve:"🔒",restore:"♻️",adjust:"✏️",sync:"🔄"};
 async function skLoadAudit(){
-  const storeId = document.getElementById("skStoreFilter")?.value || "";
+  const storeId = selectedStoreId || "";
   const body = document.getElementById("skAuditBody");
-  body.innerHTML = `<div style="text-align:center;padding:30px;color:var(--vf-muted);">Loading…</div>`;
+  body.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--vf-muted);">Loading…</td></tr>`;
   try{
-    const r = await fetch(`/stock/audit/?store_id=${storeId}&limit=100`);
+    const r = await fetch(`/stock/audit/?store_id=${storeId}&limit=200`);
     const d = await r.json();
     if(!d.success || !d.logs.length){
-      body.innerHTML = `<div style="text-align:center;padding:30px;color:var(--vf-muted);">No audit logs yet.</div>`;
+      body.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--vf-muted);">No audit logs yet.</td></tr>`;
       return;
     }
     body.innerHTML = d.logs.map(log => {
       const dt = new Date(log.created_at);
-      const ts = dt.toLocaleDateString("en-GB",{day:"numeric",month:"short"}) + " " + dt.toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"});
-      const chip = `<span class="sk-action-chip ${log.action}">${log.action_label}</span>`;
-      const varLabel = [log.color, log.size].filter(Boolean).join(" / ") || "—";
-      return `<div style="display:grid;grid-template-columns:160px 1fr 90px 90px 90px 130px;gap:0;padding:10px 16px;border-bottom:1px solid var(--vf-line);font-size:12px;align-items:center;">
-        <span style="color:var(--vf-muted);font-size:11px;">${ts}</span>
-        <span style="font-weight:700;">${log.product_name}<span style="font-weight:400;color:var(--vf-muted);"> · ${varLabel}</span></span>
-        <span>${chip}</span>
-        <span style="color:var(--vf-muted);">${log.qty_before}</span>
-        <span style="font-weight:900;">${log.qty_after}</span>
-        <span style="color:var(--vf-muted);font-size:11px;">${log.actor}</span>
+      const dateStr = dt.toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"2-digit"});
+      const timeStr = dt.toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"});
+      const chip = `<span class="sk-action-chip ${log.action}">${_AUDIT_ICONS[log.action]||''} ${escapeHtml(log.action_label)}</span>`;
+      const varLabel = [log.color, log.size].filter(Boolean).join(" / ");
+      const diff = log.qty_after - log.qty_before;
+      const diffColor = diff > 0 ? '#16a34a' : diff < 0 ? '#dc2626' : '#6b7280';
+      const diffStr = diff > 0 ? `+${diff}` : String(diff);
+      const qtyHtml = `<div style="display:flex;align-items:center;gap:6px;">
+        <span style="font-family:monospace;color:var(--vf-muted);font-size:12px;">${log.qty_before}</span>
+        <span style="color:var(--vf-muted);">→</span>
+        <span style="font-family:monospace;font-weight:800;font-size:12px;">${log.qty_after}</span>
+        <span style="font-size:10px;font-weight:800;color:${diffColor};background:${diffColor}18;padding:1px 6px;border-radius:999px;">${diffStr}</span>
       </div>`;
+      return `<tr>
+        <td>
+          <div style="font-size:12px;font-weight:700;color:var(--vf-text);">${dateStr}</div>
+          <div style="font-size:11px;color:var(--vf-muted);">${timeStr}</div>
+        </td>
+        <td>
+          <div style="font-weight:700;font-size:13px;color:var(--vf-text);">${escapeHtml(log.product_name)}</div>
+          ${varLabel ? `<div style="font-size:11px;color:var(--vf-muted);margin-top:2px;">${escapeHtml(varLabel)}</div>` : ''}
+        </td>
+        <td>${chip}</td>
+        <td>${qtyHtml}</td>
+        <td>
+          <div style="font-size:12px;font-weight:600;color:var(--vf-text);">${escapeHtml(log.actor||'—')}</div>
+        </td>
+        <td style="font-size:11px;color:var(--vf-muted);max-width:200px;">${escapeHtml(log.note||'—')}</td>
+      </tr>`;
     }).join("");
-  }catch(e){ body.innerHTML = `<div style="text-align:center;padding:30px;color:#ef4444;">Error loading audit log.</div>`; }
+  }catch(e){ body.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:40px;color:#ef4444;">Error loading audit log.</td></tr>`; }
 }
 
 async function skSyncFromOrders(){
-  const storeId = document.getElementById("skStoreFilter")?.value;
+  const storeId = selectedStoreId;
   if(!storeId){
-    alert("Please select a store first to sync.");
+    alert("Please select a store from the sidebar first.");
     return;
   }
   const btn = event.target;
@@ -15312,14 +16011,13 @@ async function skSyncFromOrders(){
   try{
     const r = await fetch("/stock/sync/",{method:"POST",headers:{"Content-Type":"application/json","X-CSRFToken":getCsrfToken()},body:JSON.stringify({store_id:storeId})});
     const d = await r.json();
-    if(d.success) { alert(`Synced ${d.synced} products from orders.`); loadStock(); }
+    if(d.success) { loadStock(); }
     else alert("Sync failed: " + d.message);
   }finally{ btn.disabled=false; btn.textContent="⟳ Sync from Orders"; }
 }
 
 // ── Add Stock Modal ──
 function openSkAddModal(){
-  _skLoadStores();
   document.getElementById("skAddModal").style.display = "flex";
   document.getElementById("skAddProductName").value = "";
   document.getElementById("skAddColor").value = "";
@@ -15332,7 +16030,7 @@ function openSkAddModal(){
 function closeSkAddModal(){ document.getElementById("skAddModal").style.display = "none"; }
 
 async function submitSkAdd(){
-  const store_id = document.getElementById("skAddStore").value;
+  const store_id = selectedStoreId;
   const product_name = document.getElementById("skAddProductName").value.trim();
   const color = document.getElementById("skAddColor").value.trim();
   const size = document.getElementById("skAddSize").value.trim();
@@ -15354,9 +16052,25 @@ async function submitSkAdd(){
   }catch(e){ errEl.textContent = "Network error."; errEl.style.display="block"; }
 }
 
-// ── Bulk CSV Modal ──
-function openSkBulkModal(){
-  _skLoadStores();
+// ── Import file dropdown ──
+function skToggleImportFileMenu(){
+  const m = document.getElementById("skImportFileMenu");
+  m.style.display = m.style.display === "none" ? "block" : "none";
+}
+document.addEventListener("click", e => {
+  if(!e.target.closest("#skImportFileWrap")) {
+    const m = document.getElementById("skImportFileMenu");
+    if(m) m.style.display = "none";
+  }
+});
+
+// ── Bulk Import Modal ──
+function openSkBulkModal(fmt){
+  document.getElementById("skImportFileMenu").style.display = "none";
+  const isXlsx = fmt === "xlsx";
+  document.getElementById("skBulkModalTitle").textContent = isXlsx ? "Import Excel (.xlsx)" : "Import CSV";
+  document.getElementById("skBulkFileLabel").textContent = isXlsx ? "Excel File (.xlsx) *" : "CSV File *";
+  document.getElementById("skBulkFile").accept = isXlsx ? ".xlsx,.xls" : ".csv";
   document.getElementById("skBulkModal").style.display = "flex";
   document.getElementById("skBulkFile").value = "";
   document.getElementById("skBulkResult").style.display = "none";
@@ -15364,7 +16078,7 @@ function openSkBulkModal(){
 function closeSkBulkModal(){ document.getElementById("skBulkModal").style.display = "none"; }
 
 async function submitSkBulk(){
-  const store_id = document.getElementById("skBulkStore").value;
+  const store_id = selectedStoreId;
   const file = document.getElementById("skBulkFile").files[0];
   const resEl = document.getElementById("skBulkResult");
   if(!store_id || !file){
@@ -15411,11 +16125,234 @@ async function submitSkEdit(){
   }catch(e){ alert("Network error."); }
 }
 
+// ── Export ──
+function skToggleExportMenu(){
+  const menu = document.getElementById("skExportMenu");
+  menu.style.display = menu.style.display === "none" ? "block" : "none";
+}
+function skExport(fmt){
+  document.getElementById("skExportMenu").style.display = "none";
+  const storeId = selectedStoreId || "";
+  window.location.href = `/stock/export/?store_id=${storeId}&format=${fmt}`;
+}
+document.addEventListener("click", e => {
+  if(!e.target.closest("#skExportWrap")) document.getElementById("skExportMenu") && (document.getElementById("skExportMenu").style.display = "none");
+});
+
+// ── Bulk Select ──
+function skOnRowCheck(){
+  const checked = document.querySelectorAll(".skRowCheck:checked");
+  const bar = document.getElementById("skBulkBar");
+  const countEl = document.getElementById("skBulkCount");
+  const allCb = document.getElementById("skSelectAll");
+  const total = document.querySelectorAll(".skRowCheck").length;
+
+  if(checked.length > 0){
+    bar.style.display = "flex";
+    countEl.textContent = `${checked.length} product${checked.length!==1?"s":""} selected`;
+  } else {
+    bar.style.display = "none";
+  }
+  if(allCb) allCb.indeterminate = checked.length > 0 && checked.length < total;
+  if(allCb) allCb.checked = checked.length === total && total > 0;
+}
+
+function skToggleSelectAll(checked){
+  document.querySelectorAll(".skRowCheck").forEach(cb => cb.checked = checked);
+  skOnRowCheck();
+}
+
+function skDeselectAll(){
+  document.querySelectorAll(".skRowCheck").forEach(cb => cb.checked = false);
+  const allCb = document.getElementById("skSelectAll");
+  if(allCb){ allCb.checked = false; allCb.indeterminate = false; }
+  document.getElementById("skBulkBar").style.display = "none";
+}
+
+function _skGetSelectedVariantIds(){
+  const checked = document.querySelectorAll(".skRowCheck:checked");
+  const variantIds = [];
+  checked.forEach(cb => {
+    const ids = (cb.dataset.variantIds || "").split(",").filter(Boolean).map(Number);
+    variantIds.push(...ids);
+  });
+  return [...new Set(variantIds)];
+}
+
+// ── Bulk Update Modal ──
+function openSkBulkUpdateModal(){
+  const checked = document.querySelectorAll(".skRowCheck:checked");
+  if(!checked.length){ alert("Select at least one product first."); return; }
+  const count = checked.length;
+  document.getElementById("skBulkUpdateModal").style.display = "flex";
+  document.getElementById("skBulkUpdateLabel").textContent = `This will set the same quantity for all variants of the ${count} selected product${count!==1?"s":""}.`;
+  document.getElementById("skBulkUpdateQty").value = "";
+  document.getElementById("skBulkUpdateNote").value = "";
+  document.getElementById("skBulkUpdateResult").style.display = "none";
+  document.getElementById("skBulkUpdateBtn").disabled = false;
+  document.getElementById("skBulkUpdateBtn").textContent = "✏ Update All Selected";
+  setTimeout(()=>document.getElementById("skBulkUpdateQty").focus(), 100);
+}
+function closeSkBulkUpdateModal(){ document.getElementById("skBulkUpdateModal").style.display = "none"; }
+
+async function submitSkBulkUpdate(){
+  const qty = document.getElementById("skBulkUpdateQty").value;
+  const note = document.getElementById("skBulkUpdateNote").value.trim() || "Bulk update";
+  const resEl = document.getElementById("skBulkUpdateResult");
+  const btn = document.getElementById("skBulkUpdateBtn");
+
+  if(qty === "" || isNaN(parseInt(qty))){
+    resEl.textContent = "Please enter a valid quantity.";
+    resEl.style.cssText = "display:block;color:#dc2626;";
+    return;
+  }
+
+  const variantIds = _skGetSelectedVariantIds();
+  if(!variantIds.length){ alert("No variants found for selected products."); return; }
+
+  const updates = variantIds.map(id => ({ variant_id: id, quantity: parseInt(qty), note }));
+
+  btn.disabled = true; btn.textContent = "Updating…";
+  try{
+    const r = await fetch("/stock/bulk-update/",{
+      method:"POST",
+      headers:{"Content-Type":"application/json","X-CSRFToken":getCsrfToken()},
+      body: JSON.stringify({updates})
+    });
+    const d = await r.json();
+    if(d.success){
+      resEl.textContent = `✓ ${d.updated} variant${d.updated!==1?"s":""} updated successfully.`;
+      resEl.style.cssText = "display:block;color:#059669;";
+      loadStock();
+      skDeselectAll();
+      setTimeout(closeSkBulkUpdateModal, 1200);
+    } else {
+      resEl.textContent = d.message || "Update failed.";
+      resEl.style.cssText = "display:block;color:#dc2626;";
+      btn.disabled = false; btn.textContent = "✏ Update All Selected";
+    }
+  }catch(e){
+    resEl.textContent = "Network error."; resEl.style.cssText = "display:block;color:#dc2626;";
+    btn.disabled = false; btn.textContent = "✏ Update All Selected";
+  }
+}
+
+// ── Import from Store Modal ──
+async function openSkImportModal(){
+  const storeId = selectedStoreId;
+  if(!storeId){ alert("Please select a store from the sidebar first."); return; }
+
+  document.getElementById("skImportModal").style.display = "flex";
+  document.getElementById("skImportLoading").style.display = "block";
+  document.getElementById("skImportList").style.display = "none";
+  document.getElementById("skImportError").style.display = "none";
+  document.getElementById("skImportResult").style.display = "none";
+  _skImportProducts = [];
+
+  try{
+    const r = await fetch(`/stock/fetch-products/?store_id=${storeId}`);
+    const d = await r.json();
+    document.getElementById("skImportLoading").style.display = "none";
+    if(!d.success){
+      document.getElementById("skImportError").textContent = d.message || "Failed to fetch products.";
+      document.getElementById("skImportError").style.display = "block";
+      return;
+    }
+    _skImportProducts = d.products || [];
+    skRenderImportList();
+    document.getElementById("skImportList").style.display = "block";
+    document.getElementById("skImportCount").textContent = `${_skImportProducts.length} products found`;
+  }catch(e){
+    document.getElementById("skImportLoading").style.display = "none";
+    document.getElementById("skImportError").textContent = "Network error fetching products.";
+    document.getElementById("skImportError").style.display = "block";
+  }
+}
+
+function closeSkImportModal(){
+  document.getElementById("skImportModal").style.display = "none";
+}
+
+function skRenderImportList(){
+  const container = document.getElementById("skImportProductList");
+  if(!_skImportProducts.length){
+    container.innerHTML = `<div style="text-align:center;padding:30px;color:var(--vf-muted);">No products found in store.</div>`;
+    return;
+  }
+  container.innerHTML = _skImportProducts.map((p, i) => {
+    const varLabel = p.variants.length === 1 && !p.variants[0].color && !p.variants[0].size
+      ? "Simple product"
+      : `${p.variants.length} variant${p.variants.length!==1?"s":""}`;
+    const alreadyBadge = p.already_imported
+      ? `<span style="font-size:10px;background:#dcfce7;color:#166534;border-radius:999px;padding:2px 8px;font-weight:700;">Imported</span>`
+      : "";
+    const imgHtml = p.image_url
+      ? `<img src="${p.image_url}" style="width:40px;height:40px;border-radius:8px;object-fit:cover;border:1px solid var(--vf-line);flex-shrink:0;" loading="lazy" onerror="this.style.display='none'">`
+      : `<div style="width:40px;height:40px;border-radius:8px;background:var(--vf-surface-2);border:1px solid var(--vf-line);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px;">📦</div>`;
+    return `<label style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--vf-line);cursor:pointer;transition:.1s;" onmouseover="this.style.background='var(--vf-surface-2)'" onmouseout="this.style.background=''">
+      <input type="checkbox" class="skImportCheck" data-idx="${i}" style="width:16px;height:16px;flex-shrink:0;" checked>
+      ${imgHtml}
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:800;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.product_name} ${alreadyBadge}</div>
+        <div style="font-size:11px;color:var(--vf-muted);">${varLabel}</div>
+      </div>
+    </label>`;
+  }).join("");
+}
+
+function skImportToggleAll(checked){
+  document.querySelectorAll(".skImportCheck").forEach(cb => cb.checked = checked);
+}
+
+async function submitSkImport(){
+  const storeId = selectedStoreId;
+  const checks = document.querySelectorAll(".skImportCheck:checked");
+  if(!checks.length){ alert("Please select at least one product."); return; }
+
+  const selected = Array.from(checks).map(cb => {
+    const idx = parseInt(cb.dataset.idx);
+    return _skImportProducts[idx];
+  });
+
+  const btn = document.getElementById("skImportBtn");
+  btn.disabled = true; btn.textContent = "Importing…";
+  const resEl = document.getElementById("skImportResult");
+
+  try{
+    const r = await fetch("/stock/import-products/",{
+      method:"POST",
+      headers:{"Content-Type":"application/json","X-CSRFToken":getCsrfToken()},
+      body: JSON.stringify({store_id: storeId, products: selected})
+    });
+    const d = await r.json();
+    if(d.success){
+      resEl.textContent = `✓ ${d.imported} product${d.imported!==1?"s":""} imported successfully.`;
+      resEl.style.cssText = "display:block;color:#059669;";
+      loadStock();
+      // Re-fetch to update already_imported flags
+      _skImportProducts.forEach(p => {
+        if(selected.some(s => s.product_id === p.product_id)) p.already_imported = true;
+      });
+      skRenderImportList();
+    } else {
+      resEl.textContent = d.message || "Import failed.";
+      resEl.style.cssText = "display:block;color:#dc2626;";
+    }
+  }catch(e){
+    resEl.textContent = "Network error.";
+    resEl.style.cssText = "display:block;color:#dc2626;";
+  }finally{
+    btn.disabled = false; btn.textContent = "⬇ Import Selected";
+  }
+}
+
 // Close stock modals on background click
 document.addEventListener("click", e => {
   if(e.target.id === "skAddModal") closeSkAddModal();
   if(e.target.id === "skBulkModal") closeSkBulkModal();
   if(e.target.id === "skEditModal") closeSkEditModal();
+  if(e.target.id === "skImportModal") closeSkImportModal();
+  if(e.target.id === "skBulkUpdateModal") closeSkBulkUpdateModal();
 });
 </script>
 </body>

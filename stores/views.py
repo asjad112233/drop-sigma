@@ -259,6 +259,29 @@ def check_connected_api(request):
     return Response({"connected": False})
 
 
+def _http_get_subprocess(url, auth=None, headers=None, timeout=12):
+    """
+    Make an HTTP GET in a fresh subprocess to bypass stale DNS state
+    in long-running server processes (macOS mDNSResponder bug).
+    Returns (status_code, None) on success, raises on error.
+    """
+    import subprocess, sys, base64, json as _json
+    payload = json.dumps({"url": url, "auth": list(auth) if auth else None, "headers": headers or {}, "timeout": timeout})
+    script = (
+        "import sys,json,requests;"
+        "d=json.loads(sys.stdin.read());"
+        "r=requests.get(d['url'],auth=tuple(d['auth']) if d['auth'] else None,headers=d['headers'],timeout=d['timeout']);"
+        "print(r.status_code)"
+    )
+    proc = subprocess.run(
+        [sys.executable, "-c", script],
+        input=payload, capture_output=True, text=True, timeout=timeout + 3
+    )
+    if proc.returncode != 0:
+        raise Exception(proc.stderr.strip() or "subprocess failed")
+    return int(proc.stdout.strip()), None
+
+
 def _diagnose_store(store):
     """
     Attempt to reach the store API and return a detailed diagnosis dict.
@@ -266,47 +289,74 @@ def _diagnose_store(store):
     """
     if store.platform == "woocommerce":
         url = f"{store.store_url.rstrip('/')}/wp-json/wc/v3/"
-        kwargs = {"auth": (store.api_key, store.api_secret), "timeout": 10}
+        auth = (store.api_key, store.api_secret)
+        req_headers = None
     elif store.platform == "shopify":
         url = f"{store.store_url.rstrip('/')}/admin/api/2024-01/shop.json"
-        headers = {"Content-Type": "application/json"}
+        req_headers = {"Content-Type": "application/json"}
         if store.access_token:
-            headers["X-Shopify-Access-Token"] = store.access_token
-            kwargs = {"headers": headers, "timeout": 10}
+            req_headers["X-Shopify-Access-Token"] = store.access_token
+            auth = None
         else:
-            kwargs = {"headers": headers, "auth": (store.api_key, store.api_secret), "timeout": 10}
+            auth = (store.api_key, store.api_secret)
     else:
         return {"online": False, "issue": "unsupported", "title": "Platform Not Supported",
                 "message": "This platform does not support health checks yet.", "fix": ""}
 
-    try:
-        r = _req.get(url, **kwargs)
+    # Try direct request first; fall back to subprocess if DNS fails in this process
+    def _do_request():
+        kwargs = {"timeout": 10}
+        if auth:
+            kwargs["auth"] = auth
+        if req_headers:
+            kwargs["headers"] = req_headers
+        try:
+            r = _req.get(url, **kwargs)
+            return r.status_code, None
+        except _req.exceptions.ConnectionError as e:
+            err = str(e).lower()
+            if "nodename nor servname" in err or "getaddrinfo failed" in err or "name or service not known" in err:
+                # Stale DNS in this process — retry via subprocess with fresh DNS
+                try:
+                    return _http_get_subprocess(url, auth=auth, headers=req_headers)
+                except subprocess.TimeoutExpired:
+                    raise _req.exceptions.Timeout()
+                except Exception as sub_e:
+                    sub_msg = str(sub_e).lower()
+                    if "nodename nor servname" in sub_msg or "getaddrinfo" in sub_msg or "name or service" in sub_msg:
+                        raise _req.exceptions.ConnectionError(sub_e)
+                    raise _req.exceptions.ConnectionError(sub_e)
+            raise
 
-        if r.status_code in range(200, 300):
+    try:
+        import subprocess
+        status_code, _ = _do_request()
+
+        if status_code in range(200, 300):
             return {"online": True, "issue": None, "title": "Store Online",
                     "message": "Store API is reachable and responding correctly.", "fix": ""}
 
-        if r.status_code in (401, 403):
+        if status_code in (401, 403):
             return {"online": False, "issue": "auth",
                     "title": "Invalid API Credentials",
-                    "message": f"The store responded with HTTP {r.status_code}. Your API key or secret is incorrect or has been revoked.",
+                    "message": f"The store responded with HTTP {status_code}. Your API key or secret is incorrect or has been revoked.",
                     "fix": "Go to your store's admin panel and regenerate API keys, then update them here."}
 
-        if r.status_code == 404:
+        if status_code == 404:
             return {"online": False, "issue": "not_found",
                     "title": "API Endpoint Not Found",
                     "message": f"HTTP 404 — The API endpoint was not found at:\n{url}",
                     "fix": "Make sure WooCommerce REST API is enabled under WooCommerce → Settings → Advanced → REST API, or verify the store URL is correct."}
 
-        if r.status_code >= 500:
+        if status_code >= 500:
             return {"online": False, "issue": "server_error",
                     "title": "Store Server Error",
-                    "message": f"The store's server returned HTTP {r.status_code}. The server is experiencing internal issues.",
+                    "message": f"The store's server returned HTTP {status_code}. The server is experiencing internal issues.",
                     "fix": "Contact your hosting provider or check your server error logs. This is a server-side issue, not an API key problem."}
 
         return {"online": False, "issue": "unexpected",
                 "title": "Unexpected Response",
-                "message": f"The store returned an unexpected HTTP status: {r.status_code}.",
+                "message": f"The store returned an unexpected HTTP status: {status_code}.",
                 "fix": "Check the store URL and ensure the API is properly configured."}
 
     except _req.exceptions.SSLError as e:
@@ -361,6 +411,8 @@ def store_health_api(request, store_id):
     store = get_object_or_404(Store, id=store_id)
     result = _diagnose_store(store)
     return Response({"success": True, **result})
+
+
 
 
 # 🔥 DELETE STORE
