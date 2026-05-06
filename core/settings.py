@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     'teamapp',
     'ai',
     'vendors',
+    'stock',
 ]
 
 ASGI_APPLICATION = 'core.asgi.application'

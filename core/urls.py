@@ -20,4 +20,5 @@ urlpatterns = [
     path("vendors/api/", include("vendors.urls")),
     path("vendor/", include("vendors.portal_urls")),
     path("employee/", include("teamapp.portal_urls")),
+    path("stock/", include("stock.urls")),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

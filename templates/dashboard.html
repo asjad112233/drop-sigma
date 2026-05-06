@@ -2111,7 +2111,7 @@ table{border-collapse:separate!important;border-spacing:0!important;border-radiu
 #teamSection .card,#vendorsSection .card{border-radius:26px!important}.vendor-search-row,.order-bulk-bar{border-radius:24px!important;background:var(--vf-surface)!important;box-shadow:var(--vf-shadow)!important;padding:16px!important}.vendor-table-wrap{border-radius:28px!important;overflow:auto!important}
 #vendorsPanelVendors .vendor-stat{padding:10px 16px!important;border-radius:14px!important;width:auto!important;min-width:0!important;display:inline-flex!important;flex-direction:column!important;}#vendorsPanelVendors .vendor-stat span{font-size:11px!important;font-weight:700!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;}#vendorsPanelVendors .vendor-stat b{font-size:17px!important;letter-spacing:-.3px!important;margin-top:3px!important;}#vendorsPanelVendors .vendor-stat:hover{transform:translateY(-2px)!important;}
 #emailsSection.active{display:flex!important;flex-direction:column!important;height:100%!important;min-height:0!important;overflow:hidden!important;padding-bottom:0!important}#emailsSection .topbar{flex:0 0 auto!important}.email-chat-layout{flex:1 1 auto!important;min-height:0!important;height:auto!important;overflow:hidden!important}.chat-sidebar.card,.chat-email-list,.chat-window{height:100%!important;min-height:0!important;overflow:hidden!important;border-radius:26px!important}.chat-sidebar.card{overflow-y:auto!important}.chat-body,#emailsList{overflow-y:auto!important;min-height:0!important}.chat-header,.chat-reply-area{flex:0 0 auto!important}.chat-body{flex:1 1 auto!important}.email-folder{background:var(--vf-surface-2)!important;color:var(--vf-text)!important;border:1px solid transparent!important}.email-folder.active,.email-folder:hover{background:linear-gradient(135deg,rgba(53,207,255,.14),rgba(139,92,246,.12))!important;border-color:rgba(53,207,255,.3)!important}.chat-header,.chat-reply-area{background:var(--vf-surface)!important;border-color:var(--vf-line)!important}.chat-body{background:linear-gradient(180deg,rgba(53,207,255,.05),rgba(139,92,246,.04))!important}.chat-bubble.customer{background:var(--vf-surface)!important;color:var(--vf-text)!important;border-color:var(--vf-line)!important}
-.modal-bg{backdrop-filter:blur(10px)!important;background:rgba(2,6,23,.62)!important;overflow-y:auto!important}.modal{border-radius:30px!important;max-width:980px!important}.modal-head h2{color:var(--vf-text)!important}.table-scroll,.table-wrap{overflow:auto!important;max-width:100%!important;border-radius:26px!important}#overviewSection,#storesSection,#ordersSection,#teamSection,#vendorsSection,#trackingQueueSection{overflow:visible!important}body.vf-dark-mode .card p,body.vf-dark-mode .card span,body.vf-dark-mode .sub,body.vf-dark-mode label{color:var(--vf-muted)!important}body.vf-dark-mode h1,body.vf-dark-mode h2,body.vf-dark-mode h3,body.vf-dark-mode b{color:#fff!important}
+.modal-bg{backdrop-filter:blur(10px)!important;background:rgba(2,6,23,.62)!important;overflow-y:auto!important}.modal{border-radius:30px!important;max-width:980px!important}.modal-head h2{color:var(--vf-text)!important}.table-scroll,.table-wrap{overflow:auto!important;max-width:100%!important;border-radius:26px!important}#overviewSection,#storesSection,#ordersSection,#teamSection,#vendorsSection,#trackingQueueSection,#stockSection{overflow:visible!important}body.vf-dark-mode .card p,body.vf-dark-mode .card span,body.vf-dark-mode .sub,body.vf-dark-mode label{color:var(--vf-muted)!important}body.vf-dark-mode h1,body.vf-dark-mode h2,body.vf-dark-mode h3,body.vf-dark-mode b{color:#fff!important}
 @media(max-width:1250px){.layout{grid-template-columns:230px minmax(0,1fr)!important}.cards{grid-template-columns:repeat(3,1fr)!important}.grid,.vendor-grid,#storesGrid{grid-template-columns:repeat(2,1fr)!important}.email-chat-layout{grid-template-columns:210px 310px minmax(0,1fr)!important}}
 @media(max-width:900px){html,body{overflow:auto!important}.layout{display:block!important;height:auto!important;overflow:visible!important}.sidebar{height:auto!important;position:relative!important}.main{height:auto!important;min-height:100vh!important;overflow:visible!important;padding:16px!important}.section{min-height:auto!important}.cards,.grid,.vendor-grid,#storesGrid{grid-template-columns:1fr!important}.topbar{flex-direction:column!important}.email-chat-layout{grid-template-columns:1fr!important;overflow:visible!important}#emailsSection.active{height:auto!important;overflow:visible!important}.chat-window{height:720px!important}}
 
@@ -3308,8 +3308,48 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
 
 /* ── Tracking Queue Section ── */
 #trackingQueueSection{padding:28px 32px;}
-#navTrackingQueue:before{content:'📦'}
+#navTrackingQueue:before{content:'🚚'}
 #navChat:before{content:'💬'}
+#navStock:before{content:'📦'}
+
+/* ── Stock Section ── */
+#stockSection{padding:28px 32px;}
+.sk-topbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:22px;}
+.sk-topbar h1{font-size:26px;font-weight:900;color:var(--vf-text);margin:0;letter-spacing:-.5px;}
+.sk-topbar p{margin:0;color:var(--vf-muted);font-size:13px;}
+.sk-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:22px;}
+.sk-stat{background:var(--vf-surface);border:1px solid var(--vf-line);border-radius:20px;padding:18px 20px;box-shadow:var(--vf-shadow);}
+.sk-stat span{display:block;font-size:11px;font-weight:700;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;}
+.sk-stat b{font-size:26px;font-weight:900;color:var(--vf-text);}
+.sk-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:18px;}
+.sk-search{flex:1;min-width:180px;padding:10px 14px;border:1px solid var(--vf-line);border-radius:14px;background:var(--vf-surface);color:var(--vf-text);font-size:13px;outline:none;}
+.sk-tab{padding:8px 18px;border-radius:14px;border:1px solid var(--vf-line);background:var(--vf-surface);color:var(--vf-muted);font-size:12px;font-weight:800;cursor:pointer;transition:.15s;}
+.sk-tab.active{background:linear-gradient(135deg,#35cfff,#8b5cf6);color:#fff;border-color:transparent;}
+.sk-table-wrap{border-radius:22px;overflow:auto;background:var(--vf-surface);border:1px solid var(--vf-line);box-shadow:var(--vf-shadow);}
+.sk-table{width:100%;border-collapse:collapse;font-size:13px;}
+.sk-table th{padding:12px 16px;text-align:left;font-size:11px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--vf-line);}
+.sk-table td{padding:12px 16px;border-bottom:1px solid var(--vf-line);color:var(--vf-text);vertical-align:middle;}
+.sk-table tr:last-child td{border-bottom:none;}
+.sk-table tr:hover td{background:var(--vf-surface-2);}
+.sk-badge{display:inline-block;padding:2px 10px;border-radius:999px;font-size:10px;font-weight:800;}
+.sk-badge.ok{background:#dcfce7;color:#166534;}
+.sk-badge.low{background:#fef9c3;color:#854d0e;}
+.sk-badge.out{background:#fee2e2;color:#991b1b;}
+.sk-expand-row{background:var(--vf-surface-2)!important;}
+.sk-variant-table{width:100%;border-collapse:collapse;font-size:12px;margin:0;}
+.sk-variant-table th{padding:8px 16px;text-align:left;font-size:10px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.06em;}
+.sk-variant-table td{padding:8px 16px;color:var(--vf-text);}
+.sk-qty-input{width:72px;padding:5px 8px;border:1px solid var(--vf-line);border-radius:8px;background:var(--vf-panel);color:var(--vf-text);font-size:12px;font-weight:700;text-align:center;}
+.sk-audit-wrap{margin-top:20px;}
+.sk-audit-row{display:grid;grid-template-columns:160px 1fr 80px 80px 120px;gap:12px;padding:10px 16px;border-bottom:1px solid var(--vf-line);font-size:12px;align-items:center;}
+.sk-audit-row:last-child{border-bottom:none;}
+.sk-action-chip{display:inline-block;padding:2px 9px;border-radius:999px;font-size:10px;font-weight:800;}
+.sk-action-chip.add{background:#dcfce7;color:#166534;}
+.sk-action-chip.deduct{background:#fee2e2;color:#991b1b;}
+.sk-action-chip.adjust{background:#e0e7ff;color:#3730a3;}
+.sk-action-chip.sync{background:#f3f4f6;color:#6b7280;}
+.sk-action-chip.reserve{background:#fef3c7;color:#92400e;}
+.sk-action-chip.restore{background:#ede9fe;color:#5b21b6;}
 .tq-topbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:22px;}
 .tq-topbar h1{font-size:26px;font-weight:900;color:var(--vf-text);margin:0;letter-spacing:-.5px;}
 .tq-topbar p{margin:0;color:var(--vf-muted);font-size:13px;}
@@ -3400,6 +3440,7 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
     <button id="navVendors" onclick="showSection('vendors')" title="Vendors">Vendors</button>
     <button id="navTrackingQueue" onclick="showSection('trackingQueue')" title="Tracking Queue" style="position:relative;">Tracking Queue <span id="tqNavBadge" style="display:none;position:absolute;top:8px;right:10px;background:#ef4444;color:#fff;font-size:9px;font-weight:900;border-radius:999px;padding:1px 6px;min-width:16px;text-align:center;"></span></button>
     <button id="navChat" onclick="showSection('chat')" title="Team Chat">Team Chat</button>
+    <button id="navStock" onclick="showSection('stock')" title="Stock Management">Stock</button>
 
     <!-- Project switcher moved to sidebar bottom -->
     <div class="sidebar-project-wrap">
@@ -5404,10 +5445,182 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
       </div>
     </section>
 
+    <!-- ══════════════════ STOCK MANAGEMENT SECTION ══════════════════ -->
+    <section id="stockSection" class="section">
+      <div class="sk-topbar">
+        <div>
+          <h1>Stock Management</h1>
+          <p>Track inventory levels, sync products, and manage stock across stores.</p>
+        </div>
+        <div class="actions" style="margin-top:0;display:flex;gap:10px;flex-wrap:wrap;">
+          <select id="skStoreFilter" onchange="loadStock()" style="padding:9px 14px;border-radius:14px;border:1px solid var(--vf-line);background:var(--vf-surface);color:var(--vf-text);font-size:13px;font-weight:700;cursor:pointer;outline:none;">
+            <option value="">All Stores</option>
+          </select>
+          <button class="btn" onclick="skSyncFromOrders()">⟳ Sync from Orders</button>
+          <button class="btn green" onclick="openSkAddModal()">+ Add Stock</button>
+          <button class="btn" onclick="openSkBulkModal()" style="background:var(--vf-surface-2);">⬆ Bulk CSV</button>
+          <button class="btn" onclick="loadStock()" style="background:var(--vf-surface-2);">Refresh</button>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="sk-stats">
+        <div class="sk-stat"><span>Total Products</span><b id="skStatProducts">—</b></div>
+        <div class="sk-stat"><span>Total Variants</span><b id="skStatVariants">—</b></div>
+        <div class="sk-stat"><span>Total Units</span><b id="skStatQty">—</b></div>
+        <div class="sk-stat"><span style="color:#f59e0b;">⚠ Low Stock (≤5)</span><b id="skStatLow" style="color:#f59e0b;">—</b></div>
+        <div class="sk-stat"><span style="color:#ef4444;">✕ Out of Stock</span><b id="skStatOut" style="color:#ef4444;">—</b></div>
+      </div>
+
+      <!-- Sub-tabs -->
+      <div style="display:flex;gap:8px;margin-bottom:18px;">
+        <button class="sk-tab active" id="skTabProducts" onclick="skSwitchTab('products')">Products</button>
+        <button class="sk-tab" id="skTabAudit" onclick="skSwitchTab('audit')">Audit Log</button>
+      </div>
+
+      <!-- Products panel -->
+      <div id="skPanelProducts">
+        <div class="sk-toolbar">
+          <input class="sk-search" id="skSearch" type="text" placeholder="Search product name or SKU…" oninput="skFilterProducts()">
+          <div style="display:flex;gap:6px;">
+            <button class="sk-tab active" id="skF_all" onclick="skSetStockFilter('all',this)">All</button>
+            <button class="sk-tab" id="skF_low" onclick="skSetStockFilter('low',this)" style="color:#f59e0b;">Low</button>
+            <button class="sk-tab" id="skF_out" onclick="skSetStockFilter('out',this)" style="color:#ef4444;">Out</button>
+          </div>
+        </div>
+
+        <div class="sk-table-wrap">
+          <table class="sk-table">
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th>Store</th>
+                <th>Variants</th>
+                <th>Total Units</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="skProductsBody">
+              <tr><td colspan="6" style="text-align:center;padding:40px;color:var(--vf-muted);">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Audit Log panel -->
+      <div id="skPanelAudit" style="display:none;">
+        <div class="sk-table-wrap">
+          <div style="display:grid;grid-template-columns:160px 1fr 90px 90px 90px 130px;gap:0;padding:10px 16px;border-bottom:1px solid var(--vf-line);font-size:10px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.06em;">
+            <span>Time</span><span>Product / Variant</span><span>Action</span><span>Before</span><span>After</span><span>Actor</span>
+          </div>
+          <div id="skAuditBody" style="max-height:520px;overflow-y:auto;">
+            <div style="text-align:center;padding:40px;color:var(--vf-muted);">Loading audit log…</div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <!-- ══════════════════ END STOCK SECTION ══════════════════ -->
+
   </main>
 </div>
 
 <!-- New Channel Modal -->
+<!-- ── Add Stock Modal ── -->
+<div id="skAddModal" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(13,13,18,.6);backdrop-filter:blur(8px);align-items:center;justify-content:center;">
+  <div style="background:var(--vf-panel);border-radius:26px;padding:32px;width:100%;max-width:480px;box-shadow:0 30px 80px rgba(0,0,0,.3);position:relative;">
+    <button onclick="closeSkAddModal()" style="position:absolute;top:16px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--vf-muted);">✕</button>
+    <h2 style="margin:0 0 20px;font-size:20px;font-weight:900;color:var(--vf-text);">Add / Update Stock</h2>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div>
+        <label style="font-size:11px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.06em;">Store *</label>
+        <select id="skAddStore" style="width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--vf-line);border-radius:12px;background:var(--vf-surface);color:var(--vf-text);font-size:13px;"></select>
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.06em;">Product Name *</label>
+        <input id="skAddProductName" type="text" placeholder="e.g. Blue Hoodie" style="width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--vf-line);border-radius:12px;background:var(--vf-surface);color:var(--vf-text);font-size:13px;box-sizing:border-box;">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <label style="font-size:11px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.06em;">Color</label>
+          <input id="skAddColor" type="text" placeholder="e.g. Blue" style="width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--vf-line);border-radius:12px;background:var(--vf-surface);color:var(--vf-text);font-size:13px;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.06em;">Size</label>
+          <input id="skAddSize" type="text" placeholder="e.g. XL" style="width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--vf-line);border-radius:12px;background:var(--vf-surface);color:var(--vf-text);font-size:13px;box-sizing:border-box;">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <label style="font-size:11px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.06em;">SKU</label>
+          <input id="skAddSku" type="text" placeholder="Optional" style="width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--vf-line);border-radius:12px;background:var(--vf-surface);color:var(--vf-text);font-size:13px;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.06em;">Quantity *</label>
+          <input id="skAddQty" type="number" min="0" placeholder="0" style="width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--vf-line);border-radius:12px;background:var(--vf-surface);color:var(--vf-text);font-size:13px;box-sizing:border-box;">
+        </div>
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.06em;">Note</label>
+        <input id="skAddNote" type="text" placeholder="Optional note" style="width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--vf-line);border-radius:12px;background:var(--vf-surface);color:var(--vf-text);font-size:13px;box-sizing:border-box;">
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:20px;">
+      <button class="btn green" onclick="submitSkAdd()" style="flex:1;">Add Stock</button>
+      <button class="btn" onclick="closeSkAddModal()" style="flex:0.4;">Cancel</button>
+    </div>
+    <div id="skAddError" style="display:none;margin-top:12px;color:#dc2626;font-size:12px;font-weight:700;"></div>
+  </div>
+</div>
+
+<!-- ── Bulk CSV Upload Modal ── -->
+<div id="skBulkModal" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(13,13,18,.6);backdrop-filter:blur(8px);align-items:center;justify-content:center;">
+  <div style="background:var(--vf-panel);border-radius:26px;padding:32px;width:100%;max-width:480px;box-shadow:0 30px 80px rgba(0,0,0,.3);position:relative;">
+    <button onclick="closeSkBulkModal()" style="position:absolute;top:16px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--vf-muted);">✕</button>
+    <h2 style="margin:0 0 6px;font-size:20px;font-weight:900;color:var(--vf-text);">Bulk CSV Upload</h2>
+    <p style="margin:0 0 20px;font-size:12px;color:var(--vf-muted);">CSV columns: <b>product_name, color, size, sku, quantity</b> (optional: product_id)</p>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div>
+        <label style="font-size:11px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.06em;">Store *</label>
+        <select id="skBulkStore" style="width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--vf-line);border-radius:12px;background:var(--vf-surface);color:var(--vf-text);font-size:13px;"></select>
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.06em;">CSV File *</label>
+        <input id="skBulkFile" type="file" accept=".csv" style="margin-top:4px;width:100%;font-size:13px;color:var(--vf-text);">
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:20px;">
+      <button class="btn green" onclick="submitSkBulk()" style="flex:1;">Upload & Import</button>
+      <button class="btn" onclick="closeSkBulkModal()" style="flex:0.4;">Cancel</button>
+    </div>
+    <div id="skBulkResult" style="display:none;margin-top:12px;font-size:12px;font-weight:700;"></div>
+  </div>
+</div>
+
+<!-- ── Edit Variant Stock Modal ── -->
+<div id="skEditModal" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(13,13,18,.6);backdrop-filter:blur(8px);align-items:center;justify-content:center;">
+  <div style="background:var(--vf-panel);border-radius:26px;padding:32px;width:100%;max-width:400px;box-shadow:0 30px 80px rgba(0,0,0,.3);position:relative;">
+    <button onclick="closeSkEditModal()" style="position:absolute;top:16px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--vf-muted);">✕</button>
+    <h2 style="margin:0 0 4px;font-size:18px;font-weight:900;color:var(--vf-text);">Update Stock</h2>
+    <p id="skEditLabel" style="margin:0 0 18px;font-size:13px;color:var(--vf-muted);"></p>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div>
+        <label style="font-size:11px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.06em;">New Quantity</label>
+        <input id="skEditQty" type="number" min="0" style="width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--vf-line);border-radius:12px;background:var(--vf-surface);color:var(--vf-text);font-size:16px;font-weight:900;text-align:center;box-sizing:border-box;">
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.06em;">Note (optional)</label>
+        <input id="skEditNote" type="text" placeholder="Reason for adjustment…" style="width:100%;margin-top:4px;padding:10px 12px;border:1px solid var(--vf-line);border-radius:12px;background:var(--vf-surface);color:var(--vf-text);font-size:13px;box-sizing:border-box;">
+      </div>
+    </div>
+    <input type="hidden" id="skEditVariantId">
+    <div style="display:flex;gap:10px;margin-top:20px;">
+      <button class="btn green" onclick="submitSkEdit()" style="flex:1;">Save</button>
+      <button class="btn" onclick="closeSkEditModal()" style="flex:0.4;">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <div id="newChannelModal" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(13,13,18,.6);backdrop-filter:blur(8px);align-items:center;justify-content:center;">
   <div style="background:#fff;border-radius:22px;padding:30px 32px;width:440px;box-shadow:0 28px 70px rgba(20,14,60,.18);border:1px solid #e7e2f5;">
     <h3 style="margin:0 0 20px;font-size:20px;font-weight:800;color:#0d0d12;letter-spacing:-.3px;">New Channel</h3>
@@ -6418,6 +6631,12 @@ function showSection(section){
     _tcStartPoll();
   } else {
     _tcStopPoll();
+  }
+
+  if(section === "stock"){
+    document.getElementById("stockSection").classList.add("active");
+    document.getElementById("navStock").classList.add("active");
+    loadStock();
   }
 }
 
@@ -14928,6 +15147,275 @@ document.addEventListener("click",e=>{
   const picker=document.getElementById("tcEmojiPicker");
   if(picker&&picker.classList.contains("show")&&!picker.contains(e.target)&&!e.target.closest("[onclick='toggleEmojiPicker()']"))
     picker.classList.remove("show");
+});
+
+// ══════════════════════════════════════════════════════════════
+// STOCK MANAGEMENT JS
+// ══════════════════════════════════════════════════════════════
+let _skProducts = [];
+let _skStockFilter = "all";
+let _skActiveTab = "products";
+let _skStores = [];
+
+async function loadStock(){
+  await _skLoadStores();
+  const storeId = document.getElementById("skStoreFilter")?.value || "";
+  try{
+    const r = await fetch(`/stock/dashboard/?store_id=${storeId}`);
+    const d = await r.json();
+    if(!d.success) return;
+    _skProducts = d.products || [];
+    // Stats
+    document.getElementById("skStatProducts").textContent = d.stats.total_products;
+    document.getElementById("skStatVariants").textContent = d.stats.total_variants;
+    document.getElementById("skStatQty").textContent = d.stats.total_qty;
+    document.getElementById("skStatLow").textContent = d.stats.low_stock;
+    document.getElementById("skStatOut").textContent = d.stats.out_of_stock;
+    skRenderProducts();
+    if(_skActiveTab === "audit") skLoadAudit();
+  }catch(e){ console.error("loadStock error", e); }
+}
+
+async function _skLoadStores(){
+  if(_skStores.length) return;
+  try{
+    const r = await fetch("/stores/");
+    const d = await r.json();
+    _skStores = d.stores || [];
+    const filterSel = document.getElementById("skStoreFilter");
+    const addSel = document.getElementById("skAddStore");
+    const bulkSel = document.getElementById("skBulkStore");
+    filterSel.innerHTML = '<option value="">All Stores</option>';
+    addSel && (addSel.innerHTML = "");
+    bulkSel && (bulkSel.innerHTML = "");
+    _skStores.forEach(s => {
+      filterSel.innerHTML += `<option value="${s.id}">${s.name}</option>`;
+      if(addSel) addSel.innerHTML += `<option value="${s.id}">${s.name}</option>`;
+      if(bulkSel) bulkSel.innerHTML += `<option value="${s.id}">${s.name}</option>`;
+    });
+  }catch(e){}
+}
+
+function skRenderProducts(){
+  const search = (document.getElementById("skSearch")?.value || "").toLowerCase();
+  let list = _skProducts;
+  if(search) list = list.filter(p =>
+    p.product_name.toLowerCase().includes(search) ||
+    (p.variants||[]).some(v => v.sku.toLowerCase().includes(search))
+  );
+  if(_skStockFilter === "low") list = list.filter(p => p.total_available > 0 && p.total_available <= 5);
+  if(_skStockFilter === "out") list = list.filter(p => p.total_available === 0);
+
+  const tbody = document.getElementById("skProductsBody");
+  if(!list.length){
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--vf-muted);">No products found.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = list.map(p => {
+    const avail = p.total_available;
+    const badge = avail === 0
+      ? `<span class="sk-badge out">Out of Stock</span>`
+      : avail <= 5
+        ? `<span class="sk-badge low">Low (${avail})</span>`
+        : `<span class="sk-badge ok">In Stock</span>`;
+    return `<tr>
+      <td style="font-weight:800;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${p.product_name}">${p.product_name}</td>
+      <td style="color:var(--vf-muted);font-size:12px;">${p.store_name}</td>
+      <td style="color:var(--vf-muted);">${p.variant_count}</td>
+      <td style="font-weight:900;font-size:15px;">${p.total_qty}</td>
+      <td>${badge}</td>
+      <td>
+        <button class="btn dark" style="font-size:11px;padding:5px 12px;" onclick="skToggleVariants(${p.id})">Details</button>
+      </td>
+    </tr>
+    <tr id="skVarRow_${p.id}" style="display:none;">
+      <td colspan="6" style="padding:0 0 0 32px;background:var(--vf-surface-2);">
+        <table class="sk-variant-table">
+          <thead><tr><th>Color</th><th>Size</th><th>SKU</th><th>Quantity</th><th>Available</th><th></th></tr></thead>
+          <tbody>
+            ${(p.variants||[]).map(v => `<tr>
+              <td>${v.color||"—"}</td>
+              <td>${v.size||"—"}</td>
+              <td style="color:var(--vf-muted);font-size:11px;">${v.sku||"—"}</td>
+              <td style="font-weight:900;">${v.quantity}</td>
+              <td style="font-weight:700;color:${v.available===0?"#ef4444":v.available<=5?"#f59e0b":"#059669"};">${v.available}</td>
+              <td><button class="btn dark" style="font-size:10px;padding:4px 10px;" onclick="openSkEditModal(${v.id},'${p.product_name}',${v.quantity})">Edit</button></td>
+            </tr>`).join("")}
+          </tbody>
+        </table>
+      </td>
+    </tr>`;
+  }).join("");
+}
+
+function skFilterProducts(){ skRenderProducts(); }
+
+function skToggleVariants(productId){
+  const row = document.getElementById(`skVarRow_${productId}`);
+  if(!row) return;
+  row.style.display = row.style.display === "none" ? "table-row" : "none";
+}
+
+function skSetStockFilter(filter, btn){
+  _skStockFilter = filter;
+  document.querySelectorAll("#skPanelProducts .sk-tab").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  skRenderProducts();
+}
+
+function skSwitchTab(tab){
+  _skActiveTab = tab;
+  document.getElementById("skPanelProducts").style.display = tab === "products" ? "block" : "none";
+  document.getElementById("skPanelAudit").style.display = tab === "audit" ? "block" : "none";
+  document.getElementById("skTabProducts").classList.toggle("active", tab === "products");
+  document.getElementById("skTabAudit").classList.toggle("active", tab === "audit");
+  if(tab === "audit") skLoadAudit();
+}
+
+async function skLoadAudit(){
+  const storeId = document.getElementById("skStoreFilter")?.value || "";
+  const body = document.getElementById("skAuditBody");
+  body.innerHTML = `<div style="text-align:center;padding:30px;color:var(--vf-muted);">Loading…</div>`;
+  try{
+    const r = await fetch(`/stock/audit/?store_id=${storeId}&limit=100`);
+    const d = await r.json();
+    if(!d.success || !d.logs.length){
+      body.innerHTML = `<div style="text-align:center;padding:30px;color:var(--vf-muted);">No audit logs yet.</div>`;
+      return;
+    }
+    body.innerHTML = d.logs.map(log => {
+      const dt = new Date(log.created_at);
+      const ts = dt.toLocaleDateString("en-GB",{day:"numeric",month:"short"}) + " " + dt.toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"});
+      const chip = `<span class="sk-action-chip ${log.action}">${log.action_label}</span>`;
+      const varLabel = [log.color, log.size].filter(Boolean).join(" / ") || "—";
+      return `<div style="display:grid;grid-template-columns:160px 1fr 90px 90px 90px 130px;gap:0;padding:10px 16px;border-bottom:1px solid var(--vf-line);font-size:12px;align-items:center;">
+        <span style="color:var(--vf-muted);font-size:11px;">${ts}</span>
+        <span style="font-weight:700;">${log.product_name}<span style="font-weight:400;color:var(--vf-muted);"> · ${varLabel}</span></span>
+        <span>${chip}</span>
+        <span style="color:var(--vf-muted);">${log.qty_before}</span>
+        <span style="font-weight:900;">${log.qty_after}</span>
+        <span style="color:var(--vf-muted);font-size:11px;">${log.actor}</span>
+      </div>`;
+    }).join("");
+  }catch(e){ body.innerHTML = `<div style="text-align:center;padding:30px;color:#ef4444;">Error loading audit log.</div>`; }
+}
+
+async function skSyncFromOrders(){
+  const storeId = document.getElementById("skStoreFilter")?.value;
+  if(!storeId){
+    alert("Please select a store first to sync.");
+    return;
+  }
+  const btn = event.target;
+  btn.disabled = true; btn.textContent = "Syncing…";
+  try{
+    const r = await fetch("/stock/sync/",{method:"POST",headers:{"Content-Type":"application/json","X-CSRFToken":getCsrfToken()},body:JSON.stringify({store_id:storeId})});
+    const d = await r.json();
+    if(d.success) { alert(`Synced ${d.synced} products from orders.`); loadStock(); }
+    else alert("Sync failed: " + d.message);
+  }finally{ btn.disabled=false; btn.textContent="⟳ Sync from Orders"; }
+}
+
+// ── Add Stock Modal ──
+function openSkAddModal(){
+  _skLoadStores();
+  document.getElementById("skAddModal").style.display = "flex";
+  document.getElementById("skAddProductName").value = "";
+  document.getElementById("skAddColor").value = "";
+  document.getElementById("skAddSize").value = "";
+  document.getElementById("skAddSku").value = "";
+  document.getElementById("skAddQty").value = "";
+  document.getElementById("skAddNote").value = "";
+  document.getElementById("skAddError").style.display = "none";
+}
+function closeSkAddModal(){ document.getElementById("skAddModal").style.display = "none"; }
+
+async function submitSkAdd(){
+  const store_id = document.getElementById("skAddStore").value;
+  const product_name = document.getElementById("skAddProductName").value.trim();
+  const color = document.getElementById("skAddColor").value.trim();
+  const size = document.getElementById("skAddSize").value.trim();
+  const sku = document.getElementById("skAddSku").value.trim();
+  const quantity = parseInt(document.getElementById("skAddQty").value) || 0;
+  const note = document.getElementById("skAddNote").value.trim();
+  const errEl = document.getElementById("skAddError");
+
+  if(!store_id || !product_name){
+    errEl.textContent = "Store and product name are required.";
+    errEl.style.display = "block";
+    return;
+  }
+  try{
+    const r = await fetch("/stock/add/",{method:"POST",headers:{"Content-Type":"application/json","X-CSRFToken":getCsrfToken()},body:JSON.stringify({store_id,product_name,color,size,sku,quantity,note})});
+    const d = await r.json();
+    if(d.success){ closeSkAddModal(); loadStock(); }
+    else{ errEl.textContent = d.message || "Error adding stock."; errEl.style.display="block"; }
+  }catch(e){ errEl.textContent = "Network error."; errEl.style.display="block"; }
+}
+
+// ── Bulk CSV Modal ──
+function openSkBulkModal(){
+  _skLoadStores();
+  document.getElementById("skBulkModal").style.display = "flex";
+  document.getElementById("skBulkFile").value = "";
+  document.getElementById("skBulkResult").style.display = "none";
+}
+function closeSkBulkModal(){ document.getElementById("skBulkModal").style.display = "none"; }
+
+async function submitSkBulk(){
+  const store_id = document.getElementById("skBulkStore").value;
+  const file = document.getElementById("skBulkFile").files[0];
+  const resEl = document.getElementById("skBulkResult");
+  if(!store_id || !file){
+    resEl.textContent = "Please select a store and a CSV file.";
+    resEl.style.cssText = "display:block;color:#dc2626;";
+    return;
+  }
+  const fd = new FormData();
+  fd.append("store_id", store_id);
+  fd.append("file", file);
+  try{
+    const r = await fetch("/stock/bulk-upload/",{method:"POST",headers:{"X-CSRFToken":getCsrfToken()},body:fd});
+    const d = await r.json();
+    if(d.success){
+      resEl.textContent = `Imported ${d.imported} rows. ${d.errors > 0 ? d.errors+" errors." : ""}`;
+      resEl.style.cssText = "display:block;color:#059669;";
+      loadStock();
+    } else {
+      resEl.textContent = d.message || "Upload failed.";
+      resEl.style.cssText = "display:block;color:#dc2626;";
+    }
+  }catch(e){ resEl.textContent = "Network error."; resEl.style.cssText = "display:block;color:#dc2626;"; }
+}
+
+// ── Edit Variant Stock Modal ──
+function openSkEditModal(variantId, productName, currentQty){
+  document.getElementById("skEditModal").style.display = "flex";
+  document.getElementById("skEditLabel").textContent = productName;
+  document.getElementById("skEditVariantId").value = variantId;
+  document.getElementById("skEditQty").value = currentQty;
+  document.getElementById("skEditNote").value = "";
+}
+function closeSkEditModal(){ document.getElementById("skEditModal").style.display = "none"; }
+
+async function submitSkEdit(){
+  const variant_id = document.getElementById("skEditVariantId").value;
+  const quantity = parseInt(document.getElementById("skEditQty").value) || 0;
+  const note = document.getElementById("skEditNote").value.trim();
+  try{
+    const r = await fetch("/stock/entry/",{method:"POST",headers:{"Content-Type":"application/json","X-CSRFToken":getCsrfToken()},body:JSON.stringify({variant_id,quantity,note,action:"adjust"})});
+    const d = await r.json();
+    if(d.success){ closeSkEditModal(); loadStock(); }
+    else alert("Error: " + (d.message||"Update failed."));
+  }catch(e){ alert("Network error."); }
+}
+
+// Close stock modals on background click
+document.addEventListener("click", e => {
+  if(e.target.id === "skAddModal") closeSkAddModal();
+  if(e.target.id === "skBulkModal") closeSkBulkModal();
+  if(e.target.id === "skEditModal") closeSkEditModal();
 });
 </script>
 </body>
