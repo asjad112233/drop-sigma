@@ -267,7 +267,89 @@ def signup_view(request):
 
 def email_sent_view(request):
     email = request.GET.get("email", "")
-    return render(request, "email_sent.html", {"email": email})
+    resent = request.GET.get("resent", "")
+    return render(request, "email_sent.html", {"email": email, "resent": resent})
+
+
+def resend_verification_email_view(request):
+    email = request.GET.get("email", "").strip()
+    if not email:
+        return redirect("/signup/")
+
+    from django.contrib.auth.models import User
+    from superadmin.models import EmailVerificationToken
+    import threading, logging, os as _os, resend as _resend
+
+    _mail_logger = logging.getLogger("dropsigma.mail")
+
+    try:
+        user = User.objects.get(email__iexact=email)
+    except User.DoesNotExist:
+        return redirect(f"/signup/email-sent/?email={email}&resent=1")
+
+    # Delete old tokens and create fresh one
+    EmailVerificationToken.objects.filter(user=user).delete()
+    token_obj = EmailVerificationToken.objects.create(user=user)
+
+    host   = request.get_host()
+    scheme = "http" if host.split(":")[0] in ("localhost", "127.0.0.1") else "https"
+    link   = f"{scheme}://{host}/verify-email/{token_obj.token}/"
+    name   = user.first_name or user.username
+
+    def _send():
+        try:
+            _resend.api_key = _os.getenv("RESEND_API_KEY", "")
+            html_body = f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f6f9fc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f6f9fc;padding:48px 16px;">
+  <tr><td align="center">
+  <table width="520" cellpadding="0" cellspacing="0" style="max-width:520px;width:100%;">
+    <tr><td align="center" style="padding-bottom:28px;">
+      <table cellpadding="0" cellspacing="0"><tr>
+        <td style="background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:12px;width:40px;height:40px;text-align:center;vertical-align:middle;">
+          <span style="color:#fff;font-weight:900;font-size:16px;">DS</span>
+        </td>
+        <td style="padding-left:10px;">
+          <span style="font-size:18px;font-weight:800;color:#0f172a;letter-spacing:-.3px;">Drop Sigma</span>
+        </td>
+      </tr></table>
+    </td></tr>
+    <tr><td style="background:#ffffff;border-radius:16px;border:1px solid #e2e8f0;padding:44px 48px;">
+      <h1 style="margin:0 0 12px;font-size:24px;font-weight:800;color:#0f172a;letter-spacing:-.4px;">Verify your email address</h1>
+      <p style="margin:0 0 28px;font-size:15px;color:#64748b;line-height:1.7;">Hi <strong style="color:#0f172a;">{name}</strong>, here is your new verification link. Click the button below to activate your account.</p>
+      <table cellpadding="0" cellspacing="0" style="margin-bottom:32px;">
+        <tr><td style="background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:10px;">
+          <a href="{link}" style="display:inline-block;padding:14px 36px;color:#fff;font-weight:700;font-size:15px;text-decoration:none;">Verify Email Address →</a>
+        </td></tr>
+      </table>
+      <hr style="border:none;border-top:1px solid #e2e8f0;margin:0 0 24px;">
+      <p style="margin:0 0 8px;font-size:12px;font-weight:700;color:#94a3b8;letter-spacing:.06em;text-transform:uppercase;">Or copy this link</p>
+      <p style="margin:0 0 28px;font-size:13px;color:#6366f1;word-break:break-all;">{link}</p>
+      <div style="background:#fafafa;border:1px solid #e2e8f0;border-radius:10px;padding:14px 18px;">
+        <p style="margin:0;font-size:13px;color:#64748b;line-height:1.6;">⏱ This link expires in <strong style="color:#0f172a;">24 hours</strong>. If you didn't create an account, you can safely ignore this email.</p>
+      </div>
+    </td></tr>
+    <tr><td style="padding:28px 8px 0;text-align:center;">
+      <p style="margin:0 0 6px;font-size:12px;color:#94a3b8;">Questions? Email us at <a href="mailto:support@dropsigma.com" style="color:#6366f1;text-decoration:none;">support@dropsigma.com</a></p>
+      <p style="margin:0;font-size:12px;color:#cbd5e1;">© 2026 Drop Sigma · <a href="https://dropsigma.com" style="color:#94a3b8;text-decoration:none;">dropsigma.com</a></p>
+    </td></tr>
+  </table>
+  </td></tr>
+  </table>
+</body></html>"""
+            _resend.Emails.send({
+                "from": "Drop Sigma <noreply@dropsigma.com>",
+                "to": [email],
+                "subject": "Verify your Drop Sigma account",
+                "html": html_body,
+            })
+            _mail_logger.info(f"Resent verification email to {email}")
+        except Exception as exc:
+            _mail_logger.error(f"Resend verification FAILED to {email}: {exc}")
+
+    threading.Thread(target=_send, daemon=True).start()
+    return redirect(f"/signup/email-sent/?email={email}&resent=1")
 
 
 # ── Email Verification ────────────────────────────────────────────────────────
