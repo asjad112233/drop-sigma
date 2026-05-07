@@ -198,20 +198,62 @@ def signup_view(request):
                     try:
                         _mail_logger.info(f"Sending verification email to {email} via Resend")
                         _resend.api_key = _os.getenv("RESEND_API_KEY", "")
+                        html_body = f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f4f6fb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6fb;padding:40px 16px;">
+    <tr><td align="center">
+      <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
+
+        <!-- Header -->
+        <tr><td align="center" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:16px 16px 0 0;padding:32px 24px;">
+          <table cellpadding="0" cellspacing="0"><tr>
+            <td style="background:rgba(255,255,255,0.15);border-radius:12px;width:44px;height:44px;text-align:center;vertical-align:middle;">
+              <span style="color:#fff;font-weight:900;font-size:18px;letter-spacing:-.5px;">DS</span>
+            </td>
+            <td style="padding-left:12px;">
+              <div style="color:#fff;font-weight:900;font-size:20px;letter-spacing:-.3px;">Drop Sigma</div>
+              <div style="color:rgba(255,255,255,0.7);font-size:11px;margin-top:2px;">Ecommerce Operations OS</div>
+            </td>
+          </tr></table>
+        </td></tr>
+
+        <!-- Body -->
+        <tr><td style="background:#ffffff;padding:36px 40px;">
+          <h1 style="margin:0 0 8px;font-size:22px;font-weight:800;color:#0f172a;letter-spacing:-.3px;">Verify your email address</h1>
+          <p style="margin:0 0 24px;font-size:14px;color:#64748b;line-height:1.6;">Hi <strong style="color:#0f172a;">{name}</strong>, welcome to Drop Sigma! Click the button below to verify your email and activate your account.</p>
+
+          <table cellpadding="0" cellspacing="0" style="margin:0 0 28px;">
+            <tr><td style="background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:10px;">
+              <a href="{link}" style="display:inline-block;padding:14px 32px;color:#fff;font-weight:700;font-size:15px;text-decoration:none;letter-spacing:-.1px;">Verify Email Address →</a>
+            </td></tr>
+          </table>
+
+          <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px 20px;margin-bottom:24px;">
+            <p style="margin:0 0 6px;font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:.05em;text-transform:uppercase;">Or copy this link</p>
+            <p style="margin:0;font-size:12px;color:#6366f1;word-break:break-all;"><a href="{link}" style="color:#6366f1;text-decoration:none;">{link}</a></p>
+          </div>
+
+          <div style="border-top:1px solid #e2e8f0;padding-top:20px;">
+            <p style="margin:0;font-size:12px;color:#94a3b8;line-height:1.6;">This link expires in <strong style="color:#64748b;">24 hours</strong>. If you did not create a Drop Sigma account, you can safely ignore this email.</p>
+          </div>
+        </td></tr>
+
+        <!-- Footer -->
+        <tr><td style="background:#f8fafc;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 16px 16px;padding:20px 40px;text-align:center;">
+          <p style="margin:0;font-size:11px;color:#94a3b8;">© 2026 Drop Sigma · <a href="https://dropsigma.com" style="color:#6366f1;text-decoration:none;">dropsigma.com</a></p>
+          <p style="margin:6px 0 0;font-size:11px;color:#cbd5e1;">This email was sent from <a href="mailto:noreply@dropsigma.com" style="color:#94a3b8;text-decoration:none;">noreply@dropsigma.com</a></p>
+        </td></tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body></html>"""
                         _resend.Emails.send({
                             "from": "Drop Sigma <noreply@dropsigma.com>",
                             "to": [email],
                             "subject": "Verify your Drop Sigma account",
-                            "html": (
-                                f"<p>Hi {name},</p>"
-                                f"<p>Click the button below to verify your email and activate your account:</p>"
-                                f"<p><a href='{link}' style='background:#6366f1;color:#fff;padding:12px 24px;"
-                                f"border-radius:8px;text-decoration:none;font-weight:700;display:inline-block;'>"
-                                f"Verify Email</a></p>"
-                                f"<p>Or copy this link: <a href='{link}'>{link}</a></p>"
-                                f"<p>This link expires in 24 hours.</p>"
-                                f"<p>— Drop Sigma Team</p>"
-                            ),
+                            "html": html_body,
                         })
                         _mail_logger.info(f"Verification email sent OK to {email}")
                     except Exception as exc:
