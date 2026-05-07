@@ -125,6 +125,180 @@ def _build_verification_email(name, link):
 </body></html>"""
 
 
+def _build_welcome_email(name, upgrade_url):
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Welcome to Drop Sigma</title>
+</head>
+<body style="margin:0;padding:0;background:#f6f9fc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f6f9fc;padding:48px 16px;">
+<tr><td align="center">
+<table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
+
+  <!-- Logo -->
+  <tr><td align="center" style="padding-bottom:32px;">
+    <table cellpadding="0" cellspacing="0"><tr>
+      <td style="background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:14px;width:44px;height:44px;text-align:center;vertical-align:middle;">
+        <span style="color:#fff;font-weight:900;font-size:17px;letter-spacing:-.5px;">DS</span>
+      </td>
+      <td style="padding-left:12px;text-align:left;">
+        <div style="font-size:19px;font-weight:900;color:#0f172a;letter-spacing:-.4px;">Drop Sigma</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:1px;">Ecommerce Operations OS</div>
+      </td>
+    </tr></table>
+  </td></tr>
+
+  <!-- Card -->
+  <tr><td style="background:#ffffff;border-radius:16px;border:1px solid #e2e8f0;overflow:hidden;">
+    <div style="height:4px;background:linear-gradient(90deg,#6366f1,#8b5cf6,#a855f7);"></div>
+    <table width="100%" cellpadding="0" cellspacing="0">
+
+    <!-- Header -->
+    <tr><td align="center" style="padding:40px 48px 32px;">
+      <div style="font-size:12px;font-weight:700;color:#6366f1;background:#ede9fe;border-radius:20px;display:inline-block;padding:5px 16px;letter-spacing:0.5px;margin-bottom:20px;">
+        &#x1F389; WELCOME ABOARD
+      </div>
+      <h1 style="margin:0 0 12px;font-size:26px;font-weight:800;color:#0f172a;line-height:1.3;">
+        You&apos;re in, {name}!
+      </h1>
+      <p style="margin:0;font-size:15px;color:#64748b;line-height:1.7;">
+        Your email is verified. Drop Sigma is ready to transform how you run your ecommerce business &mdash; fully automated, all in one place.
+      </p>
+    </td></tr>
+
+    <!-- Divider -->
+    <tr><td style="padding:0 48px;"><div style="height:1px;background:#f1f5f9;"></div></td></tr>
+
+    <!-- Steps -->
+    <tr><td style="padding:32px 48px;">
+      <p style="margin:0 0 20px;font-size:12px;font-weight:700;color:#94a3b8;letter-spacing:0.8px;text-transform:uppercase;">3 Steps to Full Automation</p>
+
+      <!-- Step 1 Done -->
+      <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">
+      <tr>
+        <td width="40" valign="top">
+          <div style="width:32px;height:32px;background:#dcfce7;border-radius:50%;text-align:center;line-height:32px;font-size:14px;">&#10003;</div>
+        </td>
+        <td valign="top" style="padding-left:12px;">
+          <p style="margin:0;font-size:14px;font-weight:700;color:#16a34a;">Email Verified</p>
+          <p style="margin:4px 0 0;font-size:13px;color:#94a3b8;">Your account is active and secure.</p>
+        </td>
+      </tr>
+      </table>
+
+      <!-- Step 2 Active -->
+      <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">
+      <tr><td style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:12px;padding:14px 16px;">
+        <table width="100%" cellpadding="0" cellspacing="0"><tr>
+          <td width="40" valign="top">
+            <div style="width:32px;height:32px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:50%;text-align:center;line-height:32px;font-size:13px;color:#fff;font-weight:800;">2</div>
+          </td>
+          <td valign="top" style="padding-left:12px;">
+            <p style="margin:0;font-size:14px;font-weight:700;color:#4c1d95;">Choose Your Plan</p>
+            <p style="margin:4px 0 0;font-size:13px;color:#7c3aed;">Unlock stores, order sync, vendors, team chat &amp; AI tools. Plans start at just $49/mo.</p>
+          </td>
+        </tr></table>
+      </td></tr>
+      </table>
+
+      <!-- Step 3 Locked -->
+      <table width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td width="40" valign="top">
+          <div style="width:32px;height:32px;background:#f1f5f9;border-radius:50%;text-align:center;line-height:32px;font-size:14px;color:#94a3b8;">3</div>
+        </td>
+        <td valign="top" style="padding-left:12px;">
+          <p style="margin:0;font-size:14px;font-weight:700;color:#94a3b8;">Run on Autopilot</p>
+          <p style="margin:4px 0 0;font-size:13px;color:#cbd5e1;">Auto sync orders, manage vendors, track stock &mdash; all automated.</p>
+        </td>
+      </tr>
+      </table>
+    </td></tr>
+
+    <!-- Feature Grid -->
+    <tr><td style="padding:0 48px 32px;">
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:20px 24px;">
+        <p style="margin:0 0 14px;font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">What&apos;s waiting for you inside</p>
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td width="50%" style="padding:5px 0;font-size:13px;color:#475569;">&#x1F3EA; &nbsp;Multi-store management</td>
+            <td width="50%" style="padding:5px 0;font-size:13px;color:#475569;">&#x1F4E6; &nbsp;Auto order sync</td>
+          </tr>
+          <tr>
+            <td width="50%" style="padding:5px 0;font-size:13px;color:#475569;">&#x1F91D; &nbsp;Vendor portal</td>
+            <td width="50%" style="padding:5px 0;font-size:13px;color:#475569;">&#x1F4CA; &nbsp;Stock tracking</td>
+          </tr>
+          <tr>
+            <td width="50%" style="padding:5px 0;font-size:13px;color:#475569;">&#x1F4AC; &nbsp;Team chat</td>
+            <td width="50%" style="padding:5px 0;font-size:13px;color:#475569;">&#x1F916; &nbsp;AI assistant</td>
+          </tr>
+        </table>
+      </div>
+    </td></tr>
+
+    <!-- CTA -->
+    <tr><td align="center" style="padding:0 48px 40px;">
+      <table cellpadding="0" cellspacing="0"><tr>
+        <td style="background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:10px;box-shadow:0 4px 14px rgba(99,102,241,.35);">
+          <a href="{upgrade_url}" style="display:inline-block;color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;padding:15px 40px;">
+            Choose a Plan &rarr;
+          </a>
+        </td>
+      </tr></table>
+    </td></tr>
+
+    <!-- Support -->
+    <tr><td style="padding:0 48px 40px;">
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px 20px;text-align:center;">
+        <p style="margin:0;font-size:13px;color:#64748b;">
+          &#x1F6DF; &nbsp;Questions before you start? We&apos;re here.<br/>
+          <a href="mailto:support@dropsigma.com" style="color:#6366f1;font-weight:600;text-decoration:none;">support@dropsigma.com</a>
+        </p>
+      </div>
+    </td></tr>
+
+    </table>
+  </td></tr>
+
+  <!-- Footer -->
+  <tr><td align="center" style="padding:24px 8px 0;text-align:center;">
+    <p style="margin:0 0 6px;font-size:12px;color:#94a3b8;">
+      &copy; 2026 Drop Sigma &nbsp;&middot;&nbsp;
+      <a href="https://dropsigma.com" style="color:#94a3b8;text-decoration:none;">dropsigma.com</a>
+      &nbsp;&middot;&nbsp;
+      <a href="mailto:support@dropsigma.com" style="color:#94a3b8;text-decoration:none;">support@dropsigma.com</a>
+    </p>
+    <p style="margin:0;font-size:11px;color:#cbd5e1;">
+      You received this because you signed up at dropsigma.com
+    </p>
+  </td></tr>
+
+</table>
+</td></tr>
+</table>
+</body></html>"""
+
+
+def _send_welcome_email(email, name, upgrade_url):
+    def _send():
+        try:
+            _mail_logger.info(f"Sending welcome email to {email} via Resend")
+            _resend.api_key = os.getenv("RESEND_API_KEY", "")
+            _resend.Emails.send({
+                "from": "Drop Sigma <noreply@dropsigma.com>",
+                "to": [email],
+                "subject": "Welcome to Drop Sigma — you're one step away 🚀",
+                "html": _build_welcome_email(name, upgrade_url),
+            })
+            _mail_logger.info(f"Welcome email sent OK to {email}")
+        except Exception as exc:
+            _mail_logger.error(f"Welcome email FAILED to {email}: {exc}")
+    threading.Thread(target=_send, daemon=True).start()
+
+
 def _send_verification_email(email, name, link):
     def _send():
         try:
@@ -405,6 +579,13 @@ def verify_email_view(request, token):
             action="Account verified and created via signup",
             action_type="signup",
         )
+
+        # Send welcome email after first-time verification
+        host = request.get_host()
+        scheme = "http" if host.split(":")[0] in ("localhost", "127.0.0.1") else "https"
+        upgrade_url = f"{scheme}://{host}/upgrade/"
+        name = user.first_name or user.username
+        _send_welcome_email(user.email, name, upgrade_url)
 
     return render(request, "verify_email.html", {"status": "success", "email": user.email})
 
