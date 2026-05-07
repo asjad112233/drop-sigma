@@ -191,23 +191,26 @@ def signup_view(request):
                 scheme = "http" if host.split(":")[0] in ("localhost", "127.0.0.1") else "https"
                 link   = f"{scheme}://{host}/verify-email/{token_obj.token}/"
 
-                # Send email
-                try:
-                    send_mail(
-                        subject="Verify your Drop Sigma account",
-                        message=(
-                            f"Hi {name},\n\n"
-                            f"Click the link below to verify your email and activate your account:\n\n"
-                            f"{link}\n\n"
-                            f"This link expires in 24 hours.\n\n"
-                            f"— Drop Sigma Team"
-                        ),
-                        from_email=settings.DEFAULT_FROM_EMAIL,
-                        recipient_list=[email],
-                        fail_silently=False,
-                    )
-                except Exception:
-                    pass
+                # Send verification email in background thread so request returns instantly
+                import threading
+                def _send():
+                    try:
+                        send_mail(
+                            subject="Verify your Drop Sigma account",
+                            message=(
+                                f"Hi {name},\n\n"
+                                f"Click the link below to verify your email and activate your account:\n\n"
+                                f"{link}\n\n"
+                                f"This link expires in 24 hours.\n\n"
+                                f"— Drop Sigma Team"
+                            ),
+                            from_email=settings.DEFAULT_FROM_EMAIL,
+                            recipient_list=[email],
+                            fail_silently=True,
+                        )
+                    except Exception:
+                        pass
+                threading.Thread(target=_send, daemon=True).start()
 
                 return redirect(f"/signup/email-sent/?email={email}")
 
