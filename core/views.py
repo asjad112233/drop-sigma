@@ -192,12 +192,12 @@ def signup_view(request):
                 link   = f"{scheme}://{host}/verify-email/{token_obj.token}/"
 
                 # Send verification email via Resend API (Railway blocks SMTP ports)
-                import threading, logging, resend as _resend
+                import threading, logging, os as _os, resend as _resend
                 _mail_logger = logging.getLogger("dropsigma.mail")
                 def _send():
                     try:
                         _mail_logger.info(f"Sending verification email to {email} via Resend")
-                        _resend.api_key = os.getenv("RESEND_API_KEY", "")
+                        _resend.api_key = _os.getenv("RESEND_API_KEY", "")
                         _resend.Emails.send({
                             "from": "Drop Sigma <noreply@dropsigma.com>",
                             "to": [email],
