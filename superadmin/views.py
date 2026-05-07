@@ -21,7 +21,7 @@ from .models import Tenant, Subscription, TenantActivity, PLAN_PRICES, Coupon
 def superadmin_required(view_fn):
     def wrapper(request, *args, **kwargs):
         if not request.user.is_authenticated or not request.user.is_superuser:
-            return redirect("/login/")
+            return redirect(f"/login/?next={request.path}")
         return view_fn(request, *args, **kwargs)
     wrapper.__name__ = view_fn.__name__
     return wrapper
