@@ -192,9 +192,11 @@ def signup_view(request):
                 link   = f"{scheme}://{host}/verify-email/{token_obj.token}/"
 
                 # Send verification email in background thread so request returns instantly
-                import threading
+                import threading, logging
+                _mail_logger = logging.getLogger("dropsigma.mail")
                 def _send():
                     try:
+                        _mail_logger.info(f"Sending verification email to {email} from {settings.DEFAULT_FROM_EMAIL}")
                         send_mail(
                             subject="Verify your Drop Sigma account",
                             message=(
@@ -206,10 +208,11 @@ def signup_view(request):
                             ),
                             from_email=settings.DEFAULT_FROM_EMAIL,
                             recipient_list=[email],
-                            fail_silently=True,
+                            fail_silently=False,
                         )
-                    except Exception:
-                        pass
+                        _mail_logger.info(f"Verification email sent OK to {email}")
+                    except Exception as exc:
+                        _mail_logger.error(f"Verification email FAILED to {email}: {exc}")
                 threading.Thread(target=_send, daemon=True).start()
 
                 return redirect(f"/signup/email-sent/?email={email}")
