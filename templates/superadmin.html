@@ -899,81 +899,304 @@ function renderPlans(){
 ═══════════════════════════════════════════════════════ */
 
 async function renderCoupons(c){
-  c.innerHTML = `<div style="padding:20px 0"><div style="color:var(--muted);font-size:13px">Loading coupons…</div></div>`;
+  c.innerHTML = `<div style="padding:40px 0;text-align:center;color:var(--muted);font-size:13px;">Loading…</div>`;
   const {ok,data} = await api('/superadmin/api/coupons/');
   const coupons = ok ? data : [];
 
+  const total     = coupons.length;
+  const active    = coupons.filter(x=>x.is_active).length;
+  const totalUses = coupons.reduce((s,x)=>s+(x.uses||0),0);
+  const now       = new Date();
+
+  function expiryLabel(exp){
+    if(!exp) return null;
+    const d = new Date(exp);
+    const diff = Math.ceil((d - now)/(1000*60*60*24));
+    if(diff < 0)  return {txt:'Expired', cls:'down'};
+    if(diff === 0) return {txt:'Expires today', cls:'warn'};
+    if(diff <= 7)  return {txt:`${diff}d left`, cls:'warn'};
+    return {txt: d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}), cls:''};
+  }
+
+  function usageBar(uses, max){
+    if(!max) return '';
+    const pct = Math.min(100, Math.round((uses/max)*100));
+    const col = pct>=90?'var(--red)':pct>=60?'var(--accent)':'var(--green)';
+    return `<div style="margin-top:6px;">
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:3px;">
+        <span>${uses} used</span><span>${max} max</span>
+      </div>
+      <div style="height:4px;background:var(--line);border-radius:99px;overflow:hidden;">
+        <div style="width:${pct}%;height:100%;background:${col};border-radius:99px;transition:width .4s;"></div>
+      </div>
+    </div>`;
+  }
+
+  function couponRow(cp){
+    const exp = expiryLabel(cp.expires_at);
+    const isExpired = exp && exp.cls==='down';
+    const statusOk = cp.is_active && !isExpired;
+    return `
+    <div class="cp-row" data-id="${cp.id}" data-active="${cp.is_active}" data-expired="${isExpired}">
+      <div class="cp-left">
+        <div class="cp-code-wrap">
+          <span class="cp-code">${cp.code}</span>
+          <button class="cp-copy-btn" title="Copy code" onclick="cpCopy('${cp.code}',this)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+          </button>
+        </div>
+        <div class="cp-meta-row">
+          <span class="cp-type-badge ${cp.discount_type==='flat'?'flat':'pct'}">${cp.discount_type==='flat'?'Flat':'%'}</span>
+          <span class="cp-discount">${cp.discount_type==='flat'?'$'+cp.discount_value:cp.discount_value+'% off'}</span>
+          ${exp ? `<span class="cp-expiry ${exp.cls}">${exp.txt}</span>` : `<span class="cp-expiry">No expiry</span>`}
+        </div>
+      </div>
+      <div class="cp-mid">
+        <div class="cp-uses-label">${cp.max_uses ? `${cp.uses} / ${cp.max_uses} uses` : `${cp.uses} uses · Unlimited`}</div>
+        ${usageBar(cp.uses, cp.max_uses)}
+      </div>
+      <div class="cp-right">
+        <span class="cp-status-dot ${statusOk?'ok':isExpired?'expired':'off'}"></span>
+        <span class="cp-status-txt">${isExpired?'Expired':cp.is_active?'Active':'Inactive'}</span>
+      </div>
+      <div class="cp-actions">
+        <button class="cp-act-btn ${cp.is_active?'deact':'act'}" onclick="toggleCoupon(${cp.id},this)" title="${cp.is_active?'Deactivate':'Activate'}">
+          ${cp.is_active
+            ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18.36 6.64A9 9 0 115.64 17.36"/><path d="M12 2v10"/></svg>`
+            : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12l5 5L20 7"/></svg>`}
+        </button>
+        <button class="cp-act-btn del" onclick="deleteCoupon(${cp.id},this)" title="Delete">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+        </button>
+      </div>
+    </div>`;
+  }
+
   c.innerHTML = `
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+  <style>
+    .cp-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;}
+    .cp-header h2{margin:0;font-size:22px;font-weight:900;letter-spacing:-.02em;}
+    .cp-header p{margin:3px 0 0;font-size:13px;color:var(--muted);}
+    .cp-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:22px;}
+    .cp-stat{background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px 20px;display:flex;align-items:center;gap:14px;}
+    .cp-stat-icon{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+    .cp-stat-lbl{font-size:10px;color:var(--muted);font-weight:800;letter-spacing:.06em;text-transform:uppercase;}
+    .cp-stat-val{font-size:26px;font-weight:900;letter-spacing:-.02em;margin-top:2px;}
+    .cp-filters{display:flex;gap:8px;margin-bottom:16px;}
+    .cp-filt{padding:6px 14px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;}
+    .cp-filt:hover{border-color:var(--accent);color:var(--text);}
+    .cp-filt.on{background:var(--side);color:#fff;border-color:var(--side);}
+    .cp-list{display:flex;flex-direction:column;gap:10px;}
+    .cp-row{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px 18px;display:grid;grid-template-columns:2fr 1.6fr 120px auto;gap:16px;align-items:center;transition:box-shadow .15s;}
+    .cp-row:hover{box-shadow:0 4px 18px rgba(15,23,42,.08);}
+    .cp-code-wrap{display:flex;align-items:center;gap:7px;}
+    .cp-code{font-family:monospace;font-size:15px;font-weight:800;color:var(--text);letter-spacing:.04em;}
+    .cp-copy-btn{background:none;border:none;padding:4px;border-radius:6px;color:var(--muted);cursor:pointer;display:flex;align-items:center;transition:all .12s;}
+    .cp-copy-btn:hover{background:var(--surface-2);color:var(--accent);}
+    .cp-meta-row{display:flex;align-items:center;gap:8px;margin-top:7px;}
+    .cp-type-badge{font-size:9px;font-weight:800;padding:2px 7px;border-radius:5px;letter-spacing:.05em;text-transform:uppercase;}
+    .cp-type-badge.flat{background:#fef3c7;color:#b45309;}
+    .cp-type-badge.pct{background:#eff6ff;color:#1d4ed8;}
+    .cp-discount{font-size:12px;font-weight:700;color:var(--text);}
+    .cp-expiry{font-size:11px;font-weight:600;color:var(--muted);}
+    .cp-expiry.warn{color:var(--accent);}
+    .cp-expiry.down{color:var(--red);}
+    .cp-uses-label{font-size:12px;font-weight:700;color:var(--text);}
+    .cp-right{display:flex;align-items:center;gap:7px;}
+    .cp-status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+    .cp-status-dot.ok{background:var(--green);}
+    .cp-status-dot.off{background:#94a3b8;}
+    .cp-status-dot.expired{background:var(--red);}
+    .cp-status-txt{font-size:12px;font-weight:700;color:var(--muted);}
+    .cp-actions{display:flex;gap:6px;justify-content:flex-end;}
+    .cp-act-btn{width:32px;height:32px;border-radius:9px;border:1px solid var(--line);background:#fff;color:var(--muted);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .12s;}
+    .cp-act-btn:hover{border-color:currentColor;}
+    .cp-act-btn.act:hover{background:#ecfdf5;color:var(--green);border-color:var(--green);}
+    .cp-act-btn.deact:hover{background:#fef3c7;color:#b45309;border-color:#b45309;}
+    .cp-act-btn.del:hover{background:#fee2e2;color:var(--red);border-color:var(--red);}
+    .cp-empty{background:#fff;border:1px dashed var(--line);border-radius:16px;padding:60px 24px;text-align:center;}
+    .cp-empty-icon{font-size:40px;margin-bottom:14px;}
+    .cp-empty h3{margin:0 0 6px;font-size:16px;font-weight:800;}
+    .cp-empty p{margin:0 0 20px;font-size:13px;color:var(--muted);}
+    /* Modal */
+    .cp-modal-grid{display:grid;gap:16px;margin-top:6px;}
+    .cp-modal-label{font-size:11px;font-weight:800;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;display:block;margin-bottom:6px;}
+    .cp-modal-input{width:100%;padding:10px 13px;border:1.5px solid var(--line);border-radius:10px;background:#fff;color:var(--text);font-size:14px;font-family:inherit;outline:none;transition:border-color .15s;}
+    .cp-modal-input:focus{border-color:var(--accent);}
+    .cp-code-row{display:flex;gap:8px;}
+    .cp-code-row .cp-modal-input{font-family:monospace;font-weight:700;text-transform:uppercase;letter-spacing:.05em;flex:1;}
+    .cp-gen-btn{padding:0 13px;border:1.5px solid var(--line);border-radius:10px;background:var(--surface-2);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;transition:all .12s;}
+    .cp-gen-btn:hover{border-color:var(--accent);color:var(--accent);}
+    .cp-modal-2col{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+    .cp-modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:6px;border-top:1px solid var(--line);padding-top:18px;}
+  </style>
+
+  <div class="cp-header">
     <div>
-      <h2 style="margin:0;font-size:20px;font-weight:800;">Coupons</h2>
-      <p style="margin:4px 0 0;color:var(--muted);font-size:13px;">Create discount codes for subscribers</p>
+      <h2>Coupons</h2>
+      <p>Create and manage discount codes for your subscribers</p>
     </div>
-    <button class="btn btn-primary" onclick="openModal('couponModal')">+ Create Coupon</button>
+    <button class="btn btn-primary" onclick="openModal('couponModal')" style="gap:8px;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      New Coupon
+    </button>
   </div>
 
-  ${coupons.length===0 ? `<div class="empty"><p>No coupons yet. Create one to offer discounts.</p></div>` : `
-  <div class="card" style="padding:0;overflow:hidden;">
-    <table>
-      <thead><tr>
-        <th>Code</th><th>Discount</th><th>Uses</th><th>Expires</th><th>Status</th><th>Actions</th>
-      </tr></thead>
-      <tbody>
-        ${coupons.map(cp=>`
-        <tr>
-          <td><code style="background:rgba(245,158,11,.1);color:var(--accent);padding:3px 8px;border-radius:5px;font-size:13px;font-weight:700;">${cp.code}</code></td>
-          <td>${cp.discount_type==='flat'?'$'+cp.discount_value:cp.discount_value+'%'} off</td>
-          <td>${cp.uses}${cp.max_uses?' / '+cp.max_uses:' (unlimited)'}</td>
-          <td>${cp.expires_at||'Never'}</td>
-          <td><span class="badge ${cp.is_active?'badge-green':'badge-red'}">${cp.is_active?'Active':'Inactive'}</span></td>
-          <td>
-            <button class="btn btn-sm btn-ghost" onclick="toggleCoupon(${cp.id},this)">${cp.is_active?'Deactivate':'Activate'}</button>
-            <button class="btn btn-sm btn-red" style="margin-left:6px;" onclick="deleteCoupon(${cp.id},this)">Delete</button>
-          </td>
-        </tr>`).join('')}
-      </tbody>
-    </table>
-  </div>`}
+  <div class="cp-stats">
+    <div class="cp-stat">
+      <div class="cp-stat-icon" style="background:#fef3c7;">🏷️</div>
+      <div>
+        <div class="cp-stat-lbl">Total Coupons</div>
+        <div class="cp-stat-val">${total}</div>
+      </div>
+    </div>
+    <div class="cp-stat">
+      <div class="cp-stat-icon" style="background:#ecfdf5;">✅</div>
+      <div>
+        <div class="cp-stat-lbl">Active</div>
+        <div class="cp-stat-val" style="color:var(--green);">${active}</div>
+      </div>
+    </div>
+    <div class="cp-stat">
+      <div class="cp-stat-icon" style="background:#eff6ff;">📊</div>
+      <div>
+        <div class="cp-stat-lbl">Total Redemptions</div>
+        <div class="cp-stat-val">${totalUses}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cp-filters">
+    <button class="cp-filt on" onclick="cpFilter('all',this)">All <span style="opacity:.6;margin-left:3px;">${total}</span></button>
+    <button class="cp-filt" onclick="cpFilter('active',this)">Active <span style="opacity:.6;margin-left:3px;">${active}</span></button>
+    <button class="cp-filt" onclick="cpFilter('inactive',this)">Inactive <span style="opacity:.6;margin-left:3px;">${coupons.filter(x=>!x.is_active).length}</span></button>
+    <button class="cp-filt" onclick="cpFilter('expired',this)">Expired</button>
+  </div>
+
+  <div class="cp-list" id="cpList">
+    ${coupons.length===0
+      ? `<div class="cp-empty">
+          <div class="cp-empty-icon">🏷️</div>
+          <h3>No coupons yet</h3>
+          <p>Create your first discount code to offer deals to subscribers.</p>
+          <button class="btn btn-primary" onclick="openModal('couponModal')">+ Create First Coupon</button>
+        </div>`
+      : coupons.map(couponRow).join('')}
+  </div>
 
   <!-- Create Coupon Modal -->
-  <div class="modal-bg" id="couponModal">
-    <div class="modal" style="max-width:480px;">
-      <div class="modal-head">
-        <h3>Create Coupon</h3>
-        <button onclick="closeModal('couponModal')" class="btn btn-ghost btn-sm">✕</button>
-      </div>
-      <div style="display:grid;gap:14px;">
+  <div class="modal-bg" id="couponModal" onclick="if(event.target===this)closeModal('couponModal')">
+    <div class="modal" style="max-width:500px;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px;">
         <div>
-          <label style="font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:6px;">COUPON CODE</label>
-          <input id="cpCode" placeholder="e.g. LAUNCH50" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:9px;background:var(--bg2);color:var(--text);font-size:14px;font-family:monospace;text-transform:uppercase;">
+          <h3 style="margin:0;">New Discount Coupon</h3>
+          <p style="margin:4px 0 0;font-size:13px;color:var(--muted);">Fill in the details below to create a coupon code</p>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <button onclick="closeModal('couponModal')" style="background:none;border:none;font-size:18px;color:var(--muted);cursor:pointer;padding:2px;">✕</button>
+      </div>
+
+      <div class="cp-modal-grid">
+        <div>
+          <label class="cp-modal-label">Coupon Code</label>
+          <div class="cp-code-row">
+            <input id="cpCode" class="cp-modal-input" placeholder="e.g. LAUNCH50" oninput="this.value=this.value.toUpperCase()">
+            <button class="cp-gen-btn" onclick="cpGenCode()" title="Generate random code">⚡ Generate</button>
+          </div>
+        </div>
+
+        <div class="cp-modal-2col">
           <div>
-            <label style="font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:6px;">TYPE</label>
-            <select id="cpType" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:9px;background:var(--bg2);color:var(--text);font-size:14px;">
-              <option value="flat">Flat ($ off)</option>
-              <option value="percent">Percent (% off)</option>
+            <label class="cp-modal-label">Discount Type</label>
+            <select id="cpType" class="cp-modal-input" onchange="cpUpdatePreview()">
+              <option value="flat">Flat Amount ($)</option>
+              <option value="percent">Percentage (%)</option>
             </select>
           </div>
           <div>
-            <label style="font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:6px;">VALUE</label>
-            <input id="cpValue" type="number" min="1" placeholder="e.g. 20" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:9px;background:var(--bg2);color:var(--text);font-size:14px;">
+            <label class="cp-modal-label">Discount Value</label>
+            <input id="cpValue" type="number" min="1" class="cp-modal-input" placeholder="e.g. 20" oninput="cpUpdatePreview()">
           </div>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+
+        <div id="cpPreviewWrap" style="display:none;background:linear-gradient(135deg,#fef3c7,#fff7e6);border:1.5px solid #f59e0b40;border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:12px;">
+          <span style="font-size:22px;">🎟️</span>
           <div>
-            <label style="font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:6px;">MAX USES (optional)</label>
-            <input id="cpMaxUses" type="number" min="1" placeholder="Unlimited" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:9px;background:var(--bg2);color:var(--text);font-size:14px;">
-          </div>
-          <div>
-            <label style="font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:6px;">EXPIRES (optional)</label>
-            <input id="cpExpires" type="date" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:9px;background:var(--bg2);color:var(--text);font-size:14px;">
+            <div style="font-size:11px;color:#b45309;font-weight:800;text-transform:uppercase;letter-spacing:.05em;">Preview</div>
+            <div id="cpPreviewText" style="font-size:15px;font-weight:900;color:#92400e;margin-top:2px;">—</div>
           </div>
         </div>
-        <button id="cpSubmitBtn" class="btn btn-primary" onclick="createCoupon()">Create Coupon</button>
+
+        <div class="cp-modal-2col">
+          <div>
+            <label class="cp-modal-label">Max Uses <span style="font-weight:500;text-transform:none;letter-spacing:0;">(optional)</span></label>
+            <input id="cpMaxUses" type="number" min="1" class="cp-modal-input" placeholder="Unlimited">
+          </div>
+          <div>
+            <label class="cp-modal-label">Expiry Date <span style="font-weight:500;text-transform:none;letter-spacing:0;">(optional)</span></label>
+            <input id="cpExpires" type="date" class="cp-modal-input">
+          </div>
+        </div>
+      </div>
+
+      <div class="cp-modal-footer">
+        <button class="btn btn-ghost" onclick="closeModal('couponModal')">Cancel</button>
+        <button id="cpSubmitBtn" class="btn btn-primary" onclick="createCoupon()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Create Coupon
+        </button>
       </div>
     </div>
   </div>`;
+
+  // attach filter state
+  window._cpAllData = coupons;
+}
+
+function cpFilter(type, btn){
+  document.querySelectorAll('.cp-filt').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  const list = document.getElementById('cpList');
+  if(!list) return;
+  const rows = list.querySelectorAll('.cp-row');
+  rows.forEach(row=>{
+    const active  = row.dataset.active === 'true';
+    const expired = row.dataset.expired === 'true';
+    let show = true;
+    if(type==='active')   show = active && !expired;
+    if(type==='inactive') show = !active;
+    if(type==='expired')  show = expired;
+    row.style.display = show ? '' : 'none';
+  });
+}
+
+function cpGenCode(){
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for(let i=0;i<8;i++) code += chars[Math.floor(Math.random()*chars.length)];
+  const el = document.getElementById('cpCode');
+  if(el){ el.value = code; cpUpdatePreview(); }
+}
+
+function cpUpdatePreview(){
+  const type  = document.getElementById('cpType')?.value;
+  const value = document.getElementById('cpValue')?.value;
+  const wrap  = document.getElementById('cpPreviewWrap');
+  const text  = document.getElementById('cpPreviewText');
+  if(!wrap||!text) return;
+  if(value && parseFloat(value)>0){
+    wrap.style.display='flex';
+    text.textContent = type==='flat' ? `$${value} off every subscription` : `${value}% off first payment`;
+  } else {
+    wrap.style.display='none';
+  }
+}
+
+async function cpCopy(code, btn){
+  try{
+    await navigator.clipboard.writeText(code);
+    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>`;
+    setTimeout(()=>{ btn.innerHTML=`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>`; }, 1800);
+  }catch(e){ toast('Could not copy','error'); }
 }
 
 async function createCoupon(){
