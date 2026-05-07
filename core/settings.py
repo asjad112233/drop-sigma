@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     'ai',
     'vendors',
     'stock',
+    'superadmin',
 ]
 
 ASGI_APPLICATION = 'core.asgi.application'
@@ -77,6 +78,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'superadmin.middleware.ImpersonationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -141,6 +143,18 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # ========================
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
+
+
+# ========================
+# PAYMENT SETTINGS
+# ========================
+STRIPE_SECRET_KEY      = os.getenv("STRIPE_SECRET_KEY", "")
+STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_PUBLISHABLE_KEY", "")
+STRIPE_WEBHOOK_SECRET  = os.getenv("STRIPE_WEBHOOK_SECRET", "")
+
+PAYPAL_CLIENT_ID     = os.getenv("PAYPAL_CLIENT_ID", "")
+PAYPAL_CLIENT_SECRET = os.getenv("PAYPAL_CLIENT_SECRET", "")
+PAYPAL_MODE          = os.getenv("PAYPAL_MODE", "sandbox")  # 'sandbox' or 'live'
 
 
 # ========================

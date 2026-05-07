@@ -3430,6 +3430,44 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
 <div id="gLoader"></div>
 <form id="csrfHiddenForm" style="display:none;">{% csrf_token %}</form>
 
+{% if is_impersonating %}
+<div id="impersonationBanner" style="background:linear-gradient(135deg,#f59e0b,#ef4444);color:#fff;padding:10px 24px;display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:700;box-shadow:0 2px 8px rgba(239,68,68,.3);position:sticky;top:0;z-index:9999;">
+  <div>
+    <span style="background:rgba(255,255,255,.2);padding:3px 10px;border-radius:6px;font-size:11px;margin-right:10px;">👁 Impersonating</span>
+    You are viewing as <b>{{ impersonate_name }}</b> ({{ impersonate_email }}) — Read-Only Mode
+  </div>
+  <a href="/superadmin/exit/" style="background:#fff;color:#b45309;border:none;padding:6px 14px;border-radius:7px;font-size:12px;font-weight:800;cursor:pointer;text-decoration:none;">⟵ Exit Impersonation</a>
+</div>
+{% endif %}
+
+{% if not is_subscribed and not is_impersonating %}
+<div id="upgradeWall" style="position:fixed;inset:0;z-index:10000;background:rgba(10,12,31,0.92);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:24px;">
+  <div style="background:linear-gradient(145deg,#13162b,#1a1d3a);border:1px solid rgba(99,102,241,0.45);border-radius:24px;padding:48px 40px;max-width:480px;width:100%;text-align:center;box-shadow:0 40px 80px rgba(0,0,0,0.6),0 0 0 1px rgba(255,255,255,0.06);">
+    <div style="width:72px;height:72px;background:linear-gradient(135deg,#6366f1,#a855f7);border-radius:20px;display:flex;align-items:center;justify-content:center;margin:0 auto 24px;font-size:32px;">🚀</div>
+    <div style="display:inline-block;background:linear-gradient(135deg,#6366f1,#a855f7);color:#fff;font-size:11px;font-weight:800;padding:4px 14px;border-radius:20px;margin-bottom:16px;letter-spacing:.5px;">★ ALL FEATURES INCLUDED</div>
+    <h2 style="color:#fff;font-size:26px;font-weight:800;margin:0 0 8px;font-family:'Inter',sans-serif;">Drop Sigma Pro</h2>
+    <p style="color:#a4a8c4;font-size:14px;line-height:1.6;margin:0 0 24px;">3 stores · 2 email accounts · unlimited vendors &amp; team members · all features unlocked.</p>
+    <div style="background:linear-gradient(135deg,rgba(99,102,241,0.15),rgba(168,85,247,0.1));border:1px solid rgba(99,102,241,0.3);border-radius:16px;padding:20px;margin-bottom:28px;">
+      <div style="display:flex;align-items:baseline;justify-content:center;gap:4px;margin-bottom:4px;">
+        <span style="color:#a4a8c4;font-size:20px;font-weight:600;">$</span>
+        <span style="color:#fff;font-size:52px;font-weight:900;line-height:1;">99</span>
+      </div>
+      <div style="color:#6b6f8d;font-size:13px;">per month · cancel anytime</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:14px;">
+        <span style="background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);border-radius:8px;padding:5px 12px;font-size:12px;font-weight:600;color:#a5b4fc;">🏪 3 Stores</span>
+        <span style="background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);border-radius:8px;padding:5px 12px;font-size:12px;font-weight:600;color:#a5b4fc;">📧 2 Emails</span>
+        <span style="background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);border-radius:8px;padding:5px 12px;font-size:12px;font-weight:600;color:#a5b4fc;">🚀 All Features</span>
+        <span style="background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);border-radius:8px;padding:5px 12px;font-size:12px;font-weight:600;color:#a5b4fc;">🔁 Cancel Anytime</span>
+      </div>
+    </div>
+    <a href="/upgrade/" style="display:block;background:linear-gradient(135deg,#6366f1,#a855f7);color:#fff;font-size:15px;font-weight:800;padding:15px;border-radius:14px;text-decoration:none;box-shadow:0 8px 24px rgba(99,102,241,0.4);transition:all .2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">Activate Now &rarr;</a>
+    <div style="margin-top:16px;">
+      <a href="/logout/" style="color:#6b6f8d;font-size:12px;text-decoration:none;">Sign out</a>
+    </div>
+  </div>
+</div>
+{% endif %}
+
 <div class="layout" id="appLayout">
   <aside class="sidebar">
     <button class="sb-toggle" id="sidebarToggleBtn" onclick="toggleSidebar()" title="Collapse sidebar">
@@ -3457,8 +3495,60 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
         <option value="">Loading…</option>
       </select>
     </div>
-    <a href="/logout/" style="display:block;width:100%;text-align:left;color:#94a3b8;background:none;border:0;padding:10px 12px;border-radius:10px;margin-top:8px;cursor:pointer;font-size:13px;font-weight:600;text-decoration:none;transition:.15s;" onmouseover="this.style.background='#1e293b';this.style.color='#fff'" onmouseout="this.style.background='none';this.style.color='#94a3b8'">🚪 Logout</a>
+    <!-- Profile button -->
+    <div style="position:relative;margin-top:4px;" id="profileWrap">
+      <button onclick="toggleProfileMenu(event)" style="display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:0;padding:10px 12px;border-radius:10px;cursor:pointer;color:var(--vf-muted,#cbd5e1);transition:background .15s,color .15s;font-family:inherit;" onmouseover="this.style.background='#1e293b';this.style.color='#fff'" onmouseout="this.style.background='none';this.style.color=''">
+        <div id="profileAvatarBtn" style="width:28px;height:28px;background:linear-gradient(135deg,#6366f1,#a855f7);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0;letter-spacing:.5px;">{{ user_initials }}</div>
+        <span id="profileNameBtn" style="font-size:13px;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ display_name }}</span>
+        <svg id="profileChevron" width="12" height="12" viewBox="0 0 12 12" fill="none" style="flex-shrink:0;opacity:.45;transition:transform .2s"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div id="profileMenu" style="display:none;position:absolute;bottom:calc(100% + 4px);left:0;right:0;background:rgba(30,41,59,.96);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:4px;z-index:200;box-shadow:0 -8px 24px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.2);backdrop-filter:blur(12px);">
+        <a href="/profile/" style="display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:0;padding:9px 12px;border-radius:8px;cursor:pointer;color:#cbd5e1;font-size:13px;font-weight:600;font-family:inherit;transition:background .12s,color .12s;text-decoration:none;" onmouseover="this.style.background='rgba(255,255,255,.08)';this.style.color='#fff'" onmouseout="this.style.background='none';this.style.color='#cbd5e1'">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+          Edit Profile
+        </a>
+        <div style="height:1px;background:rgba(255,255,255,.08);margin:3px 4px;"></div>
+        <a href="/logout/" style="display:flex;align-items:center;gap:10px;width:100%;padding:9px 12px;border-radius:8px;color:#f87171;font-size:13px;font-weight:600;text-decoration:none;transition:background .12s;" onmouseover="this.style.background='rgba(248,113,113,.1)'" onmouseout="this.style.background='none'">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="opacity:.7"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Sign out
+        </a>
+      </div>
+    </div>
   </aside>
+
+  <!-- Profile Modal -->
+  <div id="profileModal" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(5,7,18,.8);backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:24px;">
+    <div style="background:var(--vf-gradient,linear-gradient(145deg,#0b0e22,#10132b));border:1px solid rgba(99,102,241,.28);border-radius:22px;padding:32px;width:100%;max-width:420px;box-shadow:0 40px 80px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.04);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div id="profileModalAvatar" style="width:44px;height:44px;background:linear-gradient(135deg,#6366f1,#a855f7);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800;color:#fff;letter-spacing:.5px;flex-shrink:0;">{{ user_initials }}</div>
+          <div>
+            <div style="font-size:17px;font-weight:800;color:#fff;line-height:1.2;">Edit Profile</div>
+            <div style="font-size:12px;color:var(--vf-muted,#9da8c7);margin-top:2px;">Manage your account info</div>
+          </div>
+        </div>
+        <button onclick="closeProfileModal()" style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.09);width:32px;height:32px;border-radius:9px;cursor:pointer;color:#94a3b8;font-size:18px;display:flex;align-items:center;justify-content:center;line-height:1;transition:background .15s;" onmouseover="this.style.background='rgba(255,255,255,.13)'" onmouseout="this.style.background='rgba(255,255,255,.07)'">×</button>
+      </div>
+      <!-- Fields -->
+      <div style="margin-bottom:14px;">
+        <label style="display:block;font-size:10.5px;font-weight:700;color:var(--vf-muted,#6b6f8d);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">Full Name</label>
+        <input id="profileNameInput" type="text" placeholder="Your full name" style="width:100%;padding:11px 14px;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.1);border-radius:11px;color:#fff;font-size:14px;font-family:inherit;outline:none;transition:border-color .2s,background .2s;box-sizing:border-box;" onfocus="this.style.borderColor='rgba(99,102,241,.65)';this.style.background='rgba(99,102,241,.07)'" onblur="this.style.borderColor='rgba(255,255,255,.1)';this.style.background='rgba(255,255,255,.055)'">
+      </div>
+      <div style="margin-bottom:14px;">
+        <label style="display:block;font-size:10.5px;font-weight:700;color:var(--vf-muted,#6b6f8d);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">Email Address <span style="font-size:9.5px;color:#4b5563;font-weight:600;letter-spacing:0;text-transform:none;">· cannot be changed</span></label>
+        <input id="profileEmailInput" type="email" readonly style="width:100%;padding:11px 14px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.06);border-radius:11px;color:#4b5563;font-size:14px;font-family:inherit;outline:none;cursor:not-allowed;box-sizing:border-box;">
+      </div>
+      <div style="margin-bottom:22px;">
+        <label style="display:block;font-size:10.5px;font-weight:700;color:var(--vf-muted,#6b6f8d);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">Address</label>
+        <textarea id="profileAddressInput" placeholder="Your address (optional)" rows="3" style="width:100%;padding:11px 14px;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.1);border-radius:11px;color:#fff;font-size:14px;font-family:inherit;outline:none;transition:border-color .2s,background .2s;resize:vertical;box-sizing:border-box;" onfocus="this.style.borderColor='rgba(99,102,241,.65)';this.style.background='rgba(99,102,241,.07)'" onblur="this.style.borderColor='rgba(255,255,255,.1)';this.style.background='rgba(255,255,255,.055)'"></textarea>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button onclick="closeProfileModal()" style="flex:1;padding:11px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:11px;color:var(--vf-muted,#94a3b8);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .15s;" onmouseover="this.style.background='rgba(255,255,255,.1)'" onmouseout="this.style.background='rgba(255,255,255,.06)'">Cancel</button>
+        <button onclick="saveProfile()" id="profileSaveBtn" style="flex:2;padding:11px;background:linear-gradient(135deg,#6366f1,#a855f7);border:none;border-radius:11px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .15s;box-shadow:0 6px 20px rgba(99,102,241,.35);">Save Changes</button>
+      </div>
+      <div id="profileMsg" style="text-align:center;font-size:13px;margin-top:12px;min-height:18px;"></div>
+    </div>
+  </div>
 
   <main class="main">
 
@@ -16353,6 +16443,95 @@ document.addEventListener("click", e => {
   if(e.target.id === "skEditModal") closeSkEditModal();
   if(e.target.id === "skImportModal") closeSkImportModal();
   if(e.target.id === "skBulkUpdateModal") closeSkBulkUpdateModal();
+});
+</script>
+
+<script>
+// ── Profile dropdown & modal ──────────────────────────────────────────────────
+function toggleProfileMenu(e){
+  e.stopPropagation();
+  const m = document.getElementById('profileMenu');
+  const chevron = document.getElementById('profileChevron');
+  const open = m.style.display === 'none';
+  m.style.display = open ? 'block' : 'none';
+  if(chevron) chevron.style.transform = open ? 'rotate(180deg)' : 'rotate(0deg)';
+}
+document.addEventListener('click', function(e){
+  const wrap = document.getElementById('profileWrap');
+  if(wrap && !wrap.contains(e.target)){
+    const m = document.getElementById('profileMenu');
+    const chevron = document.getElementById('profileChevron');
+    if(m) m.style.display = 'none';
+    if(chevron) chevron.style.transform = 'rotate(0deg)';
+  }
+});
+
+async function openProfileModal(){
+  document.getElementById('profileMenu').style.display = 'none';
+  document.getElementById('profileModal').style.display = 'flex';
+  document.getElementById('profileMsg').textContent = '';
+
+  try{
+    const r = await fetch('/api/profile/');
+    const d = await r.json();
+    document.getElementById('profileNameInput').value    = d.name    || '';
+    document.getElementById('profileEmailInput').value   = d.email   || '';
+    document.getElementById('profileAddressInput').value = d.address || '';
+    // Update avatar initials preview
+    const initials = (d.name||'U').split(' ').slice(0,2).map(w=>w[0].toUpperCase()).join('');
+    document.getElementById('profileModalAvatar').textContent = initials;
+  }catch(err){
+    document.getElementById('profileMsg').style.color='#fca5a5';
+    document.getElementById('profileMsg').textContent = 'Failed to load profile.';
+  }
+}
+
+function closeProfileModal(){
+  document.getElementById('profileModal').style.display = 'none';
+}
+
+async function saveProfile(){
+  const btn  = document.getElementById('profileSaveBtn');
+  const msg  = document.getElementById('profileMsg');
+  const name = document.getElementById('profileNameInput').value.trim();
+  const addr = document.getElementById('profileAddressInput').value.trim();
+
+  if(!name){ msg.style.color='#fca5a5'; msg.textContent='Name cannot be empty.'; return; }
+
+  btn.textContent = 'Saving…'; btn.style.opacity = '.6';
+  try{
+    const r = await fetch('/api/profile/', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]') ? document.querySelector('[name=csrfmiddlewaretoken]').value : getCsrfToken()},
+      body: JSON.stringify({name, address: addr}),
+    });
+    const d = await r.json();
+    if(d.ok){
+      // Update sidebar button
+      const newName = d.name || name;
+      document.getElementById('profileNameBtn').textContent = newName;
+      const initials = newName.split(' ').slice(0,2).map(w=>w[0].toUpperCase()).join('');
+      document.getElementById('profileAvatarBtn').textContent = initials;
+      document.getElementById('profileModalAvatar').textContent = initials;
+      msg.style.color='#6ee7b7'; msg.textContent='✓ Profile saved!';
+      setTimeout(closeProfileModal, 1000);
+    } else {
+      msg.style.color='#fca5a5'; msg.textContent = d.error || 'Failed to save.';
+    }
+  }catch(err){
+    msg.style.color='#fca5a5'; msg.textContent = 'Network error.';
+  }
+  btn.textContent = 'Save Changes'; btn.style.opacity = '1';
+}
+
+function getCsrfToken(){
+  const c = document.cookie.split(';').find(x=>x.trim().startsWith('csrftoken='));
+  return c ? c.trim().split('=')[1] : '';
+}
+
+// Close profile modal on backdrop click
+document.getElementById('profileModal').addEventListener('click', function(e){
+  if(e.target === this) closeProfileModal();
 });
 </script>
 </body>

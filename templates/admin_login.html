@@ -176,8 +176,8 @@ body{
       <form method="post" action="/login/">
         {% csrf_token %}
         <div class="field">
-          <label>Username</label>
-          <input type="text" name="username" placeholder="Enter username" {% if tab == "admin" %}autofocus{% endif %} required>
+          <label>Username or Email</label>
+          <input type="text" name="username" placeholder="Enter username or email" {% if tab == "admin" %}autofocus{% endif %} required>
         </div>
         <div class="field">
           <label>Password</label>

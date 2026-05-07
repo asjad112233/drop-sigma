@@ -11,6 +11,22 @@ urlpatterns = [
     path("login/", views.admin_login_page, name="admin_login"),
     path("setup-admin-x9k2/", views.setup_admin),
     path("logout/", views.admin_logout_view, name="admin_logout"),
+    path("signup/", views.signup_view, name="signup"),
+    path("signup/email-sent/", views.email_sent_view, name="email_sent"),
+    path("verify-email/<uuid:token>/", views.verify_email_view, name="verify_email"),
+    path("api/profile/", views.api_profile, name="api_profile"),
+    path("profile/", views.profile_page, name="profile"),
+    path("upgrade/", views.upgrade_view, name="upgrade"),
+    path("checkout/", views.checkout_view, name="checkout"),
+    path("checkout/free/", views.checkout_free, name="checkout_free"),
+    path("subscribe/", views.subscribe_view, name="subscribe"),
+    # Stripe
+    path("payment/stripe/create/",   views.stripe_create_session, name="stripe_create"),
+    path("payment/stripe/success/",  views.stripe_success,        name="stripe_success"),
+    path("payment/stripe/webhook/",  views.stripe_webhook,        name="stripe_webhook"),
+    # PayPal
+    path("payment/paypal/create-order/",  views.paypal_create_order,  name="paypal_create"),
+    path("payment/paypal/capture-order/", views.paypal_capture_order, name="paypal_capture"),
 
     # Apps
     path("stores/", include("stores.urls")),
@@ -21,4 +37,5 @@ urlpatterns = [
     path("vendor/", include("vendors.portal_urls")),
     path("employee/", include("teamapp.portal_urls")),
     path("stock/", include("stock.urls")),
+    path("superadmin/", include("superadmin.urls")),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

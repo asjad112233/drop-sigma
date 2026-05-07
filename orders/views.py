@@ -35,7 +35,10 @@ from .services import (
 def orders_poll_api(request):
     """Lightweight endpoint — returns latest order id + total count. Used by frontend polling."""
     store_id = request.GET.get("store_id")
-    qs = Order.objects.all()
+    if request.user.is_authenticated and not request.user.is_superuser:
+        qs = Order.objects.filter(store__user=request.user)
+    else:
+        qs = Order.objects.all()
     if store_id:
         qs = qs.filter(store_id=store_id)
     latest = qs.order_by("-id").values("id").first()
@@ -65,7 +68,10 @@ def orders_list_api(request):
     status = request.GET.get("status")
     search = request.GET.get("search")
 
-    orders = Order.objects.all().order_by("-created_at")
+    if request.user.is_authenticated and not request.user.is_superuser:
+        orders = Order.objects.filter(store__user=request.user).order_by("-created_at")
+    else:
+        orders = Order.objects.all().order_by("-created_at")
 
     if store_id:
         orders = orders.filter(store_id=store_id)
@@ -107,7 +113,10 @@ def overview_api(request):
     from vendors.models import VendorTrackingSubmission
 
     store_id = request.GET.get("store_id")
-    orders = Order.objects.select_related("store", "assigned_vendor").all()
+    if request.user.is_authenticated and not request.user.is_superuser:
+        orders = Order.objects.select_related("store", "assigned_vendor").filter(store__user=request.user)
+    else:
+        orders = Order.objects.select_related("store", "assigned_vendor").all()
     if store_id:
         orders = orders.filter(store_id=store_id)
 
@@ -149,8 +158,11 @@ def overview_api(request):
             "created_at": o.created_at.isoformat() if o.created_at else None,
         })
 
-    # Store stats
-    stores_qs = Store.objects.filter(is_active=True)
+    # Store stats — scoped to current user
+    if request.user.is_authenticated and not request.user.is_superuser:
+        stores_qs = Store.objects.filter(user=request.user, is_active=True)
+    else:
+        stores_qs = Store.objects.filter(is_active=True)
     if store_id:
         stores_qs = stores_qs.filter(id=store_id)
     store_stats = []
@@ -166,9 +178,13 @@ def overview_api(request):
             "last_synced": s.last_synced.isoformat() if getattr(s, "last_synced", None) else None,
         })
 
-    # Top vendors by order count
+    # Top vendors by order count — scoped to current user's stores
     top_vendors = []
-    for v in Vendor.objects.filter(status="active")[:6]:
+    if request.user.is_authenticated and not request.user.is_superuser:
+        vendor_qs = Vendor.objects.filter(status="active", assigned_store__user=request.user)
+    else:
+        vendor_qs = Vendor.objects.filter(status="active")
+    for v in vendor_qs[:6]:
         v_orders = orders.filter(assigned_vendor=v)
         top_vendors.append({
             "id": v.id,
@@ -184,7 +200,10 @@ def overview_api(request):
     # Email stats
     try:
         from emails.models import EmailMessage, EmailThreadAssignment
-        email_qs = EmailMessage.objects.all()
+        if request.user.is_authenticated and not request.user.is_superuser:
+            email_qs = EmailMessage.objects.filter(store__user=request.user)
+        else:
+            email_qs = EmailMessage.objects.all()
         if store_id:
             email_qs = email_qs.filter(store_id=store_id)
         email_unread = email_qs.filter(is_read=False).count()
@@ -220,7 +239,7 @@ def overview_api(request):
         "no_tracking": no_tracking + no_tracking2,
         "unassigned_orders": unassigned,
         "vendor_assigned": orders.filter(assigned_vendor__isnull=False).count(),
-        "active_vendors": Vendor.objects.filter(status="active").count(),
+        "active_vendors": vendor_qs.count(),
         "active_stores": stores_qs.count(),
         "revenue_7_days": revenue_7,
         "recent_orders": recent_orders,

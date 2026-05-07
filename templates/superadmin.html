@@ -1,0 +1,1187 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Drop Sigma — Super Admin</title>
+<style>
+:root{
+  --surface:#fff;--surface-2:#f8fafc;--line:#e2e8f0;
+  --text:#0f172a;--muted:#64748b;
+  --side:#0f172a;--side-muted:#94a3b8;
+  --accent:#f59e0b;
+  --grad:linear-gradient(135deg,#f59e0b,#ef4444);
+  --green:#10b981;--blue:#2563eb;--red:#dc2626;
+  --shadow:0 2px 12px rgba(15,23,42,.08);
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;background:var(--surface-2);color:var(--text);}
+button{font-family:inherit;cursor:pointer;}
+a{color:inherit;text-decoration:none;}
+
+.app{display:flex;height:100vh;overflow:hidden;}
+
+/* Sidebar */
+.sidebar{width:240px;background:var(--side);color:#e2e8f0;padding:20px 14px;flex-shrink:0;height:100vh;overflow-y:auto;border-right:1px solid #1f2937;display:flex;flex-direction:column;}
+.brand{display:flex;align-items:center;gap:10px;padding:6px 8px 18px;border-bottom:1px solid #1f2937;margin-bottom:14px;}
+.brand .logo{width:32px;height:32px;border-radius:9px;background:var(--grad);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:14px;flex-shrink:0;}
+.brand .name{font-weight:900;letter-spacing:-.01em;font-size:14px;line-height:1.2;}
+.brand .role{font-size:9px;color:var(--accent);font-weight:800;letter-spacing:.1em;text-transform:uppercase;}
+.nav-section{font-size:10px;color:var(--accent);font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:16px 10px 8px;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px;border-radius:9px;color:var(--side-muted);font-size:13px;font-weight:600;cursor:pointer;transition:all .12s;border:none;background:transparent;width:100%;text-align:left;}
+.nav-item:hover{background:rgba(245,158,11,.08);color:#fff;}
+.nav-item.active{background:linear-gradient(135deg,rgba(245,158,11,.18),rgba(239,68,68,.10));color:#fff;border-left:2px solid var(--accent);padding-left:8px;}
+.nav-item .ico{width:16px;text-align:center;}
+.badge-n{margin-left:auto;background:var(--accent);color:#fff;font-size:9px;padding:1px 6px;border-radius:999px;font-weight:800;}
+.me-card{margin-top:auto;padding:12px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:10px;}
+.me-card .who{font-size:11px;color:var(--accent);font-weight:800;}
+.me-card .em{font-size:11px;color:var(--side-muted);margin-top:2px;word-break:break-all;}
+.me-card .out{display:block;margin-top:8px;font-size:11px;color:var(--side-muted);}
+.me-card .out:hover{color:#fff;}
+
+/* Main */
+.main{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden;}
+.topbar{background:#fff;border-bottom:1px solid var(--line);padding:14px 28px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;z-index:10;}
+.topbar h1{margin:0;font-size:20px;font-weight:900;letter-spacing:-.02em;}
+.topbar .crumbs{font-size:12px;color:var(--muted);margin-top:2px;}
+.topbar-right{display:flex;gap:8px;align-items:center;}
+.content{padding:24px 28px 60px;overflow-y:auto;flex:1;}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:9px;border:1px solid var(--line);background:#fff;color:var(--text);font-size:12px;font-weight:700;transition:all .12s;cursor:pointer;}
+.btn:hover:not(:disabled){background:var(--surface-2);}
+.btn:disabled{opacity:.5;cursor:not-allowed;}
+.btn-primary{background:var(--grad);color:#fff;border-color:transparent;}
+.btn-primary:hover:not(:disabled){filter:brightness(1.05);}
+.btn-ghost{background:transparent;border:1px solid var(--line);}
+.btn-danger{background:var(--red);color:#fff;border-color:transparent;}
+.btn-warn{background:var(--accent);color:#fff;border-color:transparent;}
+.btn-green{background:var(--green);color:#fff;border-color:transparent;}
+.btn-sm{padding:5px 10px;font-size:11px;}
+
+/* Stats */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px;}
+.stat{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px 18px;}
+.stat .lbl{font-size:10px;color:var(--muted);font-weight:800;letter-spacing:.06em;text-transform:uppercase;}
+.stat .val{font-size:28px;font-weight:900;color:var(--text);margin-top:4px;letter-spacing:-.02em;}
+.stat .sub{font-size:11px;font-weight:700;margin-top:4px;color:var(--muted);}
+.stat .sub.up{color:var(--green);}
+.stat .sub.warn{color:var(--accent);}
+.stat .sub.down{color:var(--red);}
+
+/* Cards */
+.card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:14px;}
+.card h3{margin:0 0 12px;font-size:14px;font-weight:900;letter-spacing:-.01em;}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px;}
+
+/* Chart */
+.chart-box{height:160px;}
+.chart-box svg{width:100%;height:100%;}
+
+/* Activity */
+.activity .ev{padding:9px 0;border-bottom:1px dashed var(--line);color:#475569;display:flex;justify-content:space-between;gap:10px;font-size:12px;}
+.activity .ev:last-child{border:none;}
+.activity .ev b{color:var(--text);}
+.t{color:#94a3b8;font-size:10px;white-space:nowrap;}
+
+/* Toolbar / filters */
+.toolbar{display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap;}
+.search-input{flex:1;min-width:200px;padding:9px 14px;border:1px solid var(--line);border-radius:9px;font-size:13px;background:#fff;outline:none;font-family:inherit;}
+.search-input:focus{border-color:var(--accent);}
+.filter-pills{display:flex;gap:6px;flex-wrap:wrap;}
+.pill{padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;}
+.pill:hover{background:var(--surface-2);}
+.pill.on{background:var(--side);color:#fff;border-color:var(--side);}
+
+/* Table */
+.tbl-wrap{border-radius:14px;overflow:auto;border:1px solid var(--line);background:#fff;box-shadow:var(--shadow);}
+.tbl{width:100%;border-collapse:collapse;font-size:13px;}
+.tbl th{background:var(--surface-2);text-align:left;padding:12px 14px;font-size:10px;font-weight:800;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;position:sticky;top:0;z-index:2;}
+.tbl td{padding:12px 14px;border-top:1px solid var(--line);}
+.tbl tr.row{cursor:pointer;}
+.tbl tr.row:hover td{background:#fffbeb;}
+.tbl .meta{font-size:10px;color:var(--muted);margin-top:2px;}
+.tbl-actions{display:flex;gap:5px;justify-content:flex-end;}
+
+/* Badges */
+.badge{display:inline-block;padding:3px 9px;border-radius:6px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;}
+.badge.pro{background:#ecfdf5;color:#047857;}
+.badge.basic{background:#eff6ff;color:#1d4ed8;}
+.badge.trial{background:#fef3c7;color:#b45309;}
+.badge.suspended{background:#fee2e2;color:#b91c1c;}
+.badge.enterprise{background:#f3e8ff;color:#7e22ce;}
+.badge-green{background:#ecfdf5;color:#047857;}
+.badge-red{background:#fee2e2;color:#b91c1c;}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;vertical-align:middle;}
+.dot.active{background:var(--green);}
+.dot.warn{background:var(--accent);}
+.dot.down{background:var(--red);}
+
+/* Info rows */
+.ir{display:flex;justify-content:space-between;padding:6px 0;font-size:12px;border-bottom:1px dashed var(--line);}
+.ir:last-child{border:none;}
+.ir .k{color:var(--muted);}
+.ir .v{color:var(--text);font-weight:700;}
+
+/* Note box */
+.note-box{background:#fffbeb;border-left:3px solid var(--accent);padding:10px 12px;border-radius:6px;font-size:12px;color:#78350f;line-height:1.6;white-space:pre-wrap;min-height:48px;}
+
+/* Danger zone */
+.danger-zone{background:#fef2f2;border:1px solid #fecaca;border-radius:14px;padding:16px;margin-top:14px;}
+.danger-zone h3{color:var(--red);margin:0 0 4px;font-size:13px;}
+.danger-zone p{color:#7f1d1d;font-size:11px;margin:0 0 10px;}
+.danger-zone .drow{display:flex;gap:8px;flex-wrap:wrap;}
+
+/* Modal */
+.mo{position:fixed;inset:0;background:rgba(15,23,42,.55);backdrop-filter:blur(4px);z-index:100;display:none;align-items:center;justify-content:center;padding:20px;}
+.mo.show{display:flex;}
+.modal{background:#fff;border-radius:18px;max-width:520px;width:100%;padding:24px;box-shadow:0 20px 50px rgba(15,23,42,.3);}
+.modal h3{margin:0 0 6px;font-size:18px;font-weight:900;}
+.modal .desc{font-size:13px;color:var(--muted);margin-bottom:16px;}
+.form-row{margin-bottom:12px;}
+.form-row label{display:block;font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;}
+.form-row input,.form-row select,.form-row textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:13px;font-family:inherit;outline:none;}
+.form-row input:focus,.form-row select:focus,.form-row textarea:focus{border-color:var(--accent);}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;}
+
+/* Toast */
+.toast-stack{position:fixed;top:20px;right:20px;z-index:200;display:flex;flex-direction:column;gap:8px;pointer-events:none;}
+.toast{background:var(--side);color:#fff;padding:12px 16px;border-radius:10px;font-size:13px;font-weight:600;box-shadow:0 8px 24px rgba(15,23,42,.3);display:flex;align-items:center;gap:10px;min-width:240px;animation:slideIn .25s ease;border-left:3px solid var(--accent);}
+.toast.success{border-left-color:var(--green);}
+.toast.error{border-left-color:var(--red);}
+@keyframes slideIn{from{transform:translateX(110%);opacity:0;}to{transform:translateX(0);opacity:1;}}
+
+/* Misc */
+.empty{text-align:center;padding:50px 20px;color:var(--muted);}
+.empty .ic{font-size:36px;opacity:.4;}
+.empty p{font-size:13px;margin:8px 0 0;}
+.bar-row{margin-bottom:10px;}
+.bar-row .bm{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;}
+.bar-row .bm b{cursor:pointer;}
+.bar-row .bm b:hover{text-decoration:underline;}
+.bar-bg{height:8px;background:var(--surface-2);border-radius:4px;overflow:hidden;}
+.bar-fill{height:100%;background:var(--grad);border-radius:4px;transition:width .4s ease;}
+
+@media(max-width:900px){
+  .sidebar{display:none;}
+  .stats{grid-template-columns:repeat(2,1fr);}
+  .grid-2,.grid-3{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<div class="toast-stack" id="toastStack"></div>
+
+<div class="app">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo">DS</div>
+      <div>
+        <div class="name">Drop Sigma</div>
+        <div class="role">Super Admin</div>
+      </div>
+    </div>
+
+    <div class="nav-section">Main</div>
+    <button class="nav-item active" data-page="dashboard"><span class="ico">▣</span> Dashboard</button>
+    <button class="nav-item" data-page="tenants"><span class="ico">◉</span> Tenants <span class="badge-n" id="sideCount">—</span></button>
+    <button class="nav-item" data-page="billing"><span class="ico">$</span> Billing &amp; MRR</button>
+    <button class="nav-item" data-page="analytics"><span class="ico">↗</span> Analytics</button>
+    <button class="nav-item" data-page="activity"><span class="ico">⚑</span> Activity Log</button>
+
+    <div class="nav-section">Manage</div>
+    <button class="nav-item" data-page="plans"><span class="ico">▤</span> Plans</button>
+    <button class="nav-item" data-page="coupons"><span class="ico">🏷</span> Coupons</button>
+
+    <div class="me-card">
+      <div class="who">Owner Mode</div>
+      <div class="em">{{ request.user.email }}</div>
+      <a href="/logout/" class="out">↪ Sign out</a>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+    <header class="topbar">
+      <div>
+        <h1 id="pageTitle">Dashboard</h1>
+        <div class="crumbs" id="pageCrumbs">Super Admin · Overview</div>
+      </div>
+      <div class="topbar-right">
+        <button class="btn btn-ghost" onclick="navTo('activity')">Activity Log</button>
+        <button class="btn btn-primary" onclick="openModal('ntModal')">+ New Tenant</button>
+      </div>
+    </header>
+
+    <main class="content" id="pageContent">
+      <div class="empty"><div class="ic">⏳</div><p>Loading…</p></div>
+    </main>
+  </div>
+</div>
+
+<!-- MODAL: New Tenant -->
+<div class="mo" id="ntModal" onclick="if(event.target===this)closeModal('ntModal')">
+  <div class="modal">
+    <h3>Onboard a New Tenant</h3>
+    <p class="desc">Manually add a paying customer. They receive login credentials via email.</p>
+    <div class="form-row"><label>Full Name</label><input id="ntName" placeholder="e.g. Jamal Khan" autocomplete="off"/></div>
+    <div class="form-row"><label>Email</label><input id="ntEmail" type="email" placeholder="owner@store.com" autocomplete="off"/></div>
+    <div class="form-row">
+      <label>Plan</label>
+      <select id="ntPlan">
+        <option value="trial">Free Trial (14 days)</option>
+        <option value="basic">Basic — $49/mo</option>
+        <option value="pro" selected>Pro — $99/mo</option>
+        <option value="enterprise">Enterprise — $299/mo</option>
+      </select>
+    </div>
+    <div class="form-row"><label>Notes (optional)</label><textarea id="ntNotes" rows="2" placeholder="e.g. Referred via Twitter"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('ntModal')">Cancel</button>
+      <button class="btn btn-primary" id="ntSubmitBtn" onclick="createTenant()">Create Tenant</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Change Plan -->
+<div class="mo" id="planModal" onclick="if(event.target===this)closeModal('planModal')">
+  <div class="modal">
+    <h3>Change Subscription Plan</h3>
+    <p class="desc">Updating plan for <b id="planTenantName">…</b>. Takes effect immediately.</p>
+    <div class="form-row">
+      <label>New Plan</label>
+      <select id="cpPlan">
+        <option value="trial">Free Trial</option>
+        <option value="basic">Basic — $49/mo</option>
+        <option value="pro">Pro — $99/mo</option>
+        <option value="enterprise">Enterprise — $299/mo</option>
+      </select>
+    </div>
+    <div class="form-row"><label>Internal Reason (optional)</label><input id="cpReason" placeholder="e.g. Requested discount"/></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('planModal')">Cancel</button>
+      <button class="btn btn-primary" id="planSubmitBtn" onclick="confirmPlanChange()">Update Plan</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Suspend -->
+<div class="mo" id="suspendModal" onclick="if(event.target===this)closeModal('suspendModal')">
+  <div class="modal">
+    <h3>Suspend Tenant</h3>
+    <p class="desc">Blocking login access for <b id="suspendTenantName">…</b>. Data is fully preserved.</p>
+    <div class="form-row">
+      <label>Reason</label>
+      <select id="susReason">
+        <option>Payment failed</option>
+        <option>Terms of service violation</option>
+        <option>User requested suspension</option>
+        <option>Manual review</option>
+        <option>Other</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('suspendModal')">Cancel</button>
+      <button class="btn btn-warn" id="susSubmitBtn" onclick="confirmSuspend()">Suspend</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Delete -->
+<div class="mo" id="deleteModal" onclick="if(event.target===this)closeModal('deleteModal')">
+  <div class="modal">
+    <h3 style="color:var(--red)">Delete Tenant Permanently</h3>
+    <p class="desc">This will erase <b id="delTenantName">…</b> and all their stores, orders, and vendors. <b>This cannot be undone.</b></p>
+    <div class="form-row"><label>Type DELETE to confirm</label><input id="delConfirm" placeholder="DELETE" autocomplete="off"/></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('deleteModal')">Cancel</button>
+      <button class="btn btn-danger" id="delSubmitBtn" onclick="confirmDelete()">Delete Forever</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Impersonate -->
+<div class="mo" id="impModal" onclick="if(event.target===this)closeModal('impModal')">
+  <div class="modal">
+    <h3>Login as Tenant?</h3>
+    <p class="desc">You will view <b id="impTenantName">…</b>'s dashboard as they see it. This action is logged.</p>
+    <div style="background:#fffbeb;border:1px solid #fde68a;padding:10px;border-radius:8px;font-size:12px;color:#78350f;line-height:1.5">
+      🛈 All dashboard API calls will run under this tenant's account. Exit via the banner at the top of their dashboard.
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('impModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmImpersonate()">⟶ Login as Tenant</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════════════════ */
+let TENANTS  = [];
+let ACTIVITY = [];
+let STATS    = {active_tenants:0, mrr:0, trials:0, total_orders:0, total_tenants:0};
+let _page    = 'dashboard';
+let _tid     = null;   // current tenant id (for detail view)
+let _filter  = 'all';
+let _search  = '';
+let _modalId = null;   // tenant id stored for modal operations
+
+const PLAN_LBL   = {trial:'Trial', basic:'Basic', pro:'Pro', enterprise:'Enterprise'};
+const PLAN_PRICE = {trial:0, basic:49, pro:99, enterprise:299};
+
+/* ═══════════════════════════════════════════════════════
+   UTILS
+═══════════════════════════════════════════════════════ */
+function esc(s){
+  const d = document.createElement('div');
+  d.textContent = String(s ?? '');
+  return d.innerHTML;
+}
+function $$(s){ return document.querySelector(s); }
+function fmt$(n){ return '$' + Number(n).toLocaleString(); }
+function fmtDate(s){
+  if(!s) return '—';
+  const d = new Date(s);
+  return isNaN(d) ? '—' : d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+}
+function daysUntil(s){
+  if(!s) return 999;
+  return Math.ceil((new Date(s) - Date.now()) / 86400000);
+}
+function toast(msg, type='success'){
+  const el = document.createElement('div');
+  el.className = 'toast ' + type;
+  el.innerHTML = (type==='success'?'✓ ':type==='error'?'⚠ ':'🛈 ') + esc(msg);
+  document.getElementById('toastStack').appendChild(el);
+  setTimeout(()=>{ el.style.animation='slideIn .2s ease reverse'; setTimeout(()=>el.remove(),220); }, 3000);
+}
+function openModal(id){ document.getElementById(id).classList.add('show'); }
+function closeModal(id){ document.getElementById(id).classList.remove('show'); }
+
+/* ═══════════════════════════════════════════════════════
+   API
+═══════════════════════════════════════════════════════ */
+function getCsrf(){
+  const m = document.cookie.match(/csrftoken=([^;]+)/);
+  return m ? m[1] : '';
+}
+async function api(url, body=null){
+  const opts = {credentials:'same-origin', headers:{'X-CSRFToken': getCsrf()}};
+  if(body !== null){
+    opts.method  = 'POST';
+    opts.body    = JSON.stringify(body);
+    opts.headers['Content-Type'] = 'application/json';
+  }
+  const r = await fetch(url, opts);
+  let data;
+  try{ data = await r.json(); } catch(e){ data = {}; }
+  return {ok: r.ok, status: r.status, data};
+}
+
+/* lock a button during async operation */
+function withLoading(btnId, fn){
+  const btn = document.getElementById(btnId);
+  if(btn){ btn.disabled = true; const orig = btn.textContent; btn.textContent = 'Saving…';
+    fn().finally(()=>{ btn.disabled=false; btn.textContent=orig; });
+  } else { fn(); }
+}
+
+/* ═══════════════════════════════════════════════════════
+   LOAD DATA
+═══════════════════════════════════════════════════════ */
+async function loadStats(){
+  const {ok,data} = await api('/superadmin/api/stats/');
+  if(ok){ STATS = data; document.getElementById('sideCount').textContent = data.total_tenants; }
+}
+async function loadTenants(){
+  const {ok,data} = await api('/superadmin/api/tenants/');
+  if(ok) TENANTS = data;
+}
+async function loadActivity(){
+  const {ok,data} = await api('/superadmin/api/activity/');
+  if(ok) ACTIVITY = data;
+}
+async function loadAll(){
+  await Promise.all([loadStats(), loadTenants(), loadActivity()]);
+  renderPage();
+}
+async function refreshTenant(tid){
+  /* fetch latest tenant data + activities, merge into TENANTS array */
+  const {ok,data} = await api(`/superadmin/api/tenants/${tid}/`);
+  if(!ok) return false;
+  const idx = TENANTS.findIndex(x=>x.id===tid);
+  if(idx > -1) TENANTS[idx] = data;
+  else TENANTS.push(data);
+  return data;
+}
+
+/* ═══════════════════════════════════════════════════════
+   NAVIGATION  (single clean function, no override tricks)
+═══════════════════════════════════════════════════════ */
+document.querySelectorAll('.nav-item[data-page]').forEach(btn=>{
+  btn.addEventListener('click', ()=> navTo(btn.dataset.page));
+});
+
+function setActive(page){
+  document.querySelectorAll('.nav-item[data-page]').forEach(n=>n.classList.remove('active'));
+  const key = page==='tenant' ? 'tenants' : page;
+  const sb  = document.querySelector(`.nav-item[data-page="${key}"]`);
+  if(sb) sb.classList.add('active');
+}
+
+function setTitle(page){
+  const map = {
+    dashboard: ['Dashboard',     'Super Admin · Overview'],
+    tenants:   ['Tenants',       'Super Admin · All Subscribers'],
+    tenant:    ['Tenant Detail', 'Super Admin · Tenants'],
+    billing:   ['Billing & MRR','Super Admin · Revenue'],
+    analytics: ['Analytics',     'Super Admin · Usage'],
+    activity:  ['Activity Log',  'Super Admin · Audit'],
+    plans:     ['Plans',         'Super Admin · Manage'],
+  };
+  const [t,c] = map[page] || ['Super Admin',''];
+  document.getElementById('pageTitle').textContent  = t;
+  document.getElementById('pageCrumbs').textContent = c;
+}
+
+function showLoading(){
+  document.getElementById('pageContent').innerHTML =
+    '<div class="empty"><div class="ic">⏳</div><p>Loading…</p></div>';
+}
+
+async function navTo(page, opts={}){
+  if(opts.tenantId !== undefined) _tid = opts.tenantId;
+  _page = page;
+  setActive(page);
+  setTitle(page);
+
+  if(page === 'tenant'){
+    showLoading();
+    await refreshTenant(_tid);
+    await renderPage();
+    return;
+  }
+  await renderPage();
+}
+
+/* ═══════════════════════════════════════════════════════
+   RENDER DISPATCHER
+═══════════════════════════════════════════════════════ */
+async function renderPage(){
+  const c = document.getElementById('pageContent');
+  switch(_page){
+    case 'dashboard': c.innerHTML = renderDashboard(); break;
+    case 'tenants':   renderTenants(c);  break;
+    case 'tenant':    renderTenantDetail(c); break;
+    case 'billing':   c.innerHTML = renderBilling(); break;
+    case 'analytics': c.innerHTML = renderAnalytics(); break;
+    case 'activity':  c.innerHTML = renderActivityPage(); break;
+    case 'plans':     c.innerHTML = renderPlans(); break;
+    case 'coupons':   await renderCoupons(c); break;
+    default: c.innerHTML = '<div class="empty"><p>Page not found.</p></div>';
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   DASHBOARD
+═══════════════════════════════════════════════════════ */
+function renderDashboard(){
+  const needsAttn = TENANTS.filter(t=>
+    t.status==='suspended' ||
+    t.payment_status==='failed' ||
+    (t.status==='trial' && t.renews && daysUntil(t.renews)<=5)
+  );
+
+  const recent = TENANTS.slice().sort((a,b)=>new Date(b.joined)-new Date(a.joined)).slice(0,5);
+
+  return `
+  <div class="stats">
+    <div class="stat"><div class="lbl">Active Tenants</div><div class="val">${STATS.active_tenants}</div><div class="sub">${STATS.total_tenants} total</div></div>
+    <div class="stat"><div class="lbl">MRR</div><div class="val">${fmt$(STATS.mrr)}</div><div class="sub up">Monthly recurring</div></div>
+    <div class="stat"><div class="lbl">Trials</div><div class="val">${STATS.trials}</div><div class="sub warn">active trials</div></div>
+    <div class="stat"><div class="lbl">Total Orders</div><div class="val">${STATS.total_orders.toLocaleString()}</div><div class="sub">all-time across all tenants</div></div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <h3 style="margin:0">MRR Trend</h3>
+      </div>
+      <div class="chart-box">
+        <svg viewBox="0 0 400 140" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="gf" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0" stop-color="#f59e0b" stop-opacity=".30"/>
+              <stop offset="1" stop-color="#f59e0b" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <path d="M0,130 Q50,120 80,105 T160,80 T240,55 T320,32 L400,15 L400,140 L0,140 Z" fill="url(#gf)"/>
+          <path d="M0,130 Q50,120 80,105 T160,80 T240,55 T320,32 L400,15" stroke="#f59e0b" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+          <text x="8"   y="135" font-size="9" fill="#94a3b8">Jan</text>
+          <text x="75"  y="135" font-size="9" fill="#94a3b8">Feb</text>
+          <text x="155" y="135" font-size="9" fill="#94a3b8">Mar</text>
+          <text x="235" y="135" font-size="9" fill="#94a3b8">Apr</text>
+          <text x="330" y="135" font-size="9" fill="#94a3b8">May</text>
+        </svg>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Recent Activity</h3>
+      <div class="activity">
+        ${ACTIVITY.length
+          ? ACTIVITY.slice(0,8).map(a=>`<div class="ev"><span><b>${esc(a.tenant)}</b> · ${esc(a.action)}</span><span class="t">${esc(a.when)}</span></div>`).join('')
+          : '<div class="ev" style="color:var(--muted)">No activity yet. Create a tenant to begin.</div>'}
+      </div>
+      <div style="margin-top:10px;text-align:right">
+        <button class="btn btn-ghost btn-sm" onclick="navTo('activity')">View all →</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid-3">
+    <div class="card">
+      <h3>Plan Distribution</h3>
+      ${['pro','basic','enterprise','trial'].map(p=>{
+        const n = TENANTS.filter(t=>t.plan===p && t.status!=='suspended').length;
+        return `<div class="ir"><span class="k">${PLAN_LBL[p]} ($${PLAN_PRICE[p]}/mo)</span><span class="v">${n} tenant${n!==1?'s':''}</span></div>`;
+      }).join('')}
+    </div>
+
+    <div class="card">
+      <h3>Recent Signups</h3>
+      ${recent.length
+        ? recent.map(t=>`<div class="ir" style="cursor:pointer" onclick="navTo('tenant',{tenantId:${t.id}})">
+            <span class="k">${esc(t.name)}</span><span class="v">${fmtDate(t.joined)}</span>
+          </div>`).join('')
+        : '<div style="font-size:12px;color:var(--muted)">No tenants yet.</div>'}
+    </div>
+
+    <div class="card" style="${needsAttn.length?'background:#fef2f2;border-color:#fecaca':''}">
+      <h3 style="${needsAttn.length?'color:var(--red)':''}">${needsAttn.length ? '⚠ Needs Attention' : '✓ All Good'}</h3>
+      ${needsAttn.length
+        ? `<div style="font-size:12px;color:#7f1d1d;line-height:1.9">${
+            needsAttn.map(t=>`• <b style="cursor:pointer" onclick="navTo('tenant',{tenantId:${t.id}})">${esc(t.name)}</b> — ${
+              t.status==='suspended' ? 'suspended' :
+              t.payment_status==='failed' ? 'payment failed' :
+              `trial expires in ${daysUntil(t.renews)}d`
+            }`).join('<br>')
+          }</div>
+          <button class="btn btn-ghost btn-sm" style="margin-top:10px" onclick="navTo('tenants')">Review all →</button>`
+        : `<p style="font-size:12px;color:var(--muted);margin:0">All tenants are in good standing.</p>`}
+    </div>
+  </div>`;
+}
+
+/* ═══════════════════════════════════════════════════════
+   TENANTS LIST  (search doesn't re-render toolbar)
+═══════════════════════════════════════════════════════ */
+function renderTenants(container){
+  /* Render toolbar once, then the filterable table */
+  container.innerHTML = `
+  <div class="toolbar">
+    <input class="search-input" id="searchBox" placeholder="🔍  Search by name or email…" autocomplete="off"/>
+    <div class="filter-pills">
+      <button class="pill ${_filter==='all'?'on':''}"       onclick="setFilter('all')">All <span id="pillAllN">${TENANTS.length}</span></button>
+      <button class="pill ${_filter==='active'?'on':''}"    onclick="setFilter('active')">Active</button>
+      <button class="pill ${_filter==='trial'?'on':''}"     onclick="setFilter('trial')">Trials</button>
+      <button class="pill ${_filter==='pro'?'on':''}"       onclick="setFilter('pro')">Pro</button>
+      <button class="pill ${_filter==='basic'?'on':''}"     onclick="setFilter('basic')">Basic</button>
+      <button class="pill ${_filter==='suspended'?'on':''}" onclick="setFilter('suspended')">Suspended</button>
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="openModal('ntModal')">+ New Tenant</button>
+  </div>
+  <div id="tenantTableWrap"></div>`;
+
+  /* init search input with current state */
+  const box = document.getElementById('searchBox');
+  box.value = _search;
+  box.addEventListener('input', e=>{
+    _search = e.target.value;
+    renderTenantTable();
+  });
+
+  renderTenantTable();
+}
+
+function renderTenantTable(){
+  const q  = _search.toLowerCase().trim();
+  const filtered = TENANTS.filter(t=>{
+    const mf = _filter==='all' || t.status===_filter || t.plan===_filter;
+    const ms = !q || t.name.toLowerCase().includes(q) || (t.email||'').toLowerCase().includes(q);
+    return mf && ms;
+  });
+
+  const wrap = document.getElementById('tenantTableWrap');
+  if(!wrap) return;
+
+  if(!filtered.length){
+    wrap.innerHTML = `<div class="card empty"><div class="ic">🔍</div><p>No tenants match your filters.</p></div>`;
+    return;
+  }
+
+  wrap.innerHTML = `
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead><tr>
+        <th>Tenant</th><th>Plan</th><th>Stores</th><th>Orders</th><th>MRR</th><th>Joined</th><th>Status</th><th></th>
+      </tr></thead>
+      <tbody>
+        ${filtered.map(t=>`
+          <tr class="row" onclick="navTo('tenant',{tenantId:${t.id}})">
+            <td><b>${esc(t.name)}</b><div class="meta">${esc(t.email)}</div></td>
+            <td><span class="badge ${t.plan}">${PLAN_LBL[t.plan]}</span></td>
+            <td>${t.stores}</td>
+            <td>${t.orders}</td>
+            <td>${t.mrr ? '$'+t.mrr : '—'}</td>
+            <td>${fmtDate(t.joined)}</td>
+            <td><span class="dot ${t.status==='active'?'active':t.status==='suspended'?'down':'warn'}"></span>${
+              t.status==='active'?'Active':t.status==='suspended'?'Suspended':'Trial'
+            }</td>
+            <td>
+              <div class="tbl-actions">
+                <button class="btn btn-sm" onclick="event.stopPropagation();navTo('tenant',{tenantId:${t.id}})">View</button>
+                ${t.status!=='suspended'
+                  ? `<button class="btn btn-sm btn-primary" onclick="event.stopPropagation();askImpersonate(${t.id})">Login</button>`
+                  : `<button class="btn btn-sm btn-green" onclick="event.stopPropagation();reactivate(${t.id})">Reactivate</button>`}
+              </div>
+            </td>
+          </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>`;
+}
+
+function setFilter(f){
+  _filter = f;
+  /* update pill classes without full page re-render */
+  document.querySelectorAll('.pill').forEach(p=>{
+    const matches = p.getAttribute('onclick')?.includes(`'${f}'`) ||
+                    (f==='all' && p.getAttribute('onclick')?.includes("'all'"));
+    p.classList.toggle('on', !!p.getAttribute('onclick')?.includes(`'${f}'`));
+  });
+  renderTenantTable();
+}
+
+/* ═══════════════════════════════════════════════════════
+   TENANT DETAIL
+═══════════════════════════════════════════════════════ */
+function renderTenantDetail(container){
+  const t = TENANTS.find(x=>x.id===_tid);
+  if(!t){ container.innerHTML='<div class="empty"><p>Tenant not found.</p></div>'; return; }
+  const acts = t.activities || [];
+
+  container.innerHTML = `
+  <button class="btn btn-ghost btn-sm" onclick="navTo('tenants')" style="margin-bottom:14px">⟵ Back to Tenants</button>
+
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:18px;flex-wrap:wrap">
+    <div>
+      <h2 style="margin:0 0 4px;font-size:22px;font-weight:900;letter-spacing:-.02em">
+        ${esc(t.name)}
+        <span class="badge ${t.plan}" style="vertical-align:middle;font-size:11px">${PLAN_LBL[t.plan]}</span>
+        ${t.status==='suspended'?'<span class="badge suspended" style="vertical-align:middle;font-size:11px">Suspended</span>':''}
+        ${t.flagged?'<span style="font-size:12px;vertical-align:middle" title="Flagged">🚩</span>':''}
+      </h2>
+      <div style="font-size:12px;color:var(--muted)">${esc(t.email)} · Joined ${fmtDate(t.joined)} · ID #${t.id}</div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-ghost" onclick="openPlanModal(${t.id})">↑ Change Plan</button>
+      ${t.status!=='suspended'
+        ? `<button class="btn btn-primary" onclick="askImpersonate(${t.id})">⟶ Login as Tenant</button>`
+        : `<button class="btn btn-green" onclick="reactivate(${t.id})">↺ Reactivate</button>`}
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="lbl">Stores</div><div class="val">${t.stores}</div><div class="sub">connected</div></div>
+    <div class="stat"><div class="lbl">Orders</div><div class="val">${t.orders}</div><div class="sub">lifetime</div></div>
+    <div class="stat"><div class="lbl">Vendors</div><div class="val">${t.vendors}</div><div class="sub">active</div></div>
+    <div class="stat"><div class="lbl">Team</div><div class="val">${t.team}</div><div class="sub">members</div></div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <h3>Subscription</h3>
+      <div class="ir"><span class="k">Plan</span><span class="v">${PLAN_LBL[t.plan]} — ${t.mrr?'$'+t.mrr+'/mo':'Free'}</span></div>
+      <div class="ir"><span class="k">Status</span><span class="v" style="text-transform:capitalize">${t.status}</span></div>
+      <div class="ir"><span class="k">Renews on</span><span class="v">${fmtDate(t.renews)}</span></div>
+      <div class="ir">
+        <span class="k">Payment</span>
+        <span class="v" style="color:${t.payment_status==='failed'?'var(--red)':'var(--green)'}">
+          ${t.payment_status==='failed'?'⚠ Failed':'✓ Paid'}
+        </span>
+      </div>
+      <div class="ir"><span class="k">Lifetime value</span><span class="v">${fmt$(t.ltv||0)}</span></div>
+    </div>
+
+    <div class="card">
+      <h3>Admin Notes</h3>
+      <div class="note-box" id="noteBox">${esc(t.notes) || '<span style="color:var(--muted)">No notes yet.</span>'}</div>
+      <div style="display:flex;gap:6px;margin-top:10px">
+        <input class="search-input" id="newNoteInput" placeholder="Add a note…" style="font-size:12px;padding:7px 10px"
+               onkeydown="if(event.key==='Enter')addNote(${t.id})"/>
+        <button class="btn btn-sm btn-primary" id="noteBtn" onclick="addNote(${t.id})">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Recent Tenant Activity</h3>
+    <div class="activity">
+      ${acts.length
+        ? acts.map(a=>`<div class="ev"><span>${esc(a.action)}</span><span class="t">${esc(a.when)}</span></div>`).join('')
+        : '<div class="ev" style="color:var(--muted)">No activity recorded yet.</div>'}
+    </div>
+  </div>
+
+  <div class="danger-zone">
+    <h3>⚠ Danger Zone</h3>
+    <p>These actions are permanent. Handle with care.</p>
+    <div class="drow">
+      ${t.status!=='suspended'
+        ? `<button class="btn btn-warn" onclick="openSuspend(${t.id})">Suspend Tenant</button>`
+        : `<button class="btn btn-green" onclick="reactivate(${t.id})">Reactivate Tenant</button>`}
+      <button class="btn btn-ghost" onclick="toggleFlag(${t.id})">${t.flagged?'🚩 Unflag':'🚩 Flag for Review'}</button>
+      <button class="btn btn-danger" onclick="openDelete(${t.id})">Delete Permanently</button>
+    </div>
+  </div>`;
+}
+
+/* ═══════════════════════════════════════════════════════
+   BILLING
+═══════════════════════════════════════════════════════ */
+function renderBilling(){
+  const active = TENANTS.filter(t=>t.status==='active');
+  const mrr    = STATS.mrr;
+  const failed = TENANTS.filter(t=>t.payment_status==='failed');
+
+  return `
+  <div class="stats">
+    <div class="stat"><div class="lbl">MRR</div><div class="val">${fmt$(mrr)}</div><div class="sub up">Monthly recurring</div></div>
+    <div class="stat"><div class="lbl">ARR</div><div class="val">${fmt$(mrr*12)}</div><div class="sub up">Projected annual</div></div>
+    <div class="stat"><div class="lbl">Avg / Tenant</div><div class="val">${active.length?fmt$(Math.round(mrr/active.length)):'—'}</div><div class="sub">across active</div></div>
+    <div class="stat"><div class="lbl">Failed Payments</div><div class="val" style="color:${failed.length?'var(--red)':''}">${failed.length}</div><div class="sub ${failed.length?'down':''}">payments</div></div>
+  </div>
+
+  <div class="grid-3">
+    ${['pro','basic','enterprise'].map(p=>{
+      const n   = TENANTS.filter(t=>t.plan===p && t.status==='active').length;
+      const rev = n * PLAN_PRICE[p];
+      return `<div class="card"><h3>${PLAN_LBL[p]} Plan</h3>
+        <div style="font-size:28px;font-weight:900;letter-spacing:-.02em;color:var(--green)">${n}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px">${n} tenant${n!==1?'s':''} × $${PLAN_PRICE[p]} = <b>$${rev}/mo</b></div>
+      </div>`;
+    }).join('')}
+  </div>
+
+  <div class="card">
+    <h3>All Subscriptions</h3>
+    ${TENANTS.length ? `
+    <div class="tbl-wrap" style="margin-top:10px">
+      <table class="tbl">
+        <thead><tr><th>Tenant</th><th>Plan</th><th>Renews</th><th>MRR</th><th>Payment</th><th></th></tr></thead>
+        <tbody>
+          ${TENANTS.map(t=>`
+            <tr>
+              <td><b>${esc(t.name)}</b><div class="meta">${esc(t.email)}</div></td>
+              <td><span class="badge ${t.plan}">${PLAN_LBL[t.plan]}</span></td>
+              <td>${fmtDate(t.renews)}</td>
+              <td>${t.mrr?'$'+t.mrr:'—'}</td>
+              <td style="color:${t.payment_status==='failed'?'var(--red)':'var(--green)'}">
+                ${t.payment_status==='failed'?'⚠ Failed':'✓ Paid'}
+              </td>
+              <td><button class="btn btn-sm" onclick="navTo('tenant',{tenantId:${t.id}})">View</button></td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>` : '<div class="empty"><p>No tenants yet.</p></div>'}
+  </div>`;
+}
+
+/* ═══════════════════════════════════════════════════════
+   ANALYTICS
+═══════════════════════════════════════════════════════ */
+function renderAnalytics(){
+  const maxO = TENANTS.length ? Math.max(...TENANTS.map(t=>t.orders)) || 1 : 1;
+  return `
+  <div class="card">
+    <h3>Order Volume by Tenant</h3>
+    ${TENANTS.length
+      ? TENANTS.slice().sort((a,b)=>b.orders-a.orders).map(t=>{
+          const pct = Math.round((t.orders/maxO)*100);
+          return `<div class="bar-row">
+            <div class="bm"><b onclick="navTo('tenant',{tenantId:${t.id}})">${esc(t.name)}</b><span style="color:var(--muted)">${t.orders} orders</span></div>
+            <div class="bar-bg"><div class="bar-fill" style="width:${pct}%"></div></div>
+          </div>`;
+        }).join('')
+      : '<div class="empty" style="padding:20px 0"><p>No data yet.</p></div>'}
+  </div>
+  <div class="grid-2">
+    <div class="card">
+      <h3>Tenants by Plan</h3>
+      ${['pro','basic','enterprise','trial'].map(p=>{
+        const n   = TENANTS.filter(t=>t.plan===p).length;
+        const pct = TENANTS.length ? Math.round(n/TENANTS.length*100) : 0;
+        return `<div class="bar-row">
+          <div class="bm"><span>${PLAN_LBL[p]}</span><span style="color:var(--muted)">${n} (${pct}%)</span></div>
+          <div class="bar-bg"><div class="bar-fill" style="width:${pct}%"></div></div>
+        </div>`;
+      }).join('')}
+    </div>
+    <div class="card">
+      <h3>Status Breakdown</h3>
+      ${[['active','Active'],['trial','Trial'],['suspended','Suspended']].map(([s,l])=>{
+        const n   = TENANTS.filter(t=>t.status===s).length;
+        const pct = TENANTS.length ? Math.round(n/TENANTS.length*100) : 0;
+        return `<div class="ir"><span class="k">${l}</span><span class="v">${n} tenant${n!==1?'s':''} (${pct}%)</span></div>`;
+      }).join('')}
+    </div>
+  </div>`;
+}
+
+/* ═══════════════════════════════════════════════════════
+   ACTIVITY LOG
+═══════════════════════════════════════════════════════ */
+function renderActivityPage(){
+  return `
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+    <h2 style="margin:0;font-size:18px;font-weight:900">All Activity</h2>
+    <button class="btn btn-ghost btn-sm" onclick="loadActivity().then(()=>renderPage())">↻ Refresh</button>
+  </div>
+  <div class="card">
+    <div class="activity">
+      ${ACTIVITY.length
+        ? ACTIVITY.map(a=>`<div class="ev"><span><b>${esc(a.tenant)}</b> · ${esc(a.action)}</span><span class="t">${esc(a.when)}</span></div>`).join('')
+        : '<div class="ev" style="color:var(--muted)">No activity yet. Create a tenant to get started.</div>'}
+    </div>
+  </div>`;
+}
+
+/* ═══════════════════════════════════════════════════════
+   PLANS
+═══════════════════════════════════════════════════════ */
+function renderPlans(){
+  const plans = [
+    {key:'trial',     name:'Free Trial',  price:0,   features:['Full feature access','1 store','Community support','Expires in 14 days']},
+    {key:'basic',     name:'Basic',       price:49,  features:['Full feature access','Up to 3 stores','Email support','10k orders/month']},
+    {key:'pro',       name:'Pro',         price:99,  features:['Full feature access','Unlimited stores','Priority support','Unlimited orders','AI email drafts'], popular:true},
+    {key:'enterprise',name:'Enterprise',  price:299, features:['Everything in Pro','Custom integrations','Dedicated support','White-glove onboarding','SLA guarantee']},
+  ];
+  return `
+  <div class="grid-2">
+    ${plans.map(p=>{
+      const n = TENANTS.filter(t=>t.plan===p.key).length;
+      return `<div class="card" style="${p.popular?'border-color:var(--accent);box-shadow:0 0 0 2px rgba(245,158,11,.2)':''}">
+        ${p.popular?'<div style="font-size:10px;font-weight:800;color:var(--accent);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Most Popular</div>':''}
+        <h3>${p.name}</h3>
+        <div style="font-size:30px;font-weight:900;letter-spacing:-.02em;margin:8px 0">
+          ${p.price?'$'+p.price:'Free'}
+          <span style="font-size:13px;font-weight:400;color:var(--muted)">${p.price?'/mo':''}</span>
+        </div>
+        <ul style="font-size:12px;color:var(--text);padding-left:16px;margin:0 0 14px;line-height:2">
+          ${p.features.map(f=>`<li>${f}</li>`).join('')}
+        </ul>
+        <div style="font-size:12px;color:var(--muted);padding-top:10px;border-top:1px dashed var(--line)">
+          ${n} tenant${n!==1?'s':''} on this plan
+        </div>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+/* ═══════════════════════════════════════════════════════
+   COUPONS
+═══════════════════════════════════════════════════════ */
+
+async function renderCoupons(c){
+  c.innerHTML = `<div style="padding:20px 0"><div style="color:var(--muted);font-size:13px">Loading coupons…</div></div>`;
+  const {ok,data} = await api('/superadmin/api/coupons/');
+  const coupons = ok ? data : [];
+
+  c.innerHTML = `
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+    <div>
+      <h2 style="margin:0;font-size:20px;font-weight:800;">Coupons</h2>
+      <p style="margin:4px 0 0;color:var(--muted);font-size:13px;">Create discount codes for subscribers</p>
+    </div>
+    <button class="btn btn-primary" onclick="openModal('couponModal')">+ Create Coupon</button>
+  </div>
+
+  ${coupons.length===0 ? `<div class="empty"><p>No coupons yet. Create one to offer discounts.</p></div>` : `
+  <div class="card" style="padding:0;overflow:hidden;">
+    <table>
+      <thead><tr>
+        <th>Code</th><th>Discount</th><th>Uses</th><th>Expires</th><th>Status</th><th>Actions</th>
+      </tr></thead>
+      <tbody>
+        ${coupons.map(cp=>`
+        <tr>
+          <td><code style="background:rgba(245,158,11,.1);color:var(--accent);padding:3px 8px;border-radius:5px;font-size:13px;font-weight:700;">${cp.code}</code></td>
+          <td>${cp.discount_type==='flat'?'$'+cp.discount_value:cp.discount_value+'%'} off</td>
+          <td>${cp.uses}${cp.max_uses?' / '+cp.max_uses:' (unlimited)'}</td>
+          <td>${cp.expires_at||'Never'}</td>
+          <td><span class="badge ${cp.is_active?'badge-green':'badge-red'}">${cp.is_active?'Active':'Inactive'}</span></td>
+          <td>
+            <button class="btn btn-sm btn-ghost" onclick="toggleCoupon(${cp.id},this)">${cp.is_active?'Deactivate':'Activate'}</button>
+            <button class="btn btn-sm btn-red" style="margin-left:6px;" onclick="deleteCoupon(${cp.id},this)">Delete</button>
+          </td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>`}
+
+  <!-- Create Coupon Modal -->
+  <div class="modal-bg" id="couponModal">
+    <div class="modal" style="max-width:480px;">
+      <div class="modal-head">
+        <h3>Create Coupon</h3>
+        <button onclick="closeModal('couponModal')" class="btn btn-ghost btn-sm">✕</button>
+      </div>
+      <div style="display:grid;gap:14px;">
+        <div>
+          <label style="font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:6px;">COUPON CODE</label>
+          <input id="cpCode" placeholder="e.g. LAUNCH50" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:9px;background:var(--bg2);color:var(--text);font-size:14px;font-family:monospace;text-transform:uppercase;">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div>
+            <label style="font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:6px;">TYPE</label>
+            <select id="cpType" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:9px;background:var(--bg2);color:var(--text);font-size:14px;">
+              <option value="flat">Flat ($ off)</option>
+              <option value="percent">Percent (% off)</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:6px;">VALUE</label>
+            <input id="cpValue" type="number" min="1" placeholder="e.g. 20" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:9px;background:var(--bg2);color:var(--text);font-size:14px;">
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div>
+            <label style="font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:6px;">MAX USES (optional)</label>
+            <input id="cpMaxUses" type="number" min="1" placeholder="Unlimited" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:9px;background:var(--bg2);color:var(--text);font-size:14px;">
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:6px;">EXPIRES (optional)</label>
+            <input id="cpExpires" type="date" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:9px;background:var(--bg2);color:var(--text);font-size:14px;">
+          </div>
+        </div>
+        <button id="cpSubmitBtn" class="btn btn-primary" onclick="createCoupon()">Create Coupon</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function createCoupon(){
+  const code          = document.getElementById('cpCode').value.trim().toUpperCase();
+  const discount_type = document.getElementById('cpType').value;
+  const discount_value= document.getElementById('cpValue').value;
+  const max_uses      = document.getElementById('cpMaxUses').value || null;
+  const expires_at    = document.getElementById('cpExpires').value || null;
+
+  if(!code||!discount_value){ toast('Code and discount value are required.','error'); return; }
+
+  await withLoadingAsync('cpSubmitBtn', async()=>{
+    const {ok,data} = await api('/superadmin/api/coupons/',{code,discount_type,discount_value:parseFloat(discount_value),max_uses:max_uses?parseInt(max_uses):null,expires_at});
+    if(!ok){ toast(data.error||'Error creating coupon.','error'); return; }
+    closeModal('couponModal');
+    toast(`Coupon "${code}" created!`,'success');
+    navTo('coupons');
+  });
+}
+
+async function toggleCoupon(id, btn){
+  btn.disabled = true;
+  const {ok,data} = await api(`/superadmin/api/coupons/${id}/`,{action:'toggle'});
+  if(ok){
+    toast(data.is_active?'Coupon activated.':'Coupon deactivated.');
+    navTo('coupons');
+  } else { btn.disabled=false; toast('Error.','error'); }
+}
+
+async function deleteCoupon(id, btn){
+  if(!confirm('Delete this coupon?')) return;
+  btn.disabled = true;
+  const {ok} = await api(`/superadmin/api/coupons/${id}/`,{action:'delete'});
+  if(ok){ toast('Coupon deleted.'); navTo('coupons'); }
+  else { btn.disabled=false; toast('Error.','error'); }
+}
+
+/* ═══════════════════════════════════════════════════════
+   ACTIONS
+═══════════════════════════════════════════════════════ */
+
+/* Create Tenant */
+async function createTenant(){
+  const name  = document.getElementById('ntName').value.trim();
+  const email = document.getElementById('ntEmail').value.trim();
+  const plan  = document.getElementById('ntPlan').value;
+  const notes = document.getElementById('ntNotes').value.trim();
+  if(!name||!email){ toast('Name and email are required.','error'); return; }
+
+  await withLoadingAsync('ntSubmitBtn', async ()=>{
+    const {ok,data} = await api('/superadmin/api/tenants/',{name,email,plan,notes});
+    if(!ok){ toast(data.error||'Error creating tenant.','error'); return; }
+    TENANTS.push(data.tenant);
+    STATS.total_tenants++;
+    if(data.tenant.status==='active') STATS.active_tenants++;
+    if(data.tenant.status==='trial')  STATS.trials++;
+    document.getElementById('sideCount').textContent = STATS.total_tenants;
+    closeModal('ntModal');
+    /* clear form */
+    ['ntName','ntEmail','ntNotes'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+    toast(`Tenant "${name}" created!`,'success');
+    await navTo('tenant',{tenantId:data.tenant.id});
+  });
+}
+
+/* Change Plan */
+function openPlanModal(tid){
+  _modalId = tid;
+  const t  = TENANTS.find(x=>x.id===tid);
+  document.getElementById('planTenantName').textContent = t?.name ?? '…';
+  document.getElementById('cpPlan').value = t?.plan ?? 'basic';
+  document.getElementById('cpReason').value = '';
+  openModal('planModal');
+}
+async function confirmPlanChange(){
+  const plan   = document.getElementById('cpPlan').value;
+  const reason = document.getElementById('cpReason').value.trim();
+  await withLoadingAsync('planSubmitBtn', async ()=>{
+    const {ok,data} = await api(`/superadmin/api/tenants/${_modalId}/`,{action:'change_plan',plan,reason});
+    if(!ok){ toast(data.error||'Error changing plan.','error'); return; }
+    const t = TENANTS.find(x=>x.id===_modalId);
+    if(t){ t.plan=plan; t.mrr=PLAN_PRICE[plan]; if(t.status==='trial'&&plan!=='trial') t.status='active'; }
+    closeModal('planModal');
+    toast('Plan updated!','success');
+    if(_page==='tenant') await navTo('tenant',{tenantId:_modalId});
+  });
+}
+
+/* Suspend */
+function openSuspend(tid){
+  _modalId = tid;
+  const t  = TENANTS.find(x=>x.id===tid);
+  document.getElementById('suspendTenantName').textContent = t?.name ?? '…';
+  openModal('suspendModal');
+}
+async function confirmSuspend(){
+  const reason = document.getElementById('susReason').value;
+  await withLoadingAsync('susSubmitBtn', async ()=>{
+    const {ok,data} = await api(`/superadmin/api/tenants/${_modalId}/`,{action:'suspend',reason});
+    if(!ok){ toast(data.error||'Error suspending.','error'); return; }
+    const t = TENANTS.find(x=>x.id===_modalId);
+    if(t){
+      if(t.status==='active') STATS.active_tenants = Math.max(0, STATS.active_tenants-1);
+      if(t.status==='trial')  STATS.trials         = Math.max(0, STATS.trials-1);
+      t.status='suspended'; t.mrr=0;
+    }
+    closeModal('suspendModal');
+    toast('Tenant suspended.','success');
+    if(_page==='tenant') await navTo('tenant',{tenantId:_modalId});
+    else renderPage();
+  });
+}
+
+/* Reactivate */
+async function reactivate(tid){
+  const {ok,data} = await api(`/superadmin/api/tenants/${tid}/`,{action:'activate'});
+  if(!ok){ toast(data.error||'Error reactivating.','error'); return; }
+  const t = TENANTS.find(x=>x.id===tid);
+  if(t){ t.status='active'; t.mrr=PLAN_PRICE[t.plan]; STATS.active_tenants++; }
+  toast('Tenant reactivated!','success');
+  if(_page==='tenant') await navTo('tenant',{tenantId:tid});
+  else renderPage();
+}
+
+/* Delete */
+function openDelete(tid){
+  _modalId = tid;
+  const t  = TENANTS.find(x=>x.id===tid);
+  document.getElementById('delTenantName').textContent = t?.name ?? '…';
+  document.getElementById('delConfirm').value = '';
+  openModal('deleteModal');
+}
+async function confirmDelete(){
+  if(document.getElementById('delConfirm').value !== 'DELETE'){
+    toast('Type DELETE to confirm.','error'); return;
+  }
+  await withLoadingAsync('delSubmitBtn', async ()=>{
+    const {ok,data} = await api(`/superadmin/api/tenants/${_modalId}/`,{action:'delete',confirm:'DELETE'});
+    if(!ok){ toast(data.error||'Error deleting.','error'); return; }
+    const idx = TENANTS.findIndex(x=>x.id===_modalId);
+    if(idx>-1){
+      const t = TENANTS[idx];
+      if(t.status==='active')    STATS.active_tenants = Math.max(0, STATS.active_tenants-1);
+      if(t.status==='trial')     STATS.trials         = Math.max(0, STATS.trials-1);
+      STATS.total_tenants = Math.max(0, STATS.total_tenants-1);
+      document.getElementById('sideCount').textContent = STATS.total_tenants;
+      TENANTS.splice(idx,1);
+    }
+    closeModal('deleteModal');
+    toast('Tenant deleted permanently.','success');
+    await navTo('tenants');
+  });
+}
+
+/* Add Note */
+async function addNote(tid){
+  const inp  = document.getElementById('newNoteInput');
+  const note = inp?.value.trim();
+  if(!note){ toast('Note cannot be empty.','error'); return; }
+  await withLoadingAsync('noteBtn', async ()=>{
+    const {ok,data} = await api(`/superadmin/api/tenants/${tid}/`,{action:'add_note',note});
+    if(!ok){ toast(data.error||'Error saving note.','error'); return; }
+    const t = TENANTS.find(x=>x.id===tid);
+    if(t) t.notes = data.notes;
+    const box = document.getElementById('noteBox');
+    if(box) box.textContent = data.notes;
+    if(inp) inp.value = '';
+    toast('Note saved!','success');
+  });
+}
+
+/* Toggle Flag */
+async function toggleFlag(tid){
+  const {ok,data} = await api(`/superadmin/api/tenants/${tid}/`,{action:'flag'});
+  if(!ok){ toast('Error.','error'); return; }
+  const t = TENANTS.find(x=>x.id===tid);
+  if(t) t.flagged = data.flagged;
+  toast(data.flagged ? 'Tenant flagged for review.' : 'Flag removed.','success');
+  if(_page==='tenant') await navTo('tenant',{tenantId:tid});
+}
+
+/* Impersonate */
+function askImpersonate(tid){
+  _modalId = tid;
+  const t  = TENANTS.find(x=>x.id===tid);
+  document.getElementById('impTenantName').textContent = t?.name ?? '…';
+  openModal('impModal');
+}
+function confirmImpersonate(){
+  closeModal('impModal');
+  window.location.href = `/superadmin/impersonate/${_modalId}/`;
+}
+
+/* ═══════════════════════════════════════════════════════
+   HELPERS
+═══════════════════════════════════════════════════════ */
+async function withLoadingAsync(btnId, fn){
+  const btn = document.getElementById(btnId);
+  const orig = btn?.textContent;
+  if(btn){ btn.disabled=true; btn.textContent='Saving…'; }
+  try{ await fn(); }
+  finally{ if(btn){ btn.disabled=false; if(orig) btn.textContent=orig; } }
+}
+
+/* ═══════════════════════════════════════════════════════
+   BOOT
+═══════════════════════════════════════════════════════ */
+loadAll();
+</script>
+</body>
+</html>

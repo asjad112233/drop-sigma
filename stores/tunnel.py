@@ -49,17 +49,28 @@ def get_url(wait_secs=0):
 def get_base_url(request=None, wait_secs=3):
     """
     Single source of truth for the webhook/callback base URL.
-    Priority: live tunnel → WOOCOMMERCE_BASE_URL env → request host
+    Priority: live tunnel → WOOCOMMERCE_BASE_URL env → RAILWAY_PUBLIC_DOMAIN → request host
     Always returns an HTTPS URL (or None if nothing is available).
     Call this everywhere — never build callback URLs manually.
     """
     from django.conf import settings
 
+    # 1. Local Cloudflare tunnel (development)
     url = get_url(wait_secs=wait_secs)
 
+    # 2. Explicit override env var (must be non-empty to count)
     if not url:
-        url = getattr(settings, "WOOCOMMERCE_BASE_URL", "") or ""
+        override = getattr(settings, "WOOCOMMERCE_BASE_URL", "") or ""
+        if override and not override.endswith("trycloudflare.com"):
+            url = override
 
+    # 3. Railway auto-detected public domain
+    if not url:
+        railway_domain = os.getenv("RAILWAY_PUBLIC_DOMAIN", "").strip()
+        if railway_domain:
+            url = f"https://{railway_domain}"
+
+    # 4. Fall back to the actual request host (works on Railway thanks to USE_X_FORWARDED_HOST)
     if not url and request is not None:
         url = request.build_absolute_uri("/")
 

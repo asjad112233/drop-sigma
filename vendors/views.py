@@ -18,7 +18,10 @@ from stores.models import Store
 @api_view(["GET"])
 def vendor_list(request):
     store_id = request.GET.get("store_id")
-    vendors = Vendor.objects.all().order_by("-id").select_related("assigned_store")
+    if request.user.is_authenticated and not request.user.is_superuser:
+        vendors = Vendor.objects.filter(assigned_store__user=request.user).order_by("-id").select_related("assigned_store")
+    else:
+        vendors = Vendor.objects.all().order_by("-id").select_related("assigned_store")
     if store_id:
         vendors = vendors.filter(assigned_store_id=store_id)
     serializer = VendorSerializer(vendors, many=True)

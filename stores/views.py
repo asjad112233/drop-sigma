@@ -40,7 +40,10 @@ def stores_page(request):
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def stores_list_api(request):
-    stores = Store.objects.all().order_by("-id")
+    if request.user.is_authenticated and not request.user.is_superuser:
+        stores = Store.objects.filter(user=request.user).order_by("-id")
+    else:
+        stores = Store.objects.all().order_by("-id")
     serializer = StoreSerializer(stores, many=True)
     data = serializer.data
 
@@ -127,8 +130,9 @@ def auto_connect_store(request):
     base_url = get_base_url(request=request, wait_secs=0)
 
     user_id_data = {
-        "name": name,
+        "name":      name,
         "store_url": store_url,
+        "user_pk":   request.user.pk,
     }
 
     params = {
@@ -159,29 +163,38 @@ def wc_callback_api(request):
     if request.method == "GET":
         return Response({"status": "callback endpoint active"})
 
-    consumer_key = request.data.get("consumer_key")
+    consumer_key    = request.data.get("consumer_key")
     consumer_secret = request.data.get("consumer_secret")
-    key_id = request.data.get("key_id")
-    user_id_raw = request.data.get("user_id")
+    key_id          = request.data.get("key_id")
+    user_id_raw     = request.data.get("user_id", "")
 
-    logger.info(f"WC callback data: ck={bool(consumer_key)} cs={bool(consumer_secret)} user_id={user_id_raw}")
+    logger.info(f"WC callback received: ck={bool(consumer_key)} cs={bool(consumer_secret)} user_id_raw={user_id_raw!r}")
 
+    # user_id carries JSON: {"name": "...", "store_url": "...", "user_pk": ...}
     try:
         user_data = json.loads(user_id_raw) if user_id_raw else {}
     except Exception:
         user_data = {}
 
-    name = user_data.get("name", "WooCommerce Store")
-    store_url = user_data.get("store_url")
+    name      = user_data.get("name", "WooCommerce Store")
+    store_url = user_data.get("store_url", "").rstrip("/")
+    user_pk   = user_data.get("user_pk")
+
+    logger.info(f"WC callback parsed: name={name!r} store_url={store_url!r} user_pk={user_pk}")
 
     if not consumer_key or not consumer_secret or not store_url:
-        logger.error(f"WC callback missing data: ck={consumer_key} cs={consumer_secret} url={store_url}")
+        logger.error(f"WC callback missing required data")
         return Response({
             "success": False,
             "message": "WooCommerce callback missing required data."
         }, status=400)
 
-    user = User.objects.filter(is_superuser=True).first()
+    # Associate store with the correct user (falls back to first superuser)
+    user = None
+    if user_pk:
+        user = User.objects.filter(pk=user_pk, is_staff=True).first()
+    if not user:
+        user = User.objects.filter(is_superuser=True).first()
 
     try:
         store, created = Store.objects.update_or_create(

@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Checkout — Drop Sigma</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',system-ui,sans-serif;background:#05060f;color:#e6e8f0;min-height:100vh;padding:40px 24px 60px;-webkit-font-smoothing:antialiased;}
+.bg{position:fixed;inset:0;z-index:-1;background:radial-gradient(ellipse at 10% 0%,rgba(99,102,241,.18),transparent 50%),radial-gradient(ellipse at 90% 80%,rgba(168,85,247,.12),transparent 50%),#05060f;}
+.topbar{display:flex;align-items:center;justify-content:space-between;max-width:900px;margin:0 auto 40px;}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none;}
+.logo-mark{width:36px;height:36px;background:linear-gradient(135deg,#6366f1,#a855f7);border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;color:#fff;}
+.logo-text{font-size:16px;font-weight:700;color:#fff;}
+.back-link{font-size:13px;color:#6b6f8d;text-decoration:none;display:flex;align-items:center;gap:5px;}
+.back-link:hover{color:#a4a8c4;}
+
+.checkout-grid{display:grid;grid-template-columns:1fr 380px;gap:28px;max-width:900px;margin:0 auto;align-items:start;}
+@media(max-width:760px){.checkout-grid{grid-template-columns:1fr;}}
+
+/* Left — form */
+.form-card{background:linear-gradient(145deg,#10122a,#13162e);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:32px;}
+.section-title{font-size:16px;font-weight:800;color:#fff;margin-bottom:20px;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,.07);}
+.field{margin-bottom:16px;}
+.field label{display:block;font-size:12px;font-weight:700;color:#6b6f8d;text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px;}
+.field input{width:100%;padding:11px 14px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:11px;color:#fff;font-size:14px;font-family:'Inter',sans-serif;outline:none;transition:border-color .2s;}
+.field input:focus{border-color:rgba(99,102,241,.6);background:rgba(99,102,241,.06);}
+.field input::placeholder{color:#3d4167;}
+.field input[readonly]{opacity:.6;cursor:default;}
+.row-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+
+/* Coupon */
+.coupon-wrap{display:flex;gap:10px;margin-bottom:6px;}
+.coupon-wrap input{flex:1;padding:11px 14px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:11px;color:#fff;font-size:14px;font-family:'Inter',sans-serif;outline:none;transition:border-color .2s;}
+.coupon-wrap input:focus{border-color:rgba(99,102,241,.6);}
+.coupon-wrap input::placeholder{color:#3d4167;}
+.coupon-wrap button{padding:11px 18px;background:rgba(99,102,241,.2);border:1px solid rgba(99,102,241,.4);color:#818cf8;font-size:13px;font-weight:700;border-radius:11px;cursor:pointer;font-family:'Inter',sans-serif;white-space:nowrap;transition:all .15s;}
+.coupon-wrap button:hover{background:rgba(99,102,241,.35);}
+#couponMsg{font-size:12px;min-height:18px;margin-bottom:16px;}
+
+/* Right — order summary */
+.summary-card{background:linear-gradient(145deg,#10122a,#13162e);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:28px;position:sticky;top:24px;}
+.plan-badge{display:inline-block;background:linear-gradient(135deg,#6366f1,#a855f7);color:#fff;font-size:11px;font-weight:800;padding:4px 12px;border-radius:20px;margin-bottom:16px;}
+.plan-name-lg{font-size:22px;font-weight:900;color:#fff;margin-bottom:4px;}
+.plan-desc-sm{font-size:13px;color:#6b6f8d;margin-bottom:20px;}
+.price-line{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.06);font-size:14px;color:#a4a8c4;}
+.price-line:last-of-type{border-bottom:none;}
+.price-line.total{font-weight:800;color:#fff;font-size:18px;padding-top:14px;margin-top:4px;border-top:1px solid rgba(255,255,255,.12);}
+.price-line .val{font-weight:700;}
+.price-line .val.green{color:#10b981;}
+.price-line .val.strike{text-decoration:line-through;color:#6b6f8d;font-size:13px;}
+.features-mini{margin:16px 0;padding:14px;background:rgba(255,255,255,.04);border-radius:12px;}
+.features-mini li{font-size:12px;color:#a4a8c4;list-style:none;padding:4px 0;display:flex;align-items:center;gap:7px;}
+.features-mini li::before{content:'✓';color:#10b981;font-size:11px;font-weight:700;}
+
+/* Payment buttons */
+.pay-section{margin-top:24px;}
+.btn-pay{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;border:none;border-radius:13px;font-size:15px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s;margin-bottom:10px;}
+.btn-stripe{background:linear-gradient(135deg,#6366f1,#a855f7);color:#fff;box-shadow:0 8px 24px rgba(99,102,241,.3);}
+.btn-stripe:hover{opacity:.9;transform:translateY(-1px);}
+.btn-stripe:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+.btn-free{background:linear-gradient(135deg,#10b981,#059669);color:#fff;box-shadow:0 8px 24px rgba(16,185,129,.3);}
+.btn-free:hover{opacity:.9;transform:translateY(-1px);}
+.pay-divider{text-align:center;font-size:11px;color:#3d4167;margin:8px 0;}
+.no-gateway{background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:12px;padding:14px;text-align:center;}
+.no-gateway p{font-size:13px;color:#fbbf24;font-weight:600;margin-bottom:4px;}
+.no-gateway small{font-size:11px;color:#6b6f8d;}
+.secure-note{font-size:11px;color:#3d4167;text-align:center;margin-top:12px;display:flex;align-items:center;justify-content:center;gap:5px;}
+</style>
+</head>
+<body>
+<div class="bg"></div>
+
+<div class="topbar">
+  <a href="/" class="logo"><div class="logo-mark">DS</div><span class="logo-text">Drop Sigma</span></a>
+  <a href="/upgrade/" class="back-link">← Back to Plans</a>
+</div>
+
+<div class="checkout-grid">
+
+  <!-- LEFT: Customer details + coupon -->
+  <div class="form-card">
+    <div class="section-title">Coupon Code</div>
+    <div class="coupon-wrap">
+      <input type="text" id="couponInput" placeholder="Enter coupon code (optional)" value="{{ request.GET.coupon }}" oninput="onCouponChange()">
+      <button onclick="applyCoupon()">Apply</button>
+    </div>
+    <div id="couponMsg"></div>
+
+    <div class="section-title">Your Details</div>
+    <div class="field">
+      <label>Full Name</label>
+      <input type="text" id="custName" value="{{ user.get_full_name|default:user.username }}" placeholder="Your name">
+    </div>
+    <div class="field">
+      <label>Email Address</label>
+      <input type="email" id="custEmail" value="{{ user.email }}" readonly>
+    </div>
+    <div class="row-2">
+      <div class="field">
+        <label>Country</label>
+        <input type="text" id="custCountry" placeholder="e.g. Pakistan">
+      </div>
+      <div class="field">
+        <label>City</label>
+        <input type="text" id="custCity" placeholder="e.g. Karachi">
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Order summary + payment -->
+  <div class="summary-card">
+    <div class="plan-badge">{{ plan.name }} Plan</div>
+    <div class="plan-name-lg">{{ plan.name }}</div>
+    <div class="plan-desc-sm">{{ plan.desc }}</div>
+
+    <ul class="features-mini">
+      {% for f in plan.features|slice:":5" %}
+      <li>{{ f }}</li>
+      {% endfor %}
+    </ul>
+
+    <div class="price-line">
+      <span>{{ plan.name }} Plan</span>
+      <span class="val" id="origPrice">${{ plan.price }}/mo</span>
+    </div>
+    <div class="price-line" id="discountRow" style="display:none;">
+      <span>Coupon discount</span>
+      <span class="val green" id="discountVal">-$0</span>
+    </div>
+    <div class="price-line total">
+      <span>Total today</span>
+      <span class="val" id="totalPrice">${{ plan.price }}</span>
+    </div>
+
+    <div class="pay-section" id="paySection">
+      {% if stripe_ok or paypal_ok %}
+
+        <!-- Shown when price > 0 -->
+        <div id="gatewayBtns">
+          {% if stripe_ok %}
+          <form method="post" action="/payment/stripe/create/" onsubmit="onStripeSubmit(this)">
+            {% csrf_token %}
+            <input type="hidden" name="plan" value="{{ plan.key }}">
+            <input type="hidden" name="coupon_code" id="stripeCoupon">
+            <button type="submit" class="btn-pay btn-stripe">
+              💳 Pay with Card (Stripe)
+            </button>
+          </form>
+          {% endif %}
+
+          {% if paypal_ok %}
+          <div class="pay-divider">or</div>
+          <div id="paypal-btn-wrap"></div>
+          {% endif %}
+        </div>
+
+        <!-- Shown when coupon makes price $0 -->
+        <form method="post" action="/checkout/free/" id="freeForm" style="display:none;" onsubmit="onFreeSubmit(this)">
+          {% csrf_token %}
+          <input type="hidden" name="plan" value="{{ plan.key }}">
+          <input type="hidden" name="coupon_code" id="freeCoupon">
+          <button type="submit" class="btn-pay btn-free">
+            🎉 Activate for Free
+          </button>
+        </form>
+
+      {% else %}
+        <!-- No gateway configured -->
+        <div class="no-gateway">
+          <p>⚠️ No payment gateway active</p>
+          <small>Stripe and PayPal are not configured yet.<br>Add your API keys to enable payments.</small>
+        </div>
+
+        <!-- Still allow free via coupon -->
+        <form method="post" action="/checkout/free/" id="freeForm" style="display:none;" onsubmit="onFreeSubmit(this)">
+          {% csrf_token %}
+          <input type="hidden" name="plan" value="{{ plan.key }}">
+          <input type="hidden" name="coupon_code" id="freeCoupon">
+          <button type="submit" class="btn-pay btn-free" style="margin-top:14px;">
+            🎉 Activate for Free
+          </button>
+        </form>
+      {% endif %}
+    </div>
+
+    <div class="secure-note">🔒 Secured checkout · Cancel anytime</div>
+  </div>
+</div>
+
+{% if paypal_ok %}
+<script src="https://www.paypal.com/sdk/js?client-id={{ paypal_client_id }}&currency=USD"></script>
+{% endif %}
+
+<script>
+const PLAN_KEY      = "{{ plan.key }}";
+const PLAN_PRICE    = {{ plan.price }};
+let appliedCoupon   = "{{ request.GET.coupon|default:'' }}";
+let discountedPrice = PLAN_PRICE;
+
+function getCsrf(){ return document.querySelector('[name=csrfmiddlewaretoken]').value; }
+
+// Auto-apply coupon from URL on load
+window.addEventListener('DOMContentLoaded', ()=>{
+  if(appliedCoupon) applyCoupon();
+});
+
+function onCouponChange(){
+  if(appliedCoupon){ resetCoupon(); }
+}
+
+function resetCoupon(){
+  appliedCoupon = ""; discountedPrice = PLAN_PRICE;
+  document.getElementById('discountRow').style.display='none';
+  document.getElementById('totalPrice').textContent = '$'+PLAN_PRICE;
+  document.getElementById('totalPrice').style.color = '';
+  document.getElementById('couponMsg').textContent = '';
+  updatePayButtons(PLAN_PRICE);
+}
+
+async function applyCoupon(){
+  const code = document.getElementById('couponInput').value.trim().toUpperCase();
+  const msg  = document.getElementById('couponMsg');
+  if(!code){ msg.style.color='#fca5a5'; msg.textContent='Enter a coupon code first.'; return; }
+
+  const res  = await fetch(`/superadmin/api/validate-coupon/?code=${encodeURIComponent(code)}&plan=${PLAN_KEY}`);
+  const data = await res.json();
+
+  if(!data.valid){
+    msg.style.color='#fca5a5'; msg.textContent='✕ '+(data.error||'Invalid coupon.');
+    return;
+  }
+
+  appliedCoupon   = code;
+  discountedPrice = data.discounted;
+
+  document.getElementById('discountRow').style.display='flex';
+  document.getElementById('discountVal').textContent = '-$'+data.savings;
+  document.getElementById('totalPrice').textContent  = data.discounted===0 ? 'FREE' : '$'+data.discounted;
+  document.getElementById('totalPrice').style.color  = '#10b981';
+
+  msg.style.color='#6ee7b7';
+  msg.textContent=`✓ "${code}" applied — ${data.label} off!`;
+
+  updatePayButtons(data.discounted);
+}
+
+function updatePayButtons(price){
+  const gatewayBtns = document.getElementById('gatewayBtns');
+  const freeForm    = document.getElementById('freeForm');
+  const freeCoupon  = document.getElementById('freeCoupon');
+  const stripeCoupon= document.getElementById('stripeCoupon');
+
+  if(freeCoupon)   freeCoupon.value  = appliedCoupon;
+  if(stripeCoupon) stripeCoupon.value= appliedCoupon;
+
+  if(price <= 0){
+    if(gatewayBtns) gatewayBtns.style.display='none';
+    if(freeForm)    freeForm.style.display='block';
+  } else {
+    if(gatewayBtns) gatewayBtns.style.display='block';
+    if(freeForm)    freeForm.style.display='none';
+  }
+}
+
+function onStripeSubmit(form){
+  const btn = form.querySelector('button');
+  btn.disabled=true; btn.textContent='Redirecting to Stripe…';
+}
+function onFreeSubmit(form){
+  const btn = form.querySelector('button');
+  btn.disabled=true; btn.textContent='Activating…';
+}
+
+{% if paypal_ok %}
+paypal.Buttons({
+  style:{ layout:'vertical', color:'blue', shape:'rect', label:'pay', height:44 },
+  createOrder: async ()=>{
+    const res = await fetch('/payment/paypal/create-order/',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},
+      body:JSON.stringify({plan:PLAN_KEY, coupon_code:appliedCoupon}),
+    });
+    const d = await res.json();
+    if(d.error){ alert(d.error); return; }
+    return d.id;
+  },
+  onApprove: async (data)=>{
+    const res = await fetch('/payment/paypal/capture-order/',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},
+      body:JSON.stringify({order_id:data.orderID, plan:PLAN_KEY, coupon_code:appliedCoupon}),
+    });
+    const d = await res.json();
+    if(d.ok) window.location.href='/dashboard/';
+    else alert(d.error||'Payment failed. Please try again.');
+  },
+  onError: err=>{ console.error(err); alert('PayPal error. Please try again.'); }
+}).render('#paypal-btn-wrap');
+{% endif %}
+</script>
+</body>
+</html>

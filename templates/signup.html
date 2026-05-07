@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Sign Up — Drop Sigma</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:'Inter',system-ui,sans-serif;
+  background:#05060f;
+  color:#e6e8f0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:100vh;
+  padding:24px;
+  -webkit-font-smoothing:antialiased;
+}
+.bg{
+  position:fixed;inset:0;z-index:-1;
+  background:
+    radial-gradient(ellipse at 20% 0%,rgba(99,102,241,.2),transparent 50%),
+    radial-gradient(ellipse at 80% 100%,rgba(168,85,247,.18),transparent 50%),
+    #05060f;
+}
+.card{
+  background:linear-gradient(145deg,#10122a,#13162e);
+  border:1px solid rgba(99,102,241,0.25);
+  border-radius:24px;
+  padding:44px 40px;
+  width:100%;
+  max-width:440px;
+  box-shadow:0 40px 80px rgba(0,0,0,0.5),0 0 0 1px rgba(255,255,255,0.04);
+}
+.logo{display:flex;align-items:center;gap:10px;margin-bottom:32px;text-decoration:none;}
+.logo-mark{
+  width:36px;height:36px;
+  background:linear-gradient(135deg,#6366f1,#a855f7);
+  border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:800;font-size:13px;color:#fff;
+}
+.logo-text{font-size:16px;font-weight:700;color:#fff;}
+h1{font-size:22px;font-weight:800;color:#fff;margin-bottom:6px;}
+.subtitle{font-size:14px;color:#6b6f8d;margin-bottom:28px;}
+.error-box{
+  background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.35);
+  color:#fca5a5;font-size:13px;border-radius:10px;padding:12px 14px;margin-bottom:20px;
+}
+label{display:block;font-size:13px;font-weight:600;color:#a4a8c4;margin-bottom:6px;}
+input{
+  width:100%;padding:12px 14px;
+  background:rgba(255,255,255,0.05);
+  border:1px solid rgba(255,255,255,0.1);
+  border-radius:12px;color:#fff;font-size:14px;
+  outline:none;transition:border-color .2s;
+  font-family:'Inter',sans-serif;
+}
+input:focus{border-color:rgba(99,102,241,.7);background:rgba(99,102,241,.07);}
+input::placeholder{color:#3d4167;}
+.field{margin-bottom:18px;}
+.btn-submit{
+  width:100%;padding:13px;margin-top:8px;
+  background:linear-gradient(135deg,#6366f1,#a855f7);
+  color:#fff;font-size:15px;font-weight:700;
+  border:none;border-radius:13px;cursor:pointer;
+  box-shadow:0 8px 24px rgba(99,102,241,.35);
+  transition:opacity .15s,transform .15s;
+}
+.btn-submit:hover{opacity:.9;transform:translateY(-1px);}
+.divider{text-align:center;color:#3d4167;font-size:12px;margin:20px 0;}
+.login-link{text-align:center;font-size:13px;color:#6b6f8d;}
+.login-link a{color:#818cf8;text-decoration:none;font-weight:600;}
+.login-link a:hover{text-decoration:underline;}
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<div class="card">
+  <a href="/" class="logo">
+    <div class="logo-mark">DS</div>
+    <span class="logo-text">Drop Sigma</span>
+  </a>
+  <h1>Create your account</h1>
+  <p class="subtitle">Start your 14-day free trial. No credit card required.</p>
+
+  {% if error %}
+  <div class="error-box">{{ error }}</div>
+  {% endif %}
+
+  <form method="post">
+    {% csrf_token %}
+    <div class="field">
+      <label for="name">Full Name</label>
+      <input type="text" id="name" name="name" placeholder="John Smith" required autocomplete="name" value="{{ request.POST.name|default:'' }}">
+    </div>
+    <div class="field">
+      <label for="email">Work Email</label>
+      <input type="email" id="email" name="email" placeholder="john@company.com" required autocomplete="email" value="{{ request.POST.email|default:'' }}">
+    </div>
+    <div class="field">
+      <label for="password">Password</label>
+      <input type="password" id="password" name="password" placeholder="Min. 8 characters" required autocomplete="new-password">
+    </div>
+    <div class="field">
+      <label for="confirm">Confirm Password</label>
+      <input type="password" id="confirm" name="confirm" placeholder="Repeat password" required autocomplete="new-password">
+    </div>
+    <button type="submit" class="btn-submit">Create Account →</button>
+  </form>
+
+  <div class="divider">Already have an account?</div>
+  <div class="login-link"><a href="/login/">Sign in to your dashboard</a></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>My Profile — Drop Sigma</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;}
+body{font-family:'Inter',system-ui,sans-serif;background:#f4f6fb;color:#0f172a;-webkit-font-smoothing:antialiased;display:flex;flex-direction:column;}
+
+/* Topbar */
+.topbar{height:54px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 24px;border-bottom:1px solid #e8eaf2;background:#fff;}
+.back-btn{display:inline-flex;align-items:center;gap:7px;color:#64748b;text-decoration:none;font-size:13px;font-weight:600;padding:7px 13px;border-radius:9px;border:1px solid #e2e8f0;transition:all .15s;}
+.back-btn:hover{color:#0f172a;background:#f8fafc;border-color:#cbd5e1;}
+.topbar-logo{display:flex;align-items:center;gap:9px;text-decoration:none;}
+.logo-mark{width:30px;height:30px;background:linear-gradient(135deg,#6366f1,#a855f7);border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;color:#fff;}
+.logo-text{font-size:14px;font-weight:700;color:#0f172a;}
+
+/* Layout */
+.layout{display:flex;flex:1;overflow:hidden;}
+
+/* Sidebar — dark, matches dashboard */
+.sidebar{width:260px;flex-shrink:0;background:#0f172a;display:flex;flex-direction:column;overflow-y:auto;padding:24px 16px;}
+
+.avatar-wrap{text-align:center;padding:8px 0 22px;}
+.avatar{width:72px;height:72px;background:linear-gradient(135deg,#6366f1,#a855f7);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:900;color:#fff;margin:0 auto 12px;box-shadow:0 0 0 3px rgba(99,102,241,.25),0 8px 24px rgba(99,102,241,.3);letter-spacing:.5px;}
+.avatar-name{font-size:15px;font-weight:800;color:#fff;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.avatar-email{font-size:11.5px;color:#64748b;margin-bottom:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.badges{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:6px;font-size:10.5px;font-weight:700;}
+.badge-plan{background:rgba(99,102,241,.18);border:1px solid rgba(99,102,241,.35);color:#a5b4fc;}
+.badge-active{background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.3);color:#6ee7b7;}
+.badge-trial{background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.28);color:#fcd34d;}
+.badge-inactive{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.28);color:#fca5a5;}
+.badge-type{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:#94a3b8;}
+
+.divider{height:1px;background:rgba(255,255,255,.08);margin:14px 0;}
+
+/* Sidebar nav */
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;font-size:13px;font-weight:600;color:#94a3b8;text-decoration:none;cursor:pointer;transition:all .15s;margin-bottom:2px;border:1px solid transparent;}
+.nav-item:hover{background:#1e293b;color:#e2e8f0;}
+.nav-item.active{background:rgba(99,102,241,.15);border-color:rgba(99,102,241,.22);color:#a5b4fc;}
+.nav-item svg{flex-shrink:0;opacity:.7;}
+.nav-item.active svg{opacity:1;}
+
+/* Quick stats at sidebar bottom */
+.quick-stats{margin-top:auto;padding:14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;}
+.qs-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;}
+.qs-row+.qs-row{border-top:1px solid rgba(255,255,255,.06);}
+.qs-lbl{font-size:11px;color:#475569;font-weight:500;}
+.qs-val{font-size:11.5px;font-weight:700;color:#94a3b8;}
+.qs-val.green{color:#10b981;}
+.qs-val.amber{color:#f59e0b;}
+.qs-val.red{color:#ef4444;}
+
+/* Main content */
+.content{flex:1;overflow-y:auto;padding:32px 36px;background:#f4f6fb;}
+
+/* Section */
+.sec{display:none;}
+.sec.active{display:block;}
+
+.sec-title{font-size:20px;font-weight:900;color:#0f172a;margin-bottom:3px;}
+.sec-sub{font-size:13.5px;color:#64748b;margin-bottom:24px;}
+
+/* Card */
+.card{background:#fff;border:1px solid #e8eaf2;border-radius:16px;padding:22px 24px;margin-bottom:18px;box-shadow:0 1px 4px rgba(15,23,42,.04);}
+.card-head{font-size:10.5px;font-weight:800;color:#6366f1;text-transform:uppercase;letter-spacing:1.3px;margin-bottom:16px;display:flex;align-items:center;gap:7px;}
+
+/* Fields */
+.field{margin-bottom:14px;}
+.field label{display:block;font-size:10.5px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;}
+.field input,.field textarea{width:100%;padding:10px 13px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;color:#0f172a;font-size:14px;font-family:'Inter',sans-serif;outline:none;transition:border-color .2s,background .2s;resize:vertical;}
+.field input:focus,.field textarea:focus{border-color:#6366f1;background:#fff;box-shadow:0 0 0 3px rgba(99,102,241,.08);}
+.field input::placeholder,.field textarea::placeholder{color:#cbd5e1;}
+.field input[readonly]{background:#f1f5f9;border-color:#e2e8f0;color:#94a3b8;cursor:not-allowed;}
+.field .hint{font-size:11px;color:#94a3b8;margin-top:4px;display:flex;align-items:center;gap:4px;}
+.row-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+@media(max-width:680px){.row-2{grid-template-columns:1fr;}}
+
+.btn-save{display:inline-flex;align-items:center;gap:7px;padding:10px 22px;background:linear-gradient(135deg,#6366f1,#a855f7);color:#fff;font-size:13.5px;font-weight:700;border:none;border-radius:10px;cursor:pointer;font-family:'Inter',sans-serif;transition:opacity .15s,transform .15s;box-shadow:0 4px 14px rgba(99,102,241,.25);}
+.btn-save:hover{opacity:.9;transform:translateY(-1px);}
+.btn-save:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+#saveMsg{font-size:13px;margin-left:10px;vertical-align:middle;}
+
+/* Info grid */
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:0;}
+.info-cell{padding:13px 0;border-bottom:1px solid #f1f5f9;}
+.info-cell:nth-last-child(-n+2){border-bottom:none;}
+.ic-lbl{font-size:10.5px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px;}
+.ic-val{font-size:14px;font-weight:600;color:#0f172a;}
+.ic-val.muted{color:#94a3b8;font-weight:400;}
+.ic-val.green{color:#059669;}
+.ic-val.amber{color:#d97706;}
+.ic-val.red{color:#dc2626;}
+
+/* Plan banner */
+.plan-banner{background:linear-gradient(135deg,#6366f1,#7c3aed);border-radius:16px;padding:22px 24px;display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;position:relative;overflow:hidden;}
+.plan-banner::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 80% 30%,rgba(255,255,255,.12),transparent 60%);pointer-events:none;}
+.plan-eyebrow{font-size:10px;font-weight:700;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:5px;}
+.plan-name{font-size:22px;font-weight:900;color:#fff;}
+.plan-price{font-size:36px;font-weight:900;color:#fff;line-height:1;text-align:right;}
+.plan-period{font-size:12px;color:rgba(255,255,255,.6);text-align:right;margin-top:2px;}
+
+/* Chips */
+.chip-row{display:flex;flex-wrap:wrap;gap:7px;margin-top:16px;}
+.chip{display:inline-flex;align-items:center;gap:5px;background:#f8fafc;border:1px solid #e8eaf2;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;color:#475569;}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:5px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:#e2e8f0;border-radius:99px;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="/dashboard/" class="back-btn">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5m7-7-7 7 7 7"/></svg>
+    Back to Dashboard
+  </a>
+  <a href="/" class="topbar-logo">
+    <div class="logo-mark">DS</div>
+    <span class="logo-text">Drop Sigma</span>
+  </a>
+</div>
+
+<div class="layout">
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="avatar-wrap">
+      <div class="avatar">{{ user_initials }}</div>
+      <div class="avatar-name">{{ display_name }}</div>
+      <div class="avatar-email">{{ user.email }}</div>
+      <div class="badges">
+        {% if sub %}
+          <span class="badge badge-plan">★ {{ sub.plan|title }}</span>
+          {% if tenant.status == "active" %}<span class="badge badge-active">● Active</span>
+          {% elif tenant.status == "trial" %}<span class="badge badge-trial">⏳ Trial</span>
+          {% else %}<span class="badge badge-inactive">✕ Inactive</span>{% endif %}
+        {% else %}
+          <span class="badge badge-trial">No Plan</span>
+        {% endif %}
+        <span class="badge badge-type">{% if user.is_superuser %}Super Admin{% elif user.is_staff %}Admin{% else %}Member{% endif %}</span>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div onclick="switchTab('personal')" class="nav-item active" id="tab-personal">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+      Personal Info
+    </div>
+    <div onclick="switchTab('account')" class="nav-item" id="tab-account">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+      Account Details
+    </div>
+    <div onclick="switchTab('subscription')" class="nav-item" id="tab-subscription">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.56 5.82 22 7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+      Subscription
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="quick-stats">
+      <div class="qs-row">
+        <span class="qs-lbl">Joined</span>
+        <span class="qs-val">{{ user.date_joined|date:"M j, Y" }}</span>
+      </div>
+      <div class="qs-row">
+        <span class="qs-lbl">Last login</span>
+        <span class="qs-val">{% if user.last_login %}{{ user.last_login|date:"M j · g:i A" }}{% else %}—{% endif %}</span>
+      </div>
+      <div class="qs-row">
+        <span class="qs-lbl">Plan status</span>
+        <span class="qs-val {% if tenant and tenant.status == 'active' %}green{% elif tenant and tenant.status == 'trial' %}amber{% else %}red{% endif %}">{% if tenant %}{{ tenant.status|title }}{% else %}None{% endif %}</span>
+      </div>
+      {% if sub and sub.renews_on %}
+      <div class="qs-row">
+        <span class="qs-lbl">Renews</span>
+        <span class="qs-val">{{ sub.renews_on|date:"M j, Y" }}</span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="content">
+
+    <!-- Personal Info -->
+    <div class="sec active" id="sec-personal">
+      <div class="sec-title">Personal Information</div>
+      <div class="sec-sub">Update your name and address. Email cannot be changed.</div>
+      <div class="card">
+        <div class="card-head">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+          Profile Details
+        </div>
+        <form onsubmit="saveProfile(event)">
+          {% csrf_token %}
+          <div class="row-2">
+            <div class="field">
+              <label>Full Name</label>
+              <input type="text" id="pName" value="{{ display_name }}" placeholder="Your full name">
+            </div>
+            <div class="field">
+              <label>Email Address</label>
+              <input type="email" value="{{ user.email }}" readonly>
+              <div class="hint">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                Cannot be changed
+              </div>
+            </div>
+          </div>
+          <div class="field">
+            <label>Address</label>
+            <textarea id="pAddress" rows="3" placeholder="Your business or personal address (optional)">{{ profile.address }}</textarea>
+          </div>
+          <div style="display:flex;align-items:center;margin-top:4px;">
+            <button type="submit" class="btn-save" id="saveBtn">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+              Save Changes
+            </button>
+            <span id="saveMsg"></span>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Account Details -->
+    <div class="sec" id="sec-account">
+      <div class="sec-title">Account Details</div>
+      <div class="sec-sub">Your account information and access history.</div>
+      <div class="card">
+        <div class="card-head">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+          Account Info
+        </div>
+        <div class="info-grid">
+          <div class="info-cell" style="padding-right:24px;">
+            <div class="ic-lbl">Username</div>
+            <div class="ic-val">{{ user.username }}</div>
+          </div>
+          <div class="info-cell" style="padding-left:24px;border-left:1px solid #f1f5f9;">
+            <div class="ic-lbl">Account Type</div>
+            <div class="ic-val">{% if user.is_superuser %}Super Admin{% elif user.is_staff %}Admin{% else %}Team Member{% endif %}</div>
+          </div>
+          <div class="info-cell" style="padding-right:24px;">
+            <div class="ic-lbl">Member Since</div>
+            <div class="ic-val">{{ user.date_joined|date:"F j, Y" }}</div>
+          </div>
+          <div class="info-cell" style="padding-left:24px;border-left:1px solid #f1f5f9;">
+            <div class="ic-lbl">Email Address</div>
+            <div class="ic-val">{{ user.email }}</div>
+          </div>
+          <div class="info-cell" style="border-bottom:none;padding-right:24px;">
+            <div class="ic-lbl">Last Login</div>
+            <div class="ic-val">{% if user.last_login %}{{ user.last_login|date:"F j, Y · g:i A" }}{% else %}<span class="muted">—</span>{% endif %}</div>
+          </div>
+          <div class="info-cell" style="border-bottom:none;padding-left:24px;border-left:1px solid #f1f5f9;">
+            <div class="ic-lbl">Account Status</div>
+            <div class="ic-val {% if user.is_active %}green{% else %}red{% endif %}">{{ user.is_active|yesno:"Active,Inactive" }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Subscription -->
+    <div class="sec" id="sec-subscription">
+      <div class="sec-title">Subscription</div>
+      <div class="sec-sub">Your active plan, billing dates, and included features.</div>
+
+      {% if sub %}
+        <div class="plan-banner">
+          <div>
+            <div class="plan-eyebrow">Active Plan</div>
+            <div class="plan-name">{{ sub.plan|title }}</div>
+          </div>
+          <div>
+            <div class="plan-price">${{ sub.price }}</div>
+            <div class="plan-period">per month</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+            Billing Details
+          </div>
+          <div class="info-grid">
+            <div class="info-cell" style="padding-right:24px;">
+              <div class="ic-lbl">Status</div>
+              <div class="ic-val {% if tenant.status == 'active' %}green{% elif tenant.status == 'trial' %}amber{% else %}red{% endif %}">{{ tenant.status|title }}</div>
+            </div>
+            <div class="info-cell" style="padding-left:24px;border-left:1px solid #f1f5f9;">
+              <div class="ic-lbl">Payment</div>
+              <div class="ic-val">{{ sub.payment_status|title }}</div>
+            </div>
+            <div class="info-cell" style="border-bottom:none;padding-right:24px;">
+              <div class="ic-lbl">Started On</div>
+              <div class="ic-val">{{ sub.start_date|date:"F j, Y" }}</div>
+            </div>
+            <div class="info-cell" style="border-bottom:none;padding-left:24px;border-left:1px solid #f1f5f9;">
+              <div class="ic-lbl">Renews / Expires</div>
+              <div class="ic-val {% if not sub.renews_on %}muted{% endif %}">{% if sub.renews_on %}{{ sub.renews_on|date:"F j, Y" }}{% else %}—{% endif %}</div>
+            </div>
+          </div>
+          <div class="chip-row">
+            <span class="chip">🏪 3 Stores</span>
+            <span class="chip">📧 2 Emails</span>
+            <span class="chip">🚀 All Features</span>
+            <span class="chip">🔁 Cancel Anytime</span>
+          </div>
+        </div>
+
+      {% else %}
+        <div class="card" style="text-align:center;padding:48px 24px;">
+          <div style="font-size:44px;margin-bottom:14px;">📋</div>
+          <div style="font-size:17px;font-weight:800;color:#0f172a;margin-bottom:8px;">No Active Subscription</div>
+          <div style="font-size:14px;color:#64748b;margin-bottom:22px;">Upgrade to unlock all features — 3 stores, 2 emails, unlimited everything.</div>
+          <a href="/upgrade/" style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#6366f1,#a855f7);color:#fff;font-size:14px;font-weight:700;padding:11px 26px;border-radius:11px;text-decoration:none;box-shadow:0 6px 18px rgba(99,102,241,.28);">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.56 5.82 22 7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            View Plans
+          </a>
+        </div>
+      {% endif %}
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /layout -->
+
+<script>
+function switchTab(name){
+  ['personal','account','subscription'].forEach(t=>{
+    document.getElementById('sec-'+t).classList.remove('active');
+    document.getElementById('tab-'+t).classList.remove('active');
+  });
+  document.getElementById('sec-'+name).classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
+}
+
+async function saveProfile(e){
+  e.preventDefault();
+  const btn=document.getElementById('saveBtn'),msg=document.getElementById('saveMsg');
+  const name=document.getElementById('pName').value.trim();
+  const addr=document.getElementById('pAddress').value.trim();
+  if(!name){msg.style.color='#dc2626';msg.textContent='Name cannot be empty.';return;}
+  btn.disabled=true;btn.textContent='Saving…';
+  try{
+    const csrf=document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const r=await fetch('/api/profile/',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':csrf},body:JSON.stringify({name,address:addr})});
+    const d=await r.json();
+    if(d.ok){msg.style.color='#059669';msg.textContent='✓ Saved!';setTimeout(()=>msg.textContent='',2500);}
+    else{msg.style.color='#dc2626';msg.textContent=d.error||'Failed.';}
+  }catch(err){msg.style.color='#dc2626';msg.textContent='Network error.';}
+  btn.disabled=false;
+  btn.innerHTML=`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Save Changes`;
+}
+</script>
+</body>
+</html>
