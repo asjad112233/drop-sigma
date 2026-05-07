@@ -5056,7 +5056,7 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
                 </div>
                 <label class="em-stg-toggle em-stg-ctrl">
                   <input type="checkbox" id="settingLiveSyncEnabled" checked
-                    onchange="liveSyncEnabled=this.checked; this.checked ? startLiveEmailSync() : stopLiveEmailSync();">
+                    onchange="liveSyncEnabled=this.checked; emSettingChange('live_sync_enabled', this.checked); this.checked ? startLiveEmailSync() : stopLiveEmailSync();">
                   <span class="em-stg-slider"></span>
                 </label>
               </div>
@@ -5066,7 +5066,7 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
                   <p>How often to check for new emails</p>
                 </div>
                 <select class="em-stg-select em-stg-ctrl" id="settingSyncInterval"
-                  onchange="liveSyncSeconds=parseInt(this.value); startLiveEmailSync(); emSettingChange('fetch_limit', emailSettings.fetch_limit);">
+                  onchange="liveSyncSeconds=parseInt(this.value); startLiveEmailSync(); emSettingChange('sync_interval', liveSyncSeconds);">
                   <option value="30">Every 30 seconds</option>
                   <option value="60" selected>Every 60 seconds</option>
                   <option value="300">Every 5 minutes</option>
@@ -9347,6 +9347,9 @@ async function loadEmailSettings(){
     }
 
     // Sync settings
+    _setChk("settingLiveSyncEnabled", s.live_sync_enabled !== false);
+    liveSyncEnabled = s.live_sync_enabled !== false;
+    if(s.sync_interval){ liveSyncSeconds = s.sync_interval; _setSel("settingSyncInterval", String(s.sync_interval)); }
     _setChk("settingSyncOnTabFocus", s.sync_on_tab_focus);
     _setSel("settingFetchLimit", String(s.fetch_limit||30));
     _setSel("settingSyncFolder", s.sync_folder||"INBOX");
@@ -10851,7 +10854,7 @@ async function resolveCurrentThread(){
 function setThreadStatus(status){
   const pill = document.getElementById("statusPill");
   if(pill) pill.classList.remove("popOpen");
-  // "open" is just closing the dropdown — nothing else to do
+  if(status === "open") reopenThread();
 }
 
 function setEmailFilter2(filter, el){

@@ -31,6 +31,8 @@ class EmailAccount(models.Model):
     sync_folder = models.CharField(max_length=100, default="INBOX")
     mark_read_in_gmail = models.BooleanField(default=False)
     sync_on_tab_focus = models.BooleanField(default=True)
+    live_sync_enabled = models.BooleanField(default=True)
+    sync_interval = models.IntegerField(default=60)
 
     # AI settings
     ai_tone = models.CharField(max_length=50, default="friendly")

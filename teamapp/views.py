@@ -347,27 +347,33 @@ def employee_thread_detail_api(request):
 def employee_thread_resolve_api(request):
     if not request.user.is_authenticated:
         return Response({"success": False, "message": "Not authenticated"}, status=401)
-    member = request.user.team_profile.first()
-    if not member:
-        return Response({"success": False, "message": "Not an employee"}, status=403)
 
     from emails.models import EmailThreadAssignment
     from emails.views import extract_clean_email
+    from stores.models import Store
     from django.utils import timezone
 
     store_id = request.data.get("store_id")
     contact  = extract_clean_email(request.data.get("contact", ""))
 
-    assignment = EmailThreadAssignment.objects.filter(
-        store_id=store_id, contact=contact, assigned_to=member
-    ).first()
-    if not assignment:
-        return Response({"success": False, "message": "Thread not assigned to you."}, status=403)
+    member = request.user.team_profile.first()
+    is_store_owner = Store.objects.filter(id=store_id, user=request.user).exists()
+
+    if not member and not is_store_owner:
+        return Response({"success": False, "message": "Not authorised."}, status=403)
+
+    if is_store_owner:
+        # Admin/store owner can resolve any thread in their store
+        assignment, _ = EmailThreadAssignment.objects.get_or_create(store_id=store_id, contact=contact)
+    else:
+        assignment = EmailThreadAssignment.objects.filter(store_id=store_id, contact=contact).first()
+        if not assignment:
+            assignment, _ = EmailThreadAssignment.objects.get_or_create(store_id=store_id, contact=contact)
 
     assignment.is_resolved = True
     assignment.resolved_at = timezone.now()
     assignment.save()
-    return Response({"success": True, "message": "Thread marked as resolved."})
+    return Response({"success": True, "resolved_at": assignment.resolved_at.isoformat(), "message": "Thread marked as resolved."})
 
 
 @api_view(["POST"])

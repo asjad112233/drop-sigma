@@ -299,6 +299,7 @@ def connected_email_api(request):
 
 _SETTINGS_FIELDS = [
     "fetch_limit", "sync_folder", "mark_read_in_gmail", "sync_on_tab_focus",
+    "live_sync_enabled", "sync_interval",
     "ai_tone", "ai_language", "ai_auto_suggest", "ai_auto_draft", "ai_include_order",
     "signature",
     "notify_browser", "notify_sound", "notify_unread_only", "notify_assigned_only",
