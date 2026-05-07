@@ -191,25 +191,28 @@ def signup_view(request):
                 scheme = "http" if host.split(":")[0] in ("localhost", "127.0.0.1") else "https"
                 link   = f"{scheme}://{host}/verify-email/{token_obj.token}/"
 
-                # Send verification email in background thread so request returns instantly
-                import threading, logging
+                # Send verification email via Resend API (Railway blocks SMTP ports)
+                import threading, logging, resend as _resend
                 _mail_logger = logging.getLogger("dropsigma.mail")
                 def _send():
                     try:
-                        _mail_logger.info(f"Sending verification email to {email} from {settings.DEFAULT_FROM_EMAIL}")
-                        send_mail(
-                            subject="Verify your Drop Sigma account",
-                            message=(
-                                f"Hi {name},\n\n"
-                                f"Click the link below to verify your email and activate your account:\n\n"
-                                f"{link}\n\n"
-                                f"This link expires in 24 hours.\n\n"
-                                f"— Drop Sigma Team"
+                        _mail_logger.info(f"Sending verification email to {email} via Resend")
+                        _resend.api_key = os.getenv("RESEND_API_KEY", "")
+                        _resend.Emails.send({
+                            "from": "Drop Sigma <noreply@dropsigma.com>",
+                            "to": [email],
+                            "subject": "Verify your Drop Sigma account",
+                            "html": (
+                                f"<p>Hi {name},</p>"
+                                f"<p>Click the button below to verify your email and activate your account:</p>"
+                                f"<p><a href='{link}' style='background:#6366f1;color:#fff;padding:12px 24px;"
+                                f"border-radius:8px;text-decoration:none;font-weight:700;display:inline-block;'>"
+                                f"Verify Email</a></p>"
+                                f"<p>Or copy this link: <a href='{link}'>{link}</a></p>"
+                                f"<p>This link expires in 24 hours.</p>"
+                                f"<p>— Drop Sigma Team</p>"
                             ),
-                            from_email=settings.DEFAULT_FROM_EMAIL,
-                            recipient_list=[email],
-                            fail_silently=False,
-                        )
+                        })
                         _mail_logger.info(f"Verification email sent OK to {email}")
                     except Exception as exc:
                         _mail_logger.error(f"Verification email FAILED to {email}: {exc}")
