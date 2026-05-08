@@ -873,7 +873,6 @@ def tasks_list_api(request):
     return Response({"tasks": [_task_to_dict(t) for t in tasks]})
 
 
-@api_view(["POST"])
 def _send_task_assignment_dm(admin_user, member, task):
     """Send a professional DM from admin to the assigned employee about the new task."""
     try:
@@ -918,6 +917,7 @@ def _send_task_assignment_dm(admin_user, member, task):
         pass  # Never break task creation if DM fails
 
 
+@api_view(["POST"])
 def tasks_create_api(request):
     if not request.user.is_authenticated:
         return Response({"error": "Login required"}, status=401)
