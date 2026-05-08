@@ -333,6 +333,8 @@ def setup_admin(request):
 def homepage(request):
     if request.user.is_authenticated and request.user.is_staff:
         return redirect("/dashboard/")
+    if request.user.is_authenticated and request.user.team_profile.exists():
+        return redirect("/employee/dashboard/")
     return render(request, "home.html")
 
 

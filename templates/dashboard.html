@@ -8399,7 +8399,7 @@ function openOrders(storeId){
   const switcher = document.getElementById("projectSwitcher");
   if(switcher) switcher.value = selectedStoreId;
 
-  const newUrl = `/?store_id=${selectedStoreId}&section=orders`;
+  const newUrl = `/dashboard/?store_id=${selectedStoreId}&section=orders`;
   window.history.pushState({}, "", newUrl);
   showSection("orders");
 }
@@ -8815,7 +8815,7 @@ async function syncOrders(storeId){
       selectedStoreId = String(storeId);
       const switcher = document.getElementById("projectSwitcher");
       if(switcher) switcher.value = selectedStoreId;
-      window.history.pushState({}, "", `/?store_id=${selectedStoreId}&section=orders`);
+      window.history.pushState({}, "", `/dashboard/?store_id=${selectedStoreId}&section=orders`);
       showSection("orders");
     }else{
       await _alert(data.message || "Sync failed", "Sync Error", "❌");
@@ -13038,7 +13038,7 @@ async function createStore(){
 
     if(data.store && data.store.id){
       selectedStoreId = String(data.store.id);
-      window.history.pushState({}, "", `/?store_id=${selectedStoreId}&section=stores`);
+      window.history.pushState({}, "", `/dashboard/?store_id=${selectedStoreId}&section=stores`);
     }
 
     closeAddStoreModal();
@@ -13106,7 +13106,7 @@ async function loadProjectSwitcher(){
     if(!selectedStoreId || !selectedExists){
       selectedStoreId = String(stores[0].id);
       const currentSection = new URLSearchParams(window.location.search).get("section") || getActiveSectionName() || "overview";
-      window.history.replaceState({}, "", `/?store_id=${selectedStoreId}&section=${currentSection}`);
+      window.history.replaceState({}, "", `/dashboard/?store_id=${selectedStoreId}&section=${currentSection}`);
     }
 
     switcher.innerHTML = stores.map(store => `
@@ -13400,7 +13400,7 @@ async function initDashboard(){
 
   // WooCommerce auto-connect return redirect
   if(params.get("connected") === "1"){
-    window.history.replaceState({}, "", `/?section=stores`);
+    window.history.replaceState({}, "", `/dashboard/?section=stores`);
     setTimeout(()=>{ loadStores(); }, 500);
   }
   updateActiveStoreLabels();
