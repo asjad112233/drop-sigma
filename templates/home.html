@@ -1671,6 +1671,75 @@ footer{
   .showcase-wrap{padding:20px}
   .pane-info h3{font-size:22px}
 }
+
+/* ── New Feature Card Extras ── */
+.feat-icon.green-icon{background:rgba(16,185,129,.12);border-color:rgba(16,185,129,.25);}
+.feat-icon.amber-icon{background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.25);}
+.feat-icon.cyan-icon{background:rgba(34,211,238,.12);border-color:rgba(34,211,238,.25);}
+.feat .pill.green-pill{color:#6ee7b7;background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.25);}
+.feat .pill.amber-pill{color:#fcd34d;background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.25);}
+
+/* Live Chat */
+.chat-anim{margin-top:24px;background:rgba(0,0,0,.3);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px;}
+.chat-bubble{display:flex;align-items:flex-end;gap:8px;}
+.chat-bubble.right{flex-direction:row-reverse;}
+.chat-avatar{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;flex-shrink:0;}
+.chat-avatar.blue{background:rgba(99,102,241,.3);color:var(--indigo-2);}
+.chat-avatar.green{background:rgba(16,185,129,.3);color:var(--green);}
+.chat-msg{padding:9px 13px;border-radius:14px;font-size:12px;line-height:1.5;max-width:75%;}
+.chat-bubble:not(.right) .chat-msg{background:rgba(255,255,255,.07);color:var(--ink-1);border-bottom-left-radius:4px;}
+.chat-bubble.right .chat-msg{background:rgba(99,102,241,.25);color:#c7d2fe;border-bottom-right-radius:4px;}
+.chat-meta{font-size:10px;color:var(--ink-3);margin-top:2px;padding:0 4px;}
+.chat-bubble.right .chat-meta{text-align:right;}
+.chat-typing{display:flex;align-items:center;gap:4px;padding:6px 0;}
+.chat-typing span{width:6px;height:6px;border-radius:50%;background:var(--ink-3);display:inline-block;}
+.chat-typing span:nth-child(1){animation:typeBounce 1.2s ease-in-out infinite 0s;}
+.chat-typing span:nth-child(2){animation:typeBounce 1.2s ease-in-out infinite .2s;}
+.chat-typing span:nth-child(3){animation:typeBounce 1.2s ease-in-out infinite .4s;}
+@keyframes typeBounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px);background:var(--indigo-2);}}
+.live-badge-new{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--green);font-weight:600;margin-bottom:6px;}
+.live-badge-new .ldot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 1.5s ease-in-out infinite;}
+
+/* Stock Management */
+.stock-anim{margin-top:24px;background:rgba(0,0,0,.3);border:1px solid var(--line);border-radius:14px;overflow:hidden;}
+.stock-header{padding:10px 14px;border-bottom:1px solid var(--line);display:grid;grid-template-columns:1fr auto auto;gap:12px;font-size:10px;color:var(--ink-3);font-weight:600;text-transform:uppercase;letter-spacing:.5px;}
+.stock-row{display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:center;padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.04);font-size:12px;}
+.stock-row:last-child{border-bottom:none;}
+.stock-name{color:var(--ink-1);font-weight:500;}
+.stock-qty{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;}
+.stock-qty.ok{background:rgba(16,185,129,.15);color:#6ee7b7;}
+.stock-qty.low{background:rgba(245,158,11,.15);color:#fcd34d;}
+.stock-qty.out{background:rgba(239,68,68,.15);color:#fca5a5;}
+.stock-bar-wrap{width:60px;height:4px;background:rgba(255,255,255,.08);border-radius:4px;overflow:hidden;}
+.stock-bar{height:100%;border-radius:4px;background:var(--green);}
+.stock-bar.low{background:var(--amber);}
+.stock-bar.out{background:#ef4444;}
+
+/* Task Assignment */
+.task-anim{margin-top:24px;background:rgba(0,0,0,.3);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px;}
+.task-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:10px;}
+.task-check{width:18px;height:18px;border-radius:5px;border:2px solid var(--line-2);display:grid;place-items:center;flex-shrink:0;}
+.task-check.done{background:var(--green);border-color:var(--green);color:#fff;font-size:11px;}
+.task-text{flex:1;font-size:12px;color:var(--ink-1);}
+.task-text.done{text-decoration:line-through;color:var(--ink-3);}
+.task-assignee{font-size:10px;color:var(--ink-3);background:rgba(255,255,255,.06);padding:3px 8px;border-radius:20px;}
+.task-priority{font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;}
+.task-priority.high{background:rgba(239,68,68,.15);color:#fca5a5;}
+.task-priority.med{background:rgba(245,158,11,.15);color:#fcd34d;}
+.task-priority.low-p{background:rgba(16,185,129,.15);color:#6ee7b7;}
+
+/* Email Connect */
+.email-anim{margin-top:24px;background:rgba(0,0,0,.3);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px;}
+.provider-row{display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.03);transition:border-color .2s;}
+.provider-row:hover{border-color:rgba(99,102,241,.4);}
+.provider-icon{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;font-size:16px;flex-shrink:0;}
+.provider-icon.gmail{background:rgba(234,67,53,.15);}
+.provider-icon.smtp{background:rgba(99,102,241,.15);}
+.provider-label{flex:1;color:var(--ink-1);font-size:13px;font-weight:600;}
+.provider-sub{font-size:11px;color:var(--ink-3);font-weight:400;}
+.provider-status{font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;}
+.provider-status.connected{background:rgba(16,185,129,.15);color:#6ee7b7;}
+.provider-status.new-badge{background:rgba(99,102,241,.15);color:var(--indigo-2);}
 </style>
 </head>
 <body>
@@ -2038,27 +2107,30 @@ footer{
 
       <!-- Live Team Chat — featured wide card -->
       <div class="feat featured reveal">
-        <div class="feat-icon" style="background:rgba(99,102,241,.15);border-color:rgba(99,102,241,.3);">💬</div>
+        <div class="feat-icon">💬</div>
         <h3>Live Team Chat</h3>
         <p>Real-time messaging between your team — channels, direct messages, reactions, and read receipts. Built right inside the portal so your team never needs to leave Drop Sigma.</p>
         <span class="pill star">Built-in · No Slack needed</span>
-        <div style="margin-top:22px;background:rgba(0,0,0,.28);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px;">
-          <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--green);font-weight:600;margin-bottom:4px;">
-            <span style="width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 2s ease-in-out infinite;display:inline-block;"></span>
-            3 members online
-          </div>
-          <div style="display:flex;align-items:flex-end;gap:8px;">
-            <div style="width:28px;height:28px;border-radius:50%;background:rgba(99,102,241,.3);color:var(--indigo-2);display:grid;place-items:center;font-size:11px;font-weight:700;flex-shrink:0;">A</div>
+        <div class="chat-anim">
+          <div class="live-badge-new"><span class="ldot"></span>3 members online</div>
+          <div class="chat-bubble">
+            <div class="chat-avatar blue">A</div>
             <div>
-              <div style="padding:9px 13px;border-radius:14px 14px 14px 4px;background:rgba(255,255,255,.07);color:var(--ink-1);font-size:12px;line-height:1.5;">Order #10482 just came in — vendor assigned?</div>
-              <div style="font-size:10px;color:var(--ink-3);margin-top:3px;padding:0 4px;">Ali · #general</div>
+              <div class="chat-msg">Order #10482 just came in — vendor assigned?</div>
+              <div class="chat-meta">Ali · #general</div>
             </div>
           </div>
-          <div style="display:flex;align-items:flex-end;gap:8px;flex-direction:row-reverse;">
-            <div style="width:28px;height:28px;border-radius:50%;background:rgba(16,185,129,.3);color:var(--green);display:grid;place-items:center;font-size:11px;font-weight:700;flex-shrink:0;">S</div>
+          <div class="chat-bubble right">
+            <div class="chat-avatar green">S</div>
             <div>
-              <div style="padding:9px 13px;border-radius:14px 14px 4px 14px;background:rgba(99,102,241,.25);color:#c7d2fe;font-size:12px;line-height:1.5;">Yes, routed to Asia Hub automatically ✅</div>
-              <div style="font-size:10px;color:var(--ink-3);margin-top:3px;padding:0 4px;text-align:right;">Sara · just now</div>
+              <div class="chat-msg">Yes, routed to Asia Hub automatically ✅</div>
+              <div class="chat-meta">Sara · just now</div>
+            </div>
+          </div>
+          <div class="chat-bubble">
+            <div class="chat-avatar blue">A</div>
+            <div>
+              <div class="chat-typing"><span></span><span></span><span></span></div>
             </div>
           </div>
         </div>
@@ -2066,83 +2138,84 @@ footer{
 
       <!-- Personal Stock Management -->
       <div class="feat reveal">
-        <div class="feat-icon" style="background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.3);">📦</div>
+        <div class="feat-icon amber-icon">📦</div>
         <h3>Personal Stock Management</h3>
-        <p>Track your own inventory separately from vendor stock. Set low-stock alerts, view real-time quantities, and manage restocking — all in one place.</p>
-        <span class="pill" style="color:#fcd34d;background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.3);">New · Inventory Control</span>
-        <div style="margin-top:20px;background:rgba(0,0,0,.28);border:1px solid var(--line);border-radius:12px;overflow:hidden;">
-          <div style="padding:8px 14px;border-bottom:1px solid var(--line);display:grid;grid-template-columns:1fr auto auto;gap:12px;font-size:10px;color:var(--ink-3);font-weight:600;text-transform:uppercase;letter-spacing:.5px;">
+        <p>Track your own inventory separately from vendor stock. Set low-stock alerts, view real-time quantities, and manage restocking — all from one place.</p>
+        <span class="pill amber-pill">New · Inventory Control</span>
+        <div class="stock-anim">
+          <div class="stock-header">
             <span>Product</span><span>Status</span><span>Stock</span>
           </div>
-          <div style="padding:9px 14px;border-bottom:1px solid rgba(255,255,255,.04);display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:center;font-size:12px;">
-            <span style="color:var(--ink-1);font-weight:500;">Wireless Earbuds</span>
-            <span style="padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700;background:rgba(16,185,129,.15);color:#6ee7b7;">In Stock</span>
-            <div style="width:52px;height:4px;background:rgba(255,255,255,.08);border-radius:4px;overflow:hidden;"><div style="width:78%;height:100%;background:var(--green);border-radius:4px;"></div></div>
+          <div class="stock-row">
+            <span class="stock-name">Wireless Earbuds</span>
+            <span class="stock-qty ok">In Stock</span>
+            <div class="stock-bar-wrap"><div class="stock-bar" style="width:78%"></div></div>
           </div>
-          <div style="padding:9px 14px;border-bottom:1px solid rgba(255,255,255,.04);display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:center;font-size:12px;">
-            <span style="color:var(--ink-1);font-weight:500;">Phone Case Pro</span>
-            <span style="padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700;background:rgba(245,158,11,.15);color:#fcd34d;">Low</span>
-            <div style="width:52px;height:4px;background:rgba(255,255,255,.08);border-radius:4px;overflow:hidden;"><div style="width:22%;height:100%;background:var(--amber);border-radius:4px;"></div></div>
+          <div class="stock-row">
+            <span class="stock-name">Phone Case Pro</span>
+            <span class="stock-qty low">Low</span>
+            <div class="stock-bar-wrap"><div class="stock-bar low" style="width:22%"></div></div>
           </div>
-          <div style="padding:9px 14px;display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:center;font-size:12px;">
-            <span style="color:var(--ink-1);font-weight:500;">USB-C Hub</span>
-            <span style="padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700;background:rgba(239,68,68,.15);color:#fca5a5;">Out</span>
-            <div style="width:52px;height:4px;background:rgba(255,255,255,.08);border-radius:4px;overflow:hidden;"><div style="width:4%;height:100%;background:#ef4444;border-radius:4px;"></div></div>
+          <div class="stock-row">
+            <span class="stock-name">USB-C Hub</span>
+            <span class="stock-qty out">Out</span>
+            <div class="stock-bar-wrap"><div class="stock-bar out" style="width:4%"></div></div>
           </div>
         </div>
       </div>
 
       <!-- Team Task Assignment -->
       <div class="feat reveal">
-        <div class="feat-icon" style="background:rgba(16,185,129,.12);border-color:rgba(16,185,129,.3);">✅</div>
+        <div class="feat-icon green-icon">✅</div>
         <h3>Team Task Assignment</h3>
         <p>Assign tasks to team members with priorities and deadlines. Track completion in real time — no more chasing up on WhatsApp. Everyone sees their queue inside the portal.</p>
-        <span class="pill" style="color:#6ee7b7;background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.3);">New · Task Tracking</span>
-        <div style="margin-top:20px;display:flex;flex-direction:column;gap:7px;">
-          <div style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:10px;">
-            <div style="width:18px;height:18px;border-radius:5px;background:var(--green);border:2px solid var(--green);display:grid;place-items:center;font-size:10px;color:#fff;flex-shrink:0;">✓</div>
-            <span style="flex:1;font-size:12px;color:var(--ink-3);text-decoration:line-through;">Review 12 pending refunds</span>
-            <span style="font-size:10px;color:var(--ink-3);background:rgba(255,255,255,.06);padding:2px 7px;border-radius:20px;">Sara</span>
+        <span class="pill green-pill">New · Task Tracking</span>
+        <div class="task-anim">
+          <div class="task-item">
+            <div class="task-check done">✓</div>
+            <span class="task-text done">Review 12 pending refunds</span>
+            <span class="task-assignee">Sara</span>
+            <span class="task-priority low-p">Done</span>
           </div>
-          <div style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:rgba(255,255,255,.03);border:1px solid rgba(239,68,68,.25);border-radius:10px;">
-            <div style="width:18px;height:18px;border-radius:5px;border:2px solid var(--line-2);flex-shrink:0;"></div>
-            <span style="flex:1;font-size:12px;color:var(--ink-1);">Follow up on Order #10489</span>
-            <span style="font-size:10px;color:var(--ink-3);background:rgba(255,255,255,.06);padding:2px 7px;border-radius:20px;">Ali</span>
-            <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;background:rgba(239,68,68,.15);color:#fca5a5;">High</span>
+          <div class="task-item">
+            <div class="task-check"></div>
+            <span class="task-text">Follow up on Order #10489</span>
+            <span class="task-assignee">Ali</span>
+            <span class="task-priority high">High</span>
           </div>
-          <div style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:10px;">
-            <div style="width:18px;height:18px;border-radius:5px;border:2px solid var(--line-2);flex-shrink:0;"></div>
-            <span style="flex:1;font-size:12px;color:var(--ink-1);">Check supplier invoice #38</span>
-            <span style="font-size:10px;color:var(--ink-3);background:rgba(255,255,255,.06);padding:2px 7px;border-radius:20px;">Umar</span>
-            <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;background:rgba(245,158,11,.15);color:#fcd34d;">Med</span>
+          <div class="task-item">
+            <div class="task-check"></div>
+            <span class="task-text">Check supplier invoice #38</span>
+            <span class="task-assignee">Umar</span>
+            <span class="task-priority med">Medium</span>
           </div>
         </div>
       </div>
 
       <!-- Custom Email Connect -->
       <div class="feat reveal">
-        <div class="feat-icon" style="background:rgba(34,211,238,.12);border-color:rgba(34,211,238,.3);">📨</div>
+        <div class="feat-icon cyan-icon">📨</div>
         <h3>Connect Any Email Account</h3>
         <p>Not on Gmail? No problem. Connect your custom hosting email — cPanel, Plesk, Zoho, Outlook — via SMTP &amp; IMAP. Full send &amp; receive inside Drop Sigma.</p>
         <span class="pill">New · SMTP / IMAP Support</span>
-        <div style="margin-top:20px;display:flex;flex-direction:column;gap:8px;">
-          <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.02);">
-            <div style="width:32px;height:32px;border-radius:9px;background:rgba(234,67,53,.15);display:grid;place-items:center;flex-shrink:0;">
-              <img src="https://www.gstatic.com/images/branding/product/1x/gmail_2020q4_32dp.png" style="width:16px;height:16px;">
+        <div class="email-anim">
+          <div class="provider-row">
+            <div class="provider-icon gmail">
+              <img src="https://www.gstatic.com/images/branding/product/1x/gmail_2020q4_32dp.png" style="width:18px;height:18px;">
             </div>
-            <div style="flex:1;">
-              <div style="font-size:12px;font-weight:600;color:var(--ink-1);">Gmail / Google</div>
-              <div style="font-size:10px;color:var(--ink-3);">One-click OAuth setup</div>
+            <div class="provider-label">
+              Gmail / Google<br>
+              <span class="provider-sub">One-click OAuth setup</span>
             </div>
-            <span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;background:rgba(16,185,129,.15);color:#6ee7b7;">Connected</span>
+            <span class="provider-status connected">Connected</span>
           </div>
-          <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid rgba(99,102,241,.3);border-radius:10px;background:rgba(99,102,241,.06);">
-            <div style="width:32px;height:32px;border-radius:9px;background:rgba(99,102,241,.18);display:grid;place-items:center;font-size:15px;flex-shrink:0;">📮</div>
-            <div style="flex:1;">
-              <div style="font-size:12px;font-weight:600;color:var(--ink-1);">Custom Email (SMTP/IMAP)</div>
-              <div style="font-size:10px;color:var(--ink-3);">cPanel, Zoho, Outlook &amp; more</div>
+          <div class="provider-row">
+            <div class="provider-icon smtp">📮</div>
+            <div class="provider-label">
+              Custom Email (SMTP/IMAP)<br>
+              <span class="provider-sub">cPanel, Zoho, Outlook &amp; more</span>
             </div>
-            <span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;background:rgba(99,102,241,.15);color:var(--indigo-2);">New</span>
+            <span class="provider-status new-badge">New</span>
           </div>
         </div>
       </div>
