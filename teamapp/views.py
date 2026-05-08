@@ -872,6 +872,50 @@ def tasks_list_api(request):
 
 
 @api_view(["POST"])
+def _send_task_assignment_dm(admin_user, member, task):
+    """Send a professional DM from admin to the assigned employee about the new task."""
+    try:
+        emp_user = member.user
+
+        priority_labels = {"high": "🔴 High", "medium": "🟡 Medium", "low": "🟢 Low"}
+        priority_text = priority_labels.get(task.priority, task.priority.capitalize())
+
+        if task.due_date:
+            deadline_text = task.due_date.strftime("%d %b %Y")
+        else:
+            deadline_text = "No deadline set"
+
+        admin_name = admin_user.get_full_name() or admin_user.username
+
+        msg_text = (
+            f"📋 *New Task Assigned*\n\n"
+            f"Hi {member.name}, you've been assigned a new task. "
+            f"Please review it and complete it before the deadline.\n\n"
+            f"━━━━━━━━━━━━━━━━━━━━\n"
+            f"📌  Title: {task.title}\n"
+            f"⚡  Priority: {priority_text}\n"
+            f"📅  Deadline: {deadline_text}\n"
+            f"━━━━━━━━━━━━━━━━━━━━\n\n"
+            f"Assigned by {admin_name}. Please acknowledge and begin at the earliest."
+        )
+
+        # Get or create DM channel between admin and employee
+        a, b = sorted([admin_user.id, emp_user.id])
+        slug = f"dm-{a}-{b}"
+        channel = ChatChannel.objects.filter(slug=slug, is_dm=True).first()
+        if not channel:
+            channel = ChatChannel.objects.create(
+                name=f"{admin_name} & {member.name}",
+                slug=slug,
+                is_dm=True,
+            )
+            channel.participants.set([admin_user, emp_user])
+
+        ChatMessage.objects.create(channel=channel, sender=admin_user, content=msg_text)
+    except Exception:
+        pass  # Never break task creation if DM fails
+
+
 def tasks_create_api(request):
     if not request.user.is_authenticated:
         return Response({"error": "Login required"}, status=401)
@@ -906,6 +950,10 @@ def tasks_create_api(request):
         progress=int(d.get("progress", 0)),
         due_date=due,
     )
+
+    if assigned_to:
+        _send_task_assignment_dm(request.user, assigned_to, task)
+
     return Response({"task": _task_to_dict(task)})
 
 
@@ -946,16 +994,22 @@ def tasks_detail_api(request, task_id):
                 pass
         else:
             task.due_date = None
+    new_assignee = None
     if "assigned_to" in d:
         if d["assigned_to"]:
             try:
-                task.assigned_to = TeamMember.objects.get(pk=d["assigned_to"], owner=request.user)
+                new_assignee = TeamMember.objects.get(pk=d["assigned_to"], owner=request.user)
+                task.assigned_to = new_assignee
             except TeamMember.DoesNotExist:
                 pass
         else:
             task.assigned_to = None
 
     task.save()
+
+    if new_assignee:
+        _send_task_assignment_dm(request.user, new_assignee, task)
+
     return Response({"task": _task_to_dict(task)})
 
 
