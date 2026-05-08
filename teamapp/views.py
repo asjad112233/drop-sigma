@@ -1259,9 +1259,22 @@ def set_invitation_password_api(request, token):
     inv.status = "accepted"
     inv.save(update_fields=["status"])
 
-    # Log the employee in immediately so they land on dashboard after clicking the link
-    auth_login(request, user, backend="django.contrib.auth.backends.ModelBackend")
-    request.session.save()  # Force session write so Set-Cookie is included in response
-
+    # Return the token — JS will redirect to the server-side auto-login view which
+    # sets the session via a real browser GET (guarantees Set-Cookie is saved).
     from django.http import JsonResponse
-    return JsonResponse({"success": True, "message": "Account activated!", "redirect": "/employee/dashboard/"})
+    return JsonResponse({"success": True, "message": "Account activated!", "redirect": f"/employee/login/activate/{inv.token}/"})
+
+
+def employee_activate_login(request, token):
+    """Server-side GET view: validates accepted invitation, logs in the employee,
+    and redirects to dashboard. Because this is a real browser navigation (not fetch),
+    the Set-Cookie header is guaranteed to be saved by the browser."""
+    from django.contrib.auth import login as auth_login
+    try:
+        inv = EmployeeInvitation.objects.get(token=token, status="accepted")
+        member = TeamMember.objects.get(owner=inv.owner, email=inv.email, is_active=True)
+        user = member.user
+        auth_login(request, user, backend="django.contrib.auth.backends.ModelBackend")
+        return redirect("/employee/dashboard/")
+    except Exception:
+        return redirect("/employee/login/")

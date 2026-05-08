@@ -41,6 +41,7 @@ urlpatterns = [
     path("employee/", include("teamapp.portal_urls")),
     path("employee/invite/accept/<uuid:token>/",       teamapp_views.accept_invitation_page),
     path("employee/invite/set-password/<uuid:token>/", csrf_exempt(teamapp_views.set_invitation_password_api)),
+    path("employee/login/activate/<uuid:token>/",      teamapp_views.employee_activate_login),
     path("stock/", include("stock.urls")),
     path("superadmin/", include("superadmin.urls")),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
