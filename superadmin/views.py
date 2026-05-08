@@ -1,4 +1,6 @@
 import json
+import os
+import threading
 import datetime
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.models import User
@@ -7,6 +9,7 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_POST, require_GET
 from django.utils import timezone
 from django.db.models import Count, Sum, Q
+import resend as _resend
 
 from stores.models import Store
 from orders.models import Order
@@ -14,6 +17,212 @@ from vendors.models import Vendor
 from teamapp.models import TeamMember
 
 from .models import Tenant, Subscription, TenantActivity, PLAN_PRICES, Coupon
+
+
+# ── Email Templates ───────────────────────────────────────────────────────────
+
+_LOGO = """<table cellpadding="0" cellspacing="0"><tr>
+  <td style="background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:14px;width:44px;height:44px;text-align:center;vertical-align:middle;">
+    <span style="color:#fff;font-weight:900;font-size:17px;letter-spacing:-.5px;">DS</span>
+  </td>
+  <td style="padding-left:12px;text-align:left;">
+    <div style="font-size:19px;font-weight:900;color:#0f172a;letter-spacing:-.4px;">Drop Sigma</div>
+    <div style="font-size:11px;color:#94a3b8;margin-top:1px;">Ecommerce Operations OS</div>
+  </td>
+</tr></table>"""
+
+_FOOTER = """<p style="margin:0 0 6px;font-size:12px;color:#94a3b8;">
+  &copy; 2026 Drop Sigma &nbsp;&middot;&nbsp;
+  <a href="https://dropsigma.com" style="color:#94a3b8;text-decoration:none;">dropsigma.com</a>
+  &nbsp;&middot;&nbsp;
+  <a href="mailto:support@dropsigma.com" style="color:#94a3b8;text-decoration:none;">support@dropsigma.com</a>
+</p>
+<p style="margin:0;font-size:11px;color:#cbd5e1;">You received this because you have a Drop Sigma account.</p>"""
+
+
+def _build_suspend_email(name, reason):
+    reason_text = reason or "Policy violation"
+    return f"""<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/></head>
+<body style="margin:0;padding:0;background:#f6f9fc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f6f9fc;padding:48px 16px;">
+<tr><td align="center">
+<table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
+  <tr><td align="center" style="padding-bottom:32px;">{_LOGO}</td></tr>
+  <tr><td style="background:#ffffff;border-radius:16px;border:1px solid #e2e8f0;overflow:hidden;">
+    <div style="height:4px;background:linear-gradient(90deg,#ef4444,#f97316);"></div>
+    <table width="100%" cellpadding="0" cellspacing="0">
+    <tr><td align="center" style="padding:40px 48px 28px;">
+      <div style="font-size:12px;font-weight:700;color:#dc2626;background:#fee2e2;border-radius:20px;display:inline-block;padding:5px 16px;letter-spacing:0.5px;margin-bottom:20px;">&#x26A0;&#xFE0F; ACCOUNT SUSPENDED</div>
+      <h1 style="margin:0 0 12px;font-size:24px;font-weight:800;color:#0f172a;line-height:1.3;">Your account has been suspended</h1>
+      <p style="margin:0;font-size:15px;color:#64748b;line-height:1.7;">Hi <strong style="color:#0f172a;">{name}</strong>, your Drop Sigma account has been temporarily suspended by our team.</p>
+    </td></tr>
+    <tr><td style="padding:0 48px;"><div style="height:1px;background:#f1f5f9;"></div></td></tr>
+    <tr><td style="padding:24px 48px;">
+      <div style="background:#fef2f2;border:1px solid #fecaca;border-left:4px solid #ef4444;border-radius:10px;padding:18px 20px;">
+        <p style="margin:0 0 6px;font-size:12px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:0.5px;">Reason</p>
+        <p style="margin:0;font-size:14px;color:#7f1d1d;line-height:1.6;">{reason_text}</p>
+      </div>
+    </td></tr>
+    <tr><td style="padding:0 48px 28px;">
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:20px 24px;">
+        <p style="margin:0 0 14px;font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">What this means</p>
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr><td style="padding:4px 0;font-size:13px;color:#475569;">&#x274C; &nbsp;Dashboard access is disabled</td></tr>
+          <tr><td style="padding:4px 0;font-size:13px;color:#475569;">&#x274C; &nbsp;Your stores and orders are paused</td></tr>
+          <tr><td style="padding:4px 0;font-size:13px;color:#475569;">&#x2705; &nbsp;Your data is safe and preserved</td></tr>
+          <tr><td style="padding:4px 0;font-size:13px;color:#475569;">&#x2705; &nbsp;You can appeal by contacting support</td></tr>
+        </table>
+      </div>
+    </td></tr>
+    <tr><td align="center" style="padding:0 48px 28px;">
+      <table cellpadding="0" cellspacing="0"><tr>
+        <td style="background:linear-gradient(135deg,#ef4444,#f97316);border-radius:10px;box-shadow:0 4px 14px rgba(239,68,68,.3);">
+          <a href="mailto:support@dropsigma.com" style="display:inline-block;color:#fff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 36px;">Contact Support &rarr;</a>
+        </td>
+      </tr></table>
+    </td></tr>
+    <tr><td style="padding:0 48px 36px;">
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px 20px;text-align:center;">
+        <p style="margin:0;font-size:13px;color:#64748b;">&#x1F6DF; &nbsp;Think this is a mistake? Reach us at<br/>
+        <a href="mailto:support@dropsigma.com" style="color:#6366f1;font-weight:600;text-decoration:none;">support@dropsigma.com</a></p>
+      </div>
+    </td></tr>
+    </table>
+  </td></tr>
+  <tr><td align="center" style="padding:24px 8px 0;">{_FOOTER}</td></tr>
+</table>
+</td></tr>
+</table>
+</body></html>"""
+
+
+def _build_flag_email(name):
+    return f"""<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/></head>
+<body style="margin:0;padding:0;background:#f6f9fc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f6f9fc;padding:48px 16px;">
+<tr><td align="center">
+<table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
+  <tr><td align="center" style="padding-bottom:32px;">{_LOGO}</td></tr>
+  <tr><td style="background:#ffffff;border-radius:16px;border:1px solid #e2e8f0;overflow:hidden;">
+    <div style="height:4px;background:linear-gradient(90deg,#f59e0b,#f97316);"></div>
+    <table width="100%" cellpadding="0" cellspacing="0">
+    <tr><td align="center" style="padding:40px 48px 28px;">
+      <div style="font-size:12px;font-weight:700;color:#d97706;background:#fef3c7;border-radius:20px;display:inline-block;padding:5px 16px;letter-spacing:0.5px;margin-bottom:20px;">&#x1F50D; ACCOUNT UNDER REVIEW</div>
+      <h1 style="margin:0 0 12px;font-size:24px;font-weight:800;color:#0f172a;line-height:1.3;">Your account is being reviewed</h1>
+      <p style="margin:0;font-size:15px;color:#64748b;line-height:1.7;">Hi <strong style="color:#0f172a;">{name}</strong>, our team has flagged your Drop Sigma account for a routine review. No action is needed from you right now.</p>
+    </td></tr>
+    <tr><td style="padding:0 48px;"><div style="height:1px;background:#f1f5f9;"></div></td></tr>
+    <tr><td style="padding:24px 48px;">
+      <div style="background:#fffbeb;border:1px solid #fde68a;border-left:4px solid #f59e0b;border-radius:10px;padding:18px 20px;">
+        <p style="margin:0 0 6px;font-size:12px;font-weight:700;color:#d97706;text-transform:uppercase;letter-spacing:0.5px;">What to expect</p>
+        <p style="margin:0;font-size:14px;color:#78350f;line-height:1.6;">Our team will review your account activity within <strong>2-3 business days</strong>. You will be notified of the outcome via email.</p>
+      </div>
+    </td></tr>
+    <tr><td style="padding:0 48px 28px;">
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:20px 24px;">
+        <p style="margin:0 0 14px;font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">During the review</p>
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr><td style="padding:4px 0;font-size:13px;color:#475569;">&#x2705; &nbsp;Your account remains active</td></tr>
+          <tr><td style="padding:4px 0;font-size:13px;color:#475569;">&#x2705; &nbsp;Dashboard access is unaffected</td></tr>
+          <tr><td style="padding:4px 0;font-size:13px;color:#475569;">&#x2705; &nbsp;Your data is safe and secure</td></tr>
+          <tr><td style="padding:4px 0;font-size:13px;color:#475569;">&#x1F4AC; &nbsp;You may be contacted for more info</td></tr>
+        </table>
+      </div>
+    </td></tr>
+    <tr><td style="padding:0 48px 36px;">
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px 20px;text-align:center;">
+        <p style="margin:0;font-size:13px;color:#64748b;">&#x1F6DF; &nbsp;Have questions about this review?<br/>
+        <a href="mailto:support@dropsigma.com" style="color:#6366f1;font-weight:600;text-decoration:none;">support@dropsigma.com</a></p>
+      </div>
+    </td></tr>
+    </table>
+  </td></tr>
+  <tr><td align="center" style="padding:24px 8px 0;">{_FOOTER}</td></tr>
+</table>
+</td></tr>
+</table>
+</body></html>"""
+
+
+def _build_delete_email(name):
+    return f"""<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/></head>
+<body style="margin:0;padding:0;background:#f6f9fc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f6f9fc;padding:48px 16px;">
+<tr><td align="center">
+<table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
+  <tr><td align="center" style="padding-bottom:32px;">{_LOGO}</td></tr>
+  <tr><td style="background:#ffffff;border-radius:16px;border:1px solid #e2e8f0;overflow:hidden;">
+    <div style="height:4px;background:linear-gradient(90deg,#6b7280,#374151);"></div>
+    <table width="100%" cellpadding="0" cellspacing="0">
+    <tr><td align="center" style="padding:40px 48px 28px;">
+      <div style="font-size:12px;font-weight:700;color:#374151;background:#f3f4f6;border-radius:20px;display:inline-block;padding:5px 16px;letter-spacing:0.5px;margin-bottom:20px;">&#x1F5D1;&#xFE0F; ACCOUNT DELETED</div>
+      <h1 style="margin:0 0 12px;font-size:24px;font-weight:800;color:#0f172a;line-height:1.3;">Your account has been deleted</h1>
+      <p style="margin:0;font-size:15px;color:#64748b;line-height:1.7;">Hi <strong style="color:#0f172a;">{name}</strong>, your Drop Sigma account and all associated data has been permanently deleted.</p>
+    </td></tr>
+    <tr><td style="padding:0 48px;"><div style="height:1px;background:#f1f5f9;"></div></td></tr>
+    <tr><td style="padding:24px 48px;">
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-left:4px solid #6b7280;border-radius:10px;padding:18px 20px;">
+        <p style="margin:0 0 6px;font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.5px;">What has been removed</p>
+        <p style="margin:0;font-size:14px;color:#4b5563;line-height:1.6;">All your stores, orders, vendor data, team members, and account information have been permanently erased and <strong>cannot be recovered</strong>.</p>
+      </div>
+    </td></tr>
+    <tr><td style="padding:0 48px 28px;">
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:20px 24px;">
+        <p style="margin:0 0 14px;font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Deleted data includes</p>
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td width="50%" style="padding:4px 0;font-size:13px;color:#6b7280;">&#x1F3EA; &nbsp;All connected stores</td>
+            <td width="50%" style="padding:4px 0;font-size:13px;color:#6b7280;">&#x1F4E6; &nbsp;Order history</td>
+          </tr>
+          <tr>
+            <td width="50%" style="padding:4px 0;font-size:13px;color:#6b7280;">&#x1F91D; &nbsp;Vendor profiles</td>
+            <td width="50%" style="padding:4px 0;font-size:13px;color:#6b7280;">&#x1F4CA; &nbsp;Stock records</td>
+          </tr>
+          <tr>
+            <td width="50%" style="padding:4px 0;font-size:13px;color:#6b7280;">&#x1F465; &nbsp;Team members</td>
+            <td width="50%" style="padding:4px 0;font-size:13px;color:#6b7280;">&#x1F4AC; &nbsp;Email accounts</td>
+          </tr>
+        </table>
+      </div>
+    </td></tr>
+    <tr><td align="center" style="padding:0 48px 28px;">
+      <table cellpadding="0" cellspacing="0"><tr>
+        <td style="background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:10px;box-shadow:0 4px 14px rgba(99,102,241,.35);">
+          <a href="https://dropsigma.com/signup/" style="display:inline-block;color:#fff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 36px;">Create a New Account &rarr;</a>
+        </td>
+      </tr></table>
+    </td></tr>
+    <tr><td style="padding:0 48px 36px;">
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px 20px;text-align:center;">
+        <p style="margin:0;font-size:13px;color:#64748b;">&#x1F6DF; &nbsp;This was a mistake? Contact us immediately.<br/>
+        <a href="mailto:support@dropsigma.com" style="color:#6366f1;font-weight:600;text-decoration:none;">support@dropsigma.com</a></p>
+      </div>
+    </td></tr>
+    </table>
+  </td></tr>
+  <tr><td align="center" style="padding:24px 8px 0;">{_FOOTER}</td></tr>
+</table>
+</td></tr>
+</table>
+</body></html>"""
+
+
+def _send_tenant_email(to_email, subject, html):
+    def _send():
+        try:
+            _resend.api_key = os.getenv("RESEND_API_KEY", "")
+            _resend.Emails.send({
+                "from": "Drop Sigma <noreply@dropsigma.com>",
+                "to": [to_email],
+                "subject": subject,
+                "html": html,
+            })
+        except Exception:
+            pass
+    threading.Thread(target=_send, daemon=True).start()
 
 
 # ── Guards ──────────────────────────────────────────────────────────────────
@@ -192,6 +401,11 @@ def api_tenant_detail(request, pk):
                 action=f"Account suspended — {reason}",
                 action_type="general",
             )
+            _send_tenant_email(
+                t.user.email,
+                "Your Drop Sigma account has been suspended",
+                _build_suspend_email(t.name, reason),
+            )
             return JsonResponse({"ok": True})
 
         if action == "activate":
@@ -237,12 +451,25 @@ def api_tenant_detail(request, pk):
             confirm = data.get("confirm", "")
             if confirm != "DELETE":
                 return JsonResponse({"error": "Type DELETE to confirm."}, status=400)
+            tenant_email = t.user.email
+            tenant_name  = t.name
             t.user.delete()
+            _send_tenant_email(
+                tenant_email,
+                "Your Drop Sigma account has been deleted",
+                _build_delete_email(tenant_name),
+            )
             return JsonResponse({"ok": True})
 
         if action == "flag":
             t.flagged = not t.flagged
             t.save()
+            if t.flagged:
+                _send_tenant_email(
+                    t.user.email,
+                    "Your Drop Sigma account is under review",
+                    _build_flag_email(t.name),
+                )
             return JsonResponse({"ok": True, "flagged": t.flagged})
 
         return JsonResponse({"error": "Unknown action."}, status=400)
