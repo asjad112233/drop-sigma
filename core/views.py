@@ -619,10 +619,12 @@ def dashboard_page(request):
     initials     = "".join(w[0].upper() for w in display_name.split()[:2]) or "U"
 
     is_suspended = False
+    is_flagged   = False
     try:
         from superadmin.models import Tenant
         tenant = real_user.tenant_profile
         is_suspended = tenant.status == "suspended"
+        is_flagged   = tenant.flagged and not is_suspended
     except Exception:
         pass
 
@@ -632,6 +634,7 @@ def dashboard_page(request):
         "impersonate_email": imp_email,
         "is_subscribed":     subscribed,
         "is_suspended":      is_suspended,
+        "is_flagged":        is_flagged,
         "display_name":      display_name,
         "user_initials":     initials,
     })
