@@ -618,11 +618,20 @@ def dashboard_page(request):
     display_name = real_user.get_full_name().strip() or real_user.username
     initials     = "".join(w[0].upper() for w in display_name.split()[:2]) or "U"
 
+    is_suspended = False
+    try:
+        from superadmin.models import Tenant
+        tenant = real_user.tenant_profile
+        is_suspended = tenant.status == "suspended"
+    except Exception:
+        pass
+
     return render(request, "dashboard.html", {
         "is_impersonating":  bool(imp_id),
         "impersonate_name":  imp_name,
         "impersonate_email": imp_email,
         "is_subscribed":     subscribed,
+        "is_suspended":      is_suspended,
         "display_name":      display_name,
         "user_initials":     initials,
     })

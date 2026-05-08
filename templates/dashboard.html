@@ -3440,6 +3440,26 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
 </div>
 {% endif %}
 
+{% if is_suspended %}
+<style>
+  body.is-suspended * { pointer-events:none !important; user-select:none !important; }
+  body.is-suspended #suspensionBanner,
+  body.is-suspended #suspensionBanner * { pointer-events:auto !important; }
+  body.is-suspended #app, body.is-suspended #sidebar { filter:grayscale(0.25) opacity(0.65); }
+</style>
+<div id="suspensionBanner" style="background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;padding:13px 24px;display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:600;box-shadow:0 2px 12px rgba(220,38,38,.5);position:sticky;top:0;z-index:10000;">
+  <div style="display:flex;align-items:center;gap:10px;">
+    <span style="font-size:16px;">⚠️</span>
+    <span>Your account has been <strong>suspended</strong> — all features are disabled.</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px;flex-shrink:0;">
+    <span style="opacity:.8;font-weight:400;font-size:12px;">Contact us to resolve this:</span>
+    <a href="mailto:support@dropsigma.com" style="color:#fff;font-weight:700;text-decoration:none;background:rgba(255,255,255,0.2);padding:5px 14px;border-radius:6px;white-space:nowrap;">support@dropsigma.com</a>
+  </div>
+</div>
+<script>document.body.classList.add('is-suspended');</script>
+{% endif %}
+
 {% if not is_subscribed and not is_impersonating %}
 <div id="upgradeWall" style="position:fixed;inset:0;z-index:10000;background:rgba(10,12,31,0.92);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:24px;">
   <div style="background:linear-gradient(145deg,#13162b,#1a1d3a);border:1px solid rgba(99,102,241,0.45);border-radius:24px;padding:48px 40px;max-width:480px;width:100%;text-align:center;box-shadow:0 40px 80px rgba(0,0,0,0.6),0 0 0 1px rgba(255,255,255,0.06);">
