@@ -160,7 +160,7 @@ def employee_portal_page(request):
     member = request.user.team_profile.first()
     if not member:
         return redirect("/employee/login/")
-    member_json = json.dumps(TeamMemberSerializer(member).data)
+    member_json = json.dumps(TeamMemberSerializer(member).data).replace("</", "<\\/")
     return render(request, "employee_dashboard.html", {"member": member, "member_json": member_json})
 
 

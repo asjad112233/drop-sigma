@@ -860,7 +860,7 @@ body{font-family:'Inter','Segoe UI',sans-serif;background:var(--bg);color:var(--
   </div>
 </div>
 
-<script id="__member_data__" type="application/json">{{ member_json }}</script>
+<script id="__member_data__" type="application/json">{{ member_json|safe }}</script>
 <script>
 // Member data injected server-side — no API call needed to boot
 const __MEMBER__ = JSON.parse(document.getElementById('__member_data__').textContent);
