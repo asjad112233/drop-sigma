@@ -1799,7 +1799,7 @@ function ecSelectChannel(id, name, desc){
   if(!_ecCurrentChannelIsDm) ecRefreshMembersCount();
 }
 
-const _EC_AV_COLORS = ["#7c3aed","#2563eb","#059669","#dc2626","#d97706","#db2777","#0891b2","#65a30d","#9333ea","#0f766e"];
+const _EC_AV_PALETTE = ["#7c3aed","#2563eb","#059669","#dc2626","#d97706","#db2777","#0891b2","#65a30d","#9333ea","#0f766e"];
 function _ecRenderMemberAvatars(members){
   const wrap = document.getElementById("ecMembersAvatars");
   if(!wrap) return;
@@ -1808,7 +1808,7 @@ function _ecRenderMemberAvatars(members){
   const shown = members.slice(0, MAX);
   const extra = members.length - shown.length;
   let html = shown.map((m, i) =>
-    `<div style="width:26px;height:26px;border-radius:50%;background:${_EC_AV_COLORS[i%_EC_AV_COLORS.length]};color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;border:2px solid #fff;margin-left:${i>0?"-8px":"0"};position:relative;z-index:${10-i};flex-shrink:0;" title="${m.name}">${m.initials}</div>`
+    `<div style="width:26px;height:26px;border-radius:50%;background:${_EC_AV_PALETTE[i%_EC_AV_PALETTE.length]};color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;border:2px solid #fff;margin-left:${i>0?"-8px":"0"};position:relative;z-index:${10-i};flex-shrink:0;" title="${m.name}">${m.initials}</div>`
   ).join("");
   if(extra > 0) html += `<div style="width:26px;height:26px;border-radius:50%;background:#e5e7eb;color:#374151;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;border:2px solid #fff;margin-left:-8px;position:relative;z-index:0;flex-shrink:0;">+${extra}</div>`;
   html += `<span style="margin-left:7px;font-size:12px;font-weight:700;color:#5b21b6;">${members.length}</span>`;
