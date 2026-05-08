@@ -596,6 +596,7 @@ function renderTenants(container){
       <button class="pill ${_filter==='pro'?'on':''}"       onclick="setFilter('pro')">Pro</button>
       <button class="pill ${_filter==='basic'?'on':''}"     onclick="setFilter('basic')">Basic</button>
       <button class="pill ${_filter==='suspended'?'on':''}" onclick="setFilter('suspended')">Suspended</button>
+      <button class="pill ${_filter==='deleted'?'on':''}"   onclick="setFilter('deleted')">Deleted</button>
     </div>
     <button class="btn btn-primary btn-sm" onclick="openModal('ntModal')">+ New Tenant</button>
   </div>
@@ -615,7 +616,7 @@ function renderTenants(container){
 function renderTenantTable(){
   const q  = _search.toLowerCase().trim();
   const filtered = TENANTS.filter(t=>{
-    const mf = _filter==='all' || t.status===_filter || t.plan===_filter;
+    const mf = _filter==='all' || (_filter==='deleted' ? t.is_deleted : (!t.is_deleted && (t.status===_filter || t.plan===_filter)));
     const ms = !q || t.name.toLowerCase().includes(q) || (t.email||'').toLowerCase().includes(q);
     return mf && ms;
   });
@@ -643,15 +644,17 @@ function renderTenantTable(){
             <td>${t.orders}</td>
             <td>${t.mrr ? '$'+t.mrr : '—'}</td>
             <td>${fmtDate(t.joined)}</td>
-            <td><span class="dot ${t.status==='active'?'active':t.status==='suspended'?'down':'warn'}"></span>${
-              t.status==='active'?'Active':t.status==='suspended'?'Suspended':'Trial'
+            <td><span class="dot ${t.is_deleted?'down':t.status==='active'?'active':t.status==='suspended'?'down':'warn'}"></span>${
+              t.is_deleted?'Deleted':t.status==='active'?'Active':t.status==='suspended'?'Suspended':'Trial'
             }</td>
             <td>
               <div class="tbl-actions">
                 <button class="btn btn-sm" onclick="event.stopPropagation();navTo('tenant',{tenantId:${t.id}})">View</button>
-                ${t.status!=='suspended'
-                  ? `<button class="btn btn-sm btn-primary" onclick="event.stopPropagation();askImpersonate(${t.id})">Login</button>`
-                  : `<button class="btn btn-sm btn-green" onclick="event.stopPropagation();reactivate(${t.id})">Reactivate</button>`}
+                ${t.is_deleted
+                  ? `<button class="btn btn-sm btn-green" onclick="event.stopPropagation();revokeDelete(${t.id})">↩ Restore</button>`
+                  : t.status==='suspended'
+                    ? `<button class="btn btn-sm btn-green" onclick="event.stopPropagation();reactivate(${t.id})">Reactivate</button>`
+                    : `<button class="btn btn-sm btn-primary" onclick="event.stopPropagation();askImpersonate(${t.id})">Login</button>`}
               </div>
             </td>
           </tr>`).join('')}
@@ -746,11 +749,13 @@ function renderTenantDetail(container){
     <h3>⚠ Danger Zone</h3>
     <p>These actions are permanent. Handle with care.</p>
     <div class="drow">
-      ${t.status!=='suspended'
-        ? `<button class="btn btn-warn" onclick="openSuspend(${t.id})">Suspend Tenant</button>`
-        : `<button class="btn btn-green" onclick="reactivate(${t.id})">Reactivate Tenant</button>`}
-      <button class="btn btn-ghost" onclick="toggleFlag(${t.id})">${t.flagged?'🚩 Unflag':'🚩 Flag for Review'}</button>
-      <button class="btn btn-danger" onclick="openDelete(${t.id})">Delete Permanently</button>
+      ${t.is_deleted
+        ? `<button class="btn btn-green" onclick="revokeDelete(${t.id})">↩ Revoke Delete</button>`
+        : t.status!=='suspended'
+          ? `<button class="btn btn-warn" onclick="openSuspend(${t.id})">Suspend Tenant</button>`
+          : `<button class="btn btn-green" onclick="reactivate(${t.id})">Reactivate Tenant</button>`}
+      ${!t.is_deleted ? `<button class="btn btn-ghost" onclick="toggleFlag(${t.id})">${t.flagged?'🚩 Unflag':'🚩 Flag for Review'}</button>` : ''}
+      ${!t.is_deleted ? `<button class="btn btn-danger" onclick="openDelete(${t.id})">Delete Permanently</button>` : ''}
     </div>
   </div>`;
 }
@@ -1320,6 +1325,17 @@ async function reactivate(tid){
   const t = TENANTS.find(x=>x.id===tid);
   if(t){ t.status='active'; t.mrr=PLAN_PRICE[t.plan]; STATS.active_tenants++; }
   toast('Tenant reactivated!','success');
+  if(_page==='tenant') await navTo('tenant',{tenantId:tid});
+  else renderPage();
+}
+
+/* Revoke Delete / Restore */
+async function revokeDelete(tid){
+  const {ok,data} = await api(`/superadmin/api/tenants/${tid}/`,{action:'restore'});
+  if(!ok){ toast(data.error||'Error restoring tenant.','error'); return; }
+  const t = TENANTS.find(x=>x.id===tid);
+  if(t){ t.is_deleted=false; t.deleted_at=null; t.status='trial'; }
+  toast('Tenant restored!','success');
   if(_page==='tenant') await navTo('tenant',{tenantId:tid});
   else renderPage();
 }

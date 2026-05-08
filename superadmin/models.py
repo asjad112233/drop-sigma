@@ -23,6 +23,7 @@ STATUS_CHOICES = [
     ("active",    "Active"),
     ("trial",     "Trial"),
     ("suspended", "Suspended"),
+    ("deleted",   "Deleted"),
 ]
 
 PAYMENT_STATUS_CHOICES = [
@@ -40,9 +41,11 @@ class Tenant(models.Model):
     plan       = models.CharField(max_length=20, choices=PLAN_CHOICES, default="trial")
     status     = models.CharField(max_length=20, choices=STATUS_CHOICES, default="trial")
     notes      = models.TextField(blank=True, default="")
-    flagged    = models.BooleanField(default=False)
-    trial_ends = models.DateField(null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    flagged     = models.BooleanField(default=False)
+    is_deleted  = models.BooleanField(default=False)
+    deleted_at  = models.DateTimeField(null=True, blank=True)
+    trial_ends  = models.DateField(null=True, blank=True)
+    created_at  = models.DateTimeField(auto_now_add=True)
 
     @property
     def mrr(self):

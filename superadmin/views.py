@@ -372,7 +372,9 @@ def _tenant_dict(t):
         "mrr":     t.mrr,
         "ltv":     t.ltv,
         "notes":   t.notes,
-        "flagged": t.flagged,
+        "flagged":    t.flagged,
+        "is_deleted": t.is_deleted,
+        "deleted_at": t.deleted_at.date().isoformat() if t.deleted_at else None,
         "payment_status": sub.payment_status if sub else "paid",
     }
 
@@ -568,13 +570,31 @@ def api_tenant_detail(request, pk):
             confirm = data.get("confirm", "")
             if confirm != "DELETE":
                 return JsonResponse({"error": "Type DELETE to confirm."}, status=400)
-            tenant_email = t.user.email
-            tenant_name  = t.name
-            t.user.delete()
+            t.is_deleted = True
+            t.deleted_at = timezone.now()
+            t.status     = "deleted"
+            t.save()
+            TenantActivity.objects.create(
+                tenant=t,
+                action="Account soft-deleted by super admin",
+                action_type="general",
+            )
             _send_tenant_email(
-                tenant_email,
+                t.user.email,
                 "Your Drop Sigma account has been deleted",
-                _build_delete_email(tenant_name),
+                _build_delete_email(t.name),
+            )
+            return JsonResponse({"ok": True})
+
+        if action == "restore":
+            t.is_deleted = False
+            t.deleted_at = None
+            t.status     = "trial"
+            t.save()
+            TenantActivity.objects.create(
+                tenant=t,
+                action="Account restored (delete revoked) by super admin",
+                action_type="general",
             )
             return JsonResponse({"ok": True})
 
