@@ -1195,19 +1195,35 @@ def accept_invitation_page(request, token):
     return render(request, "employee_invitation.html", {"invitation": inv})
 
 
-@api_view(["POST"])
 def set_invitation_password_api(request, token):
+    from django.contrib.auth import login as auth_login
+    from django.views.decorators.csrf import csrf_exempt
+    import json
+
+    if request.method != "POST":
+        from django.http import JsonResponse
+        return JsonResponse({"success": False, "message": "Method not allowed."}, status=405)
+
     try:
         inv = EmployeeInvitation.objects.get(token=token)
     except EmployeeInvitation.DoesNotExist:
-        return Response({"success": False, "message": "Invalid invitation."}, status=404)
+        from django.http import JsonResponse
+        return JsonResponse({"success": False, "message": "Invalid invitation."}, status=404)
 
     if not inv.is_valid():
-        return Response({"success": False, "message": "This invitation has expired or was already used."}, status=400)
+        from django.http import JsonResponse
+        return JsonResponse({"success": False, "message": "This invitation has expired or was already used."}, status=400)
 
-    password = (request.data.get("password") or "").strip()
+    try:
+        body = json.loads(request.body)
+    except Exception:
+        from django.http import JsonResponse
+        return JsonResponse({"success": False, "message": "Invalid request body."}, status=400)
+
+    password = (body.get("password") or "").strip()
     if len(password) < 8:
-        return Response({"success": False, "message": "Password must be at least 8 characters."}, status=400)
+        from django.http import JsonResponse
+        return JsonResponse({"success": False, "message": "Password must be at least 8 characters."}, status=400)
 
     # Build unique username
     base     = inv.email.split("@")[0] + "_emp"
@@ -1243,4 +1259,8 @@ def set_invitation_password_api(request, token):
     inv.status = "accepted"
     inv.save(update_fields=["status"])
 
-    return Response({"success": True, "message": "Password set! You can now log in.", "redirect": "/employee/login/"})
+    # Log the employee in immediately so they land on dashboard after clicking the link
+    auth_login(request, user, backend="django.contrib.auth.backends.ModelBackend")
+
+    from django.http import JsonResponse
+    return JsonResponse({"success": True, "message": "Account activated!", "redirect": "/employee/dashboard/"})

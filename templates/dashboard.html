@@ -9462,8 +9462,14 @@ async function loadTeamMembers(){
     const response = await fetch("/teamapp/members/");
     const data = await response.json();
 
-    if(!data.success || data.members.length === 0){
+    if(!data.success || !data.members || data.members.length === 0){
       grid.innerHTML = `<div class="empty" style="grid-column:1/-1">No team members found. Add employees from admin panel first.</div>`;
+      // Reset KPIs so they don't show stale values
+      ["taKpiMembers","taKpiTasks","taKpiAuto","taKpiOverload","taKpiAvail"].forEach(id=>{
+        const el=document.getElementById(id); if(el) el.innerText="0";
+      });
+      const avgEl=document.getElementById("taKpiAvg"); if(avgEl) avgEl.innerText="0%";
+      const onEl=document.getElementById("taKpiOnline"); if(onEl) onEl.innerText="0 online";
       return;
     }
 

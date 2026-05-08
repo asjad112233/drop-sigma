@@ -200,8 +200,8 @@ async function submitPassword(){
     });
     const d = await r.json();
     if(d.success){
-      document.getElementById("formState").style.display = "none";
-      document.getElementById("successState").style.display = "block";
+      // Employee is now logged in — redirect straight to dashboard
+      window.location.href = d.redirect || "/employee/dashboard/";
     } else {
       msg.className="msg err"; msg.innerText = d.message || "Something went wrong.";
       btn.disabled=false; btn.innerText="Activate Account →";
