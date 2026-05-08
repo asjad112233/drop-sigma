@@ -9454,93 +9454,108 @@ const TA_AVATAR_COLORS = [
   "linear-gradient(135deg,#14b8a6,#3b82f6)",
 ];
 
+let _taLastMembers = [];
+
+function _renderTeamGrid(members){
+  const grid = document.getElementById("teamGrid");
+  if(!grid) return;
+  const roleLabel = {
+    support:"Support", order_manager:"Order Manager",
+    refund_manager:"Refund Manager", vendor_manager:"Vendor Manager", email_manager:"Email Manager"
+  };
+  const statusLabel = { available:"Available", busy:"Busy", limited:"Limited", offline:"Offline" };
+  const barColor = (w) => {
+    if(w >= 90) return "#ef4444";
+    if(w >= 70) return "#f59e0b";
+    return "linear-gradient(90deg,#6366f1,#06b6d4)";
+  };
+  const total = members.length;
+  const online = members.filter(m => m.status === "available" || m.status === "limited").length;
+  const overloaded = members.filter(m => (m.workload||0) >= 90).length;
+  const available = members.filter(m => m.status === "available").length;
+  const avgWorkload = total ? Math.round(members.reduce((s,m)=>s+(m.workload||0),0)/total) : 0;
+  const assigned = members.filter(m => m.status !== "offline" && (m.workload||0) > 0).length;
+  document.getElementById("taKpiMembers").innerText  = total;
+  document.getElementById("taKpiOnline").innerText   = online + " online";
+  document.getElementById("taKpiTasks").innerText    = members.reduce((s,m)=>s+(m.workload||0),0);
+  document.getElementById("taKpiAuto").innerText     = assigned;
+  document.getElementById("taKpiOverload").innerText = overloaded;
+  document.getElementById("taKpiAvg").innerText      = avgWorkload + "%";
+  document.getElementById("taKpiAvail").innerText    = available;
+  grid.innerHTML = members.map((m, i) => {
+    const initials = (m.name||"?").split(" ").map(p=>p[0]).join("").slice(0,2).toUpperCase();
+    const avatarGrad = TA_AVATAR_COLORS[i % TA_AVATAR_COLORS.length];
+    const status = m.status || "available";
+    const workload = m.workload || 0;
+    const role = roleLabel[m.role] || formatText(m.role);
+    const statusTxt = statusLabel[status] || status;
+    return `
+    <div class="ta-member">
+      <div class="ta-member-top">
+        <div class="ta-member-info">
+          <div class="ta-avatar" style="background:${avatarGrad}">${escapeHtml(initials)}</div>
+          <div class="ta-avatar-text">
+            <div class="ta-member-name">${escapeHtml(m.name)}</div>
+            <div class="ta-member-role">${escapeHtml(role)}</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="ta-status ${status}">${statusTxt}</span>
+          <div class="ta-dots-wrap">
+            <button class="ta-dots-btn" onclick="toggleMemberMenu(event,${m.id})" title="Options">⋮</button>
+            <div class="ta-dots-menu" id="memberMenu_${m.id}">
+              <button class="danger" onclick="deleteTeamMember(${m.id},'${escapeJs(m.name)}')">🗑 Delete Member</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="ta-workload-row"><span>Workload</span><span>${workload}%</span></div>
+      <div class="ta-bar"><div class="ta-bar-fill" style="width:${workload}%;background:${barColor(workload)}"></div></div>
+      <div class="ta-member-actions">
+        <button class="ta-btn ta-btn-assign" onclick="openAssignOrderToMember(${m.id},'${escapeJs(m.name)}')">Assign</button>
+        <button class="ta-btn ta-btn-tasks" onclick="viewMemberTasks(${m.id},'${escapeJs(m.name)}')">View Tasks</button>
+      </div>
+    </div>`;
+  }).join("");
+}
+
 async function loadTeamMembers(){
   const grid = document.getElementById("teamGrid");
-  grid.innerHTML = `<div class="empty" style="grid-column:1/-1">Loading team members...</div>`;
+  // Show cached data instantly — never blank the grid on re-navigation
+  if(_taLastMembers.length > 0){
+    _renderTeamGrid(_taLastMembers);
+  } else {
+    grid.innerHTML = `<div class="empty" style="grid-column:1/-1">Loading team members...</div>`;
+  }
 
   try{
     const response = await fetch("/teamapp/members/");
     const data = await response.json();
 
     if(!data.success || !data.members || data.members.length === 0){
-      grid.innerHTML = `<div class="empty" style="grid-column:1/-1">No team members found. Add employees from admin panel first.</div>`;
-      // Reset KPIs so they don't show stale values
-      ["taKpiMembers","taKpiTasks","taKpiAuto","taKpiOverload","taKpiAvail"].forEach(id=>{
-        const el=document.getElementById(id); if(el) el.innerText="0";
-      });
-      const avgEl=document.getElementById("taKpiAvg"); if(avgEl) avgEl.innerText="0%";
-      const onEl=document.getElementById("taKpiOnline"); if(onEl) onEl.innerText="0 online";
+      if(_taLastMembers.length === 0){
+        grid.innerHTML = `<div class="empty" style="grid-column:1/-1">No team members found. Add employees from admin panel first.</div>`;
+        ["taKpiMembers","taKpiTasks","taKpiAuto","taKpiOverload","taKpiAvail"].forEach(id=>{
+          const el=document.getElementById(id); if(el) el.innerText="0";
+        });
+        const avgEl=document.getElementById("taKpiAvg"); if(avgEl) avgEl.innerText="0%";
+        const onEl=document.getElementById("taKpiOnline"); if(onEl) onEl.innerText="0 online";
+      }
       return;
     }
 
     const members = data.members;
-
-    // KPI calculations
-    const total = members.length;
-    const online = members.filter(m => m.status === "available" || m.status === "limited").length;
-    const overloaded = members.filter(m => (m.workload||0) >= 90).length;
-    const available = members.filter(m => m.status === "available").length;
-    const avgWorkload = total ? Math.round(members.reduce((s,m)=>s+(m.workload||0),0)/total) : 0;
-    const assigned = members.filter(m => m.status !== "offline" && (m.workload||0) > 0).length;
-
-    document.getElementById("taKpiMembers").innerText  = total;
-    document.getElementById("taKpiOnline").innerText   = online + " online";
-    document.getElementById("taKpiTasks").innerText    = members.reduce((s,m)=>s+(m.workload||0),0);
-    document.getElementById("taKpiAuto").innerText     = assigned;
-    document.getElementById("taKpiOverload").innerText = overloaded;
-    document.getElementById("taKpiAvg").innerText      = avgWorkload + "%";
-    document.getElementById("taKpiAvail").innerText    = available;
-
-    const roleLabel = {
-      support:"Support", order_manager:"Order Manager",
-      refund_manager:"Refund Manager", vendor_manager:"Vendor Manager", email_manager:"Email Manager"
-    };
-    const statusLabel = { available:"Available", busy:"Busy", limited:"Limited", offline:"Offline" };
-
-    const barColor = (w) => {
-      if(w >= 90) return "#ef4444";
-      if(w >= 70) return "#f59e0b";
-      return "linear-gradient(90deg,#6366f1,#06b6d4)";
-    };
-
-    grid.innerHTML = members.map((m, i) => {
-      const initials = m.name.split(" ").map(p=>p[0]).join("").slice(0,2).toUpperCase();
-      const avatarGrad = TA_AVATAR_COLORS[i % TA_AVATAR_COLORS.length];
-      const status = m.status || "available";
-      const workload = m.workload || 0;
-      const role = roleLabel[m.role] || formatText(m.role);
-      const statusTxt = statusLabel[status] || status;
-      return `
-      <div class="ta-member">
-        <div class="ta-member-top">
-          <div class="ta-member-info">
-            <div class="ta-avatar" style="background:${avatarGrad}">${escapeHtml(initials)}</div>
-            <div class="ta-avatar-text">
-              <div class="ta-member-name">${escapeHtml(m.name)}</div>
-              <div class="ta-member-role">${escapeHtml(role)}</div>
-            </div>
-          </div>
-          <div style="display:flex;align-items:center;gap:8px;">
-            <span class="ta-status ${status}">${statusTxt}</span>
-            <div class="ta-dots-wrap">
-              <button class="ta-dots-btn" onclick="toggleMemberMenu(event,${m.id})" title="Options">⋮</button>
-              <div class="ta-dots-menu" id="memberMenu_${m.id}">
-                <button class="danger" onclick="deleteTeamMember(${m.id},'${escapeJs(m.name)}')">🗑 Delete Member</button>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="ta-workload-row"><span>Workload</span><span>${workload}%</span></div>
-        <div class="ta-bar"><div class="ta-bar-fill" style="width:${workload}%;background:${barColor(workload)}"></div></div>
-        <div class="ta-member-actions">
-          <button class="ta-btn ta-btn-assign" onclick="openAssignOrderToMember(${m.id},'${escapeJs(m.name)}')">Assign</button>
-          <button class="ta-btn ta-btn-tasks" onclick="viewMemberTasks(${m.id},'${escapeJs(m.name)}')">View Tasks</button>
-        </div>
-      </div>`;
-    }).join("");
+    _taLastMembers = members;
+    _renderTeamGrid(members);
+    // Also keep task selects in sync
+    _tkMembers = members;
+    tkPopulateSelects();
 
   }catch(error){
-    grid.innerHTML = `<div class="empty" style="grid-column:1/-1">Error loading team: ${escapeHtml(error.message)}</div>`;
+    // On error, keep showing cached data if available; otherwise show error
+    if(_taLastMembers.length === 0){
+      grid.innerHTML = `<div class="empty" style="grid-column:1/-1">Error loading team: ${escapeHtml(error.message)}</div>`;
+    }
   }
 }
 
@@ -9579,6 +9594,7 @@ async function deleteTeamMember(memberId, memberName){
     });
     const d = await r.json();
     if(d.success){
+      _taLastMembers = [];  // clear cache so deleted member isn't shown from cache
       loadTeamMembers();
     } else {
       await _alert("Delete failed: " + (d.message || "Unknown error"), "Error", "❌");
@@ -13425,6 +13441,15 @@ async function _tcWsBackground(){
       const allM = [...(dm.admin_contacts||[]), ...dm.members];
       _tcMentionMembers = allM.map(m=>m.name);
       allM.forEach(m=>{ _tcMentionMap[m.name.toLowerCase()] = m.user; _tcMentionMap[m.name.split(" ")[0].toLowerCase()] = m.user; });
+      // Pre-populate task assignee selects so the dropdown is ready before Tasks section is opened
+      if(dm.members && dm.members.length > 0 && _tkMembers.length === 0){
+        _tkMembers = dm.members;
+        tkPopulateSelects();
+      }
+      // Pre-cache team grid data
+      if(dm.members && dm.members.length > 0 && _taLastMembers.length === 0){
+        _taLastMembers = dm.members;
+      }
     }
     _tcWsConnect();
     _tcStartUnreadPoll();

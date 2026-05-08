@@ -606,6 +606,8 @@ def _is_subscribed(user):
 @login_required(login_url="/login/")
 def dashboard_page(request):
     if not request.user.is_staff:
+        if request.user.team_profile.exists():
+            return redirect("/employee/dashboard/")
         return redirect("/login/?tab=team")
 
     imp_id    = request.session.get("impersonate_id")
