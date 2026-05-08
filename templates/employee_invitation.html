@@ -185,8 +185,8 @@ async function submitPassword(){
   const pw1 = document.getElementById("pw1").value;
   const pw2 = document.getElementById("pw2").value;
 
-  if(pw1.length < 8){ msg.className="msg err"; msg.innerText="Password must be at least 8 characters."; return; }
-  if(pw1 !== pw2){    msg.className="msg err"; msg.innerText="Passwords do not match."; return; }
+  if(!pw1){ msg.className="msg err"; msg.innerText="Please enter a password."; return; }
+  if(pw1 !== pw2){ msg.className="msg err"; msg.innerText="Passwords do not match."; return; }
 
   btn.disabled = true;
   btn.innerText = "Activating…";

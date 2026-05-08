@@ -1152,8 +1152,8 @@ def set_invitation_password_api(request, token):
         return Response({"success": False, "message": "This invitation has expired or was already used."}, status=400)
 
     password = (request.data.get("password") or "").strip()
-    if len(password) < 8:
-        return Response({"success": False, "message": "Password must be at least 8 characters."}, status=400)
+    if not password:
+        return Response({"success": False, "message": "Password is required."}, status=400)
 
     # Build unique username
     base     = inv.email.split("@")[0] + "_emp"
