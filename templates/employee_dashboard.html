@@ -861,6 +861,12 @@ body{font-family:'Inter','Segoe UI',sans-serif;background:var(--bg);color:var(--
 </div>
 
 <script>
+// ── Diagnostic: fires immediately if JS parses and runs ──
+(function(){
+  var t = document.getElementById('overviewTitle');
+  if(t){ t.innerText = 'JS active — connecting…'; t.style.color = '#10b981'; }
+})();
+
 // ── State ──
 let empMember = null;
 let empPerms  = {};
