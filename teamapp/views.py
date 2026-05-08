@@ -1,11 +1,15 @@
+import threading
+import datetime
+
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
+from django.utils import timezone
 
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from .models import TeamMember, AssignmentRule, ChatChannel, ChatMessage, ChatReaction, ChatReadReceipt
+from .models import TeamMember, AssignmentRule, ChatChannel, ChatMessage, ChatReaction, ChatReadReceipt, EmployeeInvitation
 from .serializers import TeamMemberSerializer, AssignmentRuleSerializer
 
 
@@ -988,3 +992,201 @@ def task_comments_api(request, task_id):
         "content":    c.content,
         "created_at": c.created_at.isoformat(),
     }})
+
+
+# ─── Employee Invitations ─────────────────────────────────────────────────────
+
+import os
+import resend as _resend
+
+_INV_LOGO = """<table cellpadding="0" cellspacing="0"><tr>
+  <td style="background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:14px;width:44px;height:44px;text-align:center;vertical-align:middle;">
+    <span style="color:#fff;font-weight:900;font-size:17px;letter-spacing:-.5px;">DS</span>
+  </td>
+  <td style="padding-left:12px;text-align:left;">
+    <div style="font-size:19px;font-weight:900;color:#0f172a;letter-spacing:-.4px;">Drop Sigma</div>
+    <div style="font-size:11px;color:#94a3b8;margin-top:1px;">Ecommerce Operations OS</div>
+  </td>
+</tr></table>"""
+
+_INV_FOOTER = """<p style="margin:0 0 6px;font-size:12px;color:#94a3b8;">
+  &copy; 2026 Drop Sigma &nbsp;&middot;&nbsp;
+  <a href="https://dropsigma.com" style="color:#94a3b8;text-decoration:none;">dropsigma.com</a>
+  &nbsp;&middot;&nbsp;
+  <a href="mailto:support@dropsigma.com" style="color:#94a3b8;text-decoration:none;">support@dropsigma.com</a>
+</p>
+<p style="margin:0;font-size:11px;color:#cbd5e1;">This invitation expires in 48 hours. If you did not expect this, ignore this email.</p>"""
+
+
+def _build_invitation_email(name, invite_url, invited_by):
+    return f"""<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/></head>
+<body style="margin:0;padding:0;background:#f6f9fc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f6f9fc;padding:48px 16px;">
+<tr><td align="center">
+<table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
+  <tr><td align="center" style="padding-bottom:32px;">{_INV_LOGO}</td></tr>
+  <tr><td style="background:#ffffff;border-radius:16px;border:1px solid #e2e8f0;overflow:hidden;">
+    <div style="height:4px;background:linear-gradient(90deg,#6366f1,#8b5cf6);"></div>
+    <table width="100%" cellpadding="0" cellspacing="0">
+    <tr><td align="center" style="padding:40px 48px 28px;">
+      <div style="font-size:12px;font-weight:700;color:#6d28d9;background:#ede9fe;border-radius:20px;display:inline-block;padding:5px 16px;letter-spacing:0.5px;margin-bottom:20px;">&#x1F4E7; YOU'RE INVITED</div>
+      <h1 style="margin:0 0 12px;font-size:24px;font-weight:800;color:#0f172a;line-height:1.3;">Join the team on Drop Sigma</h1>
+      <p style="margin:0;font-size:15px;color:#64748b;line-height:1.7;">Hi <strong style="color:#0f172a;">{name}</strong>, <strong style="color:#0f172a;">{invited_by}</strong> has invited you to join their team as an employee. Click below to accept and set your password.</p>
+    </td></tr>
+    <tr><td style="padding:0 48px;"><div style="height:1px;background:#f1f5f9;"></div></td></tr>
+    <tr><td align="center" style="padding:32px 48px;">
+      <table cellpadding="0" cellspacing="0"><tr>
+        <td style="background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:12px;box-shadow:0 4px 14px rgba(99,102,241,.35);">
+          <a href="{invite_url}" style="display:block;padding:16px 36px;font-size:15px;font-weight:800;color:#ffffff;text-decoration:none;letter-spacing:.2px;">Accept Invitation &amp; Set Password</a>
+        </td>
+      </tr></table>
+    </td></tr>
+    <tr><td style="padding:0 48px 28px;">
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:20px 24px;">
+        <p style="margin:0 0 8px;font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Or copy this link</p>
+        <p style="margin:0;font-size:12px;color:#6366f1;word-break:break-all;">{invite_url}</p>
+      </div>
+    </td></tr>
+    <tr><td align="center" style="padding:0 48px 36px;">
+      <p style="margin:0;font-size:12px;color:#94a3b8;">This link expires in <strong>48 hours</strong>.</p>
+    </td></tr>
+    </table>
+  </td></tr>
+  <tr><td align="center" style="padding-top:28px;">{_INV_FOOTER}</td></tr>
+</table>
+</td></tr>
+</table>
+</body></html>"""
+
+
+def _send_invitation_email(to_email, subject, html):
+    import logging
+    logger = logging.getLogger(__name__)
+
+    def _do():
+        try:
+            api_key = os.getenv("RESEND_API_KEY", "")
+            if not api_key:
+                logger.warning("RESEND_API_KEY not set — invitation email not sent to %s", to_email)
+                return
+            _resend.api_key = api_key
+            result = _resend.Emails.send({
+                "from":    "Drop Sigma <noreply@dropsigma.com>",
+                "to":      [to_email],
+                "subject": subject,
+                "html":    html,
+            })
+            logger.info("Invitation email sent to %s — id: %s", to_email, getattr(result, "id", result))
+        except Exception as exc:
+            logger.error("Failed to send invitation email to %s: %s", to_email, exc)
+    threading.Thread(target=_do, daemon=True).start()
+
+
+@api_view(["POST"])
+def send_employee_invitation_api(request):
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Login required."}, status=401)
+
+    name   = (request.data.get("name") or "").strip()
+    email  = (request.data.get("email") or "").strip()
+    role   = request.data.get("role", "support")
+    status = request.data.get("status", "available")
+    perms  = request.data.get("permissions", {})
+
+    if not name or not email:
+        return Response({"success": False, "message": "Name and email are required."}, status=400)
+
+    if TeamMember.objects.filter(email=email).exists():
+        return Response({"success": False, "message": "An employee with this email already exists."}, status=400)
+
+    if User.objects.filter(email=email).exists():
+        return Response({"success": False, "message": "A user with this email already exists."}, status=400)
+
+    # Expire any existing pending invites for this email under this owner
+    EmployeeInvitation.objects.filter(owner=request.user, email=email, status="pending").update(status="expired")
+
+    expires_at = timezone.now() + datetime.timedelta(hours=48)
+    inv = EmployeeInvitation.objects.create(
+        owner=request.user,
+        name=name,
+        email=email,
+        role=role,
+        initial_status=status,
+        permissions=perms,
+        expires_at=expires_at,
+    )
+
+    scheme = request.scheme
+    host   = request.get_host()
+    invite_url = f"{scheme}://{host}/employee/invite/accept/{inv.token}/"
+
+    invited_by = request.user.get_full_name() or request.user.username
+    html = _build_invitation_email(name, invite_url, invited_by)
+    _send_invitation_email(email, f"You're invited to join {invited_by} on Drop Sigma", html)
+
+    return Response({"success": True, "message": f"Invitation sent to {email}."})
+
+
+def accept_invitation_page(request, token):
+    try:
+        inv = EmployeeInvitation.objects.get(token=token)
+    except EmployeeInvitation.DoesNotExist:
+        return render(request, "employee_invitation.html", {"error": "This invitation link is invalid."})
+
+    if not inv.is_valid():
+        msg = "This invitation has already been accepted." if inv.status == "accepted" else "This invitation link has expired."
+        return render(request, "employee_invitation.html", {"error": msg})
+
+    return render(request, "employee_invitation.html", {"invitation": inv})
+
+
+@api_view(["POST"])
+def set_invitation_password_api(request, token):
+    try:
+        inv = EmployeeInvitation.objects.get(token=token)
+    except EmployeeInvitation.DoesNotExist:
+        return Response({"success": False, "message": "Invalid invitation."}, status=404)
+
+    if not inv.is_valid():
+        return Response({"success": False, "message": "This invitation has expired or was already used."}, status=400)
+
+    password = (request.data.get("password") or "").strip()
+    if len(password) < 8:
+        return Response({"success": False, "message": "Password must be at least 8 characters."}, status=400)
+
+    # Build unique username
+    base     = inv.email.split("@")[0] + "_emp"
+    username = base
+    counter  = 1
+    while User.objects.filter(username=username).exists():
+        username = f"{base}_{counter}"
+        counter += 1
+
+    user = User.objects.create_user(username=username, email=inv.email, password=password)
+    user.first_name = inv.name.split()[0]
+    user.last_name  = " ".join(inv.name.split()[1:])
+    user.save()
+
+    member = TeamMember.objects.create(
+        owner=inv.owner,
+        user=user,
+        name=inv.name,
+        email=inv.email,
+        role=inv.role,
+        status=inv.initial_status,
+        permissions=inv.permissions,
+        is_active=True,
+    )
+
+    # Auto-add to General channel
+    general, _ = ChatChannel.objects.get_or_create(
+        slug="general", is_dm=False,
+        defaults={"name": "general", "description": "General team discussion"}
+    )
+    general.members.add(user)
+
+    inv.status = "accepted"
+    inv.save(update_fields=["status"])
+
+    return Response({"success": True, "message": "Password set! You can now log in.", "redirect": "/employee/login/"})

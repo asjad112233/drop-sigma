@@ -25,4 +25,6 @@ urlpatterns = [
     path("tasks/create/",                       views.tasks_create_api),
     path("tasks/<int:task_id>/",                views.tasks_detail_api),
     path("tasks/<int:task_id>/comments/",       views.task_comments_api),
+    # Invitations
+    path("invite/send/",                        views.send_employee_invitation_api),
 ]

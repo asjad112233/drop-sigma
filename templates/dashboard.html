@@ -1186,22 +1186,20 @@
     .emp-perm-count.gray{background:#f1f5f9;color:#64748b;}
     .emp-default-badge{display:inline-flex;align-items:center;background:#dcfce7;color:#15803d;font-size:9.5px;font-weight:800;padding:1px 6px;border-radius:999px;margin-left:5px;vertical-align:middle;}
     /* macOS-style toggle rows */
-    .emp-toggle-list{display:flex;flex-direction:column;gap:1px;border-radius:13px;overflow:hidden;border:1px solid #e5e7eb;}
-    .emp-toggle-row{display:flex;align-items:center;gap:12px;padding:10px 14px;background:#fff;cursor:pointer;transition:background .12s;user-select:none;}
+    .emp-toggle-list{display:flex;flex-direction:column;gap:0;border-radius:11px;overflow:hidden;border:1px solid #e5e7eb;}
+    .emp-toggle-row{display:flex;align-items:center;gap:10px;padding:7px 12px;background:#fff;cursor:pointer;transition:background .12s;user-select:none;}
     .emp-toggle-row:hover{background:#f8fafc;}
     .emp-toggle-row:not(:last-child){border-bottom:1px solid #f1f5f9;}
     .emp-toggle-row.is-default{background:#f0fdf4;}
     .emp-toggle-row.is-default:hover{background:#dcfce7;}
-    .emp-toggle-name{font-size:13px;font-weight:700;color:#0f172a;flex:1;}
-    .emp-toggle-desc{font-size:11.5px;color:#94a3b8;font-weight:500;margin-right:12px;}
+    .emp-toggle-name{font-size:12.5px;font-weight:700;color:#0f172a;flex:1;}
+    .emp-toggle-desc{font-size:11px;color:#94a3b8;font-weight:500;margin-right:8px;}
     /* iOS/macOS toggle switch */
-    .emp-sw{width:36px;height:20px;border-radius:999px;background:#d1d5db;position:relative;flex-shrink:0;transition:background .2s;}
-    .emp-sw::after{content:'';position:absolute;width:16px;height:16px;border-radius:50%;background:#fff;top:2px;left:2px;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);}
+    .emp-sw{width:32px;height:18px;border-radius:999px;background:#d1d5db;position:relative;flex-shrink:0;transition:background .2s;}
+    .emp-sw::after{content:'';position:absolute;width:14px;height:14px;border-radius:50%;background:#fff;top:2px;left:2px;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);}
     .emp-sw.on{background:#22c55e;}
-    .emp-sw.on::after{transform:translateX(16px);}
-    .emp-toggle-row.is-default .emp-sw{background:#16a34a;}
-    .emp-toggle-row.is-default .emp-sw::after{transform:translateX(16px);}
-    .emp-grp-lbl{font-size:10px;font-weight:800;color:#94a3b8;letter-spacing:.06em;text-transform:uppercase;padding:10px 14px 4px;background:transparent;}
+    .emp-sw.on::after{transform:translateX(14px);}
+    .emp-grp-lbl{font-size:10px;font-weight:800;color:#94a3b8;letter-spacing:.06em;text-transform:uppercase;padding:8px 12px 3px;background:transparent;}
 
     /* ===== GLOBAL PROJECT / STORE SWITCHER ===== */
     .global-store-switcher{
@@ -6741,7 +6739,7 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
     <div class="vm-hd">
       <div>
         <h1>👤 Create Employee</h1>
-        <p>Set designation, login credentials &amp; access permissions.</p>
+        <p>Set designation &amp; permissions — an invitation email will be sent to the employee.</p>
       </div>
       <button class="vm-close-btn" onclick="closeCreateEmpModal()">✕ Close</button>
     </div>
@@ -6751,7 +6749,6 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
     <div class="vm-form-grid">
       <div class="vm-fg"><label>Full Name *</label><input id="empName" placeholder="Ayesha Khan"></div>
       <div class="vm-fg"><label>Email Address *</label><input id="empEmail" type="email" placeholder="ayesha@company.com"></div>
-      <div class="vm-fg"><label>Password *</label><input id="empPassword" type="password" placeholder="Set login password"></div>
       <div class="vm-fg"><label>Initial Status</label>
         <select id="empStatus">
           <option value="available">✅ Available</option>
@@ -6785,7 +6782,7 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
     </div>
 
     <div class="vm-actions">
-      <button class="vm-save-btn" onclick="createEmployee()">✓ Create Employee</button>
+      <button class="vm-save-btn" onclick="sendInvitation()">📧 Send Invitation →</button>
       <button class="vm-clear-btn" onclick="closeCreateEmpModal()">Cancel</button>
     </div>
     <p id="empMsg" style="margin-top:12px;font-size:13px;font-weight:700;"></p>
@@ -6796,8 +6793,8 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
 <div id="empSuccessOverlay" class="vm-success-overlay">
   <div class="vm-success-card">
     <div class="vm-success-icon">✓</div>
-    <h2 id="empSuccessName">Employee Created!</h2>
-    <p id="empSuccessDetails">Account ready. Share login credentials with the employee.</p>
+    <h2 id="empSuccessName">Invitation Sent!</h2>
+    <p id="empSuccessDetails">The employee will receive an email to set their own password.</p>
     <button onclick="closeEmpSuccess()" style="margin-top:20px;padding:12px 28px;background:#0f172a;color:#fff;border:none;border-radius:14px;font-weight:800;font-size:14px;cursor:pointer;width:100%;">Done</button>
   </div>
 </div>
@@ -9628,47 +9625,48 @@ function renderEmpPerms(role, preserveChecked){
     </div>`;
   };
 
-  const defaultPerms = EMP_ALL_PERMS.filter(p=>defaults.has(p.key));
-  const otherPerms   = EMP_ALL_PERMS.filter(p=>!defaults.has(p.key));
+  // All perms in one grouped list — defaults first, then others by group
+  const groups = {};
+  EMP_ALL_PERMS.forEach(p=>{
+    const g = defaults.has(p.key) ? '__default__' : p.group;
+    (groups[g] = groups[g]||[]).push(p);
+  });
 
-  let html="";
+  let html = '';
 
-  if(defaultPerms.length){
-    html+=`<div class="emp-perm-section-hd">
+  if(groups['__default__']){
+    html += `<div class="emp-perm-section-hd">
       <span class="emp-perm-dot" style="background:#22c55e;"></span>
       <span class="emp-perm-section-title">Default for this role</span>
-      <span class="emp-perm-count green">${defaultPerms.length} auto-selected</span>
+      <span class="emp-perm-count green">${groups['__default__'].length} on</span>
     </div>
-    <div class="emp-toggle-list" style="margin-bottom:16px;">
-      ${defaultPerms.map(p=>mkRow(p,true)).join("")}
+    <div class="emp-toggle-list" style="margin-bottom:10px;">
+      ${groups['__default__'].map(p=>mkRow(p,true)).join('')}
     </div>`;
+    delete groups['__default__'];
   }
 
-  if(otherPerms.length){
-    const groups={};
-    otherPerms.forEach(p=>{ (groups[p.group]=groups[p.group]||[]).push(p); });
-    html+=`<div class="emp-perm-section-hd">
+  if(Object.keys(groups).length){
+    html += `<div class="emp-perm-section-hd" style="margin-top:10px;">
       <span class="emp-perm-dot" style="background:#94a3b8;"></span>
       <span class="emp-perm-section-title">Additional permissions</span>
-      <span class="emp-perm-count gray">${otherPerms.length} available</span>
     </div>`;
     Object.entries(groups).forEach(([grp, perms])=>{
-      html+=`<div class="emp-grp-lbl">${grp}</div>
-      <div class="emp-toggle-list" style="margin-bottom:10px;">
-        ${perms.map(p=>mkRow(p,false)).join("")}
+      html += `<div class="emp-grp-lbl">${grp}</div>
+      <div class="emp-toggle-list" style="margin-bottom:8px;">
+        ${perms.map(p=>mkRow(p,false)).join('')}
       </div>`;
     });
   }
 
-  document.getElementById("empPermsContainer").innerHTML=html;
+  document.getElementById("empPermsContainer").innerHTML = html;
 }
 
 function empPermToggle(row){
-  const on = row.dataset.on === '1';
-  const isDefault = row.classList.contains('is-default');
-  if(isDefault) return; // default perms are locked on
+  const on   = row.dataset.on === '1';
   const nowOn = !on;
   row.dataset.on = nowOn ? '1' : '0';
+  row.classList.toggle('is-default', nowOn && row.querySelector('.emp-default-badge'));
   const sw = row.querySelector('.emp-sw');
   const cb = row.querySelector('input[type=checkbox]');
   if(sw) sw.classList.toggle('on', nowOn);
@@ -9679,7 +9677,6 @@ function openCreateEmpModal(){
   fireLoader();
   document.getElementById("empName").value="";
   document.getElementById("empEmail").value="";
-  document.getElementById("empPassword").value="";
   document.getElementById("empStatus").value="available";
   document.getElementById("empRole").value="support";
   document.getElementById("empMsg").innerText="";
@@ -9723,38 +9720,36 @@ function selectEmpDesig(el, role){
   renderEmpPerms(role, currentChecked);
 }
 
-async function createEmployee(){
+async function sendInvitation(){
   const msg=document.getElementById("empMsg");
   const name=document.getElementById("empName").value.trim();
   const email=document.getElementById("empEmail").value.trim();
-  const password=document.getElementById("empPassword").value.trim();
   const role=document.getElementById("empRole").value;
   const status=document.getElementById("empStatus").value;
 
-  if(!name||!email||!password){
-    msg.style.color="#dc2626"; msg.innerText="Name, email and password are required."; return;
+  if(!name||!email){
+    msg.style.color="#dc2626"; msg.innerText="Name and email are required."; return;
   }
 
   const perms={};
   document.querySelectorAll("input[name=empPerm]:checked").forEach(cb=>{ perms[cb.value]=true; });
-  // Store access: collect checked store IDs (empty = all access)
   const allowedStores = Array.from(document.querySelectorAll("input[name=empStore]:checked")).map(cb=>parseInt(cb.value));
   if(allowedStores.length) perms.allowed_stores = allowedStores;
 
-  msg.style.color="#64748b"; msg.innerText="Creating employee...";
+  msg.style.color="#64748b"; msg.innerText="Sending invitation...";
 
   try{
-    const r=await fetch("/teamapp/members/create/",{
+    const r=await fetch("/teamapp/invite/send/",{
       method:"POST",
       headers:{"Content-Type":"application/json","X-CSRFToken":getCSRFToken()},
-      body:JSON.stringify({name,email,password,role,status,permissions:perms})
+      body:JSON.stringify({name,email,role,status,permissions:perms})
     });
     const d=await r.json();
     if(!d.success){ msg.style.color="#dc2626"; msg.innerText=d.message; return; }
     msg.innerText="";
     closeCreateEmpModal();
-    document.getElementById("empSuccessName").innerText=name+" is ready!";
-    document.getElementById("empSuccessDetails").innerText=`Login: ${email} — Account created successfully.`;
+    document.getElementById("empSuccessName").innerText="Invitation Sent!";
+    document.getElementById("empSuccessDetails").innerText=`An invitation email has been sent to ${email}. They'll set their own password.`;
     document.getElementById("empSuccessOverlay").style.display="flex";
     launchEmpConfetti();
     loadTeamMembers();

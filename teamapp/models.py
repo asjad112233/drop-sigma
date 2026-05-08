@@ -1,5 +1,7 @@
+import uuid
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils import timezone
 
 
 class TeamMember(models.Model):
@@ -162,3 +164,30 @@ class TaskComment(models.Model):
 
     def __str__(self):
         return f"{self.author} on {self.task}: {self.content[:40]}"
+
+
+# ─── Employee Invitation ───────────────────────────────────────────────────────
+
+class EmployeeInvitation(models.Model):
+    STATUS_CHOICES = (
+        ("pending",  "Pending"),
+        ("accepted", "Accepted"),
+        ("expired",  "Expired"),
+    )
+
+    token       = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    owner       = models.ForeignKey(User, on_delete=models.CASCADE, related_name="sent_invitations")
+    name        = models.CharField(max_length=255)
+    email       = models.EmailField()
+    role        = models.CharField(max_length=50, default="support")
+    initial_status = models.CharField(max_length=50, default="available")
+    permissions = models.JSONField(default=dict, blank=True)
+    status      = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
+    expires_at  = models.DateTimeField()
+    created_at  = models.DateTimeField(auto_now_add=True)
+
+    def is_valid(self):
+        return self.status == "pending" and timezone.now() < self.expires_at
+
+    def __str__(self):
+        return f"Invitation → {self.email} ({self.status})"
