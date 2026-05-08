@@ -862,8 +862,12 @@ body{font-family:'Inter','Segoe UI',sans-serif;background:var(--bg);color:var(--
 
 <script id="__member_data__" type="application/json">{{ member_json|safe }}</script>
 <script>
-// Member data injected server-side — no API call needed to boot
-const __MEMBER__ = JSON.parse(document.getElementById('__member_data__').textContent);
+// Member data: try embedded JSON, parse failures handled in boot()
+let __MEMBER__ = null;
+try {
+  const _el = document.getElementById('__member_data__');
+  if(_el && _el.textContent.trim()) __MEMBER__ = JSON.parse(_el.textContent);
+} catch(_e) {}
 
 // ── State ──
 let empMember = null;
@@ -929,9 +933,18 @@ const ROLE_LABELS = {
 // ── Boot ──
 async function boot(){
   try{
-    // Member data is embedded by Django — no API call needed
-    if(!__MEMBER__ || !__MEMBER__.id){ window.location.href="/employee/login/"; return; }
-    empMember = __MEMBER__;
+    // Try embedded JSON first; fall back to API if missing or invalid
+    let memberData = __MEMBER__;
+    if(!memberData || !memberData.id){
+      const r = await fetch("/employee/api/me/");
+      if(!r.ok){ window.location.href="/employee/login/"; return; }
+      const d = await r.json();
+      if(!d.success){ window.location.href="/employee/login/"; return; }
+      memberData = d.member;
+    }
+    if(!memberData || !memberData.id){ window.location.href="/employee/login/"; return; }
+
+    empMember = memberData;
     empPerms  = empMember.permissions || {};
     _ecMyName = empMember.name || "";
     buildSidebar();
