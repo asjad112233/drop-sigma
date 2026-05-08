@@ -25,10 +25,28 @@ def team_members_api(request):
     if not request.user.is_authenticated:
         return Response({"success": True, "members": [], "admin_contacts": []})
 
+    # Admin view: return their own team members
     qs = TeamMember.objects.filter(owner=request.user, is_active=True).order_by("name")
-    serializer = TeamMemberSerializer(qs, many=True)
+    if qs.exists():
+        serializer = TeamMemberSerializer(qs, many=True)
+        return Response({"success": True, "members": serializer.data, "admin_contacts": []})
 
-    return Response({"success": True, "members": serializer.data, "admin_contacts": []})
+    # Employee view: return their owner (admin) as contact + fellow employees
+    my_profile = request.user.team_profile.first()
+    if my_profile and my_profile.owner:
+        owner = my_profile.owner
+        admin_contacts = [{
+            "user": owner.id,
+            "name": owner.get_full_name() or owner.username,
+            "role": "owner",
+            "status": "available",
+            "is_admin": True,
+        }]
+        fellow_qs = TeamMember.objects.filter(owner=owner, is_active=True).exclude(user=request.user).order_by("name")
+        fellow = [{"user": m.user_id, "name": m.name, "role": m.role, "status": m.status, "is_admin": False} for m in fellow_qs]
+        return Response({"success": True, "members": fellow, "admin_contacts": admin_contacts})
+
+    return Response({"success": True, "members": [], "admin_contacts": []})
 
 
 @api_view(["POST"])
