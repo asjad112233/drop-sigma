@@ -18,7 +18,8 @@ class TeamMember(models.Model):
         ("offline", "Offline"),
     )
 
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="team_profile")
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, related_name="owned_team_members")
+    user  = models.ForeignKey(User, on_delete=models.CASCADE, related_name="team_profile")
 
     name = models.CharField(max_length=255)
     email = models.EmailField()
@@ -52,9 +53,10 @@ class AssignmentRule(models.Model):
         ("email_manager", "Email Manager"),
     )
 
-    rule_type = models.CharField(max_length=50, choices=RULE_TYPE_CHOICES)
+    owner          = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, related_name="owned_assignment_rules")
+    rule_type      = models.CharField(max_length=50, choices=RULE_TYPE_CHOICES)
     assign_to_role = models.CharField(max_length=50, choices=ASSIGN_TO_ROLE_CHOICES)
-    is_active = models.BooleanField(default=True)
+    is_active      = models.BooleanField(default=True)
 
     def __str__(self):
         return f"{self.rule_type} → {self.assign_to_role}"

@@ -18,24 +18,13 @@ def _admin_display_name(u):
 
 @api_view(["GET"])
 def team_members_api(request):
-    qs = TeamMember.objects.filter(is_active=True).order_by("name")
-    if request.user.is_authenticated:
-        qs = qs.exclude(user=request.user)
+    if not request.user.is_authenticated:
+        return Response({"success": True, "members": [], "admin_contacts": []})
+
+    qs = TeamMember.objects.filter(owner=request.user, is_active=True).order_by("name")
     serializer = TeamMemberSerializer(qs, many=True)
 
-    # Include admin/superuser contacts (excluding self)
-    admin_contacts = []
-    for u in User.objects.filter(is_superuser=True).order_by("id"):
-        if request.user.is_authenticated and u.id == request.user.id:
-            continue
-        admin_contacts.append({
-            "id": None, "user": u.id,
-            "name": _admin_display_name(u),
-            "role": "owner", "status": "available",
-            "is_admin": True,
-        })
-
-    return Response({"success": True, "members": serializer.data, "admin_contacts": admin_contacts})
+    return Response({"success": True, "members": serializer.data, "admin_contacts": []})
 
 
 @api_view(["POST"])
@@ -66,6 +55,7 @@ def create_team_member_api(request):
     user = User.objects.create_user(username=username, email=email, password=password)
 
     member = TeamMember.objects.create(
+        owner=request.user,
         user=user,
         name=name,
         email=email,
@@ -92,7 +82,7 @@ def create_team_member_api(request):
 @api_view(["DELETE"])
 def delete_team_member_api(request, member_id):
     try:
-        member = TeamMember.objects.get(id=member_id)
+        member = TeamMember.objects.get(id=member_id, owner=request.user)
         member.user.delete()
         return Response({"success": True, "message": "Employee deleted."})
     except TeamMember.DoesNotExist:
@@ -103,8 +93,8 @@ def delete_team_member_api(request, member_id):
 
 @api_view(["GET"])
 def assignment_rules_api(request):
-    rules = AssignmentRule.objects.all().order_by("-id")
-    serializer = AssignmentRuleSerializer(rules, many=True)
+    qs = AssignmentRule.objects.filter(owner=request.user).order_by("-id") if request.user.is_authenticated else AssignmentRule.objects.none()
+    serializer = AssignmentRuleSerializer(qs, many=True)
     return Response({"success": True, "rules": serializer.data})
 
 
@@ -118,6 +108,7 @@ def create_assignment_rule_api(request):
         return Response({"success": False, "message": "rule_type and assign_to_role are required."}, status=400)
 
     rule, created = AssignmentRule.objects.update_or_create(
+        owner=request.user,
         rule_type=rule_type,
         defaults={"assign_to_role": assign_to_role, "is_active": is_active}
     )
