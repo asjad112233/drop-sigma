@@ -391,6 +391,63 @@ def employee_thread_reopen_api(request):
     return Response({"success": True, "message": "Thread re-opened."})
 
 
+# ─── Employee: My Tasks ───────────────────────────────────────────────────────
+
+@api_view(["GET"])
+def employee_tasks_api(request):
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Not authenticated"}, status=401)
+    member = request.user.team_profile.first()
+    if not member:
+        return Response({"success": False, "message": "Not an employee"}, status=403)
+
+    from .models import Task
+    from datetime import date
+
+    tasks = Task.objects.filter(assigned_to=member).select_related("assigned_to")
+    result = []
+    for t in tasks:
+        due = t.due_date.isoformat() if t.due_date else None
+        is_overdue = bool(t.due_date and t.due_date < date.today() and t.status != "done")
+        result.append({
+            "id":          t.id,
+            "title":       t.title,
+            "description": t.description,
+            "priority":    t.priority,
+            "category":    t.category,
+            "status":      t.status,
+            "progress":    t.progress,
+            "due_date":    due,
+            "is_overdue":  is_overdue,
+        })
+    return Response({"success": True, "tasks": result})
+
+
+@api_view(["PATCH"])
+def employee_task_update_api(request, task_id):
+    """Employee can update status and progress of their own assigned task."""
+    if not request.user.is_authenticated:
+        return Response({"success": False}, status=401)
+    member = request.user.team_profile.first()
+    if not member:
+        return Response({"success": False}, status=403)
+
+    from .models import Task
+    try:
+        task = Task.objects.get(pk=task_id, assigned_to=member)
+    except Task.DoesNotExist:
+        return Response({"success": False, "message": "Task not found"}, status=404)
+
+    if "status" in request.data:
+        task.status = request.data["status"]
+        if task.status == "done":
+            task.progress = 100
+    if "progress" in request.data:
+        task.progress = int(request.data["progress"])
+    task.save()
+    return Response({"success": True})
+
+
 # ─── Team Chat APIs ───────────────────────────────────────────────────────────
 
 _DEFAULT_CHANNELS = [

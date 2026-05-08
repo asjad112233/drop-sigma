@@ -267,6 +267,62 @@ body{font-family:'Inter','Segoe UI',sans-serif;background:var(--bg);color:var(--
   .profile-grid{grid-template-columns:1fr;}
 }
 
+/* ── My Tasks Section ── */
+.etk-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px;}
+.etk-stat{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px 18px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow);}
+.etk-stat-ic{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.etk-stat-ic.purple{background:#ede9fe;}.etk-stat-ic.blue{background:#dbeafe;}.etk-stat-ic.amber{background:#fef3c7;}.etk-stat-ic.green{background:#dcfce7;}
+.etk-stat-val{font-size:22px;font-weight:900;color:var(--text);line-height:1;}
+.etk-stat-lbl{font-size:11px;color:var(--muted);margin-top:2px;font-weight:600;}
+.etk-board{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;align-items:start;}
+.etk-col{background:var(--surface);border:1px solid var(--border);border-radius:18px;display:flex;flex-direction:column;min-height:200px;box-shadow:var(--shadow);}
+.etk-col-head{padding:14px 16px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);}
+.etk-col-title{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:800;color:var(--text);}
+.etk-cdot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.etk-cdot.todo{background:#94a3b8;}.etk-cdot.prog{background:var(--accent);}.etk-cdot.done{background:var(--green);}
+.etk-col-cnt{background:#f1f5f9;color:var(--muted);font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;}
+.etk-col-body{padding:10px;display:flex;flex-direction:column;gap:8px;flex:1;}
+.etk-card{background:#fafbfd;border:1px solid var(--border);border-radius:13px;padding:13px 14px;cursor:pointer;transition:.15s;}
+.etk-card:hover{box-shadow:0 4px 16px rgba(15,23,42,.09);border-color:#c7d2fe;transform:translateY(-1px);}
+.etk-card.done-card{opacity:.6;}
+.etk-card.done-card h4{text-decoration:line-through;color:var(--muted);}
+.etk-card h4{font-size:13.5px;font-weight:700;color:var(--text);line-height:1.4;margin-bottom:7px;}
+.etk-tag-row{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;}
+.etk-tag{padding:3px 8px;border-radius:6px;font-size:10.5px;font-weight:700;}
+.etk-tag.orders{background:#ede9fe;color:#5b21b6;}.etk-tag.refunds{background:#fee2e2;color:#b91c1c;}
+.etk-tag.vendor{background:#fef9c3;color:#854d0e;}.etk-tag.support{background:#dbeafe;color:#1e40af;}
+.etk-tag.email{background:#d1fae5;color:#065f46;}.etk-tag.other{background:#f3f4f6;color:#374151;}
+.etk-card-desc{font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:10px;}
+.etk-prog-wrap{margin-bottom:10px;}
+.etk-prog-lbl{display:flex;justify-content:space-between;font-size:11px;color:var(--soft);margin-bottom:4px;font-weight:500;}
+.etk-prog-track{height:4px;border-radius:3px;background:#e5e7eb;overflow:hidden;}
+.etk-prog-fill{height:100%;border-radius:3px;transition:width .4s;}
+.etk-prog-fill.low{background:#94a3b8;}.etk-prog-fill.mid{background:var(--accent);}.etk-prog-fill.full{background:var(--green);}
+.etk-card-foot{display:flex;align-items:center;justify-content:space-between;gap:6px;}
+.etk-pri{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:7px;font-size:11px;font-weight:700;}
+.etk-pri .pd{width:5px;height:5px;border-radius:50%;background:currentColor;}
+.etk-pri.high{background:#fee2e2;color:#dc2626;}.etk-pri.medium{background:#fef3c7;color:#d97706;}.etk-pri.low{background:#dcfce7;color:#16a34a;}
+.etk-due{font-size:11px;font-weight:600;color:var(--muted);}
+.etk-due.late{color:var(--red);}
+/* Task detail modal */
+.etk-modal-bg{display:none;position:fixed;inset:0;background:rgba(15,23,42,.55);backdrop-filter:blur(6px);z-index:9500;align-items:center;justify-content:center;padding:20px;}
+.etk-modal-bg.open{display:flex;}
+.etk-modal{background:var(--surface);border-radius:22px;width:100%;max-width:500px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 80px rgba(15,23,42,.2);}
+.etk-modal-head{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:#fafbfd;border-radius:22px 22px 0 0;}
+.etk-modal-head h2{font-size:15px;font-weight:800;color:var(--text);flex:1;margin-right:10px;line-height:1.35;}
+.etk-modal-body{padding:20px 22px;display:flex;flex-direction:column;gap:14px;}
+.etk-dl label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--soft);margin-bottom:5px;display:block;}
+.etk-dl select,.etk-dl input[type=range]{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:10px;font-size:13px;color:var(--text);background:var(--surface);font-family:inherit;outline:none;}
+.etk-dl select:focus{border-color:var(--accent);}
+.etk-modal-foot{padding:14px 22px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px;background:#fafbfd;border-radius:0 0 22px 22px;}
+.etk-btn{padding:9px 18px;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;}
+.etk-btn.primary{background:var(--accent);color:#fff;}
+.etk-btn.primary:hover{background:#4f46e5;}
+.etk-btn.ghost{background:#f1f5f9;color:var(--text);}
+.etk-empty{text-align:center;padding:30px 20px;color:var(--muted);}
+.etk-empty-icon{font-size:32px;margin-bottom:8px;}
+.etk-empty p{font-size:13px;}
+
 /* ── Team Chat Premium ───────────────────────────────────────────────────────── */
 #secChat.active{display:flex!important;flex-direction:column;height:calc(100vh - 64px);min-height:0;padding:0!important;}
 .tc-app{flex:1;display:grid;grid-template-columns:280px 1fr;grid-template-rows:1fr;min-height:0;overflow:hidden;padding:14px;gap:14px;background:linear-gradient(180deg,#f6f4ff 0%,#eee9ff 100%);}
@@ -645,7 +701,95 @@ body{font-family:'Inter','Segoe UI',sans-serif;background:var(--bg);color:var(--
       </div>
     </section>
 
+    <!-- My Tasks -->
+    <section class="section" id="secTasks">
+      <div class="page-head" style="display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <h1>My Tasks</h1>
+          <p>Tasks assigned to you by the admin team.</p>
+        </div>
+        <button class="etk-btn ghost" onclick="loadEmpTasks()" style="font-size:13px;">↻ Refresh</button>
+      </div>
+
+      <!-- Stats -->
+      <div class="etk-stats">
+        <div class="etk-stat"><div class="etk-stat-ic purple">✅</div><div><div class="etk-stat-val" id="etkStatTotal">—</div><div class="etk-stat-lbl">Total</div></div></div>
+        <div class="etk-stat"><div class="etk-stat-ic blue">🔄</div><div><div class="etk-stat-val" id="etkStatProg">—</div><div class="etk-stat-lbl">In Progress</div></div></div>
+        <div class="etk-stat"><div class="etk-stat-ic amber">⏳</div><div><div class="etk-stat-val" id="etkStatOverdue" style="color:#ef4444">—</div><div class="etk-stat-lbl">Overdue</div></div></div>
+        <div class="etk-stat"><div class="etk-stat-ic green">🏆</div><div><div class="etk-stat-val" id="etkStatDone">—</div><div class="etk-stat-lbl">Done</div></div></div>
+      </div>
+
+      <!-- Board -->
+      <div class="etk-board" id="etkBoard">
+        <div class="etk-col">
+          <div class="etk-col-head">
+            <div class="etk-col-title"><span class="etk-cdot todo"></span> To Do</div>
+            <span class="etk-col-cnt" id="etkCnt-todo">0</span>
+          </div>
+          <div class="etk-col-body" id="etkBody-todo"></div>
+        </div>
+        <div class="etk-col">
+          <div class="etk-col-head">
+            <div class="etk-col-title"><span class="etk-cdot prog"></span> In Progress</div>
+            <span class="etk-col-cnt" id="etkCnt-in_progress">0</span>
+          </div>
+          <div class="etk-col-body" id="etkBody-in_progress"></div>
+        </div>
+        <div class="etk-col">
+          <div class="etk-col-head">
+            <div class="etk-col-title"><span class="etk-cdot done"></span> Done</div>
+            <span class="etk-col-cnt" id="etkCnt-done">0</span>
+          </div>
+          <div class="etk-col-body" id="etkBody-done"></div>
+        </div>
+      </div>
+    </section>
+
   </main>
+</div>
+
+<!-- Task Detail Modal (Employee) -->
+<div class="etk-modal-bg" id="etkModalBg" onclick="if(event.target===this)etkCloseModal()">
+  <div class="etk-modal">
+    <div class="etk-modal-head">
+      <h2 id="etkModalTitle">Task</h2>
+      <button onclick="etkCloseModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);">✕</button>
+    </div>
+    <div class="etk-modal-body">
+      <div class="etk-dl">
+        <label>Description</label>
+        <div id="etkModalDesc" style="font-size:13px;color:var(--text);line-height:1.6;background:#fafbfd;border:1px solid var(--border);border-radius:10px;padding:12px;">—</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="etk-dl">
+          <label>Priority</label>
+          <div id="etkModalPri" style="margin-top:2px;"></div>
+        </div>
+        <div class="etk-dl">
+          <label>Due Date</label>
+          <div id="etkModalDue" style="font-size:13px;font-weight:600;color:var(--text);margin-top:4px;">—</div>
+        </div>
+      </div>
+      <div class="etk-dl">
+        <label>Update Status</label>
+        <select id="etkModalStatus" onchange="etkSaveStatus()">
+          <option value="todo">📋 To Do</option>
+          <option value="in_progress">🔄 In Progress</option>
+          <option value="done">✅ Done</option>
+        </select>
+      </div>
+      <div class="etk-dl">
+        <label>Progress — <span id="etkModalProgPct">0</span>%</label>
+        <input type="range" min="0" max="100" id="etkModalProg" style="accent-color:var(--accent);"
+          oninput="document.getElementById('etkModalProgPct').textContent=this.value"
+          onchange="etkSaveProgress()"/>
+      </div>
+    </div>
+    <div class="etk-modal-foot">
+      <button class="etk-btn ghost" onclick="etkCloseModal()">Close</button>
+      <button class="etk-btn primary" onclick="etkSaveStatus();etkSaveProgress();etkCloseModal()">Save & Close</button>
+    </div>
+  </div>
 </div>
 
 <!-- Email Thread Overlay -->
@@ -875,6 +1019,7 @@ function buildSidebar(){
     {id:"secOverview", icon:"🏠", label:"Overview",  always:true},
     {id:"secOrders",   icon:"🛒", label:"My Orders", perm:"view_orders"},
     {id:"secEmails",   icon:"📧", label:"My Emails", perm:"view_emails"},
+    {id:"secTasks",    icon:"✅", label:"My Tasks",  always:true},
     {id:"secChat",     icon:"💬", label:"Team Chat", always:true},
   ];
 
@@ -933,7 +1078,8 @@ function switchSection(id){
   const el = document.getElementById(id);
   if(el){ el.classList.add("active"); if(id==="secChat") el.style.display="flex"; }
   document.getElementById("nav_"+id)?.classList.add("active");
-  if(id==="secChat") ecChatInit();
+  if(id==="secChat")  ecChatInit();
+  if(id==="secTasks") loadEmpTasks();
 }
 
 // ── Overview ──
@@ -2259,6 +2405,140 @@ document.addEventListener("click",e=>{
   if(picker&&picker.classList.contains("show")&&!picker.contains(e.target)&&!e.target.closest("[onclick='ecToggleEmoji()']"))
     picker.classList.remove("show");
 });
+
+/* ══════════════════════════════════════════
+   MY TASKS (Employee Portal)
+══════════════════════════════════════════ */
+let _etkTasks = [];
+let _etkActiveId = null;
+
+async function loadEmpTasks(){
+  try {
+    const r = await fetch('/employee/api/tasks/');
+    const d = await r.json();
+    if(!d.success) return;
+    _etkTasks = d.tasks || [];
+    etkRender();
+    etkUpdateStats();
+  } catch(e){ console.error('loadEmpTasks', e); }
+}
+
+function etkUpdateStats(){
+  const total   = _etkTasks.length;
+  const prog    = _etkTasks.filter(t=>t.status==='in_progress').length;
+  const overdue = _etkTasks.filter(t=>t.is_overdue).length;
+  const done    = _etkTasks.filter(t=>t.status==='done').length;
+  document.getElementById('etkStatTotal').textContent   = total;
+  document.getElementById('etkStatProg').textContent    = prog;
+  document.getElementById('etkStatOverdue').textContent = overdue;
+  document.getElementById('etkStatDone').textContent    = done;
+}
+
+function etkRender(){
+  const cols = ['todo','in_progress','done'];
+  cols.forEach(s=>{
+    document.getElementById('etkBody-'+s).innerHTML='';
+    document.getElementById('etkCnt-'+s).textContent='0';
+  });
+  const counts={todo:0,in_progress:0,done:0};
+  _etkTasks.forEach(t=>{
+    const col = t.status in counts ? t.status : 'todo';
+    counts[col]++;
+    const body = document.getElementById('etkBody-'+col);
+    if(body) body.insertAdjacentHTML('beforeend', etkCardHTML(t));
+  });
+  cols.forEach(s=>{ document.getElementById('etkCnt-'+s).textContent=counts[s]; });
+  cols.forEach(s=>{
+    const body = document.getElementById('etkBody-'+s);
+    if(body && counts[s]===0){
+      body.innerHTML=`<div class="etk-empty"><div class="etk-empty-icon">${s==='done'?'🏆':s==='in_progress'?'⚡':'📋'}</div><p>No tasks here</p></div>`;
+    }
+  });
+}
+
+function etkCardHTML(t){
+  const doneClass = t.status==='done' ? ' done-card' : '';
+  const progClass = t.progress>=100 ? 'full' : t.progress>0 ? 'mid' : 'low';
+  const priLabel  = t.priority==='high'?'🔴 High':t.priority==='medium'?'🟡 Medium':'🟢 Low';
+  const tagHTML   = `<span class="etk-tag ${t.category}">${t.category.charAt(0).toUpperCase()+t.category.slice(1)}</span>`;
+  const dueHTML   = t.due_date ? `<span class="etk-due${t.is_overdue?' late':''}">${t.is_overdue?'⚠ ':'📅 '}${t.due_date}</span>` : '';
+  return `<div class="etk-card${doneClass}" onclick="etkOpenModal(${t.id})">
+    <h4>${_etkEsc(t.title)}</h4>
+    <div class="etk-tag-row">${tagHTML}</div>
+    ${t.description?`<div class="etk-card-desc">${_etkEsc(t.description.substring(0,80))}${t.description.length>80?'…':''}</div>`:''}
+    <div class="etk-prog-wrap">
+      <div class="etk-prog-lbl"><span>Progress</span><span>${t.progress}%</span></div>
+      <div class="etk-prog-track"><div class="etk-prog-fill ${progClass}" style="width:${t.progress}%"></div></div>
+    </div>
+    <div class="etk-card-foot">
+      <span class="etk-pri ${t.priority}"><span class="pd"></span> ${priLabel}</span>
+      ${dueHTML}
+    </div>
+  </div>`;
+}
+
+function _etkEsc(s){ const d=document.createElement('div');d.textContent=s||'';return d.innerHTML; }
+
+function etkOpenModal(id){
+  _etkActiveId = id;
+  const t = _etkTasks.find(x=>x.id===id);
+  if(!t) return;
+  document.getElementById('etkModalTitle').textContent     = t.title;
+  document.getElementById('etkModalDesc').textContent      = t.description || 'No description.';
+  document.getElementById('etkModalStatus').value          = t.status;
+  document.getElementById('etkModalProg').value            = t.progress;
+  document.getElementById('etkModalProgPct').textContent   = t.progress;
+  const priLabel = t.priority==='high'?'🔴 High':t.priority==='medium'?'🟡 Medium':'🟢 Low';
+  const priColors = {high:'#fee2e2|#dc2626',medium:'#fef3c7|#d97706',low:'#dcfce7|#16a34a'};
+  const [bg,clr] = (priColors[t.priority]||'#f1f5f9|#374151').split('|');
+  document.getElementById('etkModalPri').innerHTML = `<span style="background:${bg};color:${clr};padding:4px 10px;border-radius:7px;font-size:12px;font-weight:700;">${priLabel}</span>`;
+  document.getElementById('etkModalDue').textContent = t.due_date ? (t.is_overdue?'⚠ '+t.due_date+' — Overdue':t.due_date) : '—';
+  document.getElementById('etkModalDue').style.color = t.is_overdue ? '#ef4444' : 'var(--text)';
+  document.getElementById('etkModalBg').classList.add('open');
+}
+
+function etkCloseModal(){
+  document.getElementById('etkModalBg').classList.remove('open');
+  _etkActiveId = null;
+}
+
+async function etkSaveStatus(){
+  if(!_etkActiveId) return;
+  const status = document.getElementById('etkModalStatus').value;
+  const task = _etkTasks.find(t=>t.id===_etkActiveId);
+  if(!task || task.status === status) return;
+  try {
+    await fetch(`/employee/api/tasks/${_etkActiveId}/`, {
+      method:'PATCH',
+      headers:{'Content-Type':'application/json','X-CSRFToken':getEmpCsrf()},
+      body: JSON.stringify({status})
+    });
+    task.status = status;
+    if(status==='done') { task.progress=100; document.getElementById('etkModalProg').value=100; document.getElementById('etkModalProgPct').textContent=100; }
+    etkRender(); etkUpdateStats();
+  } catch(e){ console.error(e); }
+}
+
+async function etkSaveProgress(){
+  if(!_etkActiveId) return;
+  const progress = parseInt(document.getElementById('etkModalProg').value);
+  const task = _etkTasks.find(t=>t.id===_etkActiveId);
+  if(!task || task.progress === progress) return;
+  try {
+    await fetch(`/employee/api/tasks/${_etkActiveId}/`, {
+      method:'PATCH',
+      headers:{'Content-Type':'application/json','X-CSRFToken':getEmpCsrf()},
+      body: JSON.stringify({progress})
+    });
+    task.progress = progress;
+    etkRender(); etkUpdateStats();
+  } catch(e){ console.error(e); }
+}
+
+function getEmpCsrf(){
+  const m = document.cookie.match(/csrftoken=([^;]+)/);
+  return m ? m[1] : '';
+}
 </script>
 </body>
 </html>

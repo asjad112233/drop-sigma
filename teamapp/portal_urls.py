@@ -11,4 +11,6 @@ urlpatterns = [
     path("api/thread/", views.employee_thread_detail_api),
     path("api/thread/resolve/", views.employee_thread_resolve_api),
     path("api/thread/reopen/", views.employee_thread_reopen_api),
+    path("api/tasks/",                    views.employee_tasks_api),
+    path("api/tasks/<int:task_id>/",      views.employee_task_update_api),
 ]
