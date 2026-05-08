@@ -3460,7 +3460,7 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
 <script>document.body.classList.add('is-suspended');</script>
 {% endif %}
 
-{% if not is_subscribed and not is_impersonating %}
+{% if not is_subscribed and not is_impersonating and not is_suspended %}
 <div id="upgradeWall" style="position:fixed;inset:0;z-index:10000;background:rgba(10,12,31,0.92);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:24px;">
   <div style="background:linear-gradient(145deg,#13162b,#1a1d3a);border:1px solid rgba(99,102,241,0.45);border-radius:24px;padding:48px 40px;max-width:480px;width:100%;text-align:center;box-shadow:0 40px 80px rgba(0,0,0,0.6),0 0 0 1px rgba(255,255,255,0.06);">
     <div style="width:72px;height:72px;background:linear-gradient(135deg,#6366f1,#a855f7);border-radius:20px;display:flex;align-items:center;justify-content:center;margin:0 auto 24px;font-size:32px;">🚀</div>
