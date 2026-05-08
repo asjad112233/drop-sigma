@@ -761,3 +761,173 @@ def chat_channel_members_remove_api(request, channel_id, user_id):
 
     ch.members.remove(u)
     return Response({"success": True})
+
+
+# ─── Task Manager ─────────────────────────────────────────────────────────────
+
+from .models import Task, TaskComment
+import json
+from django.utils import timezone
+from datetime import date
+
+
+def _task_to_dict(task):
+    due = None
+    if task.due_date:
+        due = task.due_date.isoformat()
+        is_overdue = task.due_date < date.today() and task.status != "done"
+    else:
+        is_overdue = False
+
+    assignee = None
+    if task.assigned_to:
+        assignee = {
+            "id":      task.assigned_to.id,
+            "name":    task.assigned_to.name,
+            "initials": task.assigned_to.name[0].upper() if task.assigned_to.name else "?",
+        }
+
+    return {
+        "id":          task.id,
+        "title":       task.title,
+        "description": task.description,
+        "priority":    task.priority,
+        "category":    task.category,
+        "status":      task.status,
+        "progress":    task.progress,
+        "due_date":    due,
+        "is_overdue":  is_overdue,
+        "assignee":    assignee,
+        "created_at":  task.created_at.isoformat(),
+    }
+
+
+@api_view(["GET"])
+def tasks_list_api(request):
+    if not request.user.is_authenticated:
+        return Response({"error": "Login required"}, status=401)
+    tasks = Task.objects.filter(owner=request.user)
+    return Response({"tasks": [_task_to_dict(t) for t in tasks]})
+
+
+@api_view(["POST"])
+def tasks_create_api(request):
+    if not request.user.is_authenticated:
+        return Response({"error": "Login required"}, status=401)
+    d = request.data
+    title = (d.get("title") or "").strip()
+    if not title:
+        return Response({"error": "Title is required"}, status=400)
+
+    assigned_to = None
+    if d.get("assigned_to"):
+        try:
+            assigned_to = TeamMember.objects.get(pk=d["assigned_to"], owner=request.user)
+        except TeamMember.DoesNotExist:
+            pass
+
+    due = None
+    if d.get("due_date"):
+        try:
+            from datetime import datetime
+            due = datetime.strptime(d["due_date"], "%Y-%m-%d").date()
+        except ValueError:
+            pass
+
+    task = Task.objects.create(
+        owner=request.user,
+        title=title,
+        description=d.get("description", ""),
+        assigned_to=assigned_to,
+        priority=d.get("priority", "medium"),
+        category=d.get("category", "other"),
+        status=d.get("status", "todo"),
+        progress=int(d.get("progress", 0)),
+        due_date=due,
+    )
+    return Response({"task": _task_to_dict(task)})
+
+
+@api_view(["PATCH", "DELETE"])
+def tasks_detail_api(request, task_id):
+    if not request.user.is_authenticated:
+        return Response({"error": "Login required"}, status=401)
+    try:
+        task = Task.objects.get(pk=task_id, owner=request.user)
+    except Task.DoesNotExist:
+        return Response({"error": "Not found"}, status=404)
+
+    if request.method == "DELETE":
+        task.delete()
+        return Response({"ok": True})
+
+    d = request.data
+    if "title" in d:
+        task.title = (d["title"] or "").strip() or task.title
+    if "description" in d:
+        task.description = d["description"]
+    if "priority" in d:
+        task.priority = d["priority"]
+    if "category" in d:
+        task.category = d["category"]
+    if "status" in d:
+        task.status = d["status"]
+        if d["status"] == "done" and task.progress < 100:
+            task.progress = 100
+    if "progress" in d:
+        task.progress = int(d["progress"])
+    if "due_date" in d:
+        if d["due_date"]:
+            try:
+                from datetime import datetime
+                task.due_date = datetime.strptime(d["due_date"], "%Y-%m-%d").date()
+            except ValueError:
+                pass
+        else:
+            task.due_date = None
+    if "assigned_to" in d:
+        if d["assigned_to"]:
+            try:
+                task.assigned_to = TeamMember.objects.get(pk=d["assigned_to"], owner=request.user)
+            except TeamMember.DoesNotExist:
+                pass
+        else:
+            task.assigned_to = None
+
+    task.save()
+    return Response({"task": _task_to_dict(task)})
+
+
+@api_view(["GET", "POST"])
+def task_comments_api(request, task_id):
+    if not request.user.is_authenticated:
+        return Response({"error": "Login required"}, status=401)
+    try:
+        task = Task.objects.get(pk=task_id, owner=request.user)
+    except Task.DoesNotExist:
+        return Response({"error": "Not found"}, status=404)
+
+    if request.method == "GET":
+        comments = task.comments.all()
+        return Response({"comments": [
+            {
+                "id":         c.id,
+                "author":     c.author.get_full_name() or c.author.username,
+                "initials":   (c.author.get_full_name() or c.author.username)[0].upper(),
+                "content":    c.content,
+                "created_at": c.created_at.isoformat(),
+            }
+            for c in comments
+        ]})
+
+    content = (request.data.get("content") or "").strip()
+    if not content:
+        return Response({"error": "Comment cannot be empty"}, status=400)
+    c = TaskComment.objects.create(task=task, author=request.user, content=content)
+    return Response({"comment": {
+        "id":         c.id,
+        "author":     c.author.get_full_name() or c.author.username,
+        "initials":   (c.author.get_full_name() or c.author.username)[0].upper(),
+        "content":    c.content,
+        "created_at": c.created_at.isoformat(),
+    }})

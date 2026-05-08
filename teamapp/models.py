@@ -108,3 +108,57 @@ class ChatReadReceipt(models.Model):
 
     class Meta:
         unique_together = ("user", "channel")
+
+
+# ─── Task Manager ─────────────────────────────────────────────────────────────
+
+class Task(models.Model):
+    PRIORITY_CHOICES = (
+        ("high",   "High"),
+        ("medium", "Medium"),
+        ("low",    "Low"),
+    )
+    STATUS_CHOICES = (
+        ("todo",        "To Do"),
+        ("in_progress", "In Progress"),
+        ("done",        "Done"),
+    )
+    CATEGORY_CHOICES = (
+        ("orders",  "Orders"),
+        ("refunds", "Refunds"),
+        ("vendor",  "Vendor"),
+        ("support", "Support"),
+        ("email",   "Email"),
+        ("other",   "Other"),
+    )
+
+    owner       = models.ForeignKey(User, on_delete=models.CASCADE, related_name="owned_tasks")
+    title       = models.CharField(max_length=255)
+    description = models.TextField(blank=True, default="")
+    assigned_to = models.ForeignKey(TeamMember, on_delete=models.SET_NULL, null=True, blank=True, related_name="assigned_tasks")
+    priority    = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default="medium")
+    category    = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default="other")
+    status      = models.CharField(max_length=20, choices=STATUS_CHOICES, default="todo")
+    progress    = models.IntegerField(default=0)
+    due_date    = models.DateField(null=True, blank=True)
+    created_at  = models.DateTimeField(auto_now_add=True)
+    updated_at  = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return self.title
+
+
+class TaskComment(models.Model):
+    task       = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="comments")
+    author     = models.ForeignKey(User, on_delete=models.CASCADE, related_name="task_comments")
+    content    = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at"]
+
+    def __str__(self):
+        return f"{self.author} on {self.task}: {self.content[:40]}"

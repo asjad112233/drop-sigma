@@ -20,4 +20,9 @@ urlpatterns = [
     path("chat/reaction/", views.chat_reaction_api),
     path("chat/messages/<int:msg_id>/delete/", views.chat_delete_message_api),
     path("chat/messages/<int:msg_id>/edit/", views.chat_edit_message_api),
+    # Tasks
+    path("tasks/",                              views.tasks_list_api),
+    path("tasks/create/",                       views.tasks_create_api),
+    path("tasks/<int:task_id>/",                views.tasks_detail_api),
+    path("tasks/<int:task_id>/comments/",       views.task_comments_api),
 ]
