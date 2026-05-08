@@ -874,6 +874,17 @@ let empMember = null;
 let empPerms  = {};
 let myOrders  = [];
 
+// ── Chat State (declared here to avoid TDZ when boot() runs) ──
+let _ecMyName = "";
+let _ecMentionMap = {};
+let _ecChannelId = null;
+let _ecChannelName = "";
+let _ecThreadParentId = null;
+let _ecMsgMap = {};
+let _ecCurrentUserId = null;
+let _ecMentionMembers = [];
+let _ecMentionSelIdx = 0;
+
 // ── Loader ──
 function runLoader(cb, delay=480){
   const bar = document.getElementById("gLoader");
@@ -954,9 +965,8 @@ async function boot(){
     if(perm("view_emails")) loadMyEmails();
     _ecWsBackground();
   }catch(e){
-    document.getElementById("overviewTitle").style.color="";
-    document.getElementById("overviewTitle").innerText="Error loading dashboard";
     document.getElementById("overviewTitle").style.color="#ef4444";
+    document.getElementById("overviewTitle").innerText="Error loading dashboard";
   }
 }
 
@@ -1596,15 +1606,6 @@ async function etSendReply(){
 boot();
 
 // ── Team Chat (Premium) ──────────────────────────────────────────────────────
-let _ecMyName = ""; // set after boot() loads empMember
-let _ecMentionMap = {}; // name.toLowerCase() → user_id for clickable @mentions
-let _ecChannelId = null;
-let _ecChannelName = "";
-let _ecThreadParentId = null;
-let _ecMsgMap = {};
-let _ecCurrentUserId = null;
-let _ecMentionMembers = [];
-let _ecMentionSelIdx = 0;
 
 const EC_EMOJIS = ["👍","❤️","😂","🎉","🚀","😮"];
 const _EC_AV_COLORS = {owner:"tc-av owner",support:"tc-av support",order_manager:"tc-av order_manager",refund_manager:"tc-av refund_manager",vendor_manager:"tc-av vendor_manager",email_manager:"tc-av email_manager",vendor:"tc-av vendor"};
