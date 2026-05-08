@@ -6015,65 +6015,81 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
 
     <!-- New Task Modal -->
     <div class="modal-bg" id="tkModal" onclick="if(event.target===this)tkCloseModal()" style="display:none;">
-      <div class="modal" style="max-width:540px;padding:0;overflow:hidden;">
-        <div class="modal-head" style="background:#f8fafc;border-bottom:1px solid #e5e7eb;padding:18px 24px;">
-          <h2>New Task</h2>
-          <button onclick="tkCloseModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#94a3b8;line-height:1;">✕</button>
+      <div class="modal" style="max-width:820px;width:90vw;padding:0;overflow:hidden;border-radius:22px;">
+        <!-- Header -->
+        <div style="background:linear-gradient(135deg,#f8fafc,#eff6ff);border-bottom:1.5px solid #e5e7eb;padding:22px 30px;display:flex;align-items:center;justify-content:space-between;">
+          <div>
+            <h2 style="font-size:20px;font-weight:900;color:#0f172a;margin:0;letter-spacing:-.3px;">New Task</h2>
+            <p style="margin:4px 0 0;font-size:13px;color:#64748b;">Fill in the details to create and assign a task.</p>
+          </div>
+          <button onclick="tkCloseModal()" style="width:32px;height:32px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:9px;font-size:16px;cursor:pointer;color:#94a3b8;display:flex;align-items:center;justify-content:center;line-height:1;">✕</button>
         </div>
-        <div style="padding:22px 24px;display:flex;flex-direction:column;gap:14px;">
+        <!-- Body — two-column grid -->
+        <div style="padding:28px 30px;display:grid;grid-template-columns:1fr 1fr;gap:20px 28px;">
+          <!-- Title — full width -->
+          <div style="grid-column:1/-1;">
+            <label style="font-size:12px;font-weight:700;color:#374151;letter-spacing:.3px;display:block;margin-bottom:7px;">TITLE <span style="color:#ef4444;">*</span></label>
+            <input type="text" id="tkMTitle" placeholder="What needs to be done?" style="width:100%;padding:12px 14px;border:1.5px solid #e5e7eb;border-radius:12px;font-size:14px;font-family:inherit;outline:none;color:#0f172a;transition:.15s;" onfocus="this.style.borderColor='#2563eb';this.style.boxShadow='0 0 0 3px rgba(37,99,235,.1)'" onblur="this.style.borderColor='#e5e7eb';this.style.boxShadow=''"/>
+          </div>
+          <!-- Description — full width -->
+          <div style="grid-column:1/-1;">
+            <label style="font-size:12px;font-weight:700;color:#374151;letter-spacing:.3px;display:block;margin-bottom:7px;">DESCRIPTION</label>
+            <textarea id="tkMDesc" rows="4" placeholder="Add more context, steps, or notes…" style="width:100%;padding:12px 14px;border:1.5px solid #e5e7eb;border-radius:12px;font-size:13.5px;font-family:inherit;resize:vertical;outline:none;color:#0f172a;line-height:1.6;transition:.15s;" onfocus="this.style.borderColor='#2563eb';this.style.boxShadow='0 0 0 3px rgba(37,99,235,.1)'" onblur="this.style.borderColor='#e5e7eb';this.style.boxShadow=''"></textarea>
+          </div>
+          <!-- Assign To -->
           <div>
-            <label>Title *</label>
-            <input type="text" id="tkMTitle" placeholder="What needs to be done?"/>
-          </div>
-          <div>
-            <label>Description</label>
-            <textarea id="tkMDesc" rows="3" style="width:100%;padding:10px 12px;border:1px solid #d0d5dd;border-radius:12px;font-size:13px;font-family:inherit;resize:vertical;outline:none;" placeholder="More details…"></textarea>
-          </div>
-          <div class="form-row">
-            <div>
-              <label>Assign To</label>
-              <select id="tkMAssignee">
-                <option value="">— Unassigned</option>
-              </select>
-            </div>
-            <div>
-              <label>Priority</label>
-              <select id="tkMPri">
-                <option value="high">🔴 High</option>
-                <option value="medium" selected>🟡 Medium</option>
-                <option value="low">🟢 Low</option>
-              </select>
-            </div>
-          </div>
-          <div class="form-row">
-            <div>
-              <label>Category</label>
-              <select id="tkMCat">
-                <option value="orders">Orders</option>
-                <option value="refunds">Refunds</option>
-                <option value="vendor">Vendor</option>
-                <option value="support">Support</option>
-                <option value="email">Email</option>
-                <option value="other" selected>Other</option>
-              </select>
-            </div>
-            <div>
-              <label>Due Date</label>
-              <input type="date" id="tkMDue"/>
-            </div>
-          </div>
-          <div>
-            <label>Initial Status</label>
-            <select id="tkMStatus">
-              <option value="todo">📋 To Do</option>
-              <option value="in_progress">🔄 In Progress</option>
-              <option value="done">✅ Done</option>
+            <label style="font-size:12px;font-weight:700;color:#374151;letter-spacing:.3px;display:block;margin-bottom:7px;">ASSIGN TO</label>
+            <select id="tkMAssignee" style="width:100%;padding:11px 14px;border:1.5px solid #e5e7eb;border-radius:12px;font-size:13.5px;font-family:inherit;outline:none;color:#0f172a;background:#fff;cursor:pointer;">
+              <option value="">— Unassigned</option>
             </select>
           </div>
+          <!-- Priority -->
+          <div>
+            <label style="font-size:12px;font-weight:700;color:#374151;letter-spacing:.3px;display:block;margin-bottom:7px;">PRIORITY</label>
+            <select id="tkMPri" style="width:100%;padding:11px 14px;border:1.5px solid #e5e7eb;border-radius:12px;font-size:13.5px;font-family:inherit;outline:none;color:#0f172a;background:#fff;cursor:pointer;">
+              <option value="high">🔴 High</option>
+              <option value="medium" selected>🟡 Medium</option>
+              <option value="low">🟢 Low</option>
+            </select>
+          </div>
+          <!-- Category -->
+          <div>
+            <label style="font-size:12px;font-weight:700;color:#374151;letter-spacing:.3px;display:block;margin-bottom:7px;">CATEGORY</label>
+            <select id="tkMCat" style="width:100%;padding:11px 14px;border:1.5px solid #e5e7eb;border-radius:12px;font-size:13.5px;font-family:inherit;outline:none;color:#0f172a;background:#fff;cursor:pointer;">
+              <option value="orders">📦 Orders</option>
+              <option value="refunds">💸 Refunds</option>
+              <option value="vendor">🏭 Vendor</option>
+              <option value="support">🎧 Support</option>
+              <option value="email">📨 Email</option>
+              <option value="other" selected>📌 Other</option>
+            </select>
+          </div>
+          <!-- Due Date -->
+          <div>
+            <label style="font-size:12px;font-weight:700;color:#374151;letter-spacing:.3px;display:block;margin-bottom:7px;">DUE DATE</label>
+            <input type="date" id="tkMDue" style="width:100%;padding:11px 14px;border:1.5px solid #e5e7eb;border-radius:12px;font-size:13.5px;font-family:inherit;outline:none;color:#0f172a;background:#fff;cursor:pointer;"/>
+          </div>
+          <!-- Initial Status — full width -->
+          <div style="grid-column:1/-1;">
+            <label style="font-size:12px;font-weight:700;color:#374151;letter-spacing:.3px;display:block;margin-bottom:7px;">INITIAL STATUS</label>
+            <div style="display:flex;gap:10px;">
+              <label style="flex:1;display:flex;align-items:center;gap:10px;padding:12px 16px;border:1.5px solid #e5e7eb;border-radius:12px;cursor:pointer;transition:.15s;font-weight:600;font-size:13px;color:#374151;" id="tkStatusTodo" onclick="tkPickStatus('todo')" style="">
+                <input type="radio" name="tkMStatusR" value="todo" style="display:none;" checked/> 📋 To Do
+              </label>
+              <label style="flex:1;display:flex;align-items:center;gap:10px;padding:12px 16px;border:1.5px solid #e5e7eb;border-radius:12px;cursor:pointer;transition:.15s;font-weight:600;font-size:13px;color:#374151;" id="tkStatusProg" onclick="tkPickStatus('in_progress')">
+                <input type="radio" name="tkMStatusR" value="in_progress" style="display:none;"/> 🔄 In Progress
+              </label>
+              <label style="flex:1;display:flex;align-items:center;gap:10px;padding:12px 16px;border:1.5px solid #e5e7eb;border-radius:12px;cursor:pointer;transition:.15s;font-weight:600;font-size:13px;color:#374151;" id="tkStatusDone" onclick="tkPickStatus('done')">
+                <input type="radio" name="tkMStatusR" value="done" style="display:none;"/> ✅ Done
+              </label>
+            </div>
+            <input type="hidden" id="tkMStatus" value="todo"/>
+          </div>
         </div>
-        <div style="padding:14px 24px;border-top:1px solid #e5e7eb;background:#f8fafc;display:flex;justify-content:flex-end;gap:10px;">
-          <button class="btn dark" onclick="tkCloseModal()" style="background:#e5e7eb;color:#374151;padding:9px 18px;font-size:13px;">Cancel</button>
-          <button class="btn" onclick="tkSubmit()" style="padding:9px 18px;font-size:13px;">Create Task →</button>
+        <!-- Footer -->
+        <div style="padding:16px 30px;border-top:1.5px solid #e5e7eb;background:#f8fafc;display:flex;justify-content:flex-end;gap:10px;">
+          <button class="btn dark" onclick="tkCloseModal()" style="background:#f1f5f9;color:#374151;border:1px solid #e2e8f0;padding:10px 22px;font-size:13px;border-radius:11px;">Cancel</button>
+          <button class="btn" onclick="tkSubmit()" style="padding:10px 26px;font-size:13px;border-radius:11px;background:linear-gradient(135deg,#2563eb,#4f46e5);box-shadow:0 2px 10px rgba(37,99,235,.3);">Create Task →</button>
         </div>
       </div>
     </div>
@@ -17372,14 +17388,33 @@ async function tkDeleteTask(){
 }
 
 /* ── New Task Modal ── */
+function tkPickStatus(val){
+  document.getElementById('tkMStatus').value = val;
+  const map = {todo:'tkStatusTodo', in_progress:'tkStatusProg', done:'tkStatusDone'};
+  const colors = {todo:'#2563eb', in_progress:'#7c3aed', done:'#10b981'};
+  Object.entries(map).forEach(([k,id])=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    if(k===val){
+      el.style.borderColor = colors[val];
+      el.style.background  = val==='todo'?'#eff6ff':val==='in_progress'?'#f5f3ff':'#f0fdf4';
+      el.style.color       = colors[val];
+    } else {
+      el.style.borderColor = '#e5e7eb';
+      el.style.background  = '';
+      el.style.color       = '#374151';
+    }
+  });
+}
+
 function tkOpenModal(defaultStatus){
-  document.getElementById('tkMTitle').value = '';
-  document.getElementById('tkMDesc').value  = '';
+  document.getElementById('tkMTitle').value    = '';
+  document.getElementById('tkMDesc').value     = '';
   document.getElementById('tkMAssignee').value = '';
-  document.getElementById('tkMPri').value = 'medium';
-  document.getElementById('tkMCat').value = 'other';
-  document.getElementById('tkMDue').value = '';
-  document.getElementById('tkMStatus').value = defaultStatus || 'todo';
+  document.getElementById('tkMPri').value      = 'medium';
+  document.getElementById('tkMCat').value      = 'other';
+  document.getElementById('tkMDue').value      = '';
+  tkPickStatus(defaultStatus || 'todo');
   document.getElementById('tkModal').style.display = 'flex';
   setTimeout(()=>document.getElementById('tkMTitle').focus(), 80);
 }
