@@ -478,7 +478,7 @@ body{font-family:'Inter','Segoe UI',sans-serif;background:var(--bg);color:var(--
     <!-- Overview -->
     <section class="section active" id="secOverview">
       <div class="page-head">
-        <h1 id="overviewTitle" style="color:#94a3b8;">Loading…</h1>
+        <h1 id="overviewTitle">My Dashboard</h1>
         <p>Your personal workspace — orders, tasks, and access summary.</p>
       </div>
       <div class="kpi-grid" id="overviewKpis"></div>
@@ -861,11 +861,8 @@ body{font-family:'Inter','Segoe UI',sans-serif;background:var(--bg);color:var(--
 </div>
 
 <script>
-// ── Diagnostic: fires immediately if JS parses and runs ──
-(function(){
-  var t = document.getElementById('overviewTitle');
-  if(t){ t.innerText = 'JS active — connecting…'; t.style.color = '#10b981'; }
-})();
+// Member data injected server-side — no API call needed to boot
+const __MEMBER__ = {{ member_json|safe }};
 
 // ── State ──
 let empMember = null;
@@ -931,11 +928,8 @@ const ROLE_LABELS = {
 // ── Boot ──
 async function boot(){
   try{
-    const r = await fetch("/employee/api/me/", {credentials:"include"});
-    if(!r.ok){ window.location="/employee/login/"; return; }
-    const d = await r.json();
-    if(!d.success){ window.location="/employee/login/"; return; }
-    empMember = d.member;
+    // Member data is embedded by Django — no API call needed
+    empMember = __MEMBER__;
     empPerms  = empMember.permissions || {};
     _ecMyName = empMember.name || "";
     buildSidebar();
@@ -946,9 +940,8 @@ async function boot(){
     _ecWsBackground();
   }catch(e){
     document.getElementById("overviewTitle").style.color="";
-    document.getElementById("overviewTitle").innerText="Session Error";
-    document.querySelector("#secOverview .page-head p").innerText="Could not load your dashboard. Please log in again.";
-    document.querySelector("#secOverview .page-head p").insertAdjacentHTML("afterend", `<a href="/employee/login/" style="display:inline-block;margin-top:16px;padding:12px 28px;background:#6366f1;color:#fff;border-radius:12px;font-weight:700;text-decoration:none;">Go to Login →</a>`);
+    document.getElementById("overviewTitle").innerText="Error loading dashboard";
+    document.getElementById("overviewTitle").style.color="#ef4444";
   }
 }
 

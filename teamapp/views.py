@@ -154,12 +154,14 @@ def employee_logout_view(request):
 
 
 def employee_portal_page(request):
+    import json
     if not request.user.is_authenticated:
         return redirect("/employee/login/")
     member = request.user.team_profile.first()
     if not member:
         return redirect("/employee/login/")
-    return render(request, "employee_dashboard.html", {"member": member})
+    member_json = json.dumps(TeamMemberSerializer(member).data)
+    return render(request, "employee_dashboard.html", {"member": member, "member_json": member_json})
 
 
 # ─── Employee APIs ────────────────────────────────────────────────────────────
