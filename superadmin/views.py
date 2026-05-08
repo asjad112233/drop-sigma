@@ -210,6 +210,62 @@ def _build_delete_email(name):
 </body></html>"""
 
 
+def _build_reactivate_email(name):
+    return f"""<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/></head>
+<body style="margin:0;padding:0;background:#f6f9fc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f6f9fc;padding:48px 16px;">
+<tr><td align="center">
+<table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
+  <tr><td align="center" style="padding-bottom:32px;">{_LOGO}</td></tr>
+  <tr><td style="background:#ffffff;border-radius:16px;border:1px solid #e2e8f0;overflow:hidden;">
+    <div style="height:4px;background:linear-gradient(90deg,#16a34a,#22c55e);"></div>
+    <table width="100%" cellpadding="0" cellspacing="0">
+    <tr><td align="center" style="padding:40px 48px 28px;">
+      <div style="font-size:12px;font-weight:700;color:#15803d;background:#dcfce7;border-radius:20px;display:inline-block;padding:5px 16px;letter-spacing:0.5px;margin-bottom:20px;">&#x2705; ACCOUNT REACTIVATED</div>
+      <h1 style="margin:0 0 12px;font-size:24px;font-weight:800;color:#0f172a;line-height:1.3;">Your account is back online!</h1>
+      <p style="margin:0;font-size:15px;color:#64748b;line-height:1.7;">Hi <strong style="color:#0f172a;">{name}</strong>, great news — your Drop Sigma account has been fully reactivated. Everything is back to normal.</p>
+    </td></tr>
+    <tr><td style="padding:0 48px;"><div style="height:1px;background:#f1f5f9;"></div></td></tr>
+    <tr><td style="padding:24px 48px;">
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-left:4px solid #16a34a;border-radius:10px;padding:18px 20px;">
+        <p style="margin:0 0 6px;font-size:12px;font-weight:700;color:#15803d;text-transform:uppercase;letter-spacing:0.5px;">What's restored</p>
+        <p style="margin:0;font-size:14px;color:#14532d;line-height:1.6;">Full access to your dashboard, stores, orders, vendors, and all features has been restored. You can continue where you left off.</p>
+      </div>
+    </td></tr>
+    <tr><td style="padding:0 48px 28px;">
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:20px 24px;">
+        <p style="margin:0 0 14px;font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Everything is back</p>
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr><td style="padding:4px 0;font-size:13px;color:#475569;">&#x2705; &nbsp;Dashboard access restored</td></tr>
+          <tr><td style="padding:4px 0;font-size:13px;color:#475569;">&#x2705; &nbsp;Stores and orders active</td></tr>
+          <tr><td style="padding:4px 0;font-size:13px;color:#475569;">&#x2705; &nbsp;Vendor and team management on</td></tr>
+          <tr><td style="padding:4px 0;font-size:13px;color:#475569;">&#x2705; &nbsp;All data intact, nothing lost</td></tr>
+        </table>
+      </div>
+    </td></tr>
+    <tr><td align="center" style="padding:0 48px 28px;">
+      <table cellpadding="0" cellspacing="0"><tr>
+        <td style="background:linear-gradient(135deg,#16a34a,#22c55e);border-radius:10px;box-shadow:0 4px 14px rgba(22,163,74,.3);">
+          <a href="https://dropsigma.com/dashboard/" style="display:inline-block;color:#fff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 36px;">Go to Dashboard &rarr;</a>
+        </td>
+      </tr></table>
+    </td></tr>
+    <tr><td style="padding:0 48px 36px;">
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px 20px;text-align:center;">
+        <p style="margin:0;font-size:13px;color:#64748b;">&#x1F6DF; &nbsp;Need anything? We're here.<br/>
+        <a href="mailto:support@dropsigma.com" style="color:#6366f1;font-weight:600;text-decoration:none;">support@dropsigma.com</a></p>
+      </div>
+    </td></tr>
+    </table>
+  </td></tr>
+  <tr><td align="center" style="padding:24px 8px 0;">{_FOOTER}</td></tr>
+</table>
+</td></tr>
+</table>
+</body></html>"""
+
+
 def _send_tenant_email(to_email, subject, html):
     def _send():
         try:
@@ -415,6 +471,11 @@ def api_tenant_detail(request, pk):
                 tenant=t,
                 action="Account reactivated by super admin",
                 action_type="general",
+            )
+            _send_tenant_email(
+                t.user.email,
+                "Your Drop Sigma account has been reactivated ✓",
+                _build_reactivate_email(t.name),
             )
             return JsonResponse({"ok": True})
 
