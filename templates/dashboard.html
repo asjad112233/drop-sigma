@@ -12826,7 +12826,7 @@ async function connectCustomEmail(){
   try{
     const res = await fetch('/emails/api/connect-custom-email/', {
       method:'POST',
-      headers:{'Content-Type':'application/json','X-CSRFToken': getCookie('csrftoken')},
+      headers:{'Content-Type':'application/json','X-CSRFToken': getCsrfToken()},
       body: JSON.stringify({ store_id:selectedStoreId, email, password, imap_host:imapHost, imap_port:imapPort, smtp_host:smtpHost, smtp_port:smtpPort }),
     });
     const data = await res.json();
