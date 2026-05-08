@@ -466,6 +466,9 @@ async function navTo(page, opts={}){
     await renderPage();
     return;
   }
+  if(page === 'tenants'){
+    await loadTenants();
+  }
   await renderPage();
 }
 
