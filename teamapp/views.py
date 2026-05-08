@@ -1261,6 +1261,7 @@ def set_invitation_password_api(request, token):
 
     # Log the employee in immediately so they land on dashboard after clicking the link
     auth_login(request, user, backend="django.contrib.auth.backends.ModelBackend")
+    request.session.save()  # Force session write so Set-Cookie is included in response
 
     from django.http import JsonResponse
     return JsonResponse({"success": True, "message": "Account activated!", "redirect": "/employee/dashboard/"})

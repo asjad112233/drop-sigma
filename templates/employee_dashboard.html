@@ -478,7 +478,7 @@ body{font-family:'Inter','Segoe UI',sans-serif;background:var(--bg);color:var(--
     <!-- Overview -->
     <section class="section active" id="secOverview">
       <div class="page-head">
-        <h1 id="overviewTitle">My Dashboard</h1>
+        <h1 id="overviewTitle" style="color:#94a3b8;">Loading…</h1>
         <p>Your personal workspace — orders, tasks, and access summary.</p>
       </div>
       <div class="kpi-grid" id="overviewKpis"></div>
@@ -925,7 +925,8 @@ const ROLE_LABELS = {
 // ── Boot ──
 async function boot(){
   try{
-    const r = await fetch("/employee/api/me/");
+    const r = await fetch("/employee/api/me/", {credentials:"include"});
+    if(!r.ok){ window.location="/employee/login/"; return; }
     const d = await r.json();
     if(!d.success){ window.location="/employee/login/"; return; }
     empMember = d.member;
@@ -938,7 +939,10 @@ async function boot(){
     if(perm("view_emails")) loadMyEmails();
     _ecWsBackground();
   }catch(e){
-    document.body.innerHTML = `<div style="text-align:center;padding:80px;color:#ef4444;font-family:sans-serif;">Failed to load. <a href="/employee/login/">Login again</a></div>`;
+    document.getElementById("overviewTitle").style.color="";
+    document.getElementById("overviewTitle").innerText="Session Error";
+    document.querySelector("#secOverview .page-head p").innerText="Could not load your dashboard. Please log in again.";
+    document.querySelector("#secOverview .page-head p").insertAdjacentHTML("afterend", `<a href="/employee/login/" style="display:inline-block;margin-top:16px;padding:12px 28px;background:#6366f1;color:#fff;border-radius:12px;font-weight:700;text-decoration:none;">Go to Login →</a>`);
   }
 }
 
