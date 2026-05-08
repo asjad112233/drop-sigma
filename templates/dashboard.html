@@ -3335,21 +3335,21 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
 .tk-stat-val{font-size:18px;font-weight:900;color:var(--vf-text);line-height:1;}
 .tk-stat-lbl{font-size:11px;color:var(--vf-muted);margin-top:1px;font-weight:500;}
 /* Compact single-row toolbar */
-.tk-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px;background:var(--vf-surface);border:1px solid var(--vf-line);border-radius:14px;padding:8px 12px;box-shadow:var(--vf-shadow);}
-.tk-tabs{display:flex;gap:2px;background:var(--vf-surface-2);border-radius:8px;padding:2px;}
-.tk-tab{padding:5px 12px;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;transition:.12s;background:none;color:var(--vf-muted);font-family:inherit;white-space:nowrap;}
+.tk-toolbar{display:flex;align-items:center;gap:6px;flex-wrap:nowrap;margin-bottom:16px;background:var(--vf-surface);border:1px solid var(--vf-line);border-radius:14px;padding:7px 12px;box-shadow:var(--vf-shadow);overflow:hidden;}
+.tk-tabs{display:flex;gap:2px;background:var(--vf-surface-2);border-radius:8px;padding:2px;flex-shrink:0;}
+.tk-tab{padding:5px 11px;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;transition:.12s;background:none;color:var(--vf-muted);font-family:inherit;white-space:nowrap;}
 .tk-tab.active{background:#2563eb;color:#fff;box-shadow:0 1px 6px rgba(37,99,235,.25);}
 .tk-tab:not(.active):hover{background:var(--vf-surface);color:var(--vf-text);}
-.tk-toolbar-sep{width:1px;height:20px;background:var(--vf-line);flex-shrink:0;}
-.tk-toolbar-r{display:flex;align-items:center;gap:6px;margin-left:auto;}
-.tk-search{padding:6px 10px 6px 28px;border:1px solid var(--vf-line);border-radius:8px;font-size:12px;color:var(--vf-text);background:var(--vf-surface-2);outline:none;width:150px;font-family:inherit;transition:.15s;}
-.tk-search:focus{border-color:#2563eb;background:var(--vf-surface);box-shadow:0 0 0 2px rgba(37,99,235,.1);width:180px;}
-.tk-search-wrap{position:relative;}
-.tk-search-wrap::before{content:'🔍';position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:11px;pointer-events:none;}
-.tk-sel{padding:6px 22px 6px 9px;border:1px solid var(--vf-line);border-radius:8px;font-size:12px;color:var(--vf-text);background:var(--vf-surface-2);outline:none;cursor:pointer;font-family:inherit;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%236b7280'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;font-weight:600;}
+.tk-toolbar-sep{width:1px;height:18px;background:var(--vf-line);flex-shrink:0;margin:0 2px;}
+.tk-toolbar-r{display:flex;align-items:center;gap:6px;margin-left:auto;flex-shrink:0;}
+.tk-search{padding:5px 8px 5px 26px;border:1px solid var(--vf-line);border-radius:8px;font-size:12px;color:var(--vf-text);background:var(--vf-surface-2);outline:none;width:140px;font-family:inherit;transition:.15s;}
+.tk-search:focus{border-color:#2563eb;background:var(--vf-surface);box-shadow:0 0 0 2px rgba(37,99,235,.1);width:160px;}
+.tk-search-wrap{position:relative;flex-shrink:0;}
+.tk-search-wrap::before{content:'🔍';position:absolute;left:7px;top:50%;transform:translateY(-50%);font-size:11px;pointer-events:none;}
+.tk-sel{padding:5px 20px 5px 8px;border:1px solid var(--vf-line);border-radius:8px;font-size:12px;color:var(--vf-text);background:var(--vf-surface-2);outline:none;cursor:pointer;font-family:inherit;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%236b7280'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 7px center;font-weight:600;width:auto;flex-shrink:0;}
 .tk-sel:focus{border-color:#2563eb;background:var(--vf-surface);}
-.tk-view-sw{display:flex;border:1px solid var(--vf-line);border-radius:8px;overflow:hidden;background:var(--vf-surface-2);}
-.tk-view-sw button{padding:6px 9px;border:none;background:none;cursor:pointer;color:var(--vf-muted);font-size:13px;transition:.12s;}
+.tk-view-sw{display:flex;border:1px solid var(--vf-line);border-radius:8px;overflow:hidden;background:var(--vf-surface-2);flex-shrink:0;}
+.tk-view-sw button{padding:5px 9px;border:none;background:none;cursor:pointer;color:var(--vf-muted);font-size:13px;transition:.12s;}
 .tk-view-sw button.active{background:#2563eb;color:#fff;}
 .tk-view-sw button:hover:not(.active){background:var(--vf-surface);color:var(--vf-text);}
 /* Board */
@@ -5870,7 +5870,7 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
         </div>
       </div>
 
-      <!-- Toolbar -->
+      <!-- Toolbar — single row -->
       <div class="tk-toolbar">
         <div class="tk-tabs">
           <button class="tk-tab active" onclick="tkSwitchTab('all',this)">All</button>
@@ -5893,7 +5893,7 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
         <div class="tk-toolbar-sep"></div>
         <div class="tk-view-sw">
           <button id="tkVBoard" class="active" onclick="tkSetView('board')" title="Board">⊞</button>
-          <button id="tkVList"  onclick="tkSetView('list')" title="List">☰</button>
+          <button id="tkVList" onclick="tkSetView('list')" title="List">☰</button>
         </div>
       </div>
 
