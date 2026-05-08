@@ -1626,6 +1626,683 @@ footer{
 .reveal{opacity:0;transform:translateY(30px);transition:opacity .9s ease,transform .9s ease}
 .reveal.in{opacity:1;transform:translateY(0)}
 
+/* ---------- "See new modules" teaser strip ---------- */
+.new-strip{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:24px;flex-wrap:wrap;
+  margin-top:32px;
+  padding:20px 28px;
+  background:
+    linear-gradient(135deg,rgba(168,85,247,.12),rgba(99,102,241,.08),rgba(34,211,238,.08));
+  border:1px solid rgba(168,85,247,.28);
+  border-radius:18px;
+  text-decoration:none;
+  position:relative;
+  overflow:hidden;
+  transition:transform .35s cubic-bezier(.2,.8,.2,1),
+             border-color .3s,
+             box-shadow .35s;
+}
+.new-strip::before{
+  content:"";position:absolute;inset:0;
+  background:
+    radial-gradient(800px circle at 0% 50%,rgba(168,85,247,.18),transparent 50%),
+    radial-gradient(800px circle at 100% 50%,rgba(34,211,238,.14),transparent 50%);
+  opacity:.7;pointer-events:none;
+}
+.new-strip::after{
+  content:"";position:absolute;
+  top:0;left:-100%;
+  width:60%;height:100%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.08),transparent);
+  transition:left .8s ease;
+}
+.new-strip:hover{
+  transform:translateY(-3px);
+  border-color:rgba(168,85,247,.5);
+  box-shadow:0 20px 50px -16px rgba(168,85,247,.45);
+}
+.new-strip:hover::after{left:140%}
+
+.new-strip-left{
+  display:flex;align-items:center;gap:18px;
+  position:relative;z-index:1;
+  flex-wrap:wrap;
+}
+.new-strip-text b{
+  display:block;
+  color:#fff;font-size:15px;font-weight:700;
+  letter-spacing:-.2px;
+  margin-bottom:3px;
+}
+.new-strip-text span{
+  font-size:12.5px;
+  color:var(--ink-2);
+}
+.new-strip-right{
+  display:inline-flex;align-items:center;gap:10px;
+  font-size:13px;font-weight:600;
+  color:#fff;
+  position:relative;z-index:1;
+  padding:8px 18px;
+  border-radius:100px;
+  background:rgba(255,255,255,.05);
+  border:1px solid var(--line-2);
+  transition:background .25s,border-color .25s;
+}
+.new-strip:hover .new-strip-right{
+  background:rgba(255,255,255,.1);
+  border-color:rgba(255,255,255,.25);
+}
+.new-strip-right .arr{
+  font-size:16px;
+  transition:transform .35s cubic-bezier(.2,.8,.2,1);
+}
+.new-strip:hover .new-strip-right .arr{transform:translateX(5px)}
+
+/* ============================================================
+   ===========  WHAT'S NEW / JUST SHIPPED SECTION  ============
+   ============================================================ */
+.whats-new{position:relative;overflow:hidden}
+.whats-new::before{
+  content:"";position:absolute;inset:0;
+  background:
+    radial-gradient(ellipse at 10% 0%,rgba(34,211,238,.10),transparent 55%),
+    radial-gradient(ellipse at 90% 100%,rgba(168,85,247,.10),transparent 55%);
+  pointer-events:none;
+  z-index:-1;
+}
+
+/* Glowing NEW badge */
+.new-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:5px 12px;border-radius:6px;
+  background:var(--grad-a);
+  color:#fff;font-size:10px;font-weight:800;
+  letter-spacing:1.5px;text-transform:uppercase;
+  box-shadow:0 4px 14px -2px rgba(168,85,247,.5);
+  position:relative;
+}
+.new-badge::before{
+  content:"";position:absolute;inset:-2px;
+  border-radius:8px;
+  background:var(--grad-a);
+  filter:blur(10px);opacity:.6;z-index:-1;
+  animation:newGlow 2s ease-in-out infinite;
+}
+.new-badge::after{
+  content:"";width:6px;height:6px;border-radius:50%;
+  background:#fff;
+  box-shadow:0 0 8px #fff;
+  animation:pulse 1.4s ease-in-out infinite;
+}
+@keyframes newGlow{0%,100%{opacity:.4;transform:scale(1)}50%{opacity:.85;transform:scale(1.05)}}
+
+/* Inline new pill on feat card */
+.feat .new-pill{
+  position:absolute;top:18px;right:18px;
+  display:inline-flex;align-items:center;gap:5px;
+  padding:3px 9px;border-radius:100px;
+  background:linear-gradient(135deg,#ec4899,#a855f7);
+  color:#fff;
+  font-size:9px;font-weight:800;
+  letter-spacing:1px;text-transform:uppercase;
+  box-shadow:0 4px 12px -2px rgba(236,72,153,.5);
+  z-index:2;
+}
+.feat .new-pill::before{
+  content:"";width:5px;height:5px;border-radius:50%;
+  background:#fff;box-shadow:0 0 6px #fff;
+  animation:pulse 1.4s ease-in-out infinite;
+}
+
+/* Section heading row with badge */
+.wn-head-row{
+  display:flex;align-items:center;gap:14px;
+  justify-content:center;
+  flex-wrap:wrap;
+  margin-bottom:14px;
+}
+
+/* The 4-card grid */
+.whatsnew-grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:24px;
+}
+.wn-card{
+  position:relative;
+  background:linear-gradient(145deg,rgba(255,255,255,.04),rgba(255,255,255,.01));
+  border:1px solid var(--line-2);
+  border-radius:24px;
+  padding:30px;
+  overflow:hidden;
+  transition:transform .5s cubic-bezier(.2,.8,.2,1),
+             border-color .35s,
+             box-shadow .45s;
+  isolation:isolate;
+}
+.wn-card::before{
+  content:"";position:absolute;inset:0;
+  background:radial-gradient(700px circle at var(--mx,50%) var(--my,0%),var(--cardGlow,rgba(168,85,247,.20)),transparent 45%);
+  opacity:0;transition:opacity .55s;
+  pointer-events:none;
+  z-index:0;
+}
+.wn-card::after{
+  content:"";position:absolute;
+  top:-2px;left:-2px;right:-2px;
+  height:2px;
+  background:linear-gradient(90deg,transparent,var(--cardLine,var(--purple)),transparent);
+  opacity:.6;
+  transform:translateX(-100%);
+  transition:transform .8s ease;
+}
+.wn-card:hover::after{transform:translateX(100%)}
+.wn-card:hover{
+  transform:translateY(-10px);
+  border-color:var(--cardBorder,rgba(168,85,247,.45));
+  box-shadow:0 30px 70px -20px var(--cardShadow,rgba(168,85,247,.45));
+}
+.wn-card:hover::before{opacity:1}
+.wn-card > *{position:relative;z-index:1}
+
+/* per-card themed colors */
+.wn-card[data-c="chat"]  {--cardGlow:rgba(34,211,238,.28);--cardBorder:rgba(34,211,238,.55);--cardShadow:rgba(34,211,238,.4);--cardLine:var(--cyan)}
+.wn-card[data-c="stock"] {--cardGlow:rgba(245,158,11,.28);--cardBorder:rgba(245,158,11,.55);--cardShadow:rgba(245,158,11,.4);--cardLine:var(--amber)}
+.wn-card[data-c="task"]  {--cardGlow:rgba(168,85,247,.30);--cardBorder:rgba(168,85,247,.55);--cardShadow:rgba(168,85,247,.4);--cardLine:var(--purple)}
+.wn-card[data-c="mail"]  {--cardGlow:rgba(99,102,241,.28);--cardBorder:rgba(99,102,241,.55);--cardShadow:rgba(99,102,241,.4);--cardLine:var(--indigo)}
+
+.wn-head{
+  display:flex;align-items:flex-start;justify-content:space-between;
+  gap:16px;margin-bottom:18px;
+}
+.wn-icon{
+  width:56px;height:56px;border-radius:16px;
+  display:grid;place-items:center;
+  font-size:26px;
+  background:rgba(255,255,255,.04);
+  border:1px solid var(--line-2);
+  position:relative;
+  flex-shrink:0;
+  transition:transform .5s cubic-bezier(.2,.8,.2,1);
+}
+.wn-card:hover .wn-icon{transform:rotate(-8deg) scale(1.08)}
+.wn-icon::after{
+  content:"";position:absolute;inset:-3px;border-radius:19px;
+  z-index:-1;opacity:0;
+  filter:blur(14px);
+  transition:opacity .45s;
+}
+.wn-card:hover .wn-icon::after{opacity:.85}
+.wn-card[data-c="chat"]  .wn-icon{background:rgba(34,211,238,.12);border-color:rgba(34,211,238,.35);color:var(--cyan-2)}
+.wn-card[data-c="chat"]  .wn-icon::after{background:linear-gradient(135deg,var(--cyan),#0ea5e9)}
+.wn-card[data-c="stock"] .wn-icon{background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.35);color:var(--amber)}
+.wn-card[data-c="stock"] .wn-icon::after{background:linear-gradient(135deg,var(--amber),#f97316)}
+.wn-card[data-c="task"]  .wn-icon{background:rgba(168,85,247,.12);border-color:rgba(168,85,247,.35);color:var(--purple-2)}
+.wn-card[data-c="task"]  .wn-icon::after{background:linear-gradient(135deg,var(--purple),var(--pink))}
+.wn-card[data-c="mail"]  .wn-icon{background:rgba(99,102,241,.12);border-color:rgba(99,102,241,.35);color:var(--indigo-2)}
+.wn-card[data-c="mail"]  .wn-icon::after{background:linear-gradient(135deg,var(--indigo),var(--cyan))}
+
+.wn-title{flex:1;min-width:0}
+.wn-title h3{
+  font-size:22px;font-weight:800;color:#fff;
+  letter-spacing:-.5px;margin-bottom:6px;
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+}
+.wn-title h3 .new-badge{font-size:8.5px;padding:3px 8px}
+.wn-title p{font-size:14px;color:var(--ink-2);line-height:1.6}
+
+.wn-stage{
+  margin-top:18px;
+  background:rgba(0,0,0,.4);
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:18px;
+  position:relative;
+  min-height:240px;
+  overflow:hidden;
+  isolation:isolate;
+}
+.wn-stage-head{
+  display:flex;align-items:center;justify-content:space-between;
+  font-size:10px;color:var(--ink-3);
+  text-transform:uppercase;letter-spacing:.7px;
+  font-weight:700;
+  margin-bottom:14px;
+  padding-bottom:10px;
+  border-bottom:1px dashed var(--line);
+}
+.wn-stage-head .live-dot{margin:0}
+.wn-stage-head b{color:#fff;font-weight:700;letter-spacing:.4px}
+.wn-stage-head .pill-mini{
+  background:rgba(16,185,129,.15);color:var(--green);
+  padding:2px 8px;border-radius:100px;font-size:9px;
+  display:inline-flex;align-items:center;gap:5px;
+}
+.wn-stage-head .pill-mini::before{
+  content:"";width:5px;height:5px;border-radius:50%;
+  background:var(--green);box-shadow:0 0 6px var(--green);
+  animation:pulse 1.6s ease-in-out infinite;
+}
+
+.wn-foot{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:14px;margin-top:18px;
+  font-size:12px;color:var(--ink-2);
+}
+.wn-foot .feat-list{
+  display:flex;gap:6px;flex-wrap:wrap;
+}
+.wn-foot .feat-list span{
+  font-size:10px;font-weight:600;
+  padding:4px 9px;border-radius:100px;
+  background:rgba(255,255,255,.04);
+  border:1px solid var(--line);
+  color:var(--ink-2);
+}
+
+/* ===================== LIVE CHAT ===================== */
+.lc-thread{display:flex;flex-direction:column;gap:9px;position:relative}
+.lc-msg{
+  max-width:78%;
+  padding:9px 13px;
+  border-radius:13px;
+  font-size:12px;
+  line-height:1.45;
+  position:relative;
+  animation:msgIn .55s cubic-bezier(.2,.8,.2,1) backwards;
+}
+.lc-msg.left{
+  background:rgba(255,255,255,.06);
+  color:var(--ink-1);
+  border-bottom-left-radius:4px;
+  align-self:flex-start;
+  border:1px solid var(--line);
+}
+.lc-msg.right{
+  background:linear-gradient(135deg,#22d3ee,#0ea5e9);
+  color:#fff;font-weight:500;
+  border-bottom-right-radius:4px;
+  align-self:flex-end;
+  box-shadow:0 6px 18px -4px rgba(34,211,238,.6);
+}
+.lc-msg b{color:#fff;font-weight:600}
+.lc-msg .meta{font-size:9px;opacity:.6;margin-top:3px;display:block;letter-spacing:.3px}
+@keyframes msgIn{
+  from{opacity:0;transform:translateY(14px) scale(.92)}
+  to{opacity:1;transform:translateY(0) scale(1)}
+}
+.lc-msg:nth-child(1){animation-delay:.1s}
+.lc-msg:nth-child(2){animation-delay:.7s}
+.lc-msg:nth-child(3){animation-delay:1.4s}
+.lc-msg:nth-child(4){animation-delay:2.1s}
+
+.lc-typing{
+  align-self:flex-start;
+  background:rgba(255,255,255,.06);
+  padding:11px 14px;
+  border-radius:13px;
+  border-bottom-left-radius:4px;
+  display:inline-flex;gap:5px;
+  border:1px solid var(--line);
+  animation:msgIn .55s cubic-bezier(.2,.8,.2,1) 2.7s backwards;
+}
+.lc-typing span{
+  width:6px;height:6px;border-radius:50%;
+  background:var(--ink-2);
+  animation:lcDot 1.4s ease-in-out infinite;
+}
+.lc-typing span:nth-child(2){animation-delay:.2s}
+.lc-typing span:nth-child(3){animation-delay:.4s}
+@keyframes lcDot{
+  0%,60%,100%{transform:translateY(0);opacity:.4}
+  30%{transform:translateY(-6px);opacity:1;background:var(--cyan-2)}
+}
+
+.lc-people{
+  display:flex;align-items:center;gap:6px;
+}
+.lc-avatar{
+  width:22px;height:22px;border-radius:50%;
+  display:grid;place-items:center;
+  font-size:10px;font-weight:800;color:#fff;
+  position:relative;
+  flex-shrink:0;
+  border:1.5px solid var(--bg-1);
+  margin-left:-6px;
+}
+.lc-avatar:first-child{margin-left:0}
+.lc-avatar.ag1{background:linear-gradient(135deg,#22d3ee,#0ea5e9)}
+.lc-avatar.ag2{background:linear-gradient(135deg,#a855f7,#ec4899)}
+.lc-avatar.ag3{background:linear-gradient(135deg,#f59e0b,#f97316)}
+.lc-people-cnt{font-size:10px;color:var(--ink-2);margin-left:4px}
+.lc-online{color:var(--green)}
+
+/* ===================== STOCK ===================== */
+.sm-counter{
+  font-family:'Space Grotesk',monospace;
+  font-size:12px;
+  color:var(--amber);
+  font-weight:700;
+  display:inline-flex;align-items:center;gap:5px;
+}
+.sm-counter::before{
+  content:"";width:6px;height:6px;border-radius:50%;
+  background:var(--amber);
+  box-shadow:0 0 8px var(--amber);
+  animation:pulse 1.6s ease-in-out infinite;
+}
+
+.sm-rows{display:flex;flex-direction:column;gap:7px}
+.sm-row{
+  display:grid;grid-template-columns:auto 1fr auto;
+  gap:11px;align-items:center;
+  padding:9px 11px;
+  background:rgba(255,255,255,.025);
+  border:1px solid var(--line);
+  border-radius:10px;
+  font-size:11px;
+  animation:slideIn .55s ease-out backwards;
+  transition:transform .25s,border-color .25s;
+}
+.sm-row:hover{transform:translateX(3px)}
+.sm-row:nth-child(1){animation-delay:.1s}
+.sm-row:nth-child(2){animation-delay:.22s}
+.sm-row:nth-child(3){animation-delay:.34s}
+.sm-row:nth-child(4){animation-delay:.46s}
+.sm-row .sku{
+  font-family:'Space Grotesk',monospace;
+  font-size:9.5px;color:var(--ink-3);
+  background:rgba(255,255,255,.05);
+  padding:3px 7px;border-radius:5px;
+  flex-shrink:0;letter-spacing:.5px;
+}
+.sm-row .pname{color:#fff;font-weight:500;font-size:11.5px;min-width:0}
+.sm-row .pname b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sm-row .pname span{color:var(--ink-3);font-weight:400;display:block;font-size:9.5px;margin-top:2px}
+.sm-row .qty{
+  font-family:'Space Grotesk',monospace;
+  font-size:14px;font-weight:700;
+  color:#fff;
+  text-align:right;
+  min-width:54px;
+  line-height:1;
+}
+.sm-row .qty small{font-size:9px;color:var(--ink-3);font-weight:500;display:block;margin-top:2px;letter-spacing:.4px}
+.sm-row.low{border-color:rgba(239,68,68,.35);background:rgba(239,68,68,.06)}
+.sm-row.low .qty{color:var(--red);animation:lowFlash 1.4s ease-in-out infinite}
+@keyframes lowFlash{0%,100%{opacity:1}50%{opacity:.5}}
+.sm-row.warn{border-color:rgba(245,158,11,.32);background:rgba(245,158,11,.05)}
+.sm-row.warn .qty{color:var(--amber)}
+.sm-row.ok .qty{color:var(--green)}
+
+.sm-row .bar{
+  position:absolute;left:0;right:0;bottom:0;
+  height:2px;
+  background:rgba(255,255,255,.05);
+  overflow:hidden;
+}
+.sm-row{position:relative}
+.sm-row .bar::after{
+  content:"";position:absolute;left:0;top:0;height:100%;
+  background:var(--cur,var(--green));
+  animation:barFill 1.5s ease-out backwards;
+}
+.sm-row.ok   .bar::after{--cur:var(--green);width:78%}
+.sm-row.warn .bar::after{--cur:var(--amber);width:35%}
+.sm-row.low  .bar::after{--cur:var(--red);width:12%;animation:lowFlash 1.4s ease-in-out infinite}
+
+/* ===================== TASKS / KANBAN ===================== */
+.tk-board{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  gap:9px;
+}
+.tk-col{
+  background:rgba(255,255,255,.025);
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:10px 9px;
+  min-height:175px;
+  position:relative;
+}
+.tk-col-head{
+  display:flex;justify-content:space-between;align-items:center;
+  font-size:9px;
+  text-transform:uppercase;letter-spacing:.7px;font-weight:800;
+  margin-bottom:9px;
+  padding-bottom:7px;
+  border-bottom:1px dashed var(--line);
+}
+.tk-col-head .cnt{
+  background:rgba(255,255,255,.06);
+  padding:2px 7px;border-radius:100px;
+  font-size:8.5px;color:#fff;font-weight:700;
+  min-width:18px;text-align:center;
+}
+.tk-col[data-s="todo"] .tk-col-head{color:var(--ink-2)}
+.tk-col[data-s="prog"] .tk-col-head{color:var(--purple-2)}
+.tk-col[data-s="done"] .tk-col-head{color:var(--green)}
+.tk-col[data-s="prog"] .tk-col-head .cnt{background:rgba(168,85,247,.18);color:var(--purple-2)}
+.tk-col[data-s="done"] .tk-col-head .cnt{background:rgba(16,185,129,.18);color:var(--green)}
+
+.tk-card{
+  background:linear-gradient(145deg,rgba(20,22,45,.95),rgba(15,17,38,.95));
+  border:1px solid var(--line-2);
+  border-radius:8px;
+  padding:8px 10px;
+  margin-bottom:7px;
+  font-size:10.5px;
+  color:#fff;
+  font-weight:500;
+  position:relative;
+  cursor:default;
+  animation:tkCardIn .6s cubic-bezier(.2,.8,.2,1) backwards;
+  transition:transform .25s,border-color .25s,box-shadow .25s;
+}
+.tk-card:hover{
+  transform:translateX(2px) translateY(-1px);
+  border-color:var(--purple);
+  box-shadow:0 8px 20px -8px rgba(168,85,247,.5);
+}
+.tk-card:nth-child(1){animation-delay:.1s}
+.tk-card:nth-child(2){animation-delay:.22s}
+.tk-card:nth-child(3){animation-delay:.34s}
+.tk-card:nth-child(4){animation-delay:.46s}
+@keyframes tkCardIn{
+  from{opacity:0;transform:translateY(-10px) scale(.94)}
+  to{opacity:1;transform:translateY(0) scale(1)}
+}
+.tk-card .tag{
+  font-size:8px;font-weight:800;
+  text-transform:uppercase;letter-spacing:.6px;
+  margin-bottom:4px;display:inline-block;
+}
+.tk-card .tag.p1{color:var(--red)}
+.tk-card .tag.p2{color:var(--amber)}
+.tk-card .tag.p3{color:var(--cyan-2)}
+.tk-card .meta{
+  display:flex;justify-content:space-between;
+  margin-top:6px;align-items:center;
+}
+.tk-card .due{font-size:8.5px;color:var(--ink-3);font-family:'Space Grotesk',monospace}
+.tk-avatars{display:flex}
+.tk-avatars .av{
+  width:16px;height:16px;border-radius:50%;
+  border:1.5px solid #0a0c1f;
+  margin-left:-5px;
+  display:grid;place-items:center;
+  font-size:7.5px;font-weight:800;color:#fff;
+}
+.tk-avatars .av:first-child{margin-left:0}
+.tk-avatars .a1{background:linear-gradient(135deg,#22d3ee,#0ea5e9)}
+.tk-avatars .a2{background:linear-gradient(135deg,#a855f7,#ec4899)}
+.tk-avatars .a3{background:linear-gradient(135deg,#10b981,#059669)}
+.tk-avatars .a4{background:linear-gradient(135deg,#f59e0b,#f97316)}
+
+/* Floating moving card animation */
+.tk-card.fly{
+  position:absolute;
+  z-index:5;
+  animation:tkFly 6s cubic-bezier(.5,0,.25,1) infinite;
+  pointer-events:none;
+  box-shadow:0 14px 30px -8px rgba(168,85,247,.6);
+}
+@keyframes tkFly{
+  0%   {top:30px;left:6%;  transform:rotate(-2deg) scale(.95);opacity:0}
+  6%   {opacity:1}
+  18%  {top:30px;left:6%;  transform:rotate(-2deg) scale(1)}
+  30%  {top:30px;left:38%; transform:rotate(2deg) scale(1.04)}
+  42%  {top:30px;left:38%; transform:rotate(0deg) scale(1)}
+  54%  {top:30px;left:70%; transform:rotate(-2deg) scale(1.04)}
+  62%  {top:30px;left:70%; transform:rotate(0deg) scale(1);opacity:1}
+  70%  {opacity:0}
+  100% {top:30px;left:70%; transform:rotate(0deg) scale(1);opacity:0}
+}
+
+.tk-progress{
+  margin-top:14px;
+  display:flex;align-items:center;gap:10px;
+  font-size:10px;color:var(--ink-2);
+}
+.tk-progress b{color:#fff;font-weight:700}
+.tk-bar{
+  flex:1;height:5px;
+  background:rgba(255,255,255,.06);
+  border-radius:100px;overflow:hidden;
+  position:relative;
+}
+.tk-bar::after{
+  content:"";position:absolute;left:0;top:0;height:100%;
+  background:linear-gradient(90deg,var(--purple),var(--pink),var(--cyan));
+  background-size:200% 100%;
+  border-radius:100px;
+  width:64%;
+  animation:tkProg 5s ease-in-out infinite,railFlow 3s linear infinite;
+}
+@keyframes tkProg{
+  0%,100%{width:64%}
+  50%{width:82%}
+}
+
+/* ===================== EMAIL HUB ===================== */
+.eh-providers{
+  display:flex;gap:6px;flex-wrap:wrap;
+  margin-bottom:12px;
+}
+.eh-provider{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:5px 10px;
+  border-radius:100px;
+  font-size:10px;font-weight:700;
+  background:rgba(255,255,255,.04);
+  border:1px solid var(--line);
+  color:var(--ink-2);
+  letter-spacing:.3px;
+  transition:transform .25s;
+}
+.eh-provider:hover{transform:translateY(-2px)}
+.eh-provider .pdot{
+  width:6px;height:6px;border-radius:50%;
+  background:var(--green);
+  box-shadow:0 0 6px var(--green);
+}
+.eh-provider.gmail  {color:#ea4335;border-color:rgba(234,67,53,.35);background:rgba(234,67,53,.07)}
+.eh-provider.outlook{color:#0078d4;border-color:rgba(0,120,212,.4);background:rgba(0,120,212,.08)}
+.eh-provider.yahoo  {color:#a855f7;border-color:rgba(168,85,247,.35);background:rgba(168,85,247,.07)}
+.eh-provider.imap   {color:var(--ink-2)}
+
+.eh-inbox{display:flex;flex-direction:column;gap:6px;position:relative}
+.eh-mail{
+  display:grid;grid-template-columns:auto 1fr auto;
+  gap:10px;align-items:center;
+  padding:9px 11px;
+  background:rgba(255,255,255,.025);
+  border:1px solid var(--line);
+  border-radius:9px;
+  font-size:11px;
+  position:relative;
+  animation:slideIn .55s ease-out backwards;
+  transition:transform .25s,border-color .25s,background .25s;
+}
+.eh-mail:hover{transform:translateX(4px);border-color:var(--indigo);background:rgba(99,102,241,.04)}
+.eh-mail:nth-child(1){animation-delay:.1s}
+.eh-mail:nth-child(2){animation-delay:.24s}
+.eh-mail:nth-child(3){animation-delay:.38s}
+.eh-mail:nth-child(4){animation-delay:.52s}
+.eh-mail .src{
+  width:22px;height:22px;border-radius:50%;
+  display:grid;place-items:center;
+  font-size:9.5px;font-weight:800;color:#fff;
+  flex-shrink:0;
+}
+.eh-mail .src.g{background:#ea4335}
+.eh-mail .src.o{background:#0078d4}
+.eh-mail .src.y{background:#7B0099}
+.eh-mail .src.i{background:linear-gradient(135deg,#6366f1,#22d3ee)}
+.eh-mail .body{min-width:0}
+.eh-mail .body b{
+  color:#fff;font-weight:600;font-size:11.5px;
+  display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  letter-spacing:-.1px;
+}
+.eh-mail .body span{
+  color:var(--ink-3);font-size:10px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  display:block;margin-top:2px;
+}
+.eh-mail.unread{background:rgba(99,102,241,.06)}
+.eh-mail.unread .body b::after{
+  content:"";display:inline-block;
+  width:7px;height:7px;border-radius:50%;
+  background:var(--indigo-2);margin-left:7px;
+  vertical-align:middle;
+  box-shadow:0 0 8px var(--indigo-2);
+  animation:pulse 1.6s ease-in-out infinite;
+}
+.eh-mail .ts{font-size:9px;color:var(--ink-3);font-family:'Space Grotesk',monospace;flex-shrink:0;letter-spacing:.3px}
+
+.eh-compose{
+  position:absolute;bottom:14px;right:14px;
+  width:38px;height:38px;border-radius:50%;
+  background:var(--grad-a);
+  display:grid;place-items:center;
+  color:#fff;font-size:15px;
+  box-shadow:0 10px 24px -4px rgba(168,85,247,.65),inset 0 1px 0 rgba(255,255,255,.3);
+  cursor:pointer;
+  z-index:3;
+  animation:floatA 3.5s ease-in-out infinite;
+  transition:transform .3s;
+}
+.eh-compose:hover{transform:scale(1.12) rotate(15deg)}
+.eh-compose::before{
+  content:"";position:absolute;inset:-4px;border-radius:50%;
+  background:var(--grad-a);
+  z-index:-1;
+  filter:blur(10px);opacity:.6;
+  animation:newGlow 2s ease-in-out infinite;
+}
+
+/* Send/receive activity ticker line */
+.eh-ticker{
+  margin-top:10px;
+  font-size:9.5px;color:var(--ink-3);
+  font-family:'Space Grotesk',monospace;
+  letter-spacing:.4px;
+  display:flex;align-items:center;gap:8px;
+  padding-top:10px;
+  border-top:1px dashed var(--line);
+}
+.eh-ticker .arrow{
+  display:inline-block;color:var(--cyan-2);
+  animation:arrowSlide 1.6s ease-in-out infinite;
+}
+@keyframes arrowSlide{
+  0%,100%{transform:translateX(0)}
+  50%{transform:translateX(4px)}
+}
+.eh-ticker b{color:#fff;font-weight:700}
+
 /* ---------- Responsive ---------- */
 @media (max-width:1024px){
   .hero-grid{grid-template-columns:1fr;gap:80px}
@@ -1645,6 +2322,7 @@ footer{
   .pipe-info h4{font-size:12px}
   .pipe-info p{font-size:10.5px}
   .psgrid{grid-template-columns:repeat(2,1fr)}
+  .whatsnew-grid{grid-template-columns:1fr}
 }
 @media (max-width:680px){
   .nav-links{display:none}
@@ -1670,76 +2348,15 @@ footer{
   .pipe-num{width:18px;height:18px;font-size:9px}
   .showcase-wrap{padding:20px}
   .pane-info h3{font-size:22px}
+  .wn-card{padding:22px}
+  .wn-stage{padding:14px}
+  .tk-board{grid-template-columns:1fr}
+  .tk-col{min-height:auto}
+  .tk-col:nth-child(2),.tk-col:nth-child(3){display:none}
+  .feat .new-pill{top:14px;right:14px}
+  .new-strip{padding:18px;flex-direction:column;align-items:flex-start;gap:14px}
+  .new-strip-right{align-self:stretch;justify-content:center}
 }
-
-/* ── New Feature Card Extras ── */
-.feat-icon.green-icon{background:rgba(16,185,129,.12);border-color:rgba(16,185,129,.25);}
-.feat-icon.amber-icon{background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.25);}
-.feat-icon.cyan-icon{background:rgba(34,211,238,.12);border-color:rgba(34,211,238,.25);}
-.feat .pill.green-pill{color:#6ee7b7;background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.25);}
-.feat .pill.amber-pill{color:#fcd34d;background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.25);}
-
-/* Live Chat */
-.chat-anim{margin-top:24px;background:rgba(0,0,0,.3);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px;}
-.chat-bubble{display:flex;align-items:flex-end;gap:8px;}
-.chat-bubble.right{flex-direction:row-reverse;}
-.chat-avatar{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;flex-shrink:0;}
-.chat-avatar.blue{background:rgba(99,102,241,.3);color:var(--indigo-2);}
-.chat-avatar.green{background:rgba(16,185,129,.3);color:var(--green);}
-.chat-msg{padding:9px 13px;border-radius:14px;font-size:12px;line-height:1.5;max-width:75%;}
-.chat-bubble:not(.right) .chat-msg{background:rgba(255,255,255,.07);color:var(--ink-1);border-bottom-left-radius:4px;}
-.chat-bubble.right .chat-msg{background:rgba(99,102,241,.25);color:#c7d2fe;border-bottom-right-radius:4px;}
-.chat-meta{font-size:10px;color:var(--ink-3);margin-top:2px;padding:0 4px;}
-.chat-bubble.right .chat-meta{text-align:right;}
-.chat-typing{display:flex;align-items:center;gap:4px;padding:6px 0;}
-.chat-typing span{width:6px;height:6px;border-radius:50%;background:var(--ink-3);display:inline-block;}
-.chat-typing span:nth-child(1){animation:typeBounce 1.2s ease-in-out infinite 0s;}
-.chat-typing span:nth-child(2){animation:typeBounce 1.2s ease-in-out infinite .2s;}
-.chat-typing span:nth-child(3){animation:typeBounce 1.2s ease-in-out infinite .4s;}
-@keyframes typeBounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px);background:var(--indigo-2);}}
-.live-badge-new{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--green);font-weight:600;margin-bottom:6px;}
-.live-badge-new .ldot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 1.5s ease-in-out infinite;}
-
-/* Stock Management */
-.stock-anim{margin-top:24px;background:rgba(0,0,0,.3);border:1px solid var(--line);border-radius:14px;overflow:hidden;}
-.stock-header{padding:10px 14px;border-bottom:1px solid var(--line);display:grid;grid-template-columns:1fr auto auto;gap:12px;font-size:10px;color:var(--ink-3);font-weight:600;text-transform:uppercase;letter-spacing:.5px;}
-.stock-row{display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:center;padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.04);font-size:12px;}
-.stock-row:last-child{border-bottom:none;}
-.stock-name{color:var(--ink-1);font-weight:500;}
-.stock-qty{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;}
-.stock-qty.ok{background:rgba(16,185,129,.15);color:#6ee7b7;}
-.stock-qty.low{background:rgba(245,158,11,.15);color:#fcd34d;}
-.stock-qty.out{background:rgba(239,68,68,.15);color:#fca5a5;}
-.stock-bar-wrap{width:60px;height:4px;background:rgba(255,255,255,.08);border-radius:4px;overflow:hidden;}
-.stock-bar{height:100%;border-radius:4px;background:var(--green);}
-.stock-bar.low{background:var(--amber);}
-.stock-bar.out{background:#ef4444;}
-
-/* Task Assignment */
-.task-anim{margin-top:24px;background:rgba(0,0,0,.3);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px;}
-.task-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:10px;}
-.task-check{width:18px;height:18px;border-radius:5px;border:2px solid var(--line-2);display:grid;place-items:center;flex-shrink:0;}
-.task-check.done{background:var(--green);border-color:var(--green);color:#fff;font-size:11px;}
-.task-text{flex:1;font-size:12px;color:var(--ink-1);}
-.task-text.done{text-decoration:line-through;color:var(--ink-3);}
-.task-assignee{font-size:10px;color:var(--ink-3);background:rgba(255,255,255,.06);padding:3px 8px;border-radius:20px;}
-.task-priority{font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;}
-.task-priority.high{background:rgba(239,68,68,.15);color:#fca5a5;}
-.task-priority.med{background:rgba(245,158,11,.15);color:#fcd34d;}
-.task-priority.low-p{background:rgba(16,185,129,.15);color:#6ee7b7;}
-
-/* Email Connect */
-.email-anim{margin-top:24px;background:rgba(0,0,0,.3);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px;}
-.provider-row{display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.03);transition:border-color .2s;}
-.provider-row:hover{border-color:rgba(99,102,241,.4);}
-.provider-icon{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;font-size:16px;flex-shrink:0;}
-.provider-icon.gmail{background:rgba(234,67,53,.15);}
-.provider-icon.smtp{background:rgba(99,102,241,.15);}
-.provider-label{flex:1;color:var(--ink-1);font-size:13px;font-weight:600;}
-.provider-sub{font-size:11px;color:var(--ink-3);font-weight:400;}
-.provider-status{font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;}
-.provider-status.connected{background:rgba(16,185,129,.15);color:#6ee7b7;}
-.provider-status.new-badge{background:rgba(99,102,241,.15);color:var(--indigo-2);}
 </style>
 </head>
 <body>
@@ -1761,6 +2378,7 @@ footer{
     </a>
     <div class="nav-links">
       <a href="#features">Features</a>
+      <a href="#whats-new" style="position:relative">What's New<span style="position:absolute;top:-7px;right:-22px;background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;font-size:8px;font-weight:800;padding:2px 6px;border-radius:100px;letter-spacing:.6px;box-shadow:0 4px 10px -2px rgba(236,72,153,.5)">NEW</span></a>
       <a href="#how">How it Works</a>
       <a href="#portals">Portals</a>
       <a href="#pricing">Pricing</a>
@@ -1962,10 +2580,6 @@ footer{
     <span class="marquee-item">Team Roles<span class="dot"></span></span>
     <span class="marquee-item">KPI Dashboard<span class="dot"></span></span>
     <span class="marquee-item">Email Templates<span class="dot"></span></span>
-    <span class="marquee-item">Live Team Chat<span class="dot"></span></span>
-    <span class="marquee-item">Stock Management<span class="dot"></span></span>
-    <span class="marquee-item">Task Assignment<span class="dot"></span></span>
-    <span class="marquee-item">Custom Email Connect<span class="dot"></span></span>
     <span class="marquee-item">Multi-Store Sync<span class="dot"></span></span>
     <span class="marquee-item">Live Tracking<span class="dot"></span></span>
     <span class="marquee-item">AI Email Drafts<span class="dot"></span></span>
@@ -1976,10 +2590,6 @@ footer{
     <span class="marquee-item">Team Roles<span class="dot"></span></span>
     <span class="marquee-item">KPI Dashboard<span class="dot"></span></span>
     <span class="marquee-item">Email Templates<span class="dot"></span></span>
-    <span class="marquee-item">Live Team Chat<span class="dot"></span></span>
-    <span class="marquee-item">Stock Management<span class="dot"></span></span>
-    <span class="marquee-item">Task Assignment<span class="dot"></span></span>
-    <span class="marquee-item">Custom Email Connect<span class="dot"></span></span>
   </div>
 </div>
 
@@ -2016,7 +2626,7 @@ footer{
 <section class="section" id="features">
   <div class="container">
     <div class="section-head reveal">
-      <span class="eyebrow">12 powerful modules</span>
+      <span class="eyebrow">12 powerful modules · + 4 just shipped</span>
       <h2 class="section-title">Every operation, in <span class="gradient-text">one tab.</span></h2>
       <p class="section-sub">Stop juggling between Shopify, Gmail, courier sites and WhatsApp. Drop Sigma fuses your entire operation into one polished interface.</p>
     </div>
@@ -2102,120 +2712,269 @@ footer{
         <h3>Store Health Monitor</h3>
         <p>Real-time API connection check across all your connected stores. Alerts the moment a store goes offline or a webhook misfires.</p>
       </div>
+    </div>
 
-      <!-- ── NEW FEATURES ── -->
+    <!-- See-new-modules teaser strip -->
+    <a href="#whats-new" class="new-strip reveal">
+      <div class="new-strip-left">
+        <span class="new-badge">Just Shipped</span>
+        <div class="new-strip-text">
+          <b>4 brand-new modules</b>
+          <span>Live Chat · Personal Stock · Team Tasks · Unified Email Hub</span>
+        </div>
+      </div>
+      <div class="new-strip-right">
+        <span>See them live</span>
+        <span class="arr">→</span>
+      </div>
+    </a>
+  </div>
+</section>
 
-      <!-- Live Team Chat — featured wide card -->
-      <div class="feat featured reveal">
-        <div class="feat-icon">💬</div>
-        <h3>Live Team Chat</h3>
-        <p>Real-time messaging between your team — channels, direct messages, reactions, and read receipts. Built right inside the portal so your team never needs to leave Drop Sigma.</p>
-        <span class="pill star">Built-in · No Slack needed</span>
-        <div class="chat-anim">
-          <div class="live-badge-new"><span class="ldot"></span>3 members online</div>
-          <div class="chat-bubble">
-            <div class="chat-avatar blue">A</div>
-            <div>
-              <div class="chat-msg">Order #10482 just came in — vendor assigned?</div>
-              <div class="chat-meta">Ali · #general</div>
+<!-- ============== WHAT'S NEW · JUST SHIPPED ============== -->
+<section class="section whats-new" id="whats-new">
+  <div class="container">
+    <div class="section-head reveal">
+      <div class="wn-head-row">
+        <span class="new-badge">Just Shipped</span>
+        <span class="eyebrow" style="margin:0">v2.4 release · 4 new modules</span>
+      </div>
+      <h2 class="section-title">Four new superpowers, <span class="gradient-text">live now.</span></h2>
+      <p class="section-sub">We just shipped the four most-requested modules. Hover any card to see them animate live — straight from the actual UI.</p>
+    </div>
+
+    <div class="whatsnew-grid">
+
+      <!-- ========== LIVE CHAT ========== -->
+      <div class="wn-card reveal" data-c="chat">
+        <div class="wn-head">
+          <div class="wn-icon">💬</div>
+          <div class="wn-title">
+            <h3>Live Chat <span class="new-badge">New</span></h3>
+            <p>Real-time messaging between admins, vendors and your team — built right into Drop Sigma. Typing indicators, presence, file drops, all live.</p>
+          </div>
+        </div>
+        <div class="wn-stage">
+          <div class="wn-stage-head">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span class="live-dot"></span>
+              <span><b>#order-10247</b> · 3 online</span>
+            </div>
+            <div class="lc-people">
+              <span class="lc-avatar ag1">AK</span>
+              <span class="lc-avatar ag2">SM</span>
+              <span class="lc-avatar ag3">JR</span>
+              <span class="lc-people-cnt lc-online">3 online</span>
             </div>
           </div>
-          <div class="chat-bubble right">
-            <div class="chat-avatar green">S</div>
-            <div>
-              <div class="chat-msg">Yes, routed to Asia Hub automatically ✅</div>
-              <div class="chat-meta">Sara · just now</div>
-            </div>
+          <div class="lc-thread">
+            <div class="lc-msg left"><b>Sarah · Asia Hub</b><br>Tracking submitted for #10247 ✅<span class="meta">11:42 AM</span></div>
+            <div class="lc-msg right">Approved — pushing to WooCommerce now.<span class="meta">11:43 AM</span></div>
+            <div class="lc-msg left">Customer also asked about delivery ETA.<span class="meta">11:44 AM</span></div>
+            <div class="lc-msg right">Got it — I'll AI-draft a reply.<span class="meta">11:44 AM</span></div>
+            <div class="lc-typing"><span></span><span></span><span></span></div>
           </div>
-          <div class="chat-bubble">
-            <div class="chat-avatar blue">A</div>
-            <div>
-              <div class="chat-typing"><span></span><span></span><span></span></div>
-            </div>
+        </div>
+        <div class="wn-foot">
+          <div class="feat-list">
+            <span>● Online presence</span>
+            <span>✦ Typing indicators</span>
+            <span>📎 File drops</span>
+            <span>🔔 Mentions</span>
           </div>
         </div>
       </div>
 
-      <!-- Personal Stock Management -->
-      <div class="feat reveal">
-        <div class="feat-icon amber-icon">📦</div>
-        <h3>Personal Stock Management</h3>
-        <p>Track your own inventory separately from vendor stock. Set low-stock alerts, view real-time quantities, and manage restocking — all from one place.</p>
-        <span class="pill amber-pill">New · Inventory Control</span>
-        <div class="stock-anim">
-          <div class="stock-header">
-            <span>Product</span><span>Status</span><span>Stock</span>
+      <!-- ========== STOCK ========== -->
+      <div class="wn-card reveal" data-c="stock">
+        <div class="wn-head">
+          <div class="wn-icon">📦</div>
+          <div class="wn-title">
+            <h3>Personal Stock Management <span class="new-badge">New</span></h3>
+            <p>SKU-level inventory with low-stock alerts, vendor binding and full audit history. Stock auto-decrements on every order placed.</p>
           </div>
-          <div class="stock-row">
-            <span class="stock-name">Wireless Earbuds</span>
-            <span class="stock-qty ok">In Stock</span>
-            <div class="stock-bar-wrap"><div class="stock-bar" style="width:78%"></div></div>
+        </div>
+        <div class="wn-stage">
+          <div class="wn-stage-head">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span class="live-dot"></span>
+              <span><b>Inventory</b> · 4 SKUs in view</span>
+            </div>
+            <span class="sm-counter">2 low-stock alerts</span>
           </div>
-          <div class="stock-row">
-            <span class="stock-name">Phone Case Pro</span>
-            <span class="stock-qty low">Low</span>
-            <div class="stock-bar-wrap"><div class="stock-bar low" style="width:22%"></div></div>
+          <div class="sm-rows">
+            <div class="sm-row ok">
+              <span class="sku">EAR-PRO-04</span>
+              <div class="pname"><b>Wireless Earbuds Pro</b><span>Bound: Asia Hub</span></div>
+              <div class="qty">184<small>in stock</small></div>
+              <div class="bar"></div>
+            </div>
+            <div class="sm-row warn">
+              <span class="sku">SWX-3-BLK</span>
+              <div class="pname"><b>Smart Watch X3 — Black</b><span>Bound: EU Direct</span></div>
+              <div class="qty">23<small>reorder soon</small></div>
+              <div class="bar"></div>
+            </div>
+            <div class="sm-row low">
+              <span class="sku">DRN-MNI-K2</span>
+              <div class="pname"><b>Mini Drone Kit v2</b><span>Bound: Global Co.</span></div>
+              <div class="qty">4<small>low stock!</small></div>
+              <div class="bar"></div>
+            </div>
+            <div class="sm-row ok">
+              <span class="sku">USB-C-HUB</span>
+              <div class="pname"><b>USB-C 7-in-1 Hub</b><span>Bound: Pacific Sup.</span></div>
+              <div class="qty">312<small>in stock</small></div>
+              <div class="bar"></div>
+            </div>
           </div>
-          <div class="stock-row">
-            <span class="stock-name">USB-C Hub</span>
-            <span class="stock-qty out">Out</span>
-            <div class="stock-bar-wrap"><div class="stock-bar out" style="width:4%"></div></div>
+        </div>
+        <div class="wn-foot">
+          <div class="feat-list">
+            <span>🔔 Low-stock alerts</span>
+            <span>🔗 Vendor binding</span>
+            <span>📈 Auto-decrement</span>
+            <span>🕒 Full history</span>
           </div>
         </div>
       </div>
 
-      <!-- Team Task Assignment -->
-      <div class="feat reveal">
-        <div class="feat-icon green-icon">✅</div>
-        <h3>Team Task Assignment</h3>
-        <p>Assign tasks to team members with priorities and deadlines. Track completion in real time — no more chasing up on WhatsApp. Everyone sees their queue inside the portal.</p>
-        <span class="pill green-pill">New · Task Tracking</span>
-        <div class="task-anim">
-          <div class="task-item">
-            <div class="task-check done">✓</div>
-            <span class="task-text done">Review 12 pending refunds</span>
-            <span class="task-assignee">Sara</span>
-            <span class="task-priority low-p">Done</span>
+      <!-- ========== TEAM TASKS ========== -->
+      <div class="wn-card reveal" data-c="task">
+        <div class="wn-head">
+          <div class="wn-icon">🗂️</div>
+          <div class="wn-title">
+            <h3>Team Task Assignment <span class="new-badge">New</span></h3>
+            <p>Drag-and-drop Kanban board to assign work across your team. Priorities, due dates, watchers and live status sync — all baked in.</p>
           </div>
-          <div class="task-item">
-            <div class="task-check"></div>
-            <span class="task-text">Follow up on Order #10489</span>
-            <span class="task-assignee">Ali</span>
-            <span class="task-priority high">High</span>
+        </div>
+        <div class="wn-stage">
+          <div class="wn-stage-head">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span class="live-dot"></span>
+              <span><b>Sprint board</b> · 4 members</span>
+            </div>
+            <span class="pill-mini">Live sync</span>
           </div>
-          <div class="task-item">
-            <div class="task-check"></div>
-            <span class="task-text">Check supplier invoice #38</span>
-            <span class="task-assignee">Umar</span>
-            <span class="task-priority med">Medium</span>
+          <div class="tk-board">
+            <div class="tk-col" data-s="todo">
+              <div class="tk-col-head"><span>To Do</span><span class="cnt">2</span></div>
+              <div class="tk-card">
+                <span class="tag p1">High</span>
+                <div>Investigate refund #10231</div>
+                <div class="meta"><span class="due">Today</span><div class="tk-avatars"><span class="av a1">AK</span></div></div>
+              </div>
+              <div class="tk-card">
+                <span class="tag p3">Low</span>
+                <div>Update SOP doc</div>
+                <div class="meta"><span class="due">Fri</span><div class="tk-avatars"><span class="av a4">JR</span></div></div>
+              </div>
+            </div>
+            <div class="tk-col" data-s="prog">
+              <div class="tk-col-head"><span>In Progress</span><span class="cnt">2</span></div>
+              <div class="tk-card">
+                <span class="tag p2">Med</span>
+                <div>AI-draft reply for #10247</div>
+                <div class="meta"><span class="due">2h left</span><div class="tk-avatars"><span class="av a2">SM</span><span class="av a3">JL</span></div></div>
+              </div>
+              <div class="tk-card">
+                <span class="tag p1">High</span>
+                <div>Vendor onboarding · EU3</div>
+                <div class="meta"><span class="due">Tmrw</span><div class="tk-avatars"><span class="av a1">AK</span></div></div>
+              </div>
+            </div>
+            <div class="tk-col" data-s="done">
+              <div class="tk-col-head"><span>Done</span><span class="cnt">3</span></div>
+              <div class="tk-card">
+                <span class="tag p3">Low</span>
+                <div>Push tracking #10245</div>
+                <div class="meta"><span class="due">Done</span><div class="tk-avatars"><span class="av a3">JL</span></div></div>
+              </div>
+              <div class="tk-card">
+                <span class="tag p2">Med</span>
+                <div>Stock reorder · DRN-MNI</div>
+                <div class="meta"><span class="due">Done</span><div class="tk-avatars"><span class="av a2">SM</span></div></div>
+              </div>
+            </div>
+            <div class="tk-card fly">
+              <span class="tag p2">Med</span>
+              <div>Reassigning task…</div>
+              <div class="meta"><span class="due">Live</span><div class="tk-avatars"><span class="av a4">JR</span></div></div>
+            </div>
+          </div>
+          <div class="tk-progress">
+            <span><b>Sprint</b> 64% complete</span>
+            <div class="tk-bar"></div>
+            <span>14 / 22</span>
+          </div>
+        </div>
+        <div class="wn-foot">
+          <div class="feat-list">
+            <span>↔ Drag &amp; drop</span>
+            <span>🏷️ Priorities</span>
+            <span>👥 Watchers</span>
+            <span>📅 Due dates</span>
           </div>
         </div>
       </div>
 
-      <!-- Custom Email Connect -->
-      <div class="feat reveal">
-        <div class="feat-icon cyan-icon">📨</div>
-        <h3>Connect Any Email Account</h3>
-        <p>Not on Gmail? No problem. Connect your custom hosting email — cPanel, Plesk, Zoho, Outlook — via SMTP &amp; IMAP. Full send &amp; receive inside Drop Sigma.</p>
-        <span class="pill">New · SMTP / IMAP Support</span>
-        <div class="email-anim">
-          <div class="provider-row">
-            <div class="provider-icon gmail">
-              <img src="https://www.gstatic.com/images/branding/product/1x/gmail_2020q4_32dp.png" style="width:18px;height:18px;">
-            </div>
-            <div class="provider-label">
-              Gmail / Google<br>
-              <span class="provider-sub">One-click OAuth setup</span>
-            </div>
-            <span class="provider-status connected">Connected</span>
+      <!-- ========== EMAIL HUB ========== -->
+      <div class="wn-card reveal" data-c="mail">
+        <div class="wn-head">
+          <div class="wn-icon">📨</div>
+          <div class="wn-title">
+            <h3>Unified Email Hub <span class="new-badge">New</span></h3>
+            <p>Connect Gmail, Outlook, Yahoo and any IMAP server. Send and receive every email from a single inbox — never switch tabs again.</p>
           </div>
-          <div class="provider-row">
-            <div class="provider-icon smtp">📮</div>
-            <div class="provider-label">
-              Custom Email (SMTP/IMAP)<br>
-              <span class="provider-sub">cPanel, Zoho, Outlook &amp; more</span>
+        </div>
+        <div class="wn-stage">
+          <div class="wn-stage-head">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span class="live-dot"></span>
+              <span><b>4 inboxes</b> · 12 unread</span>
             </div>
-            <span class="provider-status new-badge">New</span>
+            <span class="pill-mini">All synced</span>
+          </div>
+          <div class="eh-providers">
+            <span class="eh-provider gmail"><span class="pdot"></span>Gmail</span>
+            <span class="eh-provider outlook"><span class="pdot"></span>Outlook</span>
+            <span class="eh-provider yahoo"><span class="pdot"></span>Yahoo</span>
+            <span class="eh-provider imap"><span class="pdot"></span>IMAP</span>
+          </div>
+          <div class="eh-inbox">
+            <div class="eh-mail unread">
+              <span class="src g">G</span>
+              <div class="body"><b>Sarah Mitchell</b><span>Re: Order #10248 — earbud not charging</span></div>
+              <span class="ts">2m</span>
+            </div>
+            <div class="eh-mail unread">
+              <span class="src o">O</span>
+              <div class="body"><b>Asia Hub Logistics</b><span>Tracking submitted · #10247 · DPD-9847…</span></div>
+              <span class="ts">8m</span>
+            </div>
+            <div class="eh-mail">
+              <span class="src y">Y</span>
+              <div class="body"><b>Maria Garcia</b><span>Order #10246 — when will it ship?</span></div>
+              <span class="ts">22m</span>
+            </div>
+            <div class="eh-mail">
+              <span class="src i">I</span>
+              <div class="body"><b>support@store.com</b><span>Daily digest · 14 orders, 2 failed payments</span></div>
+              <span class="ts">1h</span>
+            </div>
+          </div>
+          <div class="eh-ticker">
+            <span class="arrow">→</span>
+            <span>Sent <b>3</b> · Received <b>14</b> · Live sync every <b>30s</b></span>
+          </div>
+          <button class="eh-compose" type="button" aria-label="Compose">✦</button>
+        </div>
+        <div class="wn-foot">
+          <div class="feat-list">
+            <span>📥 Multi-inbox</span>
+            <span>📤 Send from any</span>
+            <span>🤖 AI replies</span>
+            <span>🔄 30s sync</span>
           </div>
         </div>
       </div>
@@ -2860,13 +3619,85 @@ footer{
   });
 
   // Feature card spotlight
-  document.querySelectorAll('.feat').forEach(card => {
+  document.querySelectorAll('.feat, .wn-card').forEach(card => {
     card.addEventListener('mousemove', (e) => {
       const r = card.getBoundingClientRect();
       card.style.setProperty('--mx', (e.clientX - r.left) + 'px');
       card.style.setProperty('--my', (e.clientY - r.top) + 'px');
     });
   });
+
+  // ===== Live Chat: keep "typing" then drop a final new bubble forever =====
+  (function liveChatLoop(){
+    const thread = document.querySelector('.wn-card[data-c="chat"] .lc-thread');
+    if (!thread) return;
+    const msgs = [
+      {side:'right', who:'You', text:'AI draft is ready — sending in 3s ✨'},
+      {side:'left',  who:'Sarah · Asia Hub', text:'Customer just replied — happy with ETA 👌'},
+      {side:'right', who:'You', text:'Awesome — closing the ticket.'},
+      {side:'left',  who:'JR · Support', text:'Stock for SWX-3 reordered with EU Direct.'},
+    ];
+    let i = 0;
+    function loop(){
+      const m = msgs[i % msgs.length];
+      const el = document.createElement('div');
+      el.className = 'lc-msg ' + m.side;
+      el.style.animation = 'msgIn .55s cubic-bezier(.2,.8,.2,1) backwards';
+      el.innerHTML = (m.side === 'left' ? '<b>'+m.who+'</b><br>' : '') + m.text +
+        '<span class="meta">just now</span>';
+      // Insert before the typing indicator
+      const typing = thread.querySelector('.lc-typing');
+      if (typing) thread.insertBefore(el, typing); else thread.appendChild(el);
+      // Keep thread length manageable
+      const all = thread.querySelectorAll('.lc-msg');
+      if (all.length > 6) all[0].remove();
+      i++;
+      setTimeout(loop, 3200);
+    }
+    setTimeout(loop, 4500);
+  })();
+
+  // ===== Stock: tick down an SKU randomly =====
+  (function stockTickLoop(){
+    const rows = document.querySelectorAll('.wn-card[data-c="stock"] .sm-row .qty');
+    if (!rows.length) return;
+    const initial = Array.from(rows).map(q => parseInt(q.firstChild.textContent.trim(), 10));
+    let counts = initial.slice();
+    function pad(n){return n}
+    function tick(){
+      const idx = Math.floor(Math.random() * rows.length);
+      // never tick down past 1 for low row
+      if (counts[idx] > 1) counts[idx] -= Math.ceil(Math.random()*2);
+      const q = rows[idx];
+      const small = q.querySelector('small');
+      const newNum = counts[idx];
+      q.innerHTML = newNum + (small ? small.outerHTML : '');
+      // brief flash
+      q.style.transition = 'color .25s, transform .35s cubic-bezier(.2,.8,.2,1)';
+      q.style.transform = 'scale(1.18)';
+      setTimeout(()=>{ q.style.transform = 'scale(1)'; }, 280);
+      // reset counts periodically
+      if (Math.random() < 0.15) counts = initial.slice();
+      setTimeout(tick, 2200 + Math.random()*1500);
+    }
+    setTimeout(tick, 3000);
+  })();
+
+  // ===== Email Hub: rotate "received" counter & ping a new mail occasionally =====
+  (function emailHubLoop(){
+    const ticker = document.querySelector('.wn-card[data-c="mail"] .eh-ticker');
+    if (!ticker) return;
+    let sent = 3, recv = 14;
+    function tick(){
+      const r = Math.random();
+      if (r < 0.6) recv += 1;
+      else sent += 1;
+      const html = '<span class="arrow">→</span> Sent <b>'+sent+'</b> · Received <b>'+recv+'</b> · Live sync every <b>30s</b>';
+      ticker.innerHTML = html;
+      setTimeout(tick, 2400 + Math.random()*1800);
+    }
+    setTimeout(tick, 2200);
+  })();
 
   // ===== LIVE OPERATIONS NETWORK =====
   (function opsNetwork(){
