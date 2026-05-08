@@ -13,6 +13,7 @@ from .views import (
     improve_reply_api,
     auto_suggest_reply_api,
     connect_email_account_api,
+    connect_custom_email_api,
     connected_email_api,
     email_settings_api,
     email_settings_update_api,
@@ -75,6 +76,7 @@ urlpatterns = [
     # =========================
 
     path("api/connect-email/", connect_email_account_api, name="connect_email_account_api"),
+    path("api/connect-custom-email/", connect_custom_email_api, name="connect_custom_email_api"),
     path("api/connected-email/", connected_email_api, name="connected_email_api"),
     path("api/settings/", email_settings_api, name="email_settings_api"),
     path("api/settings/update/", email_settings_update_api, name="email_settings_update_api"),

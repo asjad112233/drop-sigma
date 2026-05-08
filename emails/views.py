@@ -114,6 +114,38 @@ def extract_clean_email(value):
     return (addr or value).strip().lower()
 
 
+def _smtp_send_direct(account, recipient, subject, html_body, files=None):
+    """Send via stored SMTP credentials (custom hosting / non-Gmail accounts)."""
+    msg = MIMEMultipart("alternative")
+    msg["From"] = account.email
+    msg["To"] = recipient
+    msg["Subject"] = subject
+    msg.attach(MIMEText(html_body, "html"))
+
+    for f in (files or []):
+        part = MIMEBase("application", "octet-stream")
+        part.set_payload(f.read())
+        encoders.encode_base64(part)
+        part.add_header("Content-Disposition", f'attachment; filename="{f.name}"')
+        msg.attach(part)
+
+    port = account.smtp_port
+    host = account.smtp_host
+    password = account.app_password
+
+    if port == 465:
+        ctx = ssl.create_default_context()
+        with smtplib.SMTP_SSL(host, port, context=ctx, timeout=20) as server:
+            server.login(account.email, password)
+            server.sendmail(account.email, recipient, msg.as_string())
+    else:
+        with smtplib.SMTP(host, port, timeout=20) as server:
+            server.ehlo()
+            server.starttls(context=ssl.create_default_context())
+            server.login(account.email, password)
+            server.sendmail(account.email, recipient, msg.as_string())
+
+
 def send_email_with_store_account(store, recipient, subject, body, files=None):
     account = EmailAccount.objects.filter(store=store, is_active=True).first()
 
@@ -122,6 +154,8 @@ def send_email_with_store_account(store, recipient, subject, body, files=None):
 
     if account.auth_type == "oauth" and account.oauth_refresh_token:
         _gmail_api_send(account, recipient, subject, body, files=files)
+    elif account.auth_type == "password" and account.app_password:
+        _smtp_send_direct(account, recipient, subject, body, files=files)
     else:
         _brevo_send(account.email, recipient, subject, body, attachments=files)
 
@@ -192,6 +226,71 @@ def connect_email_account_api(request):
         "message": "Email connected successfully.",
         "email": account.email,
         "store_id": store.id
+    })
+
+
+@csrf_exempt
+@api_view(["POST"])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def connect_custom_email_api(request):
+    """Connect a custom hosting email via SMTP + IMAP credentials."""
+    store_id  = request.data.get("store_id")
+    email     = request.data.get("email", "").strip()
+    password  = request.data.get("password", "").strip()
+    imap_host = request.data.get("imap_host", "").strip()
+    imap_port = int(request.data.get("imap_port", 993))
+    smtp_host = request.data.get("smtp_host", "").strip()
+    smtp_port = int(request.data.get("smtp_port", 587))
+
+    if not all([store_id, email, password, imap_host, smtp_host]):
+        return Response({"success": False, "message": "All fields are required."}, status=400)
+
+    store = Store.objects.filter(id=store_id).first()
+    if not store:
+        return Response({"success": False, "message": "Store not found."}, status=404)
+
+    # Test IMAP
+    try:
+        imap = imaplib.IMAP4_SSL(imap_host, imap_port, timeout=15)
+        imap.login(email, password)
+        imap.logout()
+    except Exception as e:
+        return Response({"success": False, "message": f"IMAP connection failed: {str(e)}"}, status=400)
+
+    # Test SMTP
+    try:
+        ctx = ssl.create_default_context()
+        if smtp_port == 465:
+            with smtplib.SMTP_SSL(smtp_host, smtp_port, context=ctx, timeout=15) as s:
+                s.login(email, password)
+        else:
+            with smtplib.SMTP(smtp_host, smtp_port, timeout=15) as s:
+                s.ehlo()
+                s.starttls(context=ctx)
+                s.login(email, password)
+    except Exception as e:
+        return Response({"success": False, "message": f"SMTP connection failed: {str(e)}"}, status=400)
+
+    account, _ = EmailAccount.objects.update_or_create(
+        store=store,
+        email=email,
+        defaults={
+            "app_password": password,
+            "imap_host":    imap_host,
+            "imap_port":    imap_port,
+            "smtp_host":    smtp_host,
+            "smtp_port":    smtp_port,
+            "auth_type":    "password",
+            "is_active":    True,
+        },
+    )
+
+    return Response({
+        "success":  True,
+        "message":  "Custom email connected successfully.",
+        "email":    account.email,
+        "store_id": store.id,
     })
 
 
