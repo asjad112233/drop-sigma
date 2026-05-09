@@ -11965,19 +11965,20 @@ function renderEmails(){
   const list = document.getElementById("emailsList");
   const search = (document.getElementById("emailSearch")?.value || "").toLowerCase();
 
-  // Toggle controls visibility based on connection status
+  // Toggle controls visibility — always show if there are threads, even if no email connected
   const _ctrl   = document.getElementById("emControlsBar");
   const _hdr    = document.getElementById("emInboxHdr");
   const _search = document.getElementById("emSearchWrap");
   const _tabs   = document.getElementById("emFilterTabs");
   const _connected = !!connectedStoreEmail;
-  if(_ctrl)   _ctrl.style.display   = _connected ? "" : "none";
-  if(_hdr)    _hdr.style.display    = _connected ? "" : "none";
-  if(_search) _search.style.display = _connected ? "" : "none";
-  if(_tabs)   _tabs.style.display   = _connected ? "" : "none";
+  const _hasThreads = (allThreads || []).length > 0;
+  if(_ctrl)   _ctrl.style.display   = (_connected || _hasThreads) ? "" : "none";
+  if(_hdr)    _hdr.style.display    = (_connected || _hasThreads) ? "" : "none";
+  if(_search) _search.style.display = (_connected || _hasThreads) ? "" : "none";
+  if(_tabs)   _tabs.style.display   = (_connected || _hasThreads) ? "" : "none";
 
-  // No email connected — show connect prompt in the list area only
-  if(!_connected){
+  // No email connected AND no threads — show connect prompt
+  if(!_connected && !_hasThreads){
     list.innerHTML = `
       <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;min-height:260px;padding:32px 20px;text-align:center;">
         <div style="width:60px;height:60px;border-radius:18px;background:linear-gradient(135deg,#eff6ff,#dbeafe);display:flex;align-items:center;justify-content:center;margin-bottom:16px;box-shadow:0 6px 18px rgba(37,99,235,.13);">
