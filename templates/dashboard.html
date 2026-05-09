@@ -9910,6 +9910,7 @@ function _setSel(id, val){ const el=document.getElementById(id); if(el&&val!==un
 
 function emSettingChange(key, value){
   emailSettings[key] = value;
+  _applyEmailSettings(emailSettings);
   clearTimeout(_stgSaveTimer);
   _stgSaveTimer = setTimeout(()=>_saveEmailSetting(key, value), 350);
 }
