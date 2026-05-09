@@ -9975,6 +9975,7 @@ function applyShowCcBcc(show){
 function _applyEmailSettings(s){
   window._syncOnTabFocus = s.sync_on_tab_focus !== false;
   window._autoSuggestEnabled = s.ai_auto_suggest !== false;
+  if(!window._autoSuggestEnabled) closeSuggestionBox();
   window._notifySound = !!s.notify_sound;
   window._notifyUnreadOnly = s.notify_unread_only !== false;
   window._notifyAssignedOnly = !!s.notify_assigned_only;
@@ -12160,6 +12161,7 @@ async function openThread(contact, options={}){
 
     if(!options.preserveReply){
       document.getElementById("emailReplyText").value = "";
+      closeSuggestionBox();
       autoResizeReply();
       setTimeout(() => { scrollChatToBottom(); }, 60);
     }
