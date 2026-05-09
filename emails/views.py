@@ -317,60 +317,98 @@ def gmail_oauth_start_api(request):
 
 
 def gmail_oauth_callback(request):
+    import logging
     from django.shortcuts import redirect as _redirect
     from django.conf import settings as _settings
+
+    logger = logging.getLogger(__name__)
+
     code = request.GET.get("code")
     store_id = request.GET.get("state")
+
     if request.GET.get("error") or not code:
-        return _redirect("/?gmail_error=denied")
+        return _redirect("/dashboard/?gmail_error=denied")
 
     client_id = getattr(_settings, "GOOGLE_CLIENT_ID", "") or os.getenv("GOOGLE_CLIENT_ID", "")
     client_secret = getattr(_settings, "GOOGLE_CLIENT_SECRET", "") or os.getenv("GOOGLE_CLIENT_SECRET", "")
-    redirect_uri = getattr(_settings, "GOOGLE_OAUTH_REDIRECT_URI", "") or os.getenv("GOOGLE_OAUTH_REDIRECT_URI", "http://127.0.0.1:8000/emails/oauth/callback/")
+    redirect_uri = (
+        getattr(_settings, "GOOGLE_OAUTH_REDIRECT_URI", "")
+        or os.getenv("GOOGLE_OAUTH_REDIRECT_URI", "http://127.0.0.1:8000/emails/oauth/callback/")
+    )
 
-    token_resp = requests.post("https://oauth2.googleapis.com/token", data={
-        "grant_type": "authorization_code",
-        "code": code,
-        "client_id": client_id,
-        "client_secret": client_secret,
-        "redirect_uri": redirect_uri,
-    }, timeout=15)
+    if not client_id or not client_secret:
+        return _redirect("/dashboard/?gmail_error=not_configured")
+
+    # Exchange authorization code for tokens
+    try:
+        token_resp = requests.post(
+            "https://oauth2.googleapis.com/token",
+            data={
+                "grant_type": "authorization_code",
+                "code": code,
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "redirect_uri": redirect_uri,
+            },
+            timeout=15,
+        )
+    except Exception as exc:
+        logger.error("Gmail OAuth token exchange failed: %s", exc)
+        return _redirect("/dashboard/?gmail_error=network_error")
 
     if not token_resp.ok:
-        return _redirect("/?gmail_error=auth_failed")
+        logger.error("Gmail OAuth token exchange HTTP %s: %s", token_resp.status_code, token_resp.text[:300])
+        return _redirect("/dashboard/?gmail_error=auth_failed")
 
-    tokens = token_resp.json()
+    try:
+        tokens = token_resp.json()
+    except Exception:
+        return _redirect("/dashboard/?gmail_error=bad_response")
+
     refresh_token = tokens.get("refresh_token")
     access_token = tokens.get("access_token")
     if not refresh_token:
-        return _redirect("/?gmail_error=no_refresh_token")
+        return _redirect("/dashboard/?gmail_error=no_refresh_token")
 
-    user_resp = requests.get(
-        "https://www.googleapis.com/oauth2/v1/userinfo",
-        headers={"Authorization": f"Bearer {access_token}"},
-        timeout=10,
-    )
-    email = user_resp.json().get("email", "")
+    # Fetch Gmail address
+    try:
+        user_resp = requests.get(
+            "https://www.googleapis.com/oauth2/v1/userinfo",
+            headers={"Authorization": f"Bearer {access_token}"},
+            timeout=10,
+        )
+        email = user_resp.json().get("email", "")
+    except Exception as exc:
+        logger.error("Gmail OAuth userinfo fetch failed: %s", exc)
+        return _redirect("/dashboard/?gmail_error=userinfo_failed")
+
+    if not email:
+        return _redirect("/dashboard/?gmail_error=no_email")
 
     store = Store.objects.filter(id=store_id).first()
     if not store:
-        return _redirect("/?gmail_error=store_not_found")
+        return _redirect("/dashboard/?gmail_error=store_not_found")
 
-    EmailAccount.objects.update_or_create(
-        store=store,
-        email=email,
-        defaults={
-            "app_password": "",
-            "oauth_refresh_token": refresh_token,
-            "auth_type": "oauth",
-            "imap_host": "imap.gmail.com",
-            "imap_port": 993,
-            "smtp_host": "smtp.gmail.com",
-            "smtp_port": 465,
-            "is_active": True,
-        },
-    )
-    return _redirect("/?gmail_connected=1")
+    try:
+        EmailAccount.objects.update_or_create(
+            store=store,
+            email=email,
+            defaults={
+                "app_password": "",
+                "oauth_refresh_token": refresh_token,
+                "auth_type": "oauth",
+                "imap_host": "imap.gmail.com",
+                "imap_port": 993,
+                "smtp_host": "smtp.gmail.com",
+                "smtp_port": 587,
+                "is_active": True,
+            },
+        )
+    except Exception as exc:
+        logger.error("Gmail OAuth save account failed: %s", exc)
+        return _redirect("/dashboard/?gmail_error=save_failed")
+
+    return _redirect("/dashboard/?gmail_connected=1")
 
 
 @api_view(["GET"])
