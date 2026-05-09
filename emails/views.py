@@ -4,7 +4,7 @@ import requests
 from django.conf import settings
 from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
-from django.http import FileResponse
+from django.http import FileResponse, HttpResponse
 from django.utils import timezone
 from django.db.models import Q
 
@@ -981,6 +981,12 @@ def sync_inbox_api(request):
 @permission_classes([AllowAny])
 def download_attachment_api(_request, attachment_id):
     attachment = get_object_or_404(EmailAttachment, id=attachment_id)
+    content_type = attachment.content_type or "application/octet-stream"
+    if content_type.startswith("image/"):
+        data = attachment.file.read()
+        response = HttpResponse(data, content_type=content_type)
+        response["Content-Disposition"] = f'inline; filename="{attachment.filename}"'
+        return response
     return FileResponse(
         attachment.file.open("rb"),
         as_attachment=True,

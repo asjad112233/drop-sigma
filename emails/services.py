@@ -69,6 +69,18 @@ def extract_body(msg):
     return payload.decode(errors="ignore") if payload else ""
 
 
+def extract_body_html(msg):
+    """Extract the HTML part of a MIME email, returning empty string if none."""
+    if msg.is_multipart():
+        for part in msg.walk():
+            content_type = part.get_content_type()
+            disposition = str(part.get("Content-Disposition"))
+            if content_type == "text/html" and "attachment" not in disposition:
+                payload = part.get_payload(decode=True)
+                return payload.decode(errors="ignore") if payload else ""
+    return ""
+
+
 def extract_attachments(msg):
     attachments = []
 
@@ -729,6 +741,7 @@ def _sync_gmail_api(account, store):
         sender = clean_text(msg.get("From"))
         recipient = clean_text(msg.get("To")) or account.email
         body = extract_body(msg)
+        body_html = extract_body_html(msg)
 
         category = classify_email(subject, body)
         linked_order = find_order_from_email(store, subject, body)
@@ -740,6 +753,7 @@ def _sync_gmail_api(account, store):
             recipient=recipient,
             subject=subject,
             body=body,
+            body_html=body_html,
             status="drafted",
             category=category,
             is_read=is_read,
@@ -820,6 +834,7 @@ def sync_gmail_inbox(store_id=2):
                     sender = clean_text(msg.get("From"))
                     recipient = clean_text(msg.get("To")) or account.email
                     body = extract_body(msg)
+                    body_html = extract_body_html(msg)
                     category = classify_email(subject, body)
                     linked_order = find_order_from_email(store, subject, body)
                     gmail_uid = str(num.decode() if isinstance(num, bytes) else num) + "_" + account.email
@@ -832,6 +847,7 @@ def sync_gmail_inbox(store_id=2):
                             recipient=recipient,
                             subject=subject,
                             body=body,
+                            body_html=body_html,
                             status="drafted",
                             category=category,
                             is_read=is_read,

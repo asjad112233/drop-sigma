@@ -88,6 +88,7 @@ class EmailMessage(models.Model):
 
     subject = models.CharField(max_length=255, blank=True, null=True)
     body = models.TextField(blank=True, null=True)
+    body_html = models.TextField(blank=True, default='')
 
     # 📊 Category (refund, shipping, etc)
     category = models.CharField(max_length=50, default="general")
