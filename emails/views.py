@@ -1259,10 +1259,15 @@ def send_test_template_api(request, template_id):
     try:
         account = EmailAccount.objects.filter(store=t.store, is_active=True).first()
         if not account:
-            return Response({'success': False, 'message': 'No active email account found.'}, status=400)
+            return Response({'success': False, 'message': 'No active email account connected for this store.'}, status=400)
 
-        _brevo_send(account.email, test_email, f'[TEST] {subject}', full_html)
-        return Response({'success': True, 'message': f'Test sent to {test_email}'})
+        send_email_with_store_account(
+            store=t.store,
+            recipient=test_email,
+            subject=f'[TEST] {subject}',
+            body=full_html,
+        )
+        return Response({'success': True, 'message': f'Test sent to {test_email} via {account.email}'})
     except Exception as e:
         return Response({'success': False, 'message': str(e)}, status=400)
 
