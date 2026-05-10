@@ -5870,12 +5870,22 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
             <div class="tc-group">
               <div class="tc-group-head" onclick="tcToggleGroup(this)">
                 <span><i class="fa-solid fa-caret-down tc-caret"></i> Direct Messages</span>
-              </div>
-              <div style="display:flex;gap:4px;padding:2px 8px 8px;">
-                <button id="tcTabTeam" class="tc-dm-tab-btn tc-dm-tab-active" onclick="tcDmTab('team')">Team Members</button>
-                <button id="tcTabVendors" class="tc-dm-tab-btn" onclick="tcDmTab('vendors')">Vendors</button>
+                <button class="tc-ha-btn" onclick="event.stopPropagation();tcOpenNewDmPanel()" title="New DM"><i class="fa-solid fa-plus"></i></button>
               </div>
               <div id="tcMemberList"></div>
+            </div>
+
+            <!-- New DM Panel -->
+            <div id="tcNewDmPanel" style="display:none;position:absolute;bottom:0;left:0;right:0;top:0;background:#fff;z-index:50;display:none;flex-direction:column;border-radius:0;">
+              <div style="display:flex;align-items:center;gap:8px;padding:14px 14px 10px;border-bottom:1px solid #f0eeff;">
+                <button onclick="tcCloseNewDmPanel()" style="background:none;border:none;cursor:pointer;color:#6b6b7d;font-size:16px;padding:0 4px;">←</button>
+                <span style="font-weight:700;font-size:14px;color:#0d0d12;">New Message</span>
+              </div>
+              <div style="padding:10px 12px;">
+                <input id="tcDmSearch" type="text" placeholder="Search people…" oninput="tcFilterDmPanel()"
+                  style="width:100%;padding:8px 12px;border:1.5px solid #e8e2f8;border-radius:10px;font-size:13px;outline:none;background:#faf8ff;box-sizing:border-box;">
+              </div>
+              <div id="tcNewDmList" style="overflow-y:auto;flex:1;padding:0 8px 12px;"></div>
             </div>
           </div>
         </aside>
@@ -6721,7 +6731,7 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
 .tc-app.with-thread{grid-template-columns:280px 1fr 380px;}
 
 /* Sidebar */
-.tc-sidebar{background:#fff;border:1px solid #e7e2f5;border-radius:18px;box-shadow:0 1px 3px rgba(20,14,60,.05);display:flex;flex-direction:column;overflow:hidden;}
+.tc-sidebar{background:#fff;border:1px solid #e7e2f5;border-radius:18px;box-shadow:0 1px 3px rgba(20,14,60,.05);display:flex;flex-direction:column;overflow:hidden;position:relative;}
 .tc-sb-head{padding:16px 16px 14px;display:flex;align-items:center;gap:12px;border-bottom:1px solid #f0ecfb;}
 .tc-logo{width:40px;height:40px;border-radius:11px;background:linear-gradient(135deg,#3b82f6,#8b5cf6);color:#fff;font-weight:800;font-size:12px;display:grid;place-items:center;letter-spacing:-.5px;box-shadow:0 4px 12px rgba(124,58,237,.3);flex-shrink:0;}
 .tc-br-text{flex:1;min-width:0;}
@@ -6729,9 +6739,11 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
 .tc-br-sub{color:#9a99ad;font-size:11px;margin-top:1px;}
 .tc-channels{flex:1;overflow-y:auto;padding:10px;}
 .tc-group{margin-bottom:16px;}
-.tc-dm-tab-btn{flex:1;padding:5px 0;border:1.5px solid #e8e2f8;border-radius:8px;background:#fff;color:#6b6b7d;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;}
-.tc-dm-tab-btn:hover{background:#f5f3ff;color:#6d28d9;}
-.tc-dm-tab-active{background:#6d28d9!important;color:#fff!important;border-color:#6d28d9!important;}
+.tc-ndm-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;cursor:pointer;transition:background .1s;}
+.tc-ndm-item:hover{background:#f5f3ff;}
+.tc-ndm-av{width:32px;height:32px;border-radius:9px;color:#fff;display:grid;place-items:center;font-size:12px;font-weight:700;flex-shrink:0;}
+.tc-ndm-name{font-size:13px;font-weight:600;color:#0d0d12;}
+.tc-ndm-role{font-size:10px;color:#9a99ad;}
 .tc-group-head{display:flex;align-items:center;justify-content:space-between;padding:6px 8px;color:#9a99ad;font-size:12px;font-weight:600;cursor:pointer;text-transform:uppercase;letter-spacing:.4px;}
 .tc-group-head:hover{color:#0d0d12;}
 .tc-caret{font-size:10px;margin-right:4px;}
@@ -16248,32 +16260,49 @@ async function loadChatChannels(){
   } catch(e){ console.error("chat channels:",e); }
 }
 
-let _tcDmTab = "team";
-let _tcTeamList = [];
-let _tcVendorList = [];
+let _tcAllPeople = [];
+const _TC_DM_COLORS = ["#6d28d9","#2563eb","#059669","#dc2626","#d97706","#0891b2","#9333ea","#db2777","#065f46","#1e40af"];
 
-function tcDmTab(tab){
-  _tcDmTab = tab;
-  document.getElementById("tcTabTeam").className    = "tc-dm-tab-btn" + (tab==="team"    ? " tc-dm-tab-active" : "");
-  document.getElementById("tcTabVendors").className = "tc-dm-tab-btn" + (tab==="vendors" ? " tc-dm-tab-active" : "");
-  tcRenderDmList();
+function tcOpenNewDmPanel(){
+  const panel = document.getElementById("tcNewDmPanel");
+  panel.style.display = "flex";
+  document.getElementById("tcDmSearch").value = "";
+  tcRenderNewDmList(_tcAllPeople);
+  setTimeout(()=>document.getElementById("tcDmSearch").focus(), 100);
 }
 
-function tcRenderDmList(){
-  const items = _tcDmTab === "team" ? _tcTeamList : _tcVendorList;
-  const DM_COLORS_LOCAL = ["#6d28d9","#2563eb","#059669","#dc2626","#d97706","#0891b2","#9333ea","#db2777"];
-  document.getElementById("tcMemberList").innerHTML = items.length === 0
-    ? `<div style="padding:10px 12px;font-size:12px;color:#9a99ad;">No ${_tcDmTab === "team" ? "team members" : "vendors"} yet.</div>`
-    : items.map((m,i)=>{
-        const ini = m.name.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
-        const col = m.is_vendor ? "#7c3aed" : DM_COLORS_LOCAL[i % DM_COLORS_LOCAL.length];
-        const role = m.is_admin ? `<span style="font-size:9px;background:#fef3c7;color:#92400e;border-radius:4px;padding:1px 5px;font-weight:700;margin-left:4px;">ADMIN</span>`
-                   : m.is_vendor ? `<span style="font-size:9px;background:#ede9fe;color:#6d28d9;border-radius:4px;padding:1px 5px;font-weight:700;margin-left:4px;">VENDOR</span>` : "";
-        return `<div class="tc-dm" id="tcDm_${m.user}" onclick="tcOpenDm(${m.user},'${esc(m.name)}')">
-          <div class="tc-dm-av ${m.status||"offline"}" style="background:${col};">${ini}</div>
-          <span class="tc-ch-name-txt">${esc(m.name)}${role}</span>
-        </div>`;
-      }).join("");
+function tcCloseNewDmPanel(){
+  document.getElementById("tcNewDmPanel").style.display = "none";
+}
+
+function tcFilterDmPanel(){
+  const q = document.getElementById("tcDmSearch").value.toLowerCase().trim();
+  const filtered = q ? _tcAllPeople.filter(m=>m.name.toLowerCase().includes(q)) : _tcAllPeople;
+  tcRenderNewDmList(filtered);
+}
+
+function tcRenderNewDmList(items){
+  const el = document.getElementById("tcNewDmList");
+  if(!items.length){ el.innerHTML=`<div style="padding:16px;text-align:center;font-size:12px;color:#9a99ad;">No people found.</div>`; return; }
+  const grouped = {};
+  items.forEach(m=>{
+    const g = m.is_admin?"Admin":m.is_vendor?"Vendors":"Team Members";
+    if(!grouped[g]) grouped[g]=[];
+    grouped[g].push(m);
+  });
+  const order = ["Admin","Team Members","Vendors"];
+  el.innerHTML = order.filter(g=>grouped[g]).map(g=>`
+    <div style="padding:8px 4px 4px;font-size:10px;font-weight:700;color:#9a99ad;text-transform:uppercase;letter-spacing:.5px;">${g}</div>
+    ${grouped[g].map((m,i)=>{
+      const ini = m.name.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
+      const col = m.is_admin?"#f59e0b":m.is_vendor?"#7c3aed":_TC_DM_COLORS[i%_TC_DM_COLORS.length];
+      const sub = m.is_admin?"Owner":m.is_vendor?"Vendor":m.role||"Team";
+      return `<div class="tc-ndm-item" onclick="tcCloseNewDmPanel();tcOpenDm(${m.user},'${esc(m.name)}')">
+        <div class="tc-ndm-av" style="background:${col};">${ini}</div>
+        <div><div class="tc-ndm-name">${esc(m.name)}</div><div class="tc-ndm-role">${sub}</div></div>
+      </div>`;
+    }).join("")}
+  `).join("");
 }
 
 async function loadChatMembers(){
@@ -16283,15 +16312,22 @@ async function loadChatMembers(){
     if(!d.success) return;
     const contacts = d.admin_contacts || [];
     const members  = d.members || [];
-    const all = [...contacts, ...members];
-    _tcMentionMembers = all.map(m=>m.name);
-    all.forEach(m=>{
+    _tcAllPeople = [...contacts, ...members];
+    _tcMentionMembers = _tcAllPeople.map(m=>m.name);
+    _tcAllPeople.forEach(m=>{
       _tcMentionMap[m.name.toLowerCase()] = m.user;
       _tcMentionMap[m.name.split(" ")[0].toLowerCase()] = m.user;
     });
-    _tcTeamList   = [...contacts, ...members.filter(m=>!m.is_vendor)];
-    _tcVendorList = members.filter(m=>m.is_vendor);
-    tcRenderDmList();
+    // Show recently active DMs in the sidebar list (up to 6)
+    const recent = _tcAllPeople.slice(0,6);
+    document.getElementById("tcMemberList").innerHTML = recent.map((m,i)=>{
+      const ini = m.name.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
+      const col = m.is_admin?"#f59e0b":m.is_vendor?"#7c3aed":_TC_DM_COLORS[i%_TC_DM_COLORS.length];
+      return `<div class="tc-dm" id="tcDm_${m.user}" onclick="tcOpenDm(${m.user},'${esc(m.name)}')">
+        <div class="tc-dm-av ${m.status||"offline"}" style="background:${col};">${ini}</div>
+        <span class="tc-ch-name-txt">${esc(m.name)}</span>
+      </div>`;
+    }).join("");
   } catch(e){ console.error("loadChatMembers:", e); }
 }
 
