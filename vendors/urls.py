@@ -21,4 +21,5 @@ urlpatterns = [
     path("<int:vendor_id>/store/<int:store_id>/manage-products/", views.vendor_store_manage_products_api, name="vendor_manage_products"),
     path("<int:vendor_id>/credentials/", views.vendor_credentials_api, name="vendor_credentials"),
     path("<int:vendor_id>/reset-password/", views.vendor_reset_password_api, name="vendor_reset_password"),
+    path("invite/send/", views.send_vendor_invitation_api, name="send_vendor_invitation"),
 ]

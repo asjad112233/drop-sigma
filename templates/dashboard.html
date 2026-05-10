@@ -4275,6 +4275,7 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
         <div class="actions" style="margin-top:0;">
           <button class="btn" onclick="loadVendors()">Refresh</button>
           <button class="btn green" onclick="openVendorModal()">+ Add Vendor</button>
+          <button class="btn" style="background:linear-gradient(135deg,#059669,#10b981);color:#fff;border:none;" onclick="openVendorInviteModal()">📧 Invite Vendor</button>
         </div>
       </div>
 
@@ -7216,6 +7217,51 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
   </div>
 </div>
 <!-- ══ END CREATE EMPLOYEE MODAL ══ -->
+
+<!-- ══ INVITE VENDOR MODAL ══ -->
+<div id="vendorInviteModal" class="vm-overlay" style="display:none;">
+  <div class="vm-shape vm-s1" style="background:#6ee7b7;"></div>
+  <div class="vm-shape vm-s2" style="background:#34d399;"></div>
+  <div class="vm-shape vm-s3" style="background:#a7f3d0;"></div>
+
+  <div class="vm-card" style="max-width:560px;">
+    <div class="vm-hd">
+      <div>
+        <h1>📧 Invite Vendor</h1>
+        <p>Send an invitation email — vendor will set their own password.</p>
+      </div>
+      <button class="vm-close-btn" onclick="closeVendorInviteModal()">✕ Close</button>
+    </div>
+
+    <div style="font-size:11px;font-weight:900;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;">Vendor Details</div>
+    <div class="vm-form-grid" style="grid-template-columns:1fr 1fr;">
+      <div class="vm-fg"><label>Full Name *</label><input id="vinvName" placeholder="Ali Traders"></div>
+      <div class="vm-fg"><label>Email Address *</label><input id="vinvEmail" type="email" placeholder="ali@vendor.com"></div>
+      <div class="vm-fg vm-full"><label>Assign Store *</label>
+        <select id="vinvStore">
+          <option value="">— Select Store —</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="vm-actions">
+      <button class="vm-save-btn" style="background:linear-gradient(135deg,#059669,#10b981);box-shadow:0 12px 28px rgba(5,150,105,.25);" onclick="sendVendorInvitation()">📧 Send Invitation →</button>
+      <button class="vm-clear-btn" onclick="closeVendorInviteModal()">Cancel</button>
+    </div>
+    <p id="vinvMsg" style="margin-top:12px;font-size:13px;font-weight:700;"></p>
+  </div>
+</div>
+
+<!-- Vendor invite success overlay -->
+<div id="vinvSuccessOverlay" class="vm-success-overlay">
+  <div class="vm-success-card">
+    <div class="vm-success-icon" style="background:linear-gradient(135deg,#059669,#10b981);box-shadow:0 8px 24px rgba(5,150,105,.4);">✓</div>
+    <h2>Invitation Sent!</h2>
+    <p id="vinvSuccessDetails">The vendor will receive an email to set their own password and access their portal.</p>
+    <button onclick="closeVinvSuccess()" style="margin-top:20px;padding:12px 28px;background:#059669;color:#fff;border:none;border-radius:14px;font-weight:800;font-size:14px;cursor:pointer;width:100%;">Done</button>
+  </div>
+</div>
+<!-- ══ END INVITE VENDOR MODAL ══ -->
 
 <!-- Vendor Credentials / Login Link Modal -->
 <div id="vcLoginLinkModal" class="modal-bg" style="display:none;z-index:30000;" onclick="if(event.target===this)vcCloseLoginModal()">
@@ -10226,6 +10272,73 @@ function launchEmpConfetti(){
   }
 }
 // ══ END CREATE EMPLOYEE ══
+
+// ══ INVITE VENDOR ══
+async function openVendorInviteModal(){
+  fireLoader();
+  document.getElementById("vinvName").value="";
+  document.getElementById("vinvEmail").value="";
+  document.getElementById("vinvMsg").innerText="";
+  // Load stores into dropdown
+  const sel=document.getElementById("vinvStore");
+  sel.innerHTML=`<option value="">— Select Store —</option>`;
+  try{
+    const r=await fetch("/stores/api/");
+    const d=await r.json();
+    const stores=d.stores||d.results||d||[];
+    stores.forEach(s=>{ const o=document.createElement("option"); o.value=s.id; o.innerText=s.name; sel.appendChild(o); });
+  }catch(e){}
+  document.getElementById("vendorInviteModal").style.display="flex";
+}
+
+function closeVendorInviteModal(){
+  document.getElementById("vendorInviteModal").style.display="none";
+}
+
+async function sendVendorInvitation(){
+  const msg=document.getElementById("vinvMsg");
+  const name=document.getElementById("vinvName").value.trim();
+  const email=document.getElementById("vinvEmail").value.trim();
+  const store_id=document.getElementById("vinvStore").value;
+
+  if(!name||!email){ msg.style.color="#dc2626"; msg.innerText="Name and email are required."; return; }
+  if(!store_id){ msg.style.color="#dc2626"; msg.innerText="Please select a store."; return; }
+
+  msg.style.color="#64748b"; msg.innerText="Sending invitation...";
+
+  try{
+    const r=await fetch("/vendors/api/invite/send/",{
+      method:"POST",
+      headers:{"Content-Type":"application/json","X-CSRFToken":getCSRFToken()},
+      body:JSON.stringify({name,email,store_id})
+    });
+    const d=await r.json();
+    if(!d.success){ msg.style.color="#dc2626"; msg.innerText=d.message; return; }
+    msg.innerText="";
+    closeVendorInviteModal();
+    document.getElementById("vinvSuccessDetails").innerText=`An invitation email has been sent to ${email}. They'll set their own password and access the vendor portal.`;
+    document.getElementById("vinvSuccessOverlay").style.display="flex";
+    launchVinvConfetti();
+  }catch(e){
+    msg.style.color="#dc2626"; msg.innerText="Error: "+e.message;
+  }
+}
+
+function closeVinvSuccess(){
+  document.getElementById("vinvSuccessOverlay").style.display="none";
+}
+
+function launchVinvConfetti(){
+  const colors=["#059669","#10b981","#34d399","#6ee7b7","#a7f3d0","#fbbf24"];
+  for(let i=0;i<28;i++){
+    const el=document.createElement("div");
+    el.className="vm-confetti";
+    el.style.cssText=`left:${Math.random()*100}%;background:${colors[i%colors.length]};animation-delay:${Math.random()*.6}s;animation-duration:${2.2+Math.random()*.8}s;`;
+    document.body.appendChild(el);
+    setTimeout(()=>el.remove(),3200);
+  }
+}
+// ══ END INVITE VENDOR ══
 
 
 

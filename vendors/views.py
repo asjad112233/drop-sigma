@@ -6,7 +6,7 @@ from django.utils import timezone
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from .models import Vendor, ProductVendorAssignment, VendorTrackingSubmission, StoreVendorAssignment, TrackingQueueSetting, ProductTrackingAutoApprove
+from .models import Vendor, ProductVendorAssignment, VendorTrackingSubmission, StoreVendorAssignment, TrackingQueueSetting, ProductTrackingAutoApprove, VendorInvitation
 from .serializers import VendorSerializer
 from orders.models import Order
 from orders.services import log_activity, COURIER_URL_TEMPLATES
@@ -1082,3 +1082,226 @@ def vendor_stock_mark_arrived_api(request, assignment_id):
     assignment.save(update_fields=["stock_arrived", "arrived_at"])
 
     return Response({"success": True, "message": "Stock marked as arrived. Admin has been notified."})
+
+
+# ─── Vendor Invitations ───────────────────────────────────────────────────────
+
+import os
+import threading
+import datetime
+
+_VINV_LOGO = """<table cellpadding="0" cellspacing="0"><tr>
+  <td style="background:linear-gradient(135deg,#059669,#10b981);border-radius:14px;width:44px;height:44px;text-align:center;vertical-align:middle;">
+    <span style="color:#fff;font-weight:900;font-size:17px;letter-spacing:-.5px;">DS</span>
+  </td>
+  <td style="padding-left:12px;text-align:left;">
+    <div style="font-size:19px;font-weight:900;color:#0f172a;letter-spacing:-.4px;">Drop Sigma</div>
+    <div style="font-size:11px;color:#94a3b8;margin-top:1px;">Vendor Partner Portal</div>
+  </td>
+</tr></table>"""
+
+_VINV_FOOTER = """<p style="margin:0 0 6px;font-size:12px;color:#94a3b8;">
+  &copy; 2026 Drop Sigma &nbsp;&middot;&nbsp;
+  <a href="https://dropsigma.com" style="color:#94a3b8;text-decoration:none;">dropsigma.com</a>
+  &nbsp;&middot;&nbsp;
+  <a href="mailto:support@dropsigma.com" style="color:#94a3b8;text-decoration:none;">support@dropsigma.com</a>
+</p>
+<p style="margin:0;font-size:11px;color:#cbd5e1;">This invitation expires in 48 hours. If you did not expect this, ignore this email.</p>"""
+
+
+def _build_vendor_invitation_email(name, invite_url, invited_by, store_name):
+    return f"""<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/></head>
+<body style="margin:0;padding:0;background:#f6f9fc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f6f9fc;padding:48px 16px;">
+<tr><td align="center">
+<table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
+  <tr><td align="center" style="padding-bottom:32px;">{_VINV_LOGO}</td></tr>
+  <tr><td style="background:#ffffff;border-radius:16px;border:1px solid #e2e8f0;overflow:hidden;">
+    <div style="height:4px;background:linear-gradient(90deg,#059669,#10b981);"></div>
+    <table width="100%" cellpadding="0" cellspacing="0">
+    <tr><td align="center" style="padding:40px 48px 28px;">
+      <div style="font-size:12px;font-weight:700;color:#065f46;background:#d1fae5;border-radius:20px;display:inline-block;padding:5px 16px;letter-spacing:0.5px;margin-bottom:20px;">&#x1F91D; VENDOR INVITATION</div>
+      <h1 style="margin:0 0 12px;font-size:24px;font-weight:800;color:#0f172a;line-height:1.3;">You're invited as a Vendor Partner</h1>
+      <p style="margin:0;font-size:15px;color:#64748b;line-height:1.7;">Hi <strong style="color:#0f172a;">{name}</strong>, <strong style="color:#0f172a;">{invited_by}</strong> has invited you to join <strong style="color:#0f172a;">{store_name}</strong> as a vendor partner on Drop Sigma. Click below to accept and set your password.</p>
+    </td></tr>
+    <tr><td style="padding:0 48px;"><div style="height:1px;background:#f1f5f9;"></div></td></tr>
+    <tr><td align="center" style="padding:32px 48px;">
+      <table cellpadding="0" cellspacing="0"><tr>
+        <td style="background:linear-gradient(135deg,#059669,#10b981);border-radius:12px;box-shadow:0 4px 14px rgba(5,150,105,.35);">
+          <a href="{invite_url}" style="display:block;padding:16px 36px;font-size:15px;font-weight:800;color:#ffffff;text-decoration:none;letter-spacing:.2px;">Accept Invitation &amp; Set Password</a>
+        </td>
+      </tr></table>
+    </td></tr>
+    <tr><td style="padding:0 48px 28px;">
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:20px 24px;">
+        <p style="margin:0 0 8px;font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Or copy this link</p>
+        <p style="margin:0;font-size:12px;color:#059669;word-break:break-all;">{invite_url}</p>
+      </div>
+    </td></tr>
+    <tr><td align="center" style="padding:0 48px 36px;">
+      <p style="margin:0;font-size:12px;color:#94a3b8;">This link expires in <strong>48 hours</strong>.</p>
+    </td></tr>
+    </table>
+  </td></tr>
+  <tr><td align="center" style="padding-top:28px;">{_VINV_FOOTER}</td></tr>
+</table>
+</td></tr>
+</table>
+</body></html>"""
+
+
+def _send_vendor_invitation_email(to_email, subject, html):
+    import logging
+    logger = logging.getLogger(__name__)
+
+    def _do():
+        try:
+            import resend as _resend
+            api_key = os.getenv("RESEND_API_KEY", "")
+            if not api_key:
+                logger.warning("RESEND_API_KEY not set — vendor invitation email not sent to %s", to_email)
+                return
+            _resend.api_key = api_key
+            result = _resend.Emails.send({
+                "from":    "Drop Sigma <noreply@dropsigma.com>",
+                "to":      [to_email],
+                "subject": subject,
+                "html":    html,
+            })
+            logger.info("Vendor invitation email sent to %s — id: %s", to_email, getattr(result, "id", result))
+        except Exception as exc:
+            logger.error("Failed to send vendor invitation email to %s: %s", to_email, exc)
+    threading.Thread(target=_do, daemon=True).start()
+
+
+@api_view(["POST"])
+def send_vendor_invitation_api(request):
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Login required."}, status=401)
+
+    name     = (request.data.get("name") or "").strip()
+    email    = (request.data.get("email") or "").strip()
+    store_id = request.data.get("store_id")
+
+    if not name or not email:
+        return Response({"success": False, "message": "Name and email are required."}, status=400)
+    if not store_id:
+        return Response({"success": False, "message": "Store is required."}, status=400)
+
+    try:
+        store = Store.objects.get(id=store_id)
+    except Store.DoesNotExist:
+        return Response({"success": False, "message": "Store not found."}, status=404)
+
+    if Vendor.objects.filter(email=email).exists():
+        return Response({"success": False, "message": "A vendor with this email already exists."}, status=400)
+
+    if User.objects.filter(email=email).exists():
+        return Response({"success": False, "message": "A user with this email already exists."}, status=400)
+
+    # Expire any existing pending invites for this email
+    VendorInvitation.objects.filter(owner=request.user, email=email, status="pending").update(status="expired")
+
+    expires_at = timezone.now() + datetime.timedelta(hours=48)
+    inv = VendorInvitation.objects.create(
+        owner=request.user,
+        name=name,
+        email=email,
+        store=store,
+        expires_at=expires_at,
+    )
+
+    scheme = request.scheme
+    host   = request.get_host()
+    invite_url = f"{scheme}://{host}/vendor/invite/accept/{inv.token}/"
+
+    invited_by = request.user.get_full_name() or request.user.username
+    html = _build_vendor_invitation_email(name, invite_url, invited_by, store.name)
+    _send_vendor_invitation_email(email, f"You're invited as a vendor partner on Drop Sigma", html)
+
+    return Response({"success": True, "message": f"Invitation sent to {email}."})
+
+
+def accept_vendor_invitation_page(request, token):
+    try:
+        inv = VendorInvitation.objects.select_related("store").get(token=token)
+    except VendorInvitation.DoesNotExist:
+        return render(request, "vendor_invitation.html", {"error": "This invitation link is invalid."})
+
+    if not inv.is_valid():
+        msg = "This invitation has already been accepted." if inv.status == "accepted" else "This invitation link has expired."
+        return render(request, "vendor_invitation.html", {"error": msg})
+
+    return render(request, "vendor_invitation.html", {"invitation": inv})
+
+
+def set_vendor_invitation_password_api(request, token):
+    from django.http import JsonResponse
+    import json
+
+    if request.method != "POST":
+        return JsonResponse({"success": False, "message": "Method not allowed."}, status=405)
+
+    try:
+        inv = VendorInvitation.objects.select_related("store").get(token=token)
+    except VendorInvitation.DoesNotExist:
+        return JsonResponse({"success": False, "message": "Invalid invitation."}, status=404)
+
+    if not inv.is_valid():
+        return JsonResponse({"success": False, "message": "This invitation has expired or was already used."}, status=400)
+
+    try:
+        body = json.loads(request.body)
+    except Exception:
+        return JsonResponse({"success": False, "message": "Invalid request body."}, status=400)
+
+    password = (body.get("password") or "").strip()
+    if len(password) < 8:
+        return JsonResponse({"success": False, "message": "Password must be at least 8 characters."}, status=400)
+
+    # Build unique username
+    base     = inv.email.split("@")[0] + "_vendor"
+    username = base
+    counter  = 1
+    while User.objects.filter(username=username).exists():
+        username = f"{base}_{counter}"
+        counter += 1
+
+    user = User.objects.create_user(username=username, email=inv.email, password=password)
+    user.first_name = inv.name.split()[0]
+    user.last_name  = " ".join(inv.name.split()[1:])
+    user.save()
+
+    vendor = Vendor.objects.create(
+        user=inv.owner,  # owner FK for admin scoping (same pattern as employee)
+        name=inv.name,
+        email=inv.email,
+        assigned_store=inv.store,
+        status="active",
+    )
+    vendor.user = user
+    vendor.save(update_fields=["user"])
+
+    # Auto-add to default channels + admin DM
+    from teamapp.services import add_user_to_default_channels, get_or_create_admin_dm
+    add_user_to_default_channels(user, added_by_user=inv.owner)
+    get_or_create_admin_dm(inv.owner, user)
+
+    inv.status = "accepted"
+    inv.save(update_fields=["status"])
+
+    return JsonResponse({"success": True, "message": "Account activated!", "redirect": f"/vendor/login/activate/{inv.token}/"})
+
+
+def vendor_activate_login_by_token(request, token):
+    """Server-side GET: validates accepted vendor invitation, logs in, redirects to portal."""
+    from django.contrib.auth import login as auth_login
+    try:
+        inv = VendorInvitation.objects.get(token=token, status="accepted")
+        vendor = Vendor.objects.get(email=inv.email)
+        user = vendor.user
+        auth_login(request, user, backend="django.contrib.auth.backends.ModelBackend")
+        return redirect("/vendor/dashboard/")
+    except Exception:
+        return redirect("/vendor/login/")

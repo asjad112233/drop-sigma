@@ -5,6 +5,7 @@ from django.conf.urls.static import static
 from django.views.decorators.csrf import csrf_exempt
 from . import views
 from teamapp import views as teamapp_views
+from vendors import views as vendor_views
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -42,6 +43,9 @@ urlpatterns = [
     path("employee/invite/accept/<uuid:token>/",       teamapp_views.accept_invitation_page),
     path("employee/invite/set-password/<uuid:token>/", csrf_exempt(teamapp_views.set_invitation_password_api)),
     path("employee/login/activate/<uuid:token>/",      teamapp_views.employee_activate_login),
+    path("vendor/invite/accept/<uuid:token>/",         vendor_views.accept_vendor_invitation_page),
+    path("vendor/invite/set-password/<uuid:token>/",   csrf_exempt(vendor_views.set_vendor_invitation_password_api)),
+    path("vendor/login/activate/<uuid:token>/",        vendor_views.vendor_activate_login_by_token),
     path("stock/", include("stock.urls")),
     path("superadmin/", include("superadmin.urls")),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
