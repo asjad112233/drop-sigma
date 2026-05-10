@@ -60,8 +60,12 @@ def _get_display_name(user):
     if member:
         return member.name
     try:
-        vendor = user.vendor_profile
-        return vendor.name
+        return user.vendor_profile.name
+    except Exception:
+        pass
+    # Admin — use tenant/business name so it shows e.g. "Drop Sigma" not personal name
+    try:
+        return user.tenant_profile.name
     except Exception:
         pass
     return user.get_full_name() or user.username

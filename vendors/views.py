@@ -1216,7 +1216,10 @@ def send_vendor_invitation_api(request):
     host   = request.get_host()
     invite_url = f"{scheme}://{host}/vendor/invite/accept/{inv.token}/"
 
-    invited_by = request.user.get_full_name() or request.user.username
+    try:
+        invited_by = request.user.tenant_profile.name
+    except Exception:
+        invited_by = request.user.get_full_name() or request.user.username
     html = _build_vendor_invitation_email(name, invite_url, invited_by, store.name)
     _send_vendor_invitation_email(email, f"You're invited as a vendor partner on Drop Sigma", html)
 

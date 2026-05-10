@@ -36,9 +36,13 @@ def team_members_api(request):
     my_profile = request.user.team_profile.first()
     if my_profile and my_profile.owner:
         owner = my_profile.owner
+        try:
+            admin_name = owner.tenant_profile.name
+        except Exception:
+            admin_name = owner.get_full_name() or owner.username
         admin_contacts = [{
             "user": owner.id,
-            "name": owner.get_full_name() or owner.username,
+            "name": admin_name,
             "role": "owner",
             "status": "available",
             "is_admin": True,
@@ -46,6 +50,28 @@ def team_members_api(request):
         fellow_qs = TeamMember.objects.filter(owner=owner, is_active=True).exclude(user=request.user).order_by("name")
         fellow = [{"user": m.user_id, "name": m.name, "role": m.role, "status": m.status, "is_admin": False} for m in fellow_qs]
         return Response({"success": True, "members": fellow, "admin_contacts": admin_contacts})
+
+    # Vendor view: return their store's admin as top contact + store's employees
+    try:
+        vendor = request.user.vendor_profile
+        owner = vendor.assigned_store.user
+        if owner:
+            try:
+                admin_name = owner.tenant_profile.name
+            except Exception:
+                admin_name = owner.get_full_name() or owner.username
+            admin_contacts = [{
+                "user": owner.id,
+                "name": admin_name,
+                "role": "owner",
+                "status": "available",
+                "is_admin": True,
+            }]
+            team_qs = TeamMember.objects.filter(owner=owner, is_active=True).order_by("name")
+            fellow = [{"user": m.user_id, "name": m.name, "role": m.role, "status": m.status, "is_admin": False} for m in team_qs]
+            return Response({"success": True, "members": fellow, "admin_contacts": admin_contacts})
+    except Exception:
+        pass
 
     return Response({"success": True, "members": [], "admin_contacts": []})
 
@@ -489,7 +515,13 @@ def _sender_info(user):
         return {"name": vendor.name, "role": "vendor", "initials": initials}
     except Exception:
         pass
-    # Admin / superuser fallback
+    # Admin / superuser — use their tenant/business name
+    try:
+        biz = user.tenant_profile.name
+        initials = "".join(w[0].upper() for w in biz.split()[:2]) or "AD"
+        return {"name": biz, "role": "owner", "initials": initials}
+    except Exception:
+        pass
     full = user.get_full_name() or user.username
     initials = "".join(w[0].upper() for w in full.split()[:2]) or "AD"
     return {"name": full, "role": "owner", "initials": initials}
@@ -1212,7 +1244,10 @@ def send_employee_invitation_api(request):
     host   = request.get_host()
     invite_url = f"{scheme}://{host}/employee/invite/accept/{inv.token}/"
 
-    invited_by = request.user.get_full_name() or request.user.username
+    try:
+        invited_by = request.user.tenant_profile.name
+    except Exception:
+        invited_by = request.user.get_full_name() or request.user.username
     html = _build_invitation_email(name, invite_url, invited_by)
     _send_invitation_email(email, f"You're invited to join {invited_by} on Drop Sigma", html)
 
