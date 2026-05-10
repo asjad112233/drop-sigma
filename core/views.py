@@ -632,7 +632,7 @@ def dashboard_page(request):
     except Exception:
         pass
 
-    return render(request, "dashboard.html", {
+    response = render(request, "dashboard.html", {
         "is_impersonating":  bool(imp_id),
         "impersonate_name":  imp_name,
         "impersonate_email": imp_email,
@@ -642,6 +642,10 @@ def dashboard_page(request):
         "display_name":      display_name,
         "user_initials":     initials,
     })
+    response["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response["Pragma"] = "no-cache"
+    response["Expires"] = "0"
+    return response
 
 
 # ── Upgrade / Subscribe ────────────────────────────────────────────────────────

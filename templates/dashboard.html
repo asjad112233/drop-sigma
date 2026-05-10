@@ -14096,6 +14096,7 @@ document.addEventListener("visibilitychange", () => {
 
 document.addEventListener("DOMContentLoaded", function(){
   initDashboard();
+  setTimeout(loadChatMembers, 1500);
   const replyBox = document.getElementById("emailReplyText");
   if(replyBox){
     replyBox.addEventListener("input", autoResizeReply);
