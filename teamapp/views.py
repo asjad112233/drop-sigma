@@ -43,11 +43,15 @@ def team_members_api(request):
         return Response({"success": True, "members": fellow, "admin_contacts": admin_contacts})
 
     # Vendor view: return their store's admin as top contact + store's employees
-    # Guard: if owner == request.user, this is a stale record from an old bug (skip → admin view)
+    # Vendor view: find the admin who invited this vendor (most reliable source)
     try:
-        from vendors.models import Vendor as _VModel
+        from vendors.models import Vendor as _VModel, VendorInvitation as _VInv
         vp = _VModel.objects.select_related("assigned_store__user").get(user=request.user)
-        owner = vp.assigned_store.user if vp.assigned_store else None
+
+        # Primary: use the admin who sent the invitation (invitation owner = real admin)
+        inv = _VInv.objects.filter(email=request.user.email, status="accepted").select_related("owner").first()
+        owner = inv.owner if inv else (vp.assigned_store.user if vp.assigned_store else None)
+
         if owner and owner.id != request.user.id:
             admin_name = owner.get_full_name() or owner.username
             admin_contacts = [{
