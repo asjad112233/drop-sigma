@@ -7862,6 +7862,7 @@ function showSection(section){
     document.getElementById("chatSection").classList.add("active");
     document.getElementById("navChat").classList.add("active");
     loadChatChannels();
+    loadChatMembers();
     _tcStartPoll();
   } else {
     _tcStopPoll();
@@ -16237,7 +16238,6 @@ async function loadChatChannels(){
     }
 
   } catch(e){ console.error("chat channels:",e); }
-  loadChatMembers();
 }
 
 async function loadChatMembers(){

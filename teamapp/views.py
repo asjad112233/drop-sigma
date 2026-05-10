@@ -69,21 +69,12 @@ def team_members_api(request):
     emp_qs = TeamMember.objects.filter(owner=request.user, is_active=True).order_by("name")
     employees = [{"user": m.user_id, "name": m.name, "role": m.role, "status": m.status, "is_admin": False, "is_vendor": False} for m in emp_qs]
     admin_store_ids = list(_Store.objects.filter(user=request.user).values_list("id", flat=True))
-    all_vendor_ids = list(VendorModel.objects.filter(user__isnull=False).exclude(user=request.user).values_list("assigned_store_id", flat=True))
     vendor_qs = VendorModel.objects.filter(
         assigned_store_id__in=admin_store_ids, user__isnull=False
     ).exclude(user=request.user).select_related("user").order_by("name")
     vendors = [{"user": v.user_id, "name": v.name, "role": "vendor", "status": "active", "is_admin": False, "is_vendor": True} for v in vendor_qs]
     members = employees + vendors
-    _dbg = {
-        "uid": request.user.id,
-        "has_team_profile": request.user.team_profile.exists(),
-        "store_ids": admin_store_ids,
-        "vendor_store_ids": all_vendor_ids,
-        "vendor_count": len(vendors),
-        "emp_count": len(employees),
-    }
-    return Response({"success": True, "members": members, "admin_contacts": [], "_debug": _dbg})
+    return Response({"success": True, "members": members, "admin_contacts": []})
 
 
 @api_view(["POST"])
