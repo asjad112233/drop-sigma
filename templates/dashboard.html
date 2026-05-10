@@ -16263,6 +16263,7 @@ async function loadChatChannels(){
 let _tcAllPeople = [];
 const _TC_DM_COLORS = ["#6d28d9","#2563eb","#059669","#dc2626","#d97706","#0891b2","#9333ea","#db2777","#065f46","#1e40af"];
 
+let _tcDmUnreads = {};
 async function tcOpenNewDmPanel(){
   const panel = document.getElementById("tcNewDmPanel");
   panel.style.display = "flex";
@@ -16270,11 +16271,11 @@ async function tcOpenNewDmPanel(){
   document.getElementById("tcNewDmList").innerHTML = `<div style="padding:20px;text-align:center;font-size:12px;color:#9a99ad;">Loading…</div>`;
   setTimeout(()=>document.getElementById("tcDmSearch").focus(), 100);
   try{
-    const r = await fetch("/teamapp/members/");
-    const d = await r.json();
-    if(d.success){
-      const contacts = d.admin_contacts || [];
-      const members  = d.members || [];
+    const [mr, ur] = await Promise.all([fetch("/teamapp/members/"), fetch("/teamapp/chat/dm/unreads/")]);
+    const [md, ud] = await Promise.all([mr.json(), ur.json()]);
+    if(md.success){
+      const contacts = md.admin_contacts || [];
+      const members  = md.members || [];
       _tcAllPeople = [...contacts, ...members];
       _tcMentionMembers = _tcAllPeople.map(m=>m.name);
       _tcAllPeople.forEach(m=>{
@@ -16282,6 +16283,7 @@ async function tcOpenNewDmPanel(){
         _tcMentionMap[m.name.split(" ")[0].toLowerCase()] = m.user;
       });
     }
+    if(ud.success) _tcDmUnreads = ud.unreads || {};
   } catch(e){}
   tcRenderNewDmList(_tcAllPeople);
 }
@@ -16312,9 +16314,11 @@ function tcRenderNewDmList(items){
       const ini = m.name.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
       const col = m.is_admin?"#f59e0b":m.is_vendor?"#7c3aed":_TC_DM_COLORS[i%_TC_DM_COLORS.length];
       const sub = m.is_admin?"Owner":m.is_vendor?"Vendor":m.role||"Team";
+      const unread = _tcDmUnreads[String(m.user)]||0;
+      const badge = unread>0?`<span style="margin-left:auto;background:#ef4444;color:#fff;border-radius:99px;font-size:10px;font-weight:700;padding:1px 6px;">${unread>99?"99+":unread}</span>`:"";
       return `<div class="tc-ndm-item" onclick="tcCloseNewDmPanel();tcOpenDm(${m.user},'${esc(m.name)}')">
         <div class="tc-ndm-av" style="background:${col};">${ini}</div>
-        <div><div class="tc-ndm-name">${esc(m.name)}</div><div class="tc-ndm-role">${sub}</div></div>
+        <div style="flex:1"><div class="tc-ndm-name">${esc(m.name)}</div><div class="tc-ndm-role">${sub}</div></div>${badge}
       </div>`;
     }).join("")}
   `).join("");

@@ -9,6 +9,7 @@ urlpatterns = [
     path("rules/create/", views.create_assignment_rule_api),
     # Chat
     path("chat/dm/", views.chat_dm_api),
+    path("chat/dm/unreads/", views.chat_dm_unreads_api),
     path("chat/read/", views.chat_mark_read_api),
     path("chat/channels/", views.chat_channels_api),
     path("chat/channels/<int:channel_id>/members/", views.chat_channel_members_api),

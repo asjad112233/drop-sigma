@@ -560,6 +560,26 @@ def _serialize_message(msg, current_user_id, include_replies=True):
     }
 
 
+@api_view(["GET"])
+def chat_dm_unreads_api(request):
+    """Return unread DM counts for all DM channels the current user participates in."""
+    if not request.user.is_authenticated:
+        return Response({"success": False}, status=401)
+    dm_channels = ChatChannel.objects.filter(is_dm=True, participants=request.user)
+    result = {}
+    for ch in dm_channels:
+        receipt = ChatReadReceipt.objects.filter(user=request.user, channel=ch).first()
+        if receipt:
+            unread = ch.messages.filter(created_at__gt=receipt.last_read_at).count()
+        else:
+            unread = ch.messages.count()
+        # Get the other participant's user id
+        other = ch.participants.exclude(id=request.user.id).first()
+        if other and unread > 0:
+            result[str(other.id)] = unread
+    return Response({"success": True, "unreads": result})
+
+
 @api_view(["POST"])
 def chat_dm_api(request):
     """Get or create a private DM channel between current user and target_user_id."""
