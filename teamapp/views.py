@@ -49,7 +49,14 @@ def team_members_api(request):
         vp = _VModel.objects.select_related("assigned_store__user").get(user=request.user)
         owner = vp.assigned_store.user if vp.assigned_store else None
         if owner and owner.id != request.user.id:
-            admin_name = owner.get_full_name() or owner.username
+            admin_name = owner.get_full_name()
+            if not admin_name:
+                try:
+                    from stores.models import Store as _Store
+                    _s = _Store.objects.filter(user=owner).first()
+                    admin_name = (_s.name if _s and _s.name else None) or owner.username
+                except Exception:
+                    admin_name = owner.username
             admin_contacts = [{
                 "user": owner.id,
                 "name": admin_name,
@@ -516,15 +523,26 @@ def _sender_info(user):
     if member:
         initials = "".join(w[0].upper() for w in member.name.split()[:2])
         return {"name": member.name, "role": member.role, "initials": initials}
-    # Vendor
+    # Vendor (guard against stale admin-as-vendor records)
     try:
         vendor = user.vendor_profile
-        initials = "".join(w[0].upper() for w in vendor.name.split()[:2])
-        return {"name": vendor.name, "role": "vendor", "initials": initials}
+        if vendor and vendor.assigned_store and vendor.assigned_store.user_id != user.id:
+            initials = "".join(w[0].upper() for w in vendor.name.split()[:2])
+            return {"name": vendor.name, "role": "vendor", "initials": initials}
     except Exception:
         pass
-    # Admin / superuser — use profile full name, then username
-    full = user.get_full_name() or user.username
+    # Admin / owner — use full name, store name, or username
+    full = user.get_full_name()
+    if not full:
+        try:
+            from stores.models import Store as _Store
+            store = _Store.objects.filter(user=user).first()
+            if store and store.name:
+                full = store.name
+        except Exception:
+            pass
+    if not full:
+        full = user.username
     initials = "".join(w[0].upper() for w in full.split()[:2]) or "AD"
     return {"name": full, "role": "owner", "initials": initials}
 
@@ -603,19 +621,26 @@ def chat_dm_api(request):
 
     channel = ChatChannel.objects.filter(slug=slug, is_dm=True).first()
     if not channel:
-        # Build display name from both sides
-        def _display(u):
+        def _display_for_name(u):
             try:
                 p = u.team_profile.first()
                 if p: return p.name
             except Exception: pass
             try:
                 v = u.vendor_profile
-                if v: return v.name
+                if v and v.assigned_store and v.assigned_store.user_id != u.id:
+                    return v.name
             except Exception: pass
-            return u.get_full_name() or u.username
+            full = u.get_full_name()
+            if full: return full
+            try:
+                from stores.models import Store as _Store
+                store = _Store.objects.filter(user=u).first()
+                if store and store.name: return store.name
+            except Exception: pass
+            return u.username
 
-        name = f"{_display(me)} & {_display(target)}"
+        name = f"{_display_for_name(me)} & {_display_for_name(target)}"
         channel = ChatChannel.objects.create(name=name, slug=slug, is_dm=True)
         channel.participants.set([me, target])
 
@@ -626,10 +651,20 @@ def chat_dm_api(request):
             if p: return p.name
         except Exception: pass
         try:
+            # Only use vendor_profile if it actually belongs to a different user (guard against stale admin-as-vendor records)
             v = u.vendor_profile
-            if v: return v.name
+            if v and v.assigned_store and v.assigned_store.user_id != u.id:
+                return v.name
         except Exception: pass
-        return u.get_full_name() or u.username
+        full = u.get_full_name()
+        if full: return full
+        # Fallback to store name for admin/owner
+        try:
+            from stores.models import Store as _Store
+            store = _Store.objects.filter(user=u).first()
+            if store and store.name: return store.name
+        except Exception: pass
+        return u.username
 
     other_name = _display(target)
     return Response({"success": True, "channel_id": channel.id, "channel_name": other_name})

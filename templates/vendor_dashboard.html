@@ -756,7 +756,7 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
       <main class="tc-main">
         <div class="tc-ch-header">
           <div class="tc-ch-title-block">
-            <div class="tc-ch-title"><span class="tc-hash">#</span><span id="vcChName">general</span></div>
+            <div class="tc-ch-title"><span class="tc-hash" id="vcChHash">#</span><span id="vcChName">general</span></div>
             <div class="tc-ch-meta" id="vcChDesc">General team discussion</div>
           </div>
           <div class="tc-h-actions">
@@ -1727,6 +1727,8 @@ function vcSelectChannel(id, name, desc){
   _vcChannelId=id; _vcChannelName=name;
   _vcCurrentChannelIsDm = desc === "Direct Message";
   _vcKnownUnread[id] = 0;
+  const hashEl = document.getElementById("vcChHash");
+  if(hashEl) hashEl.style.display = _vcCurrentChannelIsDm ? "none" : "";
   fetch("/teamapp/chat/read/",{method:"POST",headers:{"Content-Type":"application/json","X-CSRFToken":getCsrf()},body:JSON.stringify({channel_id:id})}).catch(()=>{});
   _vcTypingUsers = {};
   _vcRenderTyping();
@@ -2334,6 +2336,7 @@ try{ if(localStorage.getItem("vpSbCollapsed")==="1"){ document.getElementById("v
 
 // Track known unread counts per channel for polling-based notifications
 let _vcKnownUnread = {};
+let _vcDmUnreadPrev = {};
 let _vcPollTimer = null;
 
 async function _vcWsBackground(){
@@ -2368,36 +2371,65 @@ function _vcStartPoll(){
 
 async function _vcPollTick(){
   try{
-    const r = await fetch("/teamapp/chat/channels/");
-    const d = await r.json();
-    if(!d.success) return;
     const chatBtn = document.querySelector('.vp-nav button[data-tab="chat"]');
     const chatActive = chatBtn && chatBtn.classList.contains("active");
-    d.channels.forEach(ch=>{
-      const prev = _vcKnownUnread[ch.id] ?? ch.unread_count;
-      const curr = ch.unread_count || 0;
-      if(curr > prev){
-        const isCurrentCh = ch.id === _vcChannelId;
-        if(isCurrentCh && chatActive){
-          vcLoadMessages();
-        } else {
-          _vcShowInAppNotif(
-            ch.last_sender || "New message",
-            ch.name,
-            ch.last_message || "New message",
-            ()=>{ chatBtn?.click(); vcSelectChannel(ch.id, ch.name); }
-          );
-          const el = document.getElementById("vcCh_"+ch.id);
-          if(el){
-            let badge = el.querySelector(".vc-unread-badge");
-            if(!badge){ badge=document.createElement("span"); badge.className="vc-unread-badge"; el.appendChild(badge); }
-            badge.textContent = curr > 99 ? "99+" : curr;
+
+    // Poll regular channels
+    const r = await fetch("/teamapp/chat/channels/");
+    const d = await r.json();
+    if(d.success){
+      d.channels.forEach(ch=>{
+        const prev = _vcKnownUnread[ch.id] ?? ch.unread_count;
+        const curr = ch.unread_count || 0;
+        if(curr > prev){
+          const isCurrentCh = ch.id === _vcChannelId;
+          if(isCurrentCh && chatActive){
+            vcLoadMessages();
+          } else {
+            _vcShowInAppNotif(
+              ch.last_sender || "New message",
+              ch.name,
+              ch.last_message || "New message",
+              ()=>{ chatBtn?.click(); vcSelectChannel(ch.id, ch.name); }
+            );
+            const el = document.getElementById("vcCh_"+ch.id);
+            if(el){
+              let badge = el.querySelector(".vc-unread-badge");
+              if(!badge){ badge=document.createElement("span"); badge.className="vc-unread-badge"; el.appendChild(badge); }
+              badge.textContent = curr > 99 ? "99+" : curr;
+            }
+            if(document.hidden && _vcNotifPerm) _vcShowBrowserNotif((ch.last_sender||"Someone")+" in #"+ch.name, ch.last_message||"");
           }
-          if(document.hidden && _vcNotifPerm) _vcShowBrowserNotif((ch.last_sender||"Someone")+" in #"+ch.name, ch.last_message||"");
         }
-      }
-      _vcKnownUnread[ch.id] = curr;
-    });
+        _vcKnownUnread[ch.id] = curr;
+      });
+    }
+
+    // Poll DM unreads — ensures new admin messages appear even if WebSocket drops
+    const ur = await fetch("/teamapp/chat/dm/unreads/");
+    const ud = await ur.json();
+    if(ud.success && ud.unreads){
+      Object.entries(ud.unreads).forEach(([userId, count])=>{
+        const prev = _vcDmUnreadPrev[userId] ?? 0;
+        const curr = count || 0;
+        if(curr > prev){
+          // If vendor is currently in this DM and chat is active, reload messages
+          if(_vcCurrentChannelIsDm && chatActive && _vcChannelId){
+            vcLoadMessages();
+          } else {
+            // Update badge on DM list item
+            const dmEl = document.getElementById("vcDm_"+userId);
+            if(dmEl){
+              let badge = dmEl.querySelector(".vc-unread-badge");
+              if(!badge){ badge=document.createElement("span"); badge.className="vc-unread-badge"; dmEl.appendChild(badge); }
+              badge.textContent = curr > 99 ? "99+" : curr;
+              dmEl.classList.add("unread");
+            }
+          }
+        }
+        _vcDmUnreadPrev[userId] = curr;
+      });
+    }
   }catch(e){}
 }
 
