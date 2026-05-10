@@ -16263,12 +16263,27 @@ async function loadChatChannels(){
 let _tcAllPeople = [];
 const _TC_DM_COLORS = ["#6d28d9","#2563eb","#059669","#dc2626","#d97706","#0891b2","#9333ea","#db2777","#065f46","#1e40af"];
 
-function tcOpenNewDmPanel(){
+async function tcOpenNewDmPanel(){
   const panel = document.getElementById("tcNewDmPanel");
   panel.style.display = "flex";
   document.getElementById("tcDmSearch").value = "";
-  tcRenderNewDmList(_tcAllPeople);
+  document.getElementById("tcNewDmList").innerHTML = `<div style="padding:20px;text-align:center;font-size:12px;color:#9a99ad;">Loading…</div>`;
   setTimeout(()=>document.getElementById("tcDmSearch").focus(), 100);
+  try{
+    const r = await fetch("/teamapp/members/");
+    const d = await r.json();
+    if(d.success){
+      const contacts = d.admin_contacts || [];
+      const members  = d.members || [];
+      _tcAllPeople = [...contacts, ...members];
+      _tcMentionMembers = _tcAllPeople.map(m=>m.name);
+      _tcAllPeople.forEach(m=>{
+        _tcMentionMap[m.name.toLowerCase()] = m.user;
+        _tcMentionMap[m.name.split(" ")[0].toLowerCase()] = m.user;
+      });
+    }
+  } catch(e){}
+  tcRenderNewDmList(_tcAllPeople);
 }
 
 function tcCloseNewDmPanel(){
