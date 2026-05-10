@@ -8,9 +8,10 @@ from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 
+from django.utils import timezone
 from stores.models import Store
 from orders.models import Order
-from .models import StockProduct, StockVariant, StockEntry, StockAuditLog, StockOrderAssignment, StockAutoRule
+from .models import StockProduct, StockVariant, StockEntry, StockAuditLog, StockOrderAssignment, StockAutoRule, VendorStockAssignment, VendorStockAssignmentLine
 
 
 def _actor(request):
@@ -183,6 +184,23 @@ def stock_entry_api(request):
 
 @login_required
 @require_http_methods(["POST"])
+def _try_populate_image_from_orders(product):
+    """If StockProduct has no image_url, scan orders for a matching line item image."""
+    if product.image_url or not product.product_id:
+        return
+    from orders.models import Order as _Order
+    pid = str(product.product_id)
+    for order in _Order.objects.exclude(raw_data__isnull=True).order_by("-created_at")[:300]:
+        for item in (order.raw_data or {}).get("line_items", []):
+            if str(item.get("product_id", "")) == pid:
+                img = item.get("image", {})
+                src = (img.get("src", "") if isinstance(img, dict) else img) or ""
+                if src:
+                    product.image_url = src
+                    product.save(update_fields=["image_url"])
+                    return
+
+
 def stock_add_product_api(request):
     data = json.loads(request.body)
     store_id = data.get("store_id")
@@ -191,6 +209,7 @@ def stock_add_product_api(request):
     size = data.get("size", "").strip()
     sku = data.get("sku", "").strip()
     quantity = max(0, int(data.get("quantity", 0) or 0))
+    image_url = data.get("image_url", "").strip()
 
     if not store_id or not product_name:
         return JsonResponse({"success": False, "message": "store_id and product_name required"}, status=400)
@@ -203,10 +222,13 @@ def stock_add_product_api(request):
     product_id = data.get("product_id") or f"manual-{uuid.uuid4().hex[:8]}"
 
     with transaction.atomic():
-        product, _ = StockProduct.objects.get_or_create(
+        product, created = StockProduct.objects.get_or_create(
             store=store, product_id=product_id,
-            defaults={"product_name": product_name},
+            defaults={"product_name": product_name, "image_url": image_url},
         )
+        if not created and image_url and not product.image_url:
+            product.image_url = image_url
+            product.save(update_fields=["image_url"])
         variant, _ = StockVariant.objects.get_or_create(
             product=product, color=color, size=size, defaults={"sku": sku}
         )
@@ -222,6 +244,7 @@ def stock_add_product_api(request):
             actor=_actor(request), note=data.get("note", "Manual add"),
         )
 
+    _try_populate_image_from_orders(product)
     return JsonResponse({"success": True, "product_id": product.id, "variant_id": variant.id})
 
 
@@ -884,3 +907,363 @@ def stock_orders_api(request):
 
     orders = sorted(order_map.values(), key=lambda x: x["order_id"], reverse=True)
     return JsonResponse({"success": True, "orders": orders})
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# VENDOR STOCK ASSIGNMENT SYSTEM
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _line_data(line):
+    return {
+        "id":                line.id,
+        "variant_id":        line.variant_id,
+        "color":             line.variant.color,
+        "size":              line.variant.size,
+        "sku":               line.variant.sku,
+        "quantity_assigned": line.quantity_assigned,
+        "quantity_sold":     line.quantity_sold,
+        "on_hand":           line.on_hand,
+        "unit_price":        str(line.unit_price) if line.unit_price is not None else None,
+    }
+
+
+def _assignment_data(a, include_lines=True):
+    lines = list(a.lines.select_related("variant").all()) if include_lines else []
+    attempts = list(a.attempts.order_by("attempt_number"))
+    total_qty = sum(l.quantity_assigned for l in lines) if include_lines else a.total_assigned()
+    return {
+        "id":                  a.id,
+        "store_id":            a.store_id,
+        "vendor_id":           a.vendor_id,
+        "vendor_name":         a.vendor.name,
+        "vendor_email":        a.vendor.email,
+        "product_id":          a.product.product_id,
+        "product_name":        a.product.product_name,
+        "product_image":       a.product.image_url or "",
+        "status":              a.status,
+        "admin_note":          a.admin_note,
+        "vendor_note":         a.vendor_note,
+        "reject_reason":       a.reject_reason,
+        # Quotation fields
+        "per_unit_price":      str(a.per_unit_price) if a.per_unit_price is not None else None,
+        "estimated_days":      a.estimated_days,
+        "resubmission_count":  a.resubmission_count,
+        "days_remaining":      a.days_remaining,
+        "total_price":         str(round(float(a.per_unit_price or 0) * total_qty, 2)),
+        # Payment
+        "payment_amount":      str(a.payment_amount) if a.payment_amount is not None else None,
+        "payment_method":      a.payment_method,
+        "payment_reference":   a.payment_reference,
+        "approved_by":         a.approved_by,
+        "approved_at":         a.approved_at.isoformat() if a.approved_at else None,
+        "stock_arrived":       a.stock_arrived,
+        "arrived_at":          a.arrived_at.isoformat() if a.arrived_at else None,
+        "created_at":          a.created_at.isoformat(),
+        "total_assigned":      a.total_assigned(),
+        "total_sold":          a.total_sold(),
+        "total_on_hand":       a.total_on_hand(),
+        "lines":               [_line_data(l) for l in lines] if include_lines else [],
+        "attempts":            [
+            {
+                "attempt_number": at.attempt_number,
+                "per_unit_price": str(at.per_unit_price),
+                "total_quantity": at.total_quantity,
+                "total_price":    str(at.total_price),
+                "estimated_days": at.estimated_days,
+                "vendor_note":    at.vendor_note,
+                "submitted_at":   at.submitted_at.isoformat(),
+                "status":         at.status,
+                "admin_note":     at.admin_note,
+                "responded_at":   at.responded_at.isoformat() if at.responded_at else None,
+            }
+            for at in attempts
+        ],
+    }
+
+
+@login_required
+@require_http_methods(["POST"])
+def vendor_assign_stock_api(request):
+    """Admin creates a VendorStockAssignment with variant lines."""
+    try:
+        body = json.loads(request.body)
+    except Exception:
+        return JsonResponse({"success": False, "message": "Invalid JSON"}, status=400)
+
+    store_id   = body.get("store_id")
+    vendor_id  = body.get("vendor_id")
+    product_id = body.get("product_id")  # StockProduct.id (not product_id field)
+    lines_data = body.get("lines", [])   # [{variant_id, quantity_assigned}]
+    admin_note = body.get("admin_note", "")
+
+    if not all([store_id, vendor_id, product_id, lines_data]):
+        return JsonResponse({"success": False, "message": "store_id, vendor_id, product_id, lines required"}, status=400)
+
+    from vendors.models import Vendor
+    try:
+        store   = Store.objects.get(id=store_id)
+        vendor  = Vendor.objects.get(id=vendor_id)
+        product = StockProduct.objects.get(id=product_id, store=store)
+    except Exception as e:
+        return JsonResponse({"success": False, "message": str(e)}, status=404)
+
+    with transaction.atomic():
+        assignment = VendorStockAssignment.objects.create(
+            store=store, vendor=vendor, product=product,
+            status="pending_pricing", admin_note=admin_note,
+        )
+        for ld in lines_data:
+            vid = ld.get("variant_id")
+            qty = int(ld.get("quantity_assigned", 0))
+            if qty <= 0:
+                continue
+            try:
+                variant = StockVariant.objects.get(id=vid, product=product)
+            except StockVariant.DoesNotExist:
+                continue
+            VendorStockAssignmentLine.objects.create(
+                assignment=assignment, variant=variant, quantity_assigned=qty
+            )
+
+    return JsonResponse({"success": True, "assignment": _assignment_data(assignment)})
+
+
+@login_required
+@require_http_methods(["GET"])
+def vendor_assignments_list_api(request):
+    """Admin lists all VendorStockAssignments for a store."""
+    store_id  = request.GET.get("store_id")
+    vendor_id = request.GET.get("vendor_id")
+    status    = request.GET.get("status")
+
+    qs = VendorStockAssignment.objects.select_related("store", "vendor", "product").prefetch_related("lines__variant")
+    if store_id:
+        qs = qs.filter(store_id=store_id)
+    if vendor_id:
+        qs = qs.filter(vendor_id=vendor_id)
+    if status:
+        qs = qs.filter(status=status)
+
+    # Stats
+    all_for_store = VendorStockAssignment.objects.filter(store_id=store_id) if store_id else VendorStockAssignment.objects.all()
+    stats = {
+        "total":                 all_for_store.count(),
+        "pending_pricing":       all_for_store.filter(status="pending_pricing").count(),
+        "pending_approval":      all_for_store.filter(status="pending_approval").count(),
+        "approved":              all_for_store.filter(status="approved").count(),
+        "rejected":              all_for_store.filter(status="rejected").count(),
+        "permanently_rejected":  all_for_store.filter(status="permanently_rejected").count(),
+    }
+
+    return JsonResponse({
+        "success": True,
+        "assignments": [_assignment_data(a) for a in qs],
+        "stats": stats,
+    })
+
+
+@login_required
+@require_http_methods(["GET"])
+def vendor_assignment_detail_api(request, assignment_id):
+    try:
+        a = VendorStockAssignment.objects.select_related("store", "vendor", "product").prefetch_related("lines__variant").get(id=assignment_id)
+    except VendorStockAssignment.DoesNotExist:
+        return JsonResponse({"success": False, "message": "Not found"}, status=404)
+    return JsonResponse({"success": True, "assignment": _assignment_data(a)})
+
+
+@login_required
+@require_http_methods(["POST"])
+def vendor_assignment_approve_api(request, assignment_id):
+    """Admin approves a pending_approval assignment and records payment."""
+    try:
+        a = VendorStockAssignment.objects.get(id=assignment_id)
+    except VendorStockAssignment.DoesNotExist:
+        return JsonResponse({"success": False, "message": "Not found"}, status=404)
+
+    if a.status not in ("pending_approval",):
+        return JsonResponse({"success": False, "message": "Assignment is not pending approval"}, status=400)
+
+    try:
+        body = json.loads(request.body)
+    except Exception:
+        body = {}
+
+    now = timezone.now()
+    a.status            = "approved"
+    a.payment_amount    = a.per_unit_price * a.total_assigned() if a.per_unit_price else None
+    a.payment_method    = body.get("payment_method", "")
+    a.payment_reference = body.get("payment_reference", "")
+    a.approved_by       = request.user.get_full_name() or request.user.username
+    a.approved_at       = now
+    a.save()
+
+    # Mark latest pending attempt as approved
+    latest = a.attempts.filter(status="pending").order_by("-attempt_number").first()
+    if latest:
+        latest.status       = "approved"
+        latest.admin_note   = body.get("admin_note", "")
+        latest.responded_at = now
+        latest.save()
+
+    return JsonResponse({"success": True, "assignment": _assignment_data(a)})
+
+
+@login_required
+@require_http_methods(["POST"])
+def vendor_assignment_reject_api(request, assignment_id):
+    try:
+        a = VendorStockAssignment.objects.get(id=assignment_id)
+    except VendorStockAssignment.DoesNotExist:
+        return JsonResponse({"success": False, "message": "Not found"}, status=404)
+
+    if a.status == "permanently_rejected":
+        return JsonResponse({"success": False, "message": "Assignment is permanently rejected"}, status=400)
+
+    try:
+        body = json.loads(request.body)
+    except Exception:
+        body = {}
+
+    now = timezone.now()
+    reject_reason = body.get("reject_reason", "")
+    a.status        = "rejected"
+    a.reject_reason = reject_reason
+    a.resubmission_count += 1
+    a.save()
+
+    # Mark latest pending attempt as rejected
+    latest = a.attempts.filter(status="pending").order_by("-attempt_number").first()
+    if latest:
+        latest.status       = "rejected"
+        latest.admin_note   = reject_reason
+        latest.responded_at = now
+        latest.save()
+
+    return JsonResponse({"success": True, "assignment": _assignment_data(a)})
+
+
+@login_required
+@require_http_methods(["POST"])
+def vendor_assignment_permanent_reject_api(request, assignment_id):
+    try:
+        a = VendorStockAssignment.objects.get(id=assignment_id)
+    except VendorStockAssignment.DoesNotExist:
+        return JsonResponse({"success": False, "message": "Not found"}, status=404)
+
+    if a.status == "permanently_rejected":
+        return JsonResponse({"success": False, "message": "Already permanently rejected"}, status=400)
+
+    try:
+        body = json.loads(request.body)
+    except Exception:
+        body = {}
+
+    now = timezone.now()
+    reason = body.get("reject_reason", "")
+    a.status        = "permanently_rejected"
+    a.reject_reason = reason
+    a.save()
+
+    # Mark latest attempt as permanently rejected
+    latest = a.attempts.filter(status="pending").order_by("-attempt_number").first()
+    if latest:
+        latest.status       = "permanently_rejected"
+        latest.admin_note   = reason
+        latest.responded_at = now
+        latest.save()
+
+    return JsonResponse({"success": True, "assignment": _assignment_data(a)})
+
+
+@login_required
+@require_http_methods(["GET"])
+def vendor_stock_tracker_api(request):
+    """Admin view: per-variant stock tracker across all vendors."""
+    store_id  = request.GET.get("store_id")
+    vendor_id = request.GET.get("vendor_id")
+
+    qs = VendorStockAssignmentLine.objects.filter(
+        assignment__status="approved"
+    ).select_related("assignment__vendor", "assignment__product", "variant")
+
+    if store_id:
+        qs = qs.filter(assignment__store_id=store_id)
+    if vendor_id:
+        qs = qs.filter(assignment__vendor_id=vendor_id)
+
+    rows = []
+    for line in qs:
+        rows.append({
+            "assignment_id":  line.assignment_id,
+            "vendor_id":      line.assignment.vendor_id,
+            "vendor_name":    line.assignment.vendor.name,
+            "product_id":     line.assignment.product.product_id,
+            "product_name":   line.assignment.product.product_name,
+            "product_image":  line.assignment.product.image_url or "",
+            "color":          line.variant.color,
+            "size":           line.variant.size,
+            "sku":            line.variant.sku,
+            "quantity_assigned": line.quantity_assigned,
+            "quantity_sold":     line.quantity_sold,
+            "on_hand":           line.on_hand,
+            "unit_price":        str(line.unit_price) if line.unit_price else None,
+            "variant_id":        line.variant_id,
+            "stock_arrived":     line.assignment.stock_arrived,
+            "arrived_at":        line.assignment.arrived_at.isoformat() if line.assignment.arrived_at else None,
+        })
+
+    # Per-vendor summary
+    vendor_summary = {}
+    for r in rows:
+        vid = r["vendor_id"]
+        if vid not in vendor_summary:
+            vendor_summary[vid] = {
+                "vendor_id":   vid,
+                "vendor_name": r["vendor_name"],
+                "total_assigned": 0,
+                "total_sold":     0,
+                "total_on_hand":  0,
+            }
+        vendor_summary[vid]["total_assigned"] += r["quantity_assigned"]
+        vendor_summary[vid]["total_sold"]     += r["quantity_sold"]
+        vendor_summary[vid]["total_on_hand"]  += r["on_hand"]
+
+    return JsonResponse({
+        "success": True,
+        "lines":          rows,
+        "vendor_summary": list(vendor_summary.values()),
+    })
+
+
+def deduct_vendor_stock_for_order(order, vendor):
+    """Called when vendor tracking is approved — deducts from VendorStockAssignmentLine."""
+    line_items = (order.raw_data or {}).get("line_items", [])
+    if not line_items:
+        # Fallback: use order.product_id
+        line_items = [{"product_id": str(order.product_id or ""), "quantity": 1, "sku": ""}]
+
+    for item in line_items:
+        item_sku    = str(item.get("sku", "")).strip()
+        item_pid    = str(item.get("product_id", "")).strip()
+        item_qty    = int(item.get("quantity", 1))
+
+        # Find matching approved+arrived lines for this vendor
+        candidate_lines = VendorStockAssignmentLine.objects.filter(
+            assignment__vendor=vendor,
+            assignment__status="approved",
+            assignment__stock_arrived=True,
+        ).select_related("variant", "assignment__product")
+
+        # Try to match by SKU first, then product_id
+        matched = None
+        if item_sku:
+            matched = candidate_lines.filter(variant__sku=item_sku).first()
+        if not matched and item_pid:
+            matched = candidate_lines.filter(assignment__product__product_id=item_pid).first()
+
+        if matched:
+            deductable = min(item_qty, matched.on_hand)
+            if deductable > 0:
+                matched.quantity_sold += deductable
+                matched.save(update_fields=["quantity_sold"])

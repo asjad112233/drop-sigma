@@ -2114,7 +2114,41 @@ body{font-family:Inter,Arial,sans-serif!important;background:var(--vf-gradient)!
 .section{display:none!important;min-height:calc(100vh - 48px)!important;padding-bottom:70px!important;overflow:visible!important;animation:vfFade .24s ease both;}.section.active{display:block!important}@keyframes vfFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 .global-store-switcher{position:sticky!important;top:0!important;z-index:60!important;margin:-8px 0 18px!important;padding:8px 0!important;background:linear-gradient(to bottom,var(--vf-app-bg),rgba(255,255,255,0))!important;}body.vf-dark-mode .global-store-switcher{background:linear-gradient(to bottom,#050712,rgba(5,7,18,0))!important}.global-store-switcher-inner{border-radius:22px!important;padding:11px!important;box-shadow:var(--vf-shadow)!important;backdrop-filter:blur(18px)!important}#projectSwitcher,.global-store-switcher .btn{height:46px!important;border-radius:15px!important;}
 .sidebar h2{position:relative!important;font-size:21px!important;line-height:1.1!important;margin:0 0 34px 0!important;padding-left:58px!important;color:var(--vf-text)!important;letter-spacing:-.4px!important}.sidebar h2:before{content:'AI';position:absolute;left:0;top:-4px;width:46px;height:46px;border-radius:17px;background:linear-gradient(135deg,var(--vf-cyan),var(--vf-purple));display:grid;place-items:center;color:#06101f;font-weight:950;box-shadow:0 12px 36px rgba(53,207,255,.25)}.sidebar h2:after{content:'Ecommerce OS';display:block;font-size:12px;font-weight:600;color:var(--vf-muted);margin-top:5px;letter-spacing:0}
-.sidebar button[id^='nav']{height:48px!important;border:1px solid transparent!important;border-radius:18px!important;margin-bottom:9px!important;padding:0 14px!important;display:flex!important;align-items:center!important;gap:10px!important;font-weight:900!important;transition:.18s ease!important;color:var(--vf-muted)!important}.sidebar button[id^='nav']:hover,.sidebar button[id^='nav'].active{background:var(--vf-surface-2)!important;border-color:var(--vf-line)!important;color:var(--vf-text)!important;transform:translateX(3px)!important;box-shadow:0 10px 26px rgba(15,23,42,.06)!important}#navOverview:before{content:'🏠'}#navStores:before{content:'🏬'}#navOrders:before{content:'🛒'}#navTeam:before{content:'👥'}#navEmails:before{content:'✉️'}#navVendors:before{content:'🏭'}
+.sidebar button[id^='nav']{height:auto!important;border:0!important;border-radius:10px!important;margin-bottom:2px!important;padding:8px 10px!important;display:flex!important;align-items:center!important;gap:9px!important;font-weight:600!important;font-size:13px!important;transition:.12s!important;color:var(--vf-muted,#475569)!important;background:none!important;box-shadow:none!important;transform:none!important;}.sidebar button[id^='nav']:hover{background:var(--vf-surface-2,#f1f5f9)!important;color:var(--vf-text,#0f172a)!important;transform:none!important;box-shadow:none!important;border-color:transparent!important;}.sidebar button[id^='nav'].active{background:#eff6ff!important;color:#2563eb!important;transform:none!important;box-shadow:none!important;border-color:transparent!important;}body.vf-dark-mode .sidebar button[id^='nav'].active{background:rgba(37,99,235,.18)!important;color:#93c5fd!important;}
+#navOverview:before{content:'🏠';font-size:15px;width:20px;text-align:center;flex-shrink:0;}#navStores:before{content:'🏬';font-size:15px;width:20px;text-align:center;flex-shrink:0;}#navOrders:before{content:'🛒';font-size:15px;width:20px;text-align:center;flex-shrink:0;}#navTeam:before{content:'👥';font-size:15px;width:20px;text-align:center;flex-shrink:0;}#navEmails:before{content:'✉️';font-size:15px;width:20px;text-align:center;flex-shrink:0;}#navVendors:before{content:'🏭';font-size:15px;width:20px;text-align:center;flex-shrink:0;}#navTrackingQueue:before{content:'🚚';font-size:15px;width:20px;text-align:center;flex-shrink:0;}#navStock:before{content:'📦';font-size:15px;width:20px;text-align:center;flex-shrink:0;}#navTasks:before{content:'✅';font-size:15px;width:20px;text-align:center;flex-shrink:0;}#navChat:before{content:'💬';font-size:15px;width:20px;text-align:center;flex-shrink:0;}
+.sb-section-label{display:block!important;font-size:10px!important;font-weight:800!important;color:#94a3b8!important;text-transform:uppercase!important;letter-spacing:.07em!important;padding:0 8px!important;margin:14px 0 4px!important;}
+.sb-divider{height:1px!important;background:var(--vf-line,#f1f5f9)!important;margin:10px 4px!important;}
+.sb-sub-group{margin:2px 0 4px 12px!important;padding-left:12px!important;border-left:2px solid var(--vf-line,#e2e8f0)!important;}
+.sb-sub-item{display:flex!important;align-items:center!important;gap:8px!important;width:100%!important;text-align:left!important;background:none!important;border:0!important;border-radius:8px!important;padding:7px 10px!important;color:var(--vf-muted,#64748b)!important;font-size:12.5px!important;font-weight:500!important;cursor:pointer!important;font-family:inherit!important;transition:.12s!important;height:auto!important;margin-bottom:0!important;box-shadow:none!important;transform:none!important;}
+.sb-sub-item:hover{background:var(--vf-surface-2,#f8fafc)!important;color:var(--vf-text,#0f172a)!important;}
+.sb-sub-item.active{color:#2563eb!important;font-weight:700!important;}body.vf-dark-mode .sb-sub-item.active{color:#93c5fd!important;}
+.sb-sub-item::before{content:''!important;width:5px!important;height:5px!important;border-radius:50%!important;background:#cbd5e1!important;flex-shrink:0!important;transition:.12s!important;display:inline-block!important;margin-right:0!important;}
+.sb-sub-item.active::before{background:#2563eb!important;}body.vf-dark-mode .sb-sub-item.active::before{background:#93c5fd!important;}
+.sb-sub-item:hover::before{background:#94a3b8!important;}
+.vs-stats-strip{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;}
+.vs-stat-chip{display:flex;align-items:center;gap:10px;background:var(--vf-surface);border:1px solid var(--vf-line);border-radius:12px;padding:11px 16px;flex:1;min-width:0;box-shadow:none!important;border-radius:12px!important;padding:11px 16px!important;}
+.vs-stat-icon{font-size:18px;flex-shrink:0;}
+.vs-stat-label{font-size:10.5px;font-weight:700;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;margin-bottom:2px;}
+.vs-stat-value{font-size:20px;font-weight:800;color:var(--vf-text);letter-spacing:-.5px;line-height:1.1;}
+.vs-stat-value.amber{color:#d97706!important;}.vs-stat-value.blue{color:#2563eb!important;}.vs-stat-value.green{color:#16a34a!important;}
+.vs-pill-tabs{display:flex;gap:4px;background:var(--vf-surface);border:1px solid var(--vf-line);border-radius:12px;padding:4px;margin-bottom:18px;width:fit-content;box-shadow:none!important;}
+.vs-pill-tab{padding:7px 16px;border-radius:9px;border:none!important;background:none!important;font-size:12.5px;font-weight:600;color:var(--vf-muted)!important;cursor:pointer;display:flex!important;align-items:center;gap:6px;transition:.12s;white-space:nowrap;font-family:inherit;height:auto!important;margin-bottom:0!important;box-shadow:none!important;transform:none!important;}
+.vs-pill-tab:hover{background:var(--vf-surface-2)!important;color:var(--vf-text)!important;transform:none!important;box-shadow:none!important;}
+.vs-pill-tab.active{background:#eff6ff!important;color:#2563eb!important;transform:none!important;box-shadow:none!important;}body.vf-dark-mode .vs-pill-tab.active{background:rgba(37,99,235,.18)!important;color:#93c5fd!important;}
+.vs-tab-badge{font-size:10px;font-weight:800;background:#dc2626;color:#fff;border-radius:99px;padding:1px 6px;min-width:16px;text-align:center;line-height:1.5;}
+.vs-pill-tab.active .vs-tab-badge{background:#2563eb;}
+.vs-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+.vs-search-wrap{flex:1;max-width:340px;display:flex;align-items:center;gap:8px;background:var(--vf-surface);border:1px solid var(--vf-line);border-radius:9px;padding:8px 12px;}
+.vs-search-wrap svg{color:var(--vf-muted);flex-shrink:0;}
+.vs-search-wrap input{border:none!important;outline:none!important;font-size:13px;color:var(--vf-text)!important;background:none!important;width:100%;font-family:inherit;box-shadow:none!important;border-radius:0!important;padding:0!important;}
+.vs-search-wrap input::placeholder{color:var(--vf-muted);}
+.vs-select{padding:8px 12px!important;border-radius:9px!important;border:1px solid var(--vf-line)!important;background:var(--vf-surface)!important;font-size:13px!important;color:var(--vf-text)!important;outline:none!important;height:auto!important;font-family:inherit;}
+.vs-table-card{background:var(--vf-surface);border:1px solid var(--vf-line);border-radius:14px;overflow:hidden;box-shadow:none!important;}
+.vs-table-card table{width:100%!important;border-collapse:collapse!important;border-radius:0!important;border-spacing:0!important;background:transparent!important;border:none!important;box-shadow:none!important;}
+.vs-table-card thead th{background:var(--vf-surface-2)!important;padding:10px 16px!important;font-size:10.5px!important;font-weight:800!important;color:var(--vf-muted)!important;text-transform:uppercase!important;letter-spacing:.06em!important;border-bottom:1px solid var(--vf-line)!important;text-align:left!important;border-radius:0!important;}
+.vs-table-card tbody td{padding:12px 16px!important;font-size:13px!important;color:var(--vf-text)!important;border-bottom:1px solid var(--vf-line)!important;vertical-align:middle!important;background:transparent!important;}
+.vs-table-card tbody tr:last-child td{border-bottom:none!important;}
+.vs-table-card tbody tr:hover td{background:rgba(53,207,255,.04)!important;}
 .topbar{align-items:flex-start!important;gap:16px!important;margin-bottom:22px!important}.topbar h1{font-size:38px!important;line-height:1.05!important;letter-spacing:-1.2px!important;color:var(--vf-text)!important;margin:0!important}.topbar p{font-size:15px!important;line-height:1.55!important;color:var(--vf-muted)!important;margin:8px 0 0!important}.actions{gap:10px!important;margin-top:0!important}
 .btn{border:1px solid var(--vf-line)!important;border-radius:16px!important;background:var(--vf-surface-2)!important;color:var(--vf-text)!important;font-weight:900!important;box-shadow:0 8px 22px rgba(15,23,42,.06)!important;transition:.18s ease!important}.btn:hover{transform:translateY(-2px)!important;filter:none!important}.btn:not(.dark):not(.red):not(.green){background:linear-gradient(135deg,var(--vf-cyan),var(--vf-purple))!important;color:#fff!important;border-color:transparent!important}.btn.dark{background:#111827!important;color:#fff!important}.btn.red{background:#dc2626!important;color:#fff!important}.btn.green{background:#16a34a!important;color:#fff!important}
 input,select,textarea{border-radius:16px!important;border:1px solid var(--vf-line)!important;background:var(--vf-surface)!important;color:var(--vf-text)!important;outline:none!important;box-sizing:border-box!important}input:focus,select:focus,textarea:focus{border-color:#60a5fa!important;box-shadow:0 0 0 3px rgba(37,99,235,.12)!important}body.vf-dark-mode input,body.vf-dark-mode select,body.vf-dark-mode textarea{background:rgba(255,255,255,.08)!important;color:#fff!important;border-color:rgba(255,255,255,.14)!important}body.vf-dark-mode option{color:#111!important}
@@ -3498,68 +3532,83 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
 .sk-action-chip.sync{background:#f3f4f6;color:#6b7280;}
 .sk-action-chip.reserve{background:#fef3c7;color:#92400e;}
 .sk-action-chip.restore{background:#ede9fe;color:#5b21b6;}
-.tq-topbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:22px;}
-.tq-topbar h1{font-size:26px;font-weight:900;color:var(--vf-text);margin:0;letter-spacing:-.5px;}
-.tq-topbar p{margin:0;color:var(--vf-muted);font-size:13px;}
-.tq-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px;}
-.tq-stat{background:var(--vf-surface);border:1px solid var(--vf-line);border-radius:20px;padding:18px 20px;box-shadow:var(--vf-shadow);}
-.tq-stat span{font-size:12px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.5px;}
-.tq-stat b{display:block;font-size:30px;font-weight:900;color:var(--vf-text);margin-top:4px;}
-.tq-stat.pending b{color:#f59e0b;}
-.tq-stat.approved b{color:#10b981;}
-.tq-stat.rejected b{color:#ef4444;}
-.tq-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:18px;}
-.tq-chip{border:1px solid var(--vf-line);background:var(--vf-surface);color:var(--vf-muted);padding:8px 16px;border-radius:999px;font-size:12px;font-weight:800;cursor:pointer;transition:.15s;}
-.tq-chip:hover,.tq-chip.active{background:linear-gradient(135deg,rgba(53,207,255,.18),rgba(139,92,246,.15));border-color:rgba(53,207,255,.4);color:var(--vf-text);}
-.tq-auto-toggle{display:flex;align-items:center;gap:10px;margin-left:auto;background:var(--vf-surface);border:1px solid var(--vf-line);border-radius:16px;padding:10px 16px;box-shadow:var(--vf-shadow);}
-.tq-auto-toggle span{font-size:12px;font-weight:800;color:var(--vf-text);}
-.tq-toggle-sw{position:relative;width:40px;height:22px;cursor:pointer;}
-.tq-toggle-sw input{opacity:0;width:0;height:0;}
-.tq-toggle-sw .slider{position:absolute;inset:0;background:#d1d5db;border-radius:999px;transition:.2s;}
-.tq-toggle-sw input:checked + .slider{background:linear-gradient(135deg,#35cfff,#8b5cf6);}
-.tq-toggle-sw .slider:before{content:"";position:absolute;width:16px;height:16px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.2s;}
-.tq-toggle-sw input:checked + .slider:before{transform:translateX(18px);}
-.tq-table-wrap{background:var(--vf-surface);border:1px solid var(--vf-line);border-radius:24px;overflow:hidden;box-shadow:var(--vf-shadow);}
+/* ── Tracking Queue redesign ── */
+.tq-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;gap:16px;flex-wrap:wrap;}
+.tq-header-left h1{font-size:22px;font-weight:900;color:var(--vf-text);letter-spacing:-.3px;}
+.tq-header-left p{font-size:13px;color:var(--vf-muted);margin-top:3px;font-weight:500;}
+.tq-stats{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;}
+.tq-stat{background:var(--vf-surface);border:1px solid var(--vf-line);border-radius:12px;padding:11px 18px;display:flex;align-items:center;gap:12px;flex:1;min-width:130px;}
+.tq-stat-icon{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
+.tq-stat-icon.amber{background:#fff7ed;}
+.tq-stat-icon.green{background:#f0fdf4;}
+.tq-stat-icon.red{background:#fef2f2;}
+.tq-stat-icon.slate{background:#f1f5f9;}
+.tq-stat-val{font-size:20px;font-weight:900;color:var(--vf-text);line-height:1;}
+.tq-stat-val.amber{color:#d97706!important;}
+.tq-stat-val.green{color:#16a34a!important;}
+.tq-stat-val.red{color:#dc2626!important;}
+.tq-stat-lbl{font-size:10.5px;color:var(--vf-muted);font-weight:700;margin-top:2px;text-transform:uppercase;letter-spacing:.05em;}
+.tq-controls{display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+.tq-pill-tabs{display:flex;gap:3px;background:var(--vf-surface);border:1px solid var(--vf-line);border-radius:10px;padding:3px;}
+.tq-pill-tab{padding:6px 14px;border-radius:7px;border:none;background:none;font-size:12px;font-weight:700;color:var(--vf-muted);cursor:pointer;font-family:inherit;transition:.12s;white-space:nowrap;}
+.tq-pill-tab:hover{background:var(--vf-surface-2);color:var(--vf-text);}
+.tq-pill-tab.active{background:#eff6ff!important;color:#2563eb!important;}
+.tq-controls-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+.tq-sub-count{font-size:12px;color:var(--vf-muted);font-weight:700;white-space:nowrap;}
+.tq-auto-wrap{display:flex;align-items:center;gap:8px;background:var(--vf-surface);border:1px solid var(--vf-line);border-radius:10px;padding:7px 12px;}
+.tq-auto-wrap span{font-size:12px;font-weight:700;color:var(--vf-text);}
+.tq-sw{position:relative;display:inline-block;width:34px;height:18px;flex-shrink:0;}
+.tq-sw input{opacity:0;width:0;height:0;}
+.tq-sw-track{position:absolute;inset:0;border-radius:99px;background:#e5e7eb;transition:.2s;cursor:pointer;}
+.tq-sw-track::before{content:'';position:absolute;width:12px;height:12px;border-radius:50%;background:#fff;left:3px;top:3px;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.2);}
+.tq-sw input:checked+.tq-sw-track{background:#2563eb;}
+.tq-sw input:checked+.tq-sw-track::before{transform:translateX(16px);}
+.tq-table-wrap{background:var(--vf-surface);border:1px solid var(--vf-line);border-radius:14px;overflow:hidden;}
 .tq-table{width:100%;border-collapse:collapse;}
-.tq-table thead tr{background:var(--vf-surface-2);}
-.tq-table th{padding:12px 16px;text-align:left;font-size:11px;font-weight:900;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--vf-line);}
-.tq-table td{padding:14px 16px;border-bottom:1px solid var(--vf-line);font-size:13px;color:var(--vf-text);vertical-align:middle;}
-.tq-table tbody tr:last-child td{border-bottom:none;}
-.tq-table tbody tr:hover{background:rgba(53,207,255,.04);}
-.tq-order-id{font-weight:900;color:#2563eb;font-size:13px;}
-.tq-date{font-size:11px;color:var(--vf-muted);margin-top:2px;}
-.tq-tracking-num{font-family:monospace;font-weight:700;font-size:13px;color:var(--vf-text);}
-.tq-track-link{font-size:11px;color:#2563eb;text-decoration:none;font-weight:700;}
+.tq-table thead th{background:var(--vf-surface-2);padding:10px 14px;font-size:10px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.07em;text-align:left;border-bottom:1px solid var(--vf-line);}
+.tq-table tbody tr{border-bottom:1px solid var(--vf-line);transition:background .1s;}
+.tq-table tbody tr:last-child{border-bottom:none;}
+.tq-table tbody tr:hover{background:var(--vf-surface-2);}
+.tq-table tbody td{padding:11px 14px;font-size:13px;color:var(--vf-text);vertical-align:middle;}
+.tq-order-num{font-weight:800;color:var(--vf-text);font-size:13px;}
+.tq-order-date{font-size:11px;color:var(--vf-muted);margin-top:2px;font-weight:500;}
+.tq-product-name{font-weight:600;color:var(--vf-text);font-size:12.5px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.tq-product-id{font-size:10.5px;color:var(--vf-muted);font-weight:600;margin-top:2px;}
+.tq-tracking-num{font-size:12.5px;font-weight:700;color:var(--vf-text);font-family:'SF Mono','Fira Code',monospace;}
+.tq-track-link{display:inline-flex;align-items:center;gap:3px;font-size:11px;color:#2563eb;font-weight:700;text-decoration:none;margin-top:2px;}
 .tq-track-link:hover{text-decoration:underline;}
-.tq-pill{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:800;}
-.tq-pill.pending{background:#fef3c7;color:#92400e;}
-.tq-pill.approved{background:#d1fae5;color:#065f46;}
-.tq-pill.rejected{background:#fee2e2;color:#991b1b;}
-.tq-actions{display:flex;flex-direction:column;gap:5px;}
-.tq-btn{padding:6px 12px;border-radius:10px;font-size:11px;font-weight:800;border:none;cursor:pointer;transition:.15s;white-space:nowrap;}
-.tq-btn.approve{background:#10b981;color:#fff;}
-.tq-btn.approve:hover{background:#059669;}
-.tq-btn.permanent{background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;}
-.tq-btn.permanent:hover{opacity:.88;}
-.tq-btn.perm{background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;}
-.tq-btn.perm:hover{opacity:.88;}
-.tq-btn.reject{background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;}
+.tq-vendor-cell{display:inline-flex;align-items:center;gap:6px;}
+.tq-vendor-av{width:24px;height:24px;border-radius:7px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;font-size:10px;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.tq-vendor-name{font-size:12.5px;font-weight:700;color:var(--vf-text);}
+.tq-courier-badge{display:inline-block;background:var(--vf-surface-2);color:var(--vf-muted);font-size:11px;font-weight:700;padding:3px 9px;border-radius:99px;border:1px solid var(--vf-line);}
+.tq-status-pill{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:99px;font-size:11px;font-weight:800;white-space:nowrap;}
+.tq-status-pill .tq-dot{width:5px;height:5px;border-radius:50%;background:currentColor;flex-shrink:0;}
+.tq-status-pill.pending{background:#fff7ed;color:#d97706;}
+.tq-status-pill.approved{background:#f0fdf4;color:#16a34a;}
+.tq-status-pill.rejected{background:#fef2f2;color:#dc2626;}
+.tq-note-cell{font-size:12px;color:var(--vf-muted);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.tq-actions{display:flex;flex-direction:column;gap:5px;align-items:flex-start;}
+.tq-btn{padding:5px 12px;border-radius:7px;border:none;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit;transition:.12s;white-space:nowrap;display:inline-flex;align-items:center;gap:4px;}
+.tq-btn.approve{background:#dcfce7;color:#16a34a;}
+.tq-btn.approve:hover{background:#bbf7d0;}
+.tq-btn.perm{background:#ede9fe;color:#6d28d9;}
+.tq-btn.perm:hover{background:#ddd6fe;}
+.tq-btn.reject{background:#fee2e2;color:#dc2626;}
 .tq-btn.reject:hover{background:#fecaca;}
-.tq-auto-products{background:var(--vf-surface);border:1px solid var(--vf-line);border-radius:20px;padding:18px 20px;margin-top:20px;box-shadow:var(--vf-shadow);}
-.tq-auto-products h3{font-size:14px;font-weight:900;color:var(--vf-text);margin:0 0 12px;}
-.tq-auto-product-row{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--vf-surface-2);border-radius:12px;margin-bottom:6px;}
-.tq-ap-row{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--vf-surface-2);border-radius:12px;margin-bottom:6px;}
-.tq-ap-name{font-size:12px;font-weight:700;color:var(--vf-text);}
-.tq-ap-id{font-size:10px;color:var(--vf-muted);}
-.tq-ap-remove{font-size:11px;color:#ef4444;cursor:pointer;font-weight:800;border:none;background:none;padding:4px 8px;border-radius:8px;}
-.tq-ap-remove:hover{background:#fee2e2;}
+.tq-auto-products{background:var(--vf-surface);border:1px solid var(--vf-line);border-radius:14px;padding:16px 20px;margin-top:16px;}
+.tq-auto-products h3{font-size:13px;font-weight:800;color:var(--vf-text);margin:0 0 12px;}
+.tq-auto-tags{display:flex;flex-wrap:wrap;gap:6px;}
+.tq-auto-product-row{display:inline-flex;align-items:center;gap:6px;background:#eff6ff;color:#1d4ed8;border-radius:99px;padding:4px 10px;font-size:12px;font-weight:700;}
+.tq-ap-remove{background:none;border:none;color:#93c5fd;cursor:pointer;font-size:13px;line-height:1;padding:0 0 0 2px;font-weight:900;}
+.tq-ap-remove:hover{color:#dc2626;}
 .tq-reject-modal{position:fixed;inset:0;background:rgba(2,6,23,.6);backdrop-filter:blur(8px);z-index:9999;display:flex;align-items:center;justify-content:center;}
-.tq-reject-box{background:var(--vf-surface);border-radius:24px;padding:28px;width:420px;max-width:95vw;box-shadow:0 30px 60px rgba(0,0,0,.3);}
-.tq-reject-box h3{font-size:18px;font-weight:900;color:var(--vf-text);margin:0 0 8px;}
-.tq-reject-box p{font-size:13px;color:var(--vf-muted);margin:0 0 16px;}
-.tq-reject-box textarea{width:100%;border:1px solid var(--vf-line);border-radius:12px;padding:10px;font-size:13px;background:var(--vf-surface-2);color:var(--vf-text);resize:vertical;min-height:80px;font-family:inherit;}
+.tq-reject-box{background:var(--vf-surface);border-radius:16px;padding:24px;width:420px;max-width:95vw;box-shadow:0 20px 50px rgba(0,0,0,.25);}
+.tq-reject-box h3{font-size:16px;font-weight:900;color:var(--vf-text);margin:0 0 6px;}
+.tq-reject-box p{font-size:13px;color:var(--vf-muted);margin:0 0 14px;}
+.tq-reject-box textarea{width:100%;border:1px solid var(--vf-line);border-radius:10px;padding:10px 12px;font-size:13px;background:var(--vf-surface-2);color:var(--vf-text);resize:vertical;min-height:80px;font-family:inherit;outline:none;}
+.tq-reject-box textarea:focus{border-color:#2563eb;}
 .tq-reject-box .tq-reject-btns{display:flex;gap:10px;margin-top:14px;justify-content:flex-end;}
-@media(max-width:900px){.tq-stats{grid-template-columns:1fr 1fr!important;}.tq-controls{flex-direction:column;align-items:flex-start;}.tq-auto-toggle{margin-left:0;width:100%;}}
+@media(max-width:900px){.tq-stats{flex-wrap:wrap;}.tq-controls{flex-wrap:wrap;}.tq-controls-right{margin-left:0;width:100%;justify-content:space-between;}}
 
 
 </style>
@@ -3652,18 +3701,53 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
       </svg>
     </button>
     <h2>VendorFlow AI</h2>
-    <button id="navOverview" onclick="showSection('overview')" title="Overview">Overview</button>
-    <button id="navStores" onclick="showSection('stores')" title="Stores">Stores</button>
-    <button id="navOrders" onclick="showSection('orders')" title="Orders">Orders</button>
-    <button id="navTeam" onclick="showSection('team')" title="Team Assignment">Team Assignment</button>
-    <button id="navEmails" onclick="showSection('emails')" title="Emails">Emails</button>
-    <button id="navVendors" onclick="showSection('vendors')" title="Vendors">Vendors</button>
-    <button id="navTrackingQueue" onclick="showSection('trackingQueue')" title="Tracking Queue" style="position:relative;">Tracking Queue <span id="tqNavBadge" style="display:none;position:absolute;top:8px;right:10px;background:#ef4444;color:#fff;font-size:9px;font-weight:900;border-radius:999px;padding:1px 6px;min-width:16px;text-align:center;"></span></button>
-    <button id="navChat" onclick="showSection('chat')" title="Team Chat">Team Chat</button>
-    <button id="navStock" onclick="showSection('stock')" title="Stock Management">Stock</button>
-    <button id="navTasks" onclick="showSection('tasks')" title="Task Manager">Tasks</button>
 
-    <!-- Project switcher moved to sidebar bottom -->
+    <!-- ── MAIN ── -->
+    <div class="sb-section-label">Main</div>
+    <button id="navOverview" onclick="showSection('overview')">Overview</button>
+    <button id="navStores"   onclick="showSection('stores')">Stores</button>
+    <button id="navOrders"   onclick="showSection('orders')">Orders</button>
+    <button id="navEmails"   onclick="showSection('emails')">Emails</button>
+
+    <div class="sb-divider"></div>
+
+    <!-- ── VENDORS ── -->
+    <div class="sb-section-label">Vendors</div>
+
+    <!-- Vendors collapsible parent -->
+    <button id="navVendors" onclick="showSection('vendors');toggleVendorNavGroup()" style="justify-content:space-between!important;">
+      <span>Vendors</span>
+      <svg id="vendorNavChevron" width="12" height="12" viewBox="0 0 12 12" fill="none" style="opacity:.4;transition:transform .25s ease;flex-shrink:0;margin-left:auto;">
+        <path d="M2 4.5l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+    <!-- Sub-items -->
+    <div id="vendorNavGroup" class="sb-sub-group" style="display:block;">
+      <button class="sb-sub-item active" id="navSubPersonalVendors" onclick="showSection('vendors');setTimeout(()=>switchVendorTab('vendors'),50)">Personal Vendors</button>
+      <button class="sb-sub-item" id="navSubVendorStock"           onclick="showSection('vendors');setTimeout(()=>switchVendorTab('stock'),50)">Stock</button>
+      <button class="sb-sub-item" id="navSubOrderHistory"          onclick="showSection('vendors');setTimeout(()=>switchVendorTab('history'),50)">Order History</button>
+    </div>
+
+    <button id="navTrackingQueue" onclick="showSection('trackingQueue')" style="position:relative;">
+      Tracking Queue
+      <span id="tqNavBadge" style="display:none;position:absolute;top:12px;right:12px;background:#ef4444;color:#fff;font-size:9px;font-weight:900;border-radius:999px;padding:1px 6px;min-width:16px;text-align:center;line-height:1.4;"></span>
+    </button>
+
+    <div class="sb-divider"></div>
+
+    <!-- ── TEAM ── -->
+    <div class="sb-section-label">Team</div>
+    <button id="navTeam" onclick="showSection('team')">Team Assignment</button>
+    <button id="navChat" onclick="showSection('chat')">Team Chat</button>
+
+    <div class="sb-divider"></div>
+
+    <!-- ── TOOLS ── -->
+    <div class="sb-section-label">Tools</div>
+    <button id="navStock"  onclick="showSection('stock')">Stock</button>
+    <button id="navTasks"  onclick="showSection('tasks')">Tasks</button>
+
+    <!-- Project switcher -->
     <div class="sidebar-project-wrap">
       <div class="sidebar-project-lbl">Active Project</div>
       <select id="projectSwitcher" class="sidebar-project-select" onchange="changeProjectStore()">
@@ -4058,6 +4142,7 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
           <div class="pox-chip pox-chip-warn" data-filter="no_tracking" onclick="poxSetChipFilter(this,'no_tracking')">📦 No Tracking <span class="pox-chip-count" id="chipCountNoTracking">0</span></div>
           <div class="pox-chip" data-filter="unassigned" onclick="poxSetChipFilter(this,'unassigned')">👤 Unassigned <span class="pox-chip-count" id="chipCountUnassigned">0</span></div>
           <div class="pox-chip" data-filter="vendor_assigned" onclick="poxSetChipFilter(this,'vendor_assigned')">✓ Assigned <span class="pox-chip-count" id="chipCountAssigned">0</span></div>
+          <div class="pox-chip" data-filter="completed" onclick="poxSetChipFilter(this,'completed')">✅ Completed <span class="pox-chip-count" id="chipCountCompleted">0</span></div>
         </div>
         <div class="pox-filter-extras">
           <select id="orderStatusFilter" onchange="renderPremiumOrders()">
@@ -4193,10 +4278,6 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
         </div>
       </div>
 
-      <!-- Sub-tabs -->
-      <div id="vendorsSubTabs" style="display:flex;gap:8px;margin-bottom:18px;">
-        <button id="vTabVendors" class="btn" style="font-weight:900;" onclick="switchVendorTab('vendors')">Vendors</button>
-      </div>
 
       <!-- Vendors panel -->
       <div id="vendorsPanelVendors">
@@ -4359,45 +4440,269 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
           </div>
         </div>
       </div>
+
+      <!-- ══════ STOCK PANEL ══════ -->
+      <div id="vendorsPanelStock" style="display:none;">
+
+        <!-- Stats strip -->
+        <div class="vs-stats-strip">
+          <div class="vs-stat-chip">
+            <div class="vs-stat-icon">⏳</div>
+            <div><div class="vs-stat-label">Pending Pricing</div><div class="vs-stat-value amber" id="vsStatPendingPricing">0</div></div>
+          </div>
+          <div class="vs-stat-chip">
+            <div class="vs-stat-icon">🔍</div>
+            <div><div class="vs-stat-label">Pending Approval</div><div class="vs-stat-value blue" id="vsStatPendingApproval">0</div></div>
+          </div>
+          <div class="vs-stat-chip">
+            <div class="vs-stat-icon">✅</div>
+            <div><div class="vs-stat-label">Approved</div><div class="vs-stat-value green" id="vsStatApproved">0</div></div>
+          </div>
+          <div class="vs-stat-chip">
+            <div class="vs-stat-icon">📦</div>
+            <div><div class="vs-stat-label">Total Assigned</div><div class="vs-stat-value" id="vsStatTotalAssigned">0</div></div>
+          </div>
+          <div class="vs-stat-chip">
+            <div class="vs-stat-icon">🛒</div>
+            <div><div class="vs-stat-label">Total Sold</div><div class="vs-stat-value" id="vsStatTotalSold">0</div></div>
+          </div>
+          <div class="vs-stat-chip">
+            <div class="vs-stat-icon">🟢</div>
+            <div><div class="vs-stat-label">On Hand</div><div class="vs-stat-value green" id="vsStatOnHand">0</div></div>
+          </div>
+        </div>
+
+        <!-- Pill tabs -->
+        <div class="vs-pill-tabs">
+          <button class="vs-pill-tab active" onclick="vsSetInner('assign',this)">Assign Stock</button>
+          <button class="vs-pill-tab" onclick="vsSetInner('pending',this)">
+            Pending Approval
+            <span id="vsPendingBadge" class="vs-tab-badge" style="display:none;"></span>
+          </button>
+          <button class="vs-pill-tab" onclick="vsSetInner('tracker',this)">Stock Tracker</button>
+          <button class="vs-pill-tab" onclick="vsSetInner('history',this)">Assignment History</button>
+        </div>
+
+        <!-- ── Assign Stock sub-panel ── -->
+        <div id="vsSubAssign">
+          <div class="vs-toolbar">
+            <div class="vs-search-wrap">
+              <svg width="14" height="14" fill="none" viewBox="0 0 16 16"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.5"/><path d="M11 11l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              <input type="text" id="vsProductSearch" placeholder="Search product…" oninput="vsFilterProducts()">
+            </div>
+            <button class="btn green" style="margin-left:auto;" onclick="openVsAssignModal()">+ Assign Stock</button>
+          </div>
+          <div class="vs-table-card">
+            <table>
+              <thead><tr><th>Product</th><th>Variants</th><th>Total Stock</th><th>Total Assigned</th><th>Available</th><th>Action</th></tr></thead>
+              <tbody id="vsProductsTable"><tr><td colspan="6" style="text-align:center;padding:30px;color:#94a3b8;">Loading products…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ── Pending Approvals sub-panel ── -->
+        <div id="vsSubPending" style="display:none;">
+          <div class="vs-table-card">
+            <table>
+              <thead><tr><th>Vendor</th><th>Product</th><th>Product ID</th><th>Qty</th><th>Unit Price</th><th>Total</th><th>Est. Days</th><th>Status</th><th>Action</th></tr></thead>
+              <tbody id="vsApprovalsBody"><tr><td colspan="8" style="text-align:center;padding:40px;color:#94a3b8;">Loading…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ── Tracker sub-panel ── -->
+        <div id="vsSubTracker" style="display:none;">
+          <div class="vs-toolbar">
+            <select id="vsTrackerVendorFilter" onchange="loadVsTracker()" class="vs-select">
+              <option value="">All Vendors</option>
+            </select>
+            <span id="vsTrackerCount" style="font-size:12px;color:#94a3b8;font-weight:700;margin-left:auto;"></span>
+          </div>
+          <div class="vs-table-card">
+            <table>
+              <thead><tr><th>Vendor</th><th>Product</th><th>Product ID</th><th>Assigned</th><th>Sold</th><th>On Hand</th><th>Time Left</th><th>Status</th><th></th></tr></thead>
+              <tbody id="vsTrackerTable"><tr><td colspan="9" style="text-align:center;padding:30px;color:#94a3b8;">Loading…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ── Assignment History sub-panel ── -->
+        <div id="vsSubHistory" style="display:none;">
+          <div class="vs-toolbar">
+            <div class="vs-search-wrap">
+              <svg width="14" height="14" fill="none" viewBox="0 0 16 16"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.5"/><path d="M11 11l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              <input type="text" id="vsHistSearch" placeholder="Search product, vendor…" oninput="renderVsHistory()">
+            </div>
+            <select id="vsHistStatus" onchange="renderVsHistory()" class="vs-select">
+              <option value="all">All Statuses</option>
+              <option value="approved">✅ Approved</option>
+              <option value="pending_approval">⏳ Pending Approval</option>
+              <option value="pending_pricing">📝 Pending Pricing</option>
+              <option value="rejected">❌ Rejected</option>
+            </select>
+            <span id="vsHistCount" style="font-size:12px;color:#94a3b8;font-weight:700;white-space:nowrap;margin-left:auto;"></span>
+          </div>
+          <div class="vs-table-card">
+            <table>
+              <thead>
+                <tr>
+                  <th>Vendor</th>
+                  <th>Product</th>
+                  <th>Product ID</th>
+                  <th>Qty</th>
+                  <th>Unit Price</th>
+                  <th>Total</th>
+                  <th>Attempts</th>
+                  <th>Status</th>
+                  <th>Days Left</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="vsHistTableBody">
+                <tr><td colspan="10" style="text-align:center;padding:40px;color:#94a3b8;">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+      <!-- end vendorsPanelStock -->
+
+      <!-- Order History Panel -->
+      <div id="vendorsPanelHistory" style="display:none;">
+        <!-- Stats -->
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px;">
+          <div class="card" style="padding:16px!important;text-align:center;border-radius:18px!important;">
+            <div style="font-size:22px;font-weight:900;" id="ahTotal">—</div>
+            <div style="font-size:11px;color:var(--vf-muted);font-weight:700;margin-top:4px;">Total Orders</div>
+          </div>
+          <div class="card" style="padding:16px!important;text-align:center;border-radius:18px!important;">
+            <div style="font-size:22px;font-weight:900;color:#16a34a;" id="ahCompleted">—</div>
+            <div style="font-size:11px;color:var(--vf-muted);font-weight:700;margin-top:4px;">Completed</div>
+          </div>
+          <div class="card" style="padding:16px!important;text-align:center;border-radius:18px!important;">
+            <div style="font-size:22px;font-weight:900;color:#2563eb;" id="ahTracking">—</div>
+            <div style="font-size:11px;color:var(--vf-muted);font-weight:700;margin-top:4px;">Tracking Submitted</div>
+          </div>
+          <div class="card" style="padding:16px!important;text-align:center;border-radius:18px!important;">
+            <div style="font-size:22px;font-weight:900;color:#d97706;" id="ahPending">—</div>
+            <div style="font-size:11px;color:var(--vf-muted);font-weight:700;margin-top:4px;">In Progress</div>
+          </div>
+          <div class="card" style="padding:16px!important;text-align:center;border-radius:18px!important;">
+            <div style="font-size:22px;font-weight:900;color:#dc2626;" id="ahRejected">—</div>
+            <div style="font-size:11px;color:var(--vf-muted);font-weight:700;margin-top:4px;">Rejected</div>
+          </div>
+        </div>
+
+        <!-- Search + Filter -->
+        <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center;">
+          <input id="ahSearch" type="text" placeholder="Search order #, customer, product..." oninput="renderAdminHistory()"
+            style="flex:1;min-width:220px;height:40px;border-radius:12px;border:1px solid var(--vf-line);padding:0 14px;font-size:13px;background:var(--vf-surface);color:var(--vf-text);">
+          <select id="ahStatusFilter" onchange="renderAdminHistory()"
+            style="height:40px;border-radius:12px;border:1px solid var(--vf-line);padding:0 12px;font-size:13px;background:var(--vf-surface);color:var(--vf-text);font-weight:700;">
+            <option value="all">All Statuses</option>
+            <option value="approved">✅ Approved</option>
+            <option value="tracking_submitted">📦 Tracking Submitted</option>
+            <option value="in_progress">🔄 In Progress</option>
+            <option value="assigned">👤 Assigned</option>
+            <option value="rejected">❌ Rejected</option>
+          </select>
+        </div>
+
+        <!-- Table -->
+        <div class="card" style="padding:0!important;border-radius:20px!important;overflow:hidden;">
+          <div style="overflow-x:auto;">
+            <table style="width:100%;min-width:950px;border-collapse:collapse;">
+              <thead>
+                <tr style="background:var(--vf-surface-2);">
+                  <th style="width:44px;padding:12px 8px;border-bottom:1px solid var(--vf-line);"></th>
+                  <th style="padding:12px;text-align:left;font-size:10.5px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid var(--vf-line);">Product</th>
+                  <th style="padding:12px;text-align:left;font-size:10.5px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid var(--vf-line);">Order #</th>
+                  <th style="padding:12px;text-align:left;font-size:10.5px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid var(--vf-line);">Date</th>
+                  <th style="padding:12px;text-align:left;font-size:10.5px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid var(--vf-line);">Customer</th>
+                  <th style="padding:12px;text-align:left;font-size:10.5px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid var(--vf-line);">Vendor</th>
+                  <th style="padding:12px;text-align:left;font-size:10.5px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid var(--vf-line);">Tracking</th>
+                  <th style="padding:12px;text-align:left;font-size:10.5px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid var(--vf-line);">Payment</th>
+                  <th style="padding:12px;text-align:left;font-size:10.5px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid var(--vf-line);">Status</th>
+                </tr>
+              </thead>
+              <tbody id="ahTableBody">
+                <tr><td colspan="9" style="text-align:center;padding:40px;color:var(--vf-muted);">Loading history...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <!-- end vendorsPanelHistory -->
+
     </section>
 
     <!-- ══════════════════════════════════════════════════════════ -->
     <!-- TRACKING QUEUE SECTION                                    -->
     <!-- ══════════════════════════════════════════════════════════ -->
     <section id="trackingQueueSection" class="section">
-      <div class="tq-topbar">
-        <div>
-          <h1>📦 Tracking Queue</h1>
+
+      <!-- Header -->
+      <div class="tq-header">
+        <div class="tq-header-left">
+          <h1>Tracking Queue</h1>
           <p>Review and approve vendor tracking submissions</p>
         </div>
       </div>
 
-      <!-- Stats Row -->
+      <!-- Stats Strip -->
       <div class="tq-stats">
-        <div class="tq-stat pending"><span>Pending</span><b id="tqStatPending">—</b></div>
-        <div class="tq-stat approved"><span>Approved</span><b id="tqStatApproved">—</b></div>
-        <div class="tq-stat rejected"><span>Rejected</span><b id="tqStatRejected">—</b></div>
-        <div class="tq-stat"><span>Total</span><b id="tqStatTotal">—</b></div>
-      </div>
-
-      <!-- Controls -->
-      <div class="tq-controls">
-        <button class="tq-chip active" onclick="tqSetFilter('pending',this)">⏳ Pending</button>
-        <button class="tq-chip" onclick="tqSetFilter('approved',this)">✅ Approved</button>
-        <button class="tq-chip" onclick="tqSetFilter('rejected',this)">❌ Rejected</button>
-        <button class="tq-chip" onclick="tqSetFilter('all',this)">All</button>
-
-        <!-- Auto Approve Toggle -->
-        <div class="tq-auto-toggle">
-          <span>⚡ Auto Approve All</span>
-          <label class="tq-toggle-sw" title="Auto-approve all incoming tracking submissions">
-            <input type="checkbox" id="tqAutoApproveToggle" onchange="tqToggleAutoApprove(this.checked)">
-            <span class="slider"></span>
-          </label>
+        <div class="tq-stat">
+          <div class="tq-stat-icon amber">⏳</div>
+          <div>
+            <div class="tq-stat-val amber" id="tqStatPending">—</div>
+            <div class="tq-stat-lbl">Pending</div>
+          </div>
+        </div>
+        <div class="tq-stat">
+          <div class="tq-stat-icon green">✅</div>
+          <div>
+            <div class="tq-stat-val green" id="tqStatApproved">—</div>
+            <div class="tq-stat-lbl">Approved</div>
+          </div>
+        </div>
+        <div class="tq-stat">
+          <div class="tq-stat-icon red">✕</div>
+          <div>
+            <div class="tq-stat-val red" id="tqStatRejected">—</div>
+            <div class="tq-stat-lbl">Rejected</div>
+          </div>
+        </div>
+        <div class="tq-stat">
+          <div class="tq-stat-icon slate">📋</div>
+          <div>
+            <div class="tq-stat-val" id="tqStatTotal">—</div>
+            <div class="tq-stat-lbl">Total</div>
+          </div>
         </div>
       </div>
 
-      <!-- Main Table -->
+      <!-- Controls Bar -->
+      <div class="tq-controls">
+        <div class="tq-pill-tabs">
+          <button class="tq-pill-tab active" onclick="tqSetFilter('pending',this)">⏳ Pending</button>
+          <button class="tq-pill-tab" onclick="tqSetFilter('approved',this)">✅ Approved</button>
+          <button class="tq-pill-tab" onclick="tqSetFilter('rejected',this)">✕ Rejected</button>
+          <button class="tq-pill-tab" onclick="tqSetFilter('all',this)">All</button>
+        </div>
+        <div class="tq-controls-right">
+          <span class="tq-sub-count" id="tqSubCount"></span>
+          <div class="tq-auto-wrap">
+            <span>⚡ Auto Approve</span>
+            <label class="tq-sw" title="Auto-approve all incoming tracking submissions">
+              <input type="checkbox" id="tqAutoApproveToggle" onchange="tqToggleAutoApprove(this.checked)">
+              <span class="tq-sw-track"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Table -->
       <div class="tq-table-wrap">
         <table class="tq-table">
           <thead>
@@ -4414,7 +4719,7 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
             </tr>
           </thead>
           <tbody id="tqTableBody">
-            <tr><td colspan="9" style="text-align:center;padding:40px;color:var(--vf-muted);">Loading...</td></tr>
+            <tr><td colspan="9" style="text-align:center;padding:40px;color:var(--vf-muted);">Loading…</td></tr>
           </tbody>
         </table>
       </div>
@@ -4422,8 +4727,9 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
       <!-- Auto-Approve Products List -->
       <div class="tq-auto-products" id="tqAutoProductsBox" style="display:none;">
         <h3>⚡ Products with Permanent Auto-Approve</h3>
-        <div id="tqAutoProductsList"></div>
+        <div class="tq-auto-tags" id="tqAutoProductsList"></div>
       </div>
+
     </section>
 
     <!-- Reject Modal -->
@@ -6587,6 +6893,109 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
   </div>
 </div>
 
+<!-- ══ STOCK: Assign Stock Modal ══ -->
+<!-- ── Assignment History Modal ── -->
+<div id="vsHistoryModal" style="display:none;position:fixed;inset:0;background:rgba(2,6,23,.6);z-index:9100;align-items:center;justify-content:center;backdrop-filter:blur(8px);overflow-y:auto;padding:20px;" onclick="if(event.target===this)vsCloseHistoryModal()">
+  <div style="background:var(--vf-surface);border-radius:18px;width:100%;max-width:580px;box-shadow:0 30px 60px rgba(0,0,0,.3);display:flex;flex-direction:column;max-height:90vh;">
+    <!-- Header -->
+    <div style="padding:20px 24px 16px;border-bottom:1px solid var(--vf-line);display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-shrink:0;">
+      <div>
+        <div id="vsHistModalTitle" style="font-size:16px;font-weight:900;color:var(--vf-text);margin-bottom:3px;"></div>
+        <div id="vsHistModalSub" style="font-size:12px;color:var(--vf-muted);font-weight:600;"></div>
+      </div>
+      <button onclick="vsCloseHistoryModal()" style="background:var(--vf-surface-2);border:none;border-radius:8px;width:30px;height:30px;font-size:16px;cursor:pointer;color:var(--vf-muted);flex-shrink:0;display:flex;align-items:center;justify-content:center;">✕</button>
+    </div>
+    <!-- Timeline -->
+    <div id="vsHistModalBody" style="flex:1;overflow-y:auto;padding:20px 24px;display:flex;flex-direction:column;gap:0;"></div>
+  </div>
+</div>
+
+<div id="vsAssignModal" style="display:none;position:fixed;inset:0;background:rgba(2,6,23,.6);z-index:9000;align-items:center;justify-content:center;backdrop-filter:blur(8px);overflow-y:auto;padding:20px;">
+  <div style="background:#fff;border-radius:22px;width:640px;max-width:100%;box-shadow:0 40px 100px rgba(15,23,42,.25);max-height:90vh;overflow-y:auto;">
+    <div style="padding:18px 22px 14px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#fff;z-index:1;border-radius:22px 22px 0 0;">
+      <div><b style="font-size:16px;">📦 Assign Stock to Vendor</b></div>
+      <button onclick="closeVsAssignModal()" style="border:none;background:#f1f5f9;border-radius:9px;width:30px;height:30px;font-size:16px;cursor:pointer;color:#64748b;">✕</button>
+    </div>
+    <div style="padding:18px 22px;display:flex;flex-direction:column;gap:14px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <label style="font-size:11px;font-weight:800;color:#64748b;display:block;margin-bottom:4px;">Product</label>
+          <select id="vsModalProduct" style="width:100%;border:1px solid #e2e8f0;border-radius:10px;padding:9px 12px;font-size:13px;outline:none;background:#f8fafc;" onchange="vsLoadVariantsForModal()">
+            <option value="">Select product…</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:800;color:#64748b;display:block;margin-bottom:4px;">Vendor</label>
+          <select id="vsModalVendor" style="width:100%;border:1px solid #e2e8f0;border-radius:10px;padding:9px 12px;font-size:13px;outline:none;background:#f8fafc;">
+            <option value="">Select vendor…</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:800;color:#64748b;display:block;margin-bottom:6px;">Quantity per Size × Color <span style="font-weight:600;color:#94a3b8;">(enter 0 to skip)</span></label>
+        <div id="vsModalVariantsWrap" style="border:1px solid #e2e8f0;border-radius:12px;overflow:auto;min-height:60px;">
+          <div style="text-align:center;padding:20px;color:#94a3b8;font-size:12px;">Select a product first</div>
+        </div>
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:800;color:#64748b;display:block;margin-bottom:4px;">Note to Vendor (optional)</label>
+        <textarea id="vsModalNote" placeholder="e.g. Summer collection — please price competitively" style="width:100%;border:1px solid #e2e8f0;border-radius:10px;padding:9px 12px;font-size:13px;outline:none;background:#f8fafc;resize:none;height:60px;font-family:inherit;"></textarea>
+      </div>
+    </div>
+    <div style="padding:12px 22px 18px;display:flex;gap:8px;justify-content:flex-end;border-top:1px solid #f1f5f9;position:sticky;bottom:0;background:#fff;border-radius:0 0 22px 22px;">
+      <button class="btn" onclick="closeVsAssignModal()">Cancel</button>
+      <button class="btn green" onclick="submitVsAssign()">📤 Send Assignment to Vendor</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ STOCK: Approve + Pay Modal ══ -->
+<div id="vsApproveModal" style="display:none;position:fixed;inset:0;background:rgba(2,6,23,.6);z-index:9001;align-items:center;justify-content:center;backdrop-filter:blur(8px);">
+  <div style="background:#fff;border-radius:22px;width:440px;max-width:95vw;box-shadow:0 40px 100px rgba(15,23,42,.25);">
+    <div style="padding:18px 22px 14px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;">
+      <b style="font-size:15px;">✅ Approve + Confirm Payment</b>
+      <button onclick="closeVsApproveModal()" style="border:none;background:#f1f5f9;border-radius:9px;width:30px;height:30px;font-size:16px;cursor:pointer;color:#64748b;">✕</button>
+    </div>
+    <div style="padding:18px 22px;display:flex;flex-direction:column;gap:12px;">
+      <div id="vsApproveInfo" style="background:#f8fafc;border-radius:12px;padding:14px;font-size:13px;line-height:1.7;"></div>
+      <div>
+        <label style="font-size:11px;font-weight:800;color:#64748b;display:block;margin-bottom:4px;">Payment Method</label>
+        <select id="vsApprovePaymentMethod" style="width:100%;border:1px solid #e2e8f0;border-radius:10px;padding:9px 12px;font-size:13px;outline:none;background:#f8fafc;">
+          <option>Bank Transfer</option><option>PayPal</option><option>Cash</option><option>Stripe</option><option>Wise</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:800;color:#64748b;display:block;margin-bottom:4px;">Payment Reference</label>
+        <input id="vsApprovePaymentRef" type="text" placeholder="e.g. INV-2024-001" style="width:100%;border:1px solid #e2e8f0;border-radius:10px;padding:9px 12px;font-size:13px;outline:none;background:#f8fafc;">
+      </div>
+      <input type="hidden" id="vsApproveAssignmentId">
+    </div>
+    <div style="padding:12px 22px 18px;display:flex;gap:8px;justify-content:flex-end;border-top:1px solid #f1f5f9;">
+      <button class="btn" onclick="closeVsApproveModal()">Cancel</button>
+      <button class="btn green" onclick="submitVsApprove()">✓ Approve + Mark Paid</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ STOCK: Reject Modal ══ -->
+<div id="vsRejectModal" style="display:none;position:fixed;inset:0;background:rgba(2,6,23,.6);z-index:9001;align-items:center;justify-content:center;backdrop-filter:blur(8px);">
+  <div style="background:#fff;border-radius:22px;width:380px;max-width:95vw;box-shadow:0 40px 100px rgba(15,23,42,.25);">
+    <div style="padding:18px 22px 14px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;">
+      <b style="font-size:15px;">✕ Reject Pricing</b>
+      <button onclick="closeVsRejectModal()" style="border:none;background:#f1f5f9;border-radius:9px;width:30px;height:30px;font-size:16px;cursor:pointer;color:#64748b;">✕</button>
+    </div>
+    <div style="padding:18px 22px;display:flex;flex-direction:column;gap:10px;">
+      <div style="font-size:13px;color:#64748b;">Provide a reason so the vendor can re-submit.</div>
+      <textarea id="vsRejectReason" placeholder="Reason for rejection…" style="width:100%;border:1px solid #e2e8f0;border-radius:10px;padding:9px 12px;font-size:13px;outline:none;background:#f8fafc;resize:none;height:80px;font-family:inherit;"></textarea>
+      <input type="hidden" id="vsRejectAssignmentId">
+    </div>
+    <div style="padding:12px 22px 18px;display:flex;gap:8px;justify-content:flex-end;border-top:1px solid #f1f5f9;">
+      <button class="btn" onclick="closeVsRejectModal()">Cancel</button>
+      <button class="btn" style="background:#dc2626;color:#fff;border-color:#dc2626;" onclick="submitVsReject()">Reject</button>
+    </div>
+  </div>
+</div>
+
 <div id="vendorModal" class="vm-overlay" style="display:none;">
   <!-- Floating bg shapes -->
   <div class="vm-shape vm-s1"></div>
@@ -7324,6 +7733,17 @@ function _showNewOrderToast(count){
   _showNewOrderToast2(`🛒 ${count} new order${count>1?"s":""} arrived!`);
 }
 
+function toggleVendorNavGroup(forceOpen){
+  const group   = document.getElementById("vendorNavGroup");
+  const chevron = document.getElementById("vendorNavChevron");
+  const btn     = document.getElementById("navVendors");
+  if(!group) return;
+  const open = forceOpen !== undefined ? !forceOpen : group.style.display === "block";
+  group.style.display = open ? "none" : "block";
+  if(chevron) chevron.style.transform = open ? "" : "rotate(180deg)";
+  if(btn){ btn.style.background = open ? "" : "#1e293b"; btn.style.color = open ? "" : "#fff"; }
+}
+
 function showSection(section){
   fireLoader();
   if(section !== "emails"){
@@ -7413,6 +7833,7 @@ function showSection(section){
     document.getElementById("navTasks").classList.add("active");
     tkLoad();
   }
+
 }
 
 async function loadOverview(){
@@ -7917,6 +8338,7 @@ function getFilteredOrders(){
   if(quick==="unassigned")orders=orders.filter(o=>!(o.assigned_vendor_name||o.vendor_name||o.assigned_vendor));
   if(quick==="vendor_assigned")orders=orders.filter(o=>(o.assigned_vendor_name||o.vendor_name||o.assigned_vendor));
   if(quick==="no_tracking")orders=orders.filter(o=>!o.tracking_number||String(o.tracking_number).toLowerCase().includes("no tracking")||String(o.tracking_number).toLowerCase()==="pending");
+  if(quick==="completed")orders=orders.filter(o=>String(o.vendor_status||"").toLowerCase()==="approved"||String(o.fulfillment_status||"").toLowerCase().includes("fulfill")||String(o.fulfillment_status||"").toLowerCase().includes("deliver")||String(o.fulfillment_status||"").toLowerCase().includes("complet"));
   return orders;
 }
 function getCurrencySymbol(code){
@@ -8029,8 +8451,9 @@ function renderPremiumOrderStats(){
   // hidden counts for chip filter
   set("ordersPendingCount",pending); set("ordersNoTrackingCount",noTracking);
   set("ordersUnassignedCount",unassigned); set("ordersSelectedCount",selectedOrderIds.size);
+  const completed=orders.filter(o=>String(o.vendor_status||"").toLowerCase()==="approved"||String(o.fulfillment_status||"").toLowerCase().includes("fulfill")||String(o.fulfillment_status||"").toLowerCase().includes("deliver")||String(o.fulfillment_status||"").toLowerCase().includes("complet")).length;
   set("chipCountAll",total); set("chipCountPending",pending); set("chipCountNoTracking",noTracking);
-  set("chipCountUnassigned",unassigned); set("chipCountAssigned",assigned);
+  set("chipCountUnassigned",unassigned); set("chipCountAssigned",assigned); set("chipCountCompleted",completed);
   // attention bar
   const attn=document.getElementById("poxAttention"); const msg=document.getElementById("poxAttentionMsg");
   if(attn&&msg){
@@ -14009,6 +14432,8 @@ function openVendorDetailPage(vendorId, tab, storeId, storeName) {
   // hide list panels, show detail page
   document.getElementById("vendorsPanelVendors").style.display = "none";
   document.getElementById("vendorsPanelQueue").style.display = "none";
+  document.getElementById("vendorsPanelStock").style.display = "none";
+  document.getElementById("vendorsPanelHistory").style.display = "none";
   document.querySelector("#vendorsSection > .topbar").style.display = "none";
   document.getElementById("vendorsSubTabs").style.display = "none";
   document.getElementById("vendorDetailPage").style.display = "block";
@@ -14236,6 +14661,8 @@ function openManageProductsPage(vendorId, storeId, storeName, vendorName) {
 
   document.getElementById("vendorsPanelVendors").style.display="none";
   document.getElementById("vendorsPanelQueue").style.display="none";
+  document.getElementById("vendorsPanelStock").style.display="none";
+  document.getElementById("vendorsPanelHistory").style.display="none";
   document.querySelector("#vendorsSection > .topbar").style.display="none";
   document.getElementById("vendorsSubTabs").style.display="none";
   document.getElementById("mpPage").className="mp-page show";
@@ -14434,6 +14861,8 @@ function closeVendorDetailPage() {
   document.getElementById("vendorsSubTabs").style.display = "";
   document.getElementById("vendorsPanelVendors").style.display = "block";
   document.getElementById("vendorsPanelQueue").style.display = "none";
+  document.getElementById("vendorsPanelStock").style.display = "none";
+  document.getElementById("vendorsPanelHistory").style.display = "none";
 }
 
 function switchVdpTab(tab) {
@@ -14587,12 +15016,588 @@ async function removePermAssignment(assignmentId, productName) {
 
 let currentQueueFilter="pending";
 function switchVendorTab(tab){fireLoader();
-  const isVendors=tab==="vendors";
-  document.getElementById("vendorsPanelVendors").style.display=isVendors?"block":"none";
-  document.getElementById("vendorsPanelQueue").style.display=isVendors?"none":"block";
-  document.getElementById("vTabVendors").className=isVendors?"btn":"btn dark";
-  document.getElementById("vTabQueue").className=isVendors?"btn dark":"btn";
-  if(!isVendors) loadTrackingQueue(currentQueueFilter);
+  const isVendors = tab==="vendors";
+  const isStock   = tab==="stock";
+  const isQueue   = tab==="queue";
+  const isHistory = tab==="history";
+  document.getElementById("vendorsPanelVendors").style.display = isVendors ? "block" : "none";
+  document.getElementById("vendorsPanelQueue").style.display   = isQueue   ? "block" : "none";
+  document.getElementById("vendorsPanelStock").style.display   = isStock   ? "block" : "none";
+  document.getElementById("vendorsPanelHistory").style.display = isHistory ? "block" : "none";
+  // Update sidebar sub-item active states
+  ["navSubPersonalVendors","navSubVendorStock","navSubOrderHistory"].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.classList.remove("active");
+  });
+  if(isVendors && document.getElementById("navSubPersonalVendors")) document.getElementById("navSubPersonalVendors").classList.add("active");
+  if(isStock   && document.getElementById("navSubVendorStock"))     document.getElementById("navSubVendorStock").classList.add("active");
+  if(isHistory && document.getElementById("navSubOrderHistory"))    document.getElementById("navSubOrderHistory").classList.add("active");
+  if(isQueue)   loadTrackingQueue(currentQueueFilter);
+  if(isStock)   loadVsStockTab();
+  if(isHistory) loadAdminHistory();
+}
+
+// ─── VENDOR STOCK — Admin JS ───────────────────────────────────────────────
+
+let vsAllProducts = [];
+let vsAllVendors  = [];
+let vsAssignments = [];
+let vsTrackerLines = [];
+
+async function loadVsStockTab(){
+  await Promise.all([loadVsProducts(), loadVsAssignments()]);
+}
+
+async function loadVsProducts(){
+  if(!selectedStoreId) return;
+  try{
+    const r = await fetch(`/stock/dashboard/?store_id=${selectedStoreId}`);
+    const d = await r.json();
+    vsAllProducts = d.products || [];
+    renderVsProducts();
+  }catch(e){}
+}
+
+async function loadVsAssignments(){
+  if(!selectedStoreId) return;
+  try{
+    const r = await fetch(`/stock/vendor-assignments/?store_id=${selectedStoreId}`);
+    const d = await r.json();
+    if(!d.success) return;
+    vsAssignments = d.assignments || [];
+    const s = d.stats || {};
+    _setText("vsStatPendingPricing",  s.pending_pricing  || 0);
+    _setText("vsStatPendingApproval", s.pending_approval || 0);
+    _setText("vsStatApproved",        s.approved         || 0);
+
+    // Badge on tab
+    const pending = (s.pending_approval || 0);
+    const badge = document.getElementById("vsPendingBadge");
+    if(badge){ badge.style.display = pending > 0 ? "" : "none"; badge.textContent = pending; }
+
+
+    // Compute tracker stats from approved
+    let totalAssigned=0, totalSold=0, totalOnHand=0;
+    vsAssignments.filter(a=>a.status==="approved").forEach(a=>{
+      totalAssigned += a.total_assigned||0;
+      totalSold     += a.total_sold||0;
+      totalOnHand   += a.total_on_hand||0;
+    });
+    _setText("vsStatTotalAssigned", totalAssigned);
+    _setText("vsStatTotalSold",     totalSold);
+    _setText("vsStatOnHand",        totalOnHand);
+
+    renderVsApprovals();
+    renderVsHistory();
+  }catch(e){}
+}
+
+function _setText(id, val){
+  const el = document.getElementById(id);
+  if(el) el.textContent = val;
+}
+
+function renderVsProducts(){
+  const q = (document.getElementById("vsProductSearch")?.value||"").toLowerCase();
+  const rows = vsAllProducts.filter(p => !q || p.product_name.toLowerCase().includes(q));
+  const tbody = document.getElementById("vsProductsTable");
+  if(!tbody) return;
+  if(!rows.length){ tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:30px;color:#94a3b8;">No products. Import products in the Stock section first.</td></tr>`; return; }
+
+  tbody.innerHTML = rows.map(p => {
+    const assigned = vsAssignments.filter(a=>a.product_id===p.id).reduce((s,a)=>s+a.total_assigned,0);
+    const sizes = [...new Set(p.variants.map(v=>v.size).filter(Boolean))].join(" ");
+    const colors = [...new Set(p.variants.map(v=>v.color).filter(Boolean))];
+    const swatches = colors.map(c=>`<span class="vs-swatch" style="${vsColorStyle(c)}" title="${escapeHtml(c)}"></span>`).join("");
+    return `<tr>
+      <td><div style="display:flex;align-items:center;gap:10px;">
+        ${p.image_url?`<img src="${escapeHtml(p.image_url)}" style="width:34px;height:34px;border-radius:8px;object-fit:cover;" onerror="this.style.display='none'">`:`<div style="width:34px;height:34px;border-radius:8px;background:linear-gradient(135deg,#e0f2fe,#ddd6fe);display:grid;place-items:center;font-size:15px;">📦</div>`}
+        <div><div style="font-weight:800;font-size:13px;">${escapeHtml(p.product_name)}</div><div style="font-size:11px;color:#94a3b8;">${p.variant_count} variant${p.variant_count!==1?"s":""}</div></div>
+      </div></td>
+      <td><div style="font-size:11px;color:#64748b;font-weight:700;">${escapeHtml(sizes)}</div><div style="display:flex;gap:3px;margin-top:4px;">${swatches}</div></td>
+      <td><b>${p.total_qty}</b></td>
+      <td>${assigned > 0 ? `<span style="font-weight:800;color:#0284c7;">${assigned}</span>` : `<span style="color:#94a3b8;">—</span>`}</td>
+      <td>${p.total_available > 0 ? `<span style="background:#f0fdf4;color:#16a34a;border-radius:99px;padding:3px 9px;font-size:11px;font-weight:800;">${p.total_available}</span>` : `<span style="background:#fef2f2;color:#dc2626;border-radius:99px;padding:3px 9px;font-size:11px;font-weight:800;">0</span>`}</td>
+      <td><button style="padding:5px 14px;border-radius:7px;border:none;background:#eff6ff;color:#2563eb;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:.12s;" onmouseover="this.style.background='#dbeafe'" onmouseout="this.style.background='#eff6ff'" onclick="openVsAssignModalFor(${p.id},'${escapeJs(p.product_name)}')">Assign</button></td>
+    </tr>`;
+  }).join("");
+}
+
+function vsColorStyle(name){
+  const map = {black:"background:#1e293b",white:"background:#f8fafc;border:1px solid #e2e8f0",red:"background:#dc2626",blue:"background:#2563eb",green:"background:#059669",yellow:"background:#ca8a04",pink:"background:#ec4899",purple:"background:#7c3aed",orange:"background:#ea580c",grey:"background:#6b7280",gray:"background:#6b7280",beige:"background:#d4a574",navy:"background:#1e3a5f",camel:"background:#c4a882",gold:"background:#ca8a04",silver:"background:#c0c0c0",brown:"background:#92400e"};
+  const lower = (name||"").toLowerCase();
+  return (map[lower]||"background:#e2e8f0") + ";width:14px;height:14px;border-radius:50%;display:inline-block;flex-shrink:0;";
+}
+
+function vsFilterProducts(){ renderVsProducts(); }
+
+function vsSetInner(tab, btn){
+  document.getElementById("vsSubAssign").style.display   = tab==="assign"   ? "" : "none";
+  document.getElementById("vsSubPending").style.display  = tab==="pending"  ? "" : "none";
+  document.getElementById("vsSubTracker").style.display  = tab==="tracker"  ? "" : "none";
+  document.getElementById("vsSubHistory").style.display  = tab==="history"  ? "" : "none";
+  document.querySelectorAll(".vs-pill-tab").forEach(b=>b.classList.remove("active"));
+  if(btn) btn.classList.add("active");
+  if(tab==="tracker") loadVsTracker();
+  if(tab==="pending") renderVsApprovals();
+  if(tab==="history") renderVsHistory();
+}
+
+function renderVsHistory(){
+  var tbody = document.getElementById("vsHistTableBody");
+  var countEl = document.getElementById("vsHistCount");
+  if(!tbody) return;
+  var q = (document.getElementById("vsHistSearch")||{}).value||"";
+  var st = (document.getElementById("vsHistStatus")||{}).value||"all";
+  var list = vsAssignments.slice().sort(function(a,b){ return new Date(b.created_at)-new Date(a.created_at); });
+  if(st!=="all") list = list.filter(function(a){ return a.status===st; });
+  if(q){ var ql=q.toLowerCase(); list=list.filter(function(a){ return (a.product_name||"").toLowerCase().indexOf(ql)>=0||(a.vendor_name||"").toLowerCase().indexOf(ql)>=0; }); }
+  if(countEl) countEl.textContent = list.length+" record"+(list.length!==1?"s":"");
+  if(!list.length){
+    tbody.innerHTML='<tr><td colspan="10" style="text-align:center;padding:40px;color:#94a3b8;">No assignments found.</td></tr>';
+    return;
+  }
+  var statusStyle={
+    approved:"background:#dcfce7;color:#166534;",
+    pending_approval:"background:#fff7ed;color:#c2410c;",
+    pending_pricing:"background:#fef9c3;color:#854d0e;",
+    rejected:"background:#fee2e2;color:#991b1b;",
+    permanently_rejected:"background:#fce7f3;color:#9d174d;"
+  };
+  var statusLabel={approved:"✓ Approved",pending_approval:"⏳ Pending Approval",pending_pricing:"📝 Needs Pricing",rejected:"✕ Rejected",permanently_rejected:"⛔ Perm. Rejected"};
+  var rows="";
+  for(var i=0;i<list.length;i++){
+    var a=list[i];
+    var unitPrice=a.per_unit_price?parseFloat(a.per_unit_price).toFixed(2):"—";
+    var totalPrice=a.total_price?parseFloat(a.total_price).toFixed(2):"—";
+    var attemptCount=(a.attempts||[]).length||1;
+    var sStyle=statusStyle[a.status]||"background:#f1f5f9;color:#475569;";
+    var sLabel=statusLabel[a.status]||escapeHtml(a.status||"—");
+    if(a.status==="approved"&&a.stock_arrived) sLabel="📦 Arrived";
+    else if(a.status==="approved"&&!a.stock_arrived) sLabel="⏳ Awaiting Arrival";
+    var dr=a.days_remaining;
+    var daysLeft="—";
+    if(a.status==="approved"&&dr!==null&&dr!==undefined){
+      if(dr===0) daysLeft='<span style="background:#fef2f2;color:#dc2626;border-radius:99px;padding:3px 8px;font-size:11px;font-weight:700;">⏰ Overdue</span>';
+      else if(dr<=3) daysLeft='<span style="background:#fffbeb;color:#d97706;border-radius:99px;padding:3px 8px;font-size:11px;font-weight:700;">⏰ '+dr+' days</span>';
+      else daysLeft='<span style="background:#f0fdf4;color:#16a34a;border-radius:99px;padding:3px 8px;font-size:11px;font-weight:700;">'+dr+' days</span>';
+    }
+    rows+='<tr>'
+      +'<td style="font-weight:700;">'+escapeHtml(a.vendor_name||"—")+'</td>'
+      +'<td>'+escapeHtml(a.product_name||"—")+'</td>'
+      +'<td style="font-size:11px;color:#64748b;font-weight:600;">'+escapeHtml(a.product_id||"—")+'</td>'
+      +'<td style="font-weight:700;">'+(a.total_assigned||0)+'</td>'
+      +'<td>AED '+unitPrice+'</td>'
+      +'<td style="font-weight:700;color:#2563eb;">AED '+totalPrice+'</td>'
+      +'<td>'+attemptCount+'</td>'
+      +'<td><span style="'+sStyle+'border-radius:99px;padding:3px 10px;font-size:11px;font-weight:700;display:inline-block;">'+sLabel+'</span></td>'
+      +'<td>'+daysLeft+'</td>'
+      +'<td><button onclick="vsShowHistory('+a.id+')" style="padding:4px 10px;border-radius:7px;border:1px solid var(--vf-line);background:var(--vf-surface-2);color:var(--vf-muted);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">📋 History</button></td>'
+      +'</tr>';
+  }
+  tbody.innerHTML=rows;
+}
+
+// ── Assignment History Modal ──
+function vsCloseHistoryModal(){
+  document.getElementById("vsHistoryModal").style.display = "none";
+}
+
+function vsShowHistory(assignmentId){
+  const a = vsAssignments.find(x=>x.id===assignmentId);
+  if(!a){ alert("Assignment data not found. Please refresh."); return; }
+
+  document.getElementById("vsHistModalTitle").textContent = a.product_name || "Assignment";
+  document.getElementById("vsHistModalSub").textContent = "Vendor: " + (a.vendor_name||"—") + (a.product_id ? " · " + a.product_id : "");
+
+  // Build timeline events
+  const events = [];
+
+  // 1. Assignment created
+  if(a.created_at){
+    events.push({ icon:"📦", color:"#2563eb", bg:"#eff6ff",
+      title:"Stock Assigned",
+      detail:"Admin assigned " + (a.total_assigned||0) + " units",
+      time: a.created_at });
+  }
+
+  // 2. Quotation attempts
+  const attempts = (a.attempts||[]).slice().sort((x,y)=>new Date(x.submitted_at)-new Date(y.submitted_at));
+  attempts.forEach(at=>{
+    const isFirst = at.attempt_number===1;
+    events.push({ icon:"📝", color:"#d97706", bg:"#fff7ed",
+      title: isFirst ? "Vendor Submitted Quotation" : "Vendor Resubmitted (Attempt #"+at.attempt_number+")",
+      detail: "AED "+parseFloat(at.per_unit_price).toFixed(2)+"/unit · "+at.total_quantity+" units · "+at.estimated_days+" days"+(at.vendor_note?" · Note: "+at.vendor_note:""),
+      time: at.submitted_at });
+
+    if(at.responded_at && at.status!=="pending"){
+      if(at.status==="approved"){
+        events.push({ icon:"✅", color:"#16a34a", bg:"#f0fdf4",
+          title:"Admin Approved Quotation",
+          detail: at.admin_note ? "Note: "+at.admin_note : "Quotation accepted",
+          time: at.responded_at });
+      } else if(at.status==="rejected"){
+        events.push({ icon:"✕", color:"#dc2626", bg:"#fef2f2",
+          title:"Admin Rejected (Resubmit)",
+          detail: at.admin_note || a.reject_reason || "No reason given",
+          time: at.responded_at });
+      } else if(at.status==="permanently_rejected"){
+        events.push({ icon:"⛔", color:"#9d174d", bg:"#fce7f3",
+          title:"Admin Permanently Rejected",
+          detail: at.admin_note || a.reject_reason || "No reason given",
+          time: at.responded_at });
+      }
+    }
+  });
+
+  // 3. Final approved_at (if no attempt captured it)
+  if(a.status==="approved" && a.approved_at){
+    const alreadyCaptured = attempts.some(at=>at.status==="approved"&&at.responded_at);
+    if(!alreadyCaptured){
+      events.push({ icon:"✅", color:"#16a34a", bg:"#f0fdf4",
+        title:"Approved by Admin",
+        detail: (a.approved_by?"Approved by "+a.approved_by:"")+(a.payment_amount?" · Payment: AED "+parseFloat(a.payment_amount).toFixed(2)+(a.payment_method?" via "+a.payment_method:""):""),
+        time: a.approved_at });
+    }
+  }
+
+  // 4. Final rejection (if status rejected/perm and no attempt captured it)
+  if((a.status==="rejected"||a.status==="permanently_rejected") && attempts.length===0){
+    events.push({ icon: a.status==="permanently_rejected"?"⛔":"✕",
+      color: a.status==="permanently_rejected"?"#9d174d":"#dc2626",
+      bg: a.status==="permanently_rejected"?"#fce7f3":"#fef2f2",
+      title: a.status==="permanently_rejected" ? "Permanently Rejected" : "Rejected (Resubmit)",
+      detail: a.reject_reason || "No reason given",
+      time: a.updated_at||a.created_at });
+  }
+
+  // 5. Stock arrived
+  if(a.stock_arrived && a.arrived_at){
+    events.push({ icon:"🚚", color:"#059669", bg:"#ecfdf5",
+      title:"Stock Marked Arrived",
+      detail:"Vendor confirmed physical stock delivery",
+      time: a.arrived_at });
+  }
+
+  // Sort by time ascending
+  events.sort((x,y)=>new Date(x.time)-new Date(y.time));
+
+  const fmt = t => {
+    if(!t) return "—";
+    const d = new Date(t);
+    return d.toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"}) + " · " +
+           d.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"});
+  };
+
+  const timelineHtml = events.length ? events.map((ev,i)=>{
+    const isLast = i===events.length-1;
+    return `<div style="display:flex;gap:14px;padding-bottom:${isLast?0:20}px;position:relative;">
+      <!-- Line -->
+      ${!isLast?`<div style="position:absolute;left:15px;top:32px;bottom:0;width:2px;background:var(--vf-line);"></div>`:""}
+      <!-- Icon -->
+      <div style="width:32px;height:32px;border-radius:10px;background:${ev.bg};display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;z-index:1;border:2px solid ${ev.color}22;">${ev.icon}</div>
+      <!-- Content -->
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:800;color:var(--vf-text);margin-bottom:3px;">${escapeHtml(ev.title)}</div>
+        ${ev.detail?`<div style="font-size:12px;color:var(--vf-muted);font-weight:500;margin-bottom:4px;line-height:1.45;">${escapeHtml(ev.detail)}</div>`:""}
+        <div style="font-size:11px;font-weight:700;color:${ev.color};background:${ev.bg};display:inline-block;padding:2px 8px;border-radius:99px;">${fmt(ev.time)}</div>
+      </div>
+    </div>`;
+  }).join("") : `<div style="text-align:center;padding:30px;color:var(--vf-muted);font-size:13px;font-weight:600;">No activity recorded yet.</div>`;
+
+  document.getElementById("vsHistModalBody").innerHTML = timelineHtml;
+  document.getElementById("vsHistoryModal").style.display = "flex";
+}
+
+function renderVsApprovals(){
+  const tbody = document.getElementById("vsApprovalsBody");
+  if(!tbody) return;
+  const pending = vsAssignments.filter(a=>a.status==="pending_approval");
+  if(!pending.length){
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:50px;color:#94a3b8;"><div style="font-size:28px;margin-bottom:8px;">✅</div>No pending quotations</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = pending.map(a=>{
+    const latest = (a.attempts||[]).slice(-1)[0];
+    const unitPrice = latest ? parseFloat(latest.per_unit_price) : (a.per_unit_price ? parseFloat(a.per_unit_price) : 0);
+    const estDays   = latest ? latest.estimated_days : (a.estimated_days||0);
+    const totalQty  = a.total_assigned || 0;
+    const totalPrice = (unitPrice * totalQty).toFixed(2);
+    return `<tr>
+      <td style="font-weight:700;">${escapeHtml(a.vendor_name)}</td>
+      <td>${escapeHtml(a.product_name)}</td>
+      <td style="font-size:11px;color:#64748b;font-weight:600;">${escapeHtml(a.product_id||"—")}</td>
+      <td style="font-weight:700;">${totalQty}</td>
+      <td style="font-weight:700;">AED ${unitPrice.toFixed(2)}</td>
+      <td style="font-weight:700;color:#2563eb;">AED ${totalPrice}</td>
+      <td><span style="background:#f0fdf4;color:#16a34a;border-radius:99px;padding:3px 9px;font-size:11px;font-weight:700;">${estDays} days</span></td>
+      <td><span style="background:#fff7ed;color:#d97706;border-radius:99px;padding:3px 9px;font-size:11px;font-weight:700;">⏳ Pending</span></td>
+      <td>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <button onclick="vsApproveQuotation(${a.id})" style="padding:5px 12px;border-radius:7px;border:none;background:#dcfce7;color:#16a34a;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">✓ Approve</button>
+          <button onclick="vsToggleRejectRow(${a.id})" style="padding:5px 12px;border-radius:7px;border:none;background:#fee2e2;color:#dc2626;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">✕ Reject</button>
+        </div>
+      </td>
+    </tr>
+    <tr id="vsRejectRow_${a.id}" style="display:none;">
+      <td colspan="9" style="background:#fef2f2;padding:10px 16px;">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <input type="text" id="vsRejectReason_${a.id}" placeholder="Reason (optional)…" style="flex:1;min-width:200px;padding:7px 12px;border:1px solid #fca5a5;border-radius:8px;font-size:12px;font-family:inherit;outline:none;background:#fff;">
+          <button onclick="vsConfirmRejectType(${a.id},false)" style="padding:7px 14px;background:#f97316;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">↩ Reject & Resubmit</button>
+          <button onclick="vsConfirmRejectType(${a.id},true)" style="padding:7px 14px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">⛔ Permanent Reject</button>
+          <button onclick="vsToggleRejectRow(${a.id})" style="padding:7px 10px;background:#f1f5f9;color:#64748b;border:none;border-radius:8px;font-size:12px;cursor:pointer;font-family:inherit;">✕</button>
+        </div>
+        <p id="vsRejectMsg_${a.id}" style="font-size:11px;font-weight:700;margin:6px 0 0;color:#dc2626;display:none;"></p>
+      </td>
+    </tr>`;
+  }).join("");
+}
+
+function vsToggleRejectRow(id){
+  const row = document.getElementById("vsRejectRow_"+id);
+  if(row) row.style.display = row.style.display === "none" ? "" : "none";
+}
+
+async function vsConfirmRejectType(id, isPermanent){
+  const reason = (document.getElementById("vsRejectReason_"+id)||{}).value||"";
+  const url = isPermanent
+    ? `/stock/vendor-assignments/${id}/permanent-reject/`
+    : `/stock/vendor-assignments/${id}/reject/`;
+  const msgEl = document.getElementById("vsRejectMsg_"+id);
+  try{
+    const r = await fetch(url,{method:"POST",headers:{"Content-Type":"application/json","X-CSRFToken":getCsrfToken()},body:JSON.stringify({reject_reason:reason})});
+    const d = await r.json();
+    if(!d.success) throw new Error(d.message||"Failed");
+    _showToast(isPermanent?"Quotation permanently rejected.":"Rejected — vendor can resubmit.","success");
+    await loadVsAssignments();
+    renderVsApprovals();
+  }catch(e){
+    if(msgEl){msgEl.style.display="block";msgEl.textContent=e.message;}
+  }
+}
+
+async function vsApproveQuotation(id){
+  try{
+    const r = await fetch(`/stock/vendor-assignments/${id}/approve/`,{method:"POST",headers:{"Content-Type":"application/json","X-CSRFToken":getCsrfToken()},body:JSON.stringify({})});
+    const d = await r.json();
+    if(!d.success) throw new Error(d.message||"Failed");
+    _showToast("Quotation approved! Countdown started.","success");
+    await loadVsAssignments();
+    renderVsApprovals();
+  }catch(e){ _showToast(e.message,"error"); }
+}
+
+async function loadVsTracker(){
+  const vendorFilter = document.getElementById("vsTrackerVendorFilter")?.value || "";
+  try{
+    const r = await fetch(`/stock/vendor-tracker/?store_id=${selectedStoreId||""}${vendorFilter?"&vendor_id="+vendorFilter:""}`);
+    const d = await r.json();
+    if(!d.success) return;
+    vsTrackerLines = d.lines || [];
+    const vendors = d.vendor_summary || [];
+
+    // Populate vendor filter
+    const sel = document.getElementById("vsTrackerVendorFilter");
+    if(sel && vendors.length){
+      const current = sel.value;
+      sel.innerHTML = `<option value="">All Vendors</option>` + vendors.map(v=>`<option value="${v.vendor_id}" ${current==v.vendor_id?"selected":""}>${escapeHtml(v.vendor_name)}</option>`).join("");
+    }
+
+    // Variant rows
+    const tbody = document.getElementById("vsTrackerTable");
+    if(!tbody) return;
+    const rows = vsTrackerLines.filter(l=>!vendorFilter||l.vendor_id==vendorFilter);
+    _setText("vsTrackerCount", `${rows.length} line${rows.length!==1?"s":""}`);
+    if(!rows.length){ tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:40px;color:#94a3b8;">No approved stock assigned yet.</td></tr>`; return; }
+    const statusChip = (l) => {
+      if(!l.stock_arrived) return `<span style="background:#eff6ff;color:#2563eb;border-radius:99px;padding:3px 9px;font-size:11px;font-weight:700;">⏳ Awaiting Arrival</span>`;
+      if(l.on_hand === 0) return `<span style="background:#fee2e2;color:#dc2626;border-radius:99px;padding:3px 9px;font-size:11px;font-weight:700;">● Out of Stock</span>`;
+      if(l.on_hand <= 3) return `<span style="background:#fffbeb;color:#d97706;border-radius:99px;padding:3px 9px;font-size:11px;font-weight:700;">● Low Stock</span>`;
+      return `<span style="background:#dcfce7;color:#16a34a;border-radius:99px;padding:3px 9px;font-size:11px;font-weight:700;">● Active</span>`;
+    };
+    tbody.innerHTML = rows.map(l=>{
+      const asgn = vsAssignments.find(a=>a.id===l.assignment_id);
+      const dr = asgn ? asgn.days_remaining : null;
+      var timeBadge = "—";
+      if(dr !== null && dr !== undefined){
+        if(dr===0) timeBadge=`<span style="background:#fee2e2;color:#dc2626;border-radius:99px;padding:3px 8px;font-size:11px;font-weight:700;">⏰ Overdue</span>`;
+        else if(dr<=3) timeBadge=`<span style="background:#fffbeb;color:#d97706;border-radius:99px;padding:3px 8px;font-size:11px;font-weight:700;">⏰ ${dr} days</span>`;
+        else timeBadge=`<span style="background:#f0fdf4;color:#16a34a;border-radius:99px;padding:3px 8px;font-size:11px;font-weight:700;">${dr} days</span>`;
+      }
+      return `<tr>
+        <td style="font-weight:700;">${escapeHtml(l.vendor_name)}</td>
+        <td>${escapeHtml(l.product_name)}</td>
+        <td style="font-size:11px;color:#64748b;font-weight:600;">${escapeHtml(l.product_id||"—")}</td>
+        <td style="font-weight:700;">${l.quantity_assigned}</td>
+        <td style="color:#94a3b8;">${l.quantity_sold}</td>
+        <td style="font-weight:700;color:#16a34a;">${l.stock_arrived ? l.on_hand : "—"}</td>
+        <td>${timeBadge}</td>
+        <td>${statusChip(l)}</td>
+        <td><button onclick="vsShowHistory(${l.assignment_id})" style="padding:4px 10px;border-radius:7px;border:1px solid var(--vf-line);background:var(--vf-surface-2);color:var(--vf-muted);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;">📋 History</button></td>
+      </tr>`;}).join("");
+  }catch(e){}
+}
+
+// ── Assign Modal ──
+let vsModalVariants = [];
+
+function openVsAssignModal(){
+  // populate product + vendor dropdowns
+  _populateVsModalDropdowns();
+  document.getElementById("vsAssignModal").style.display = "flex";
+}
+
+function openVsAssignModalFor(productId, productName){
+  _populateVsModalDropdowns();
+  const sel = document.getElementById("vsModalProduct");
+  if(sel) sel.value = productId;
+  vsLoadVariantsForModal();
+  document.getElementById("vsAssignModal").style.display = "flex";
+}
+
+function closeVsAssignModal(){ document.getElementById("vsAssignModal").style.display = "none"; }
+
+function _populateVsModalDropdowns(){
+  const pSel = document.getElementById("vsModalProduct");
+  const vSel = document.getElementById("vsModalVendor");
+  if(pSel && vsAllProducts.length){
+    pSel.innerHTML = `<option value="">Select product…</option>` + vsAllProducts.map(p=>`<option value="${p.id}">${escapeHtml(p.product_name)}</option>`).join("");
+  }
+  // load vendors for this store
+  fetch(`/vendors/api/?store_id=${selectedStoreId}`)
+    .then(r=>r.json()).then(d=>{
+      const vendors = d.vendors || d || [];
+      if(vSel){
+        vSel.innerHTML = `<option value="">Select vendor…</option>` + vendors.map(v=>`<option value="${v.id}">${escapeHtml(v.name)}</option>`).join("");
+      }
+    }).catch(()=>{});
+}
+
+async function vsLoadVariantsForModal(){
+  const productId = document.getElementById("vsModalProduct")?.value;
+  const wrap = document.getElementById("vsModalVariantsWrap");
+  if(!productId || !wrap){ if(wrap) wrap.innerHTML = `<div style="text-align:center;padding:20px;color:#94a3b8;font-size:12px;">Select a product first</div>`; return; }
+  const product = vsAllProducts.find(p=>p.id==productId);
+  if(!product || !product.variants?.length){ wrap.innerHTML = `<div style="text-align:center;padding:20px;color:#94a3b8;font-size:12px;">No variants found.</div>`; return; }
+
+  vsModalVariants = product.variants;
+  const sizes   = [...new Set(product.variants.map(v=>v.size).filter(Boolean))];
+  const colors  = [...new Set(product.variants.map(v=>v.color).filter(Boolean))];
+  const hasSize  = sizes.length > 0;
+  const hasColor = colors.length > 0;
+
+  if(!hasSize && !hasColor){
+    // Flat product, single variant
+    wrap.innerHTML = product.variants.map(v=>`
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid #f1f5f9;">
+        <span style="font-size:12px;font-weight:700;color:#334155;flex:1;">${escapeHtml(v.sku||"Default")}</span>
+        <input type="number" class="vs-qty-input" data-variant="${v.id}" value="0" min="0" style="width:80px;border:1px solid #e2e8f0;border-radius:8px;padding:6px 10px;font-size:12px;text-align:center;outline:none;">
+      </div>`).join("");
+    return;
+  }
+
+  // Build size × color matrix
+  let html = `<table style="width:100%;border-collapse:collapse;">`;
+  // Header: Size | Color1 | Color2 | ...
+  html += `<thead><tr style="background:#f8fafc;"><th style="padding:8px 12px;font-size:10px;font-weight:800;color:#94a3b8;text-align:left;text-transform:uppercase;letter-spacing:.5px;">Size</th>`;
+  colors.forEach(c=>{ html += `<th style="padding:8px 12px;font-size:10px;font-weight:800;color:#94a3b8;text-align:center;text-transform:uppercase;letter-spacing:.5px;"><div style="display:flex;align-items:center;gap:5px;justify-content:center;"><span style="${vsColorStyle(c)}"></span>${escapeHtml(c)}</div></th>`; });
+  if(!hasColor) html += `<th style="padding:8px 12px;">Qty</th>`;
+  html += `</tr></thead><tbody>`;
+
+  const sizesToShow = hasSize ? sizes : [""];
+  sizesToShow.forEach(size=>{
+    html += `<tr style="border-top:1px solid #f1f5f9;"><td style="padding:8px 12px;font-weight:800;font-size:12px;">${escapeHtml(size||"—")}<div style="font-size:10px;color:#94a3b8;">avail: ${product.variants.filter(v=>v.size===size).reduce((s,v)=>s+v.available,0)}</div></td>`;
+    const colsToShow = hasColor ? colors : [""];
+    colsToShow.forEach(color=>{
+      const variant = product.variants.find(v=>v.size===size && v.color===color);
+      if(variant){
+        html += `<td style="padding:8px 12px;text-align:center;"><input type="number" class="vs-qty-input" data-variant="${variant.id}" value="0" min="0" max="${variant.available}" style="width:70px;border:1px solid #e2e8f0;border-radius:8px;padding:5px 8px;font-size:12px;text-align:center;outline:none;" title="Max: ${variant.available}"></td>`;
+      } else {
+        html += `<td style="padding:8px 12px;text-align:center;color:#e2e8f0;font-size:11px;">—</td>`;
+      }
+    });
+    html += `</tr>`;
+  });
+  html += `</tbody></table>`;
+  wrap.innerHTML = html;
+}
+
+async function submitVsAssign(){
+  const productId = document.getElementById("vsModalProduct")?.value;
+  const vendorId  = document.getElementById("vsModalVendor")?.value;
+  const note      = document.getElementById("vsModalNote")?.value || "";
+  if(!productId || !vendorId){ _showToast("Select a product and vendor", "error"); return; }
+
+  const lines = [];
+  document.querySelectorAll(".vs-qty-input").forEach(input=>{
+    const qty = parseInt(input.value)||0;
+    if(qty > 0) lines.push({variant_id: parseInt(input.dataset.variant), quantity_assigned: qty});
+  });
+  if(!lines.length){ _showToast("Enter quantity for at least one variant", "error"); return; }
+
+  try{
+    const r = await fetch("/stock/vendor-assign/", {
+      method:"POST",
+      headers:{"Content-Type":"application/json","X-CSRFToken":getCSRFToken()},
+      body: JSON.stringify({store_id: selectedStoreId, vendor_id: vendorId, product_id: productId, lines, admin_note: note})
+    });
+    const d = await r.json();
+    if(!d.success) throw new Error(d.message||"Error");
+    closeVsAssignModal();
+    _showToast("Stock assignment sent to vendor for pricing", "success");
+    await loadVsAssignments();
+  }catch(e){ _showToast(e.message||"Failed", "error"); }
+}
+
+// ── Approve Modal ──
+function openVsApproveModal(id, vendor, product, qty, amount){
+  document.getElementById("vsApproveAssignmentId").value = id;
+  document.getElementById("vsApproveInfo").innerHTML = `
+    <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="color:#64748b;font-weight:700;">Vendor</span><b>${escapeHtml(vendor)}</b></div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="color:#64748b;font-weight:700;">Product</span><b>${escapeHtml(product)}</b></div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="color:#64748b;font-weight:700;">Total Units</span><b>${qty}</b></div>
+    <div style="display:flex;justify-content:space-between;border-top:1px solid #e2e8f0;padding-top:8px;margin-top:4px;"><span style="color:#64748b;font-weight:700;">Amount to Pay</span><b style="font-size:18px;color:#059669;">${amount?"€"+amount:"—"}</b></div>`;
+  document.getElementById("vsApproveModal").style.display = "flex";
+}
+function closeVsApproveModal(){ document.getElementById("vsApproveModal").style.display = "none"; }
+
+async function submitVsApprove(){
+  const id     = document.getElementById("vsApproveAssignmentId").value;
+  const method = document.getElementById("vsApprovePaymentMethod").value;
+  const ref    = document.getElementById("vsApprovePaymentRef").value;
+  try{
+    const r = await fetch(`/stock/vendor-assignments/${id}/approve/`, {
+      method:"POST",
+      headers:{"Content-Type":"application/json","X-CSRFToken":getCSRFToken()},
+      body: JSON.stringify({payment_method: method, payment_reference: ref})
+    });
+    const d = await r.json();
+    if(!d.success) throw new Error(d.message||"Error");
+    closeVsApproveModal();
+    _showToast("Assignment approved and payment recorded", "success");
+    await loadVsAssignments();
+  }catch(e){ _showToast(e.message||"Failed","error"); }
+}
+
+// ── Reject Modal ──
+function openVsRejectModal(id){ document.getElementById("vsRejectAssignmentId").value=id; document.getElementById("vsRejectReason").value=""; document.getElementById("vsRejectModal").style.display="flex"; }
+function closeVsRejectModal(){ document.getElementById("vsRejectModal").style.display="none"; }
+
+async function submitVsReject(){
+  const id     = document.getElementById("vsRejectAssignmentId").value;
+  const reason = document.getElementById("vsRejectReason").value;
+  try{
+    const r = await fetch(`/stock/vendor-assignments/${id}/reject/`, {
+      method:"POST",
+      headers:{"Content-Type":"application/json","X-CSRFToken":getCSRFToken()},
+      body: JSON.stringify({reject_reason: reason})
+    });
+    const d = await r.json();
+    if(!d.success) throw new Error(d.message||"Error");
+    closeVsRejectModal();
+    _showToast("Assignment rejected", "success");
+    await loadVsAssignments();
+  }catch(e){ _showToast(e.message||"Failed","error"); }
 }
 function setQueueFilter(f,btn){
   currentQueueFilter=f;
@@ -14712,48 +15717,62 @@ async function tqLoadTable(){
   const tbody = document.getElementById("tqTableBody");
   if(!tbody) return;
   tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--vf-muted);">Loading…</td></tr>`;
+  const countEl = document.getElementById("tqSubCount");
+  if(countEl) countEl.textContent = "";
   const storeParam = selectedStoreId ? `&store_id=${selectedStoreId}` : "";
   try{
     const r = await fetch(`/vendors/api/tracking-queue/?status=${_tqFilter}${storeParam}`);
     const d = await r.json();
     if(!d.success){
-      tbody.innerHTML=`<tr><td colspan="9" style="color:red;padding:20px;text-align:center;">${escapeHtml(d.message||"Error loading submissions")}</td></tr>`;
+      tbody.innerHTML=`<tr><td colspan="9" style="color:#dc2626;padding:20px;text-align:center;font-weight:600;">${escapeHtml(d.message||"Error loading submissions")}</td></tr>`;
       return;
     }
     const subs = d.submissions||[];
+    const countEl = document.getElementById("tqSubCount");
+    if(countEl) countEl.textContent = subs.length + " submission" + (subs.length!==1?"s":"");
     if(!subs.length){
-      tbody.innerHTML=`<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--vf-muted);">No ${_tqFilter==="all"?"":_tqFilter} submissions found.</td></tr>`;
+      tbody.innerHTML=`<tr><td colspan="9" style="text-align:center;padding:50px;color:var(--vf-muted);font-weight:600;">No ${_tqFilter==="all"?"":_tqFilter} submissions found.</td></tr>`;
       return;
     }
-    const pillMap = {pending:"orange", approved:"green", rejected:"red"};
     tbody.innerHTML = subs.map(s=>{
-      const date = s.submitted_at ? new Date(s.submitted_at).toLocaleDateString() : "—";
+      const date = s.submitted_at ? new Date(s.submitted_at).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"}) : "—";
       const trackLink = s.tracking_url
-        ? `<a href="${escapeHtml(s.tracking_url)}" target="_blank" style="color:#2563eb;font-size:11px;word-break:break-all;">Track ↗</a>`
+        ? `<a href="${escapeHtml(s.tracking_url)}" target="_blank" class="tq-track-link">Track ↗</a>`
         : "";
+      const vendorInitial = (s.vendor_name||"V").charAt(0).toUpperCase();
+      const statusPill = `<span class="tq-status-pill ${escapeHtml(s.status||"")}"><span class="tq-dot"></span>${escapeHtml(s.status||"—")}${s.is_auto_approved?` <span style="font-size:9px;font-weight:900;background:#ede9fe;color:#6d28d9;border-radius:99px;padding:1px 5px;margin-left:2px;">⚡Auto</span>`:"" }</span>`;
       let actions = "";
       if(s.status==="pending"){
-        actions = `
-          <button class="tq-btn approve" onclick="tqApprove(${s.id})">✅ Approve</button>
-          <button class="tq-btn perm"    onclick="tqApprovePermanent(${s.id})">⚡ Approve Permanent</button>
-          <button class="tq-btn reject"  onclick="tqOpenRejectModal(${s.id})">❌ Reject</button>`;
+        actions = `<button class="tq-btn approve" onclick="tqApprove(${s.id})">✓ Approve</button>
+          <button class="tq-btn perm" onclick="tqApprovePermanent(${s.id})">⚡ Approve Permanent</button>
+          <button class="tq-btn reject" onclick="tqOpenRejectModal(${s.id})">✕ Reject</button>`;
       } else {
-        actions = `<span style="font-size:12px;color:var(--vf-muted);">${s.status==="approved"?"✓ Approved":"✗ Rejected"}</span>
-          ${s.reject_reason?`<div style="font-size:10px;color:#dc2626;margin-top:3px;">${escapeHtml(s.reject_reason)}</div>`:""}`;
+        actions = `<span style="font-size:12px;color:var(--vf-muted);font-weight:600;">${s.status==="approved"?"✓ Approved":"✕ Rejected"}</span>${s.reject_reason?`<div style="font-size:10px;color:#dc2626;margin-top:3px;font-weight:600;">${escapeHtml(s.reject_reason)}</div>`:""}`;
       }
       return `<tr>
-        <td><b>#${escapeHtml(String(s.order_number||s.order_id||"—"))}</b><br><span style="font-size:11px;color:var(--vf-muted);">${escapeHtml(date)}</span></td>
-        <td style="font-size:12px;">${escapeHtml(s.customer_name||"—")}</td>
-        <td style="font-size:12px;max-width:140px;">${escapeHtml(s.product_name||"—")}</td>
-        <td style="font-size:12px;">${escapeHtml(s.vendor_name||"—")}</td>
-        <td><b style="font-size:12px;">${escapeHtml(s.tracking_number||"—")}</b><br>${trackLink}</td>
-        <td style="font-size:12px;">${escapeHtml(s.courier_name||"—")}</td>
-        <td style="max-width:140px;font-size:11px;color:#64748b;">${escapeHtml(s.vendor_note||"—")}</td>
         <td>
-          <span class="pill ${pillMap[s.status]||""}">${escapeHtml(s.status)}</span>
-          ${s.is_auto_approved ? `<span style="display:inline-block;margin-top:4px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-size:9px;font-weight:900;border-radius:999px;padding:2px 7px;letter-spacing:.3px;">⚡ Auto</span>` : ""}
+          <div class="tq-order-num">#${escapeHtml(String(s.order_number||s.order_id||"—"))}</div>
+          <div class="tq-order-date">${escapeHtml(date)}</div>
         </td>
-        <td><div style="display:flex;flex-direction:column;gap:5px;">${actions}</div></td>
+        <td style="font-weight:600;color:var(--vf-text);font-size:12.5px;">${escapeHtml(s.customer_name||"—")}</td>
+        <td>
+          <div class="tq-product-name">${escapeHtml(s.product_name||"—")}</div>
+          ${s.product_id?`<div class="tq-product-id">${escapeHtml(String(s.product_id))}</div>`:""}
+        </td>
+        <td>
+          <div class="tq-vendor-cell">
+            <div class="tq-vendor-av">${escapeHtml(vendorInitial)}</div>
+            <div class="tq-vendor-name">${escapeHtml(s.vendor_name||"—")}</div>
+          </div>
+        </td>
+        <td>
+          <div class="tq-tracking-num">${escapeHtml(s.tracking_number||"—")}</div>
+          ${trackLink}
+        </td>
+        <td>${s.courier_name?`<span class="tq-courier-badge">${escapeHtml(s.courier_name)}</span>`:"<span style='color:var(--vf-muted);'>—</span>"}</td>
+        <td><span class="tq-note-cell">${escapeHtml(s.vendor_note||"—")}</span></td>
+        <td>${statusPill}</td>
+        <td><div class="tq-actions">${actions}</div></td>
       </tr>`;
     }).join("");
   }catch(e){
@@ -14763,7 +15782,7 @@ async function tqLoadTable(){
 
 function tqSetFilter(status, btn){
   _tqFilter = status;
-  document.querySelectorAll(".tq-chip").forEach(b=>b.classList.remove("active"));
+  document.querySelectorAll(".tq-pill-tab").forEach(b=>b.classList.remove("active"));
   if(btn) btn.classList.add("active");
   tqLoadTable();
 }
@@ -14853,10 +15872,10 @@ async function tqLoadAutoProducts(){
     if(!products.length){ box.style.display="none"; return; }
     box.style.display = "block";
     list.innerHTML = products.map(p=>`
-      <div class="tq-auto-product-row">
-        <span>${escapeHtml(p.product_name||p.product_id)}</span>
-        <button class="tq-btn reject" style="padding:5px 12px;font-size:11px;" onclick="tqRemoveAutoProduct('${escapeHtml(String(p.product_id))}')">Remove</button>
-      </div>`).join("");
+      <span class="tq-auto-product-row">
+        ${escapeHtml(p.product_name||p.product_id)}
+        <button class="tq-ap-remove" onclick="tqRemoveAutoProduct('${escapeHtml(String(p.product_id))}')">✕</button>
+      </span>`).join("");
   }catch(e){ console.warn("tqLoadAutoProducts error", e); box.style.display="none"; }
 }
 
@@ -17557,6 +18576,104 @@ function _showToast(msg, type){
   el.innerHTML = `<div style="width:22px;height:22px;border-radius:6px;background:${colors[type]||colors.info};display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;">${icons[type]||'→'}</div>${msg}`;
   w.appendChild(el);
   setTimeout(()=>{ el.style.transition='.2s'; el.style.opacity='0'; el.style.transform='translateY(6px)'; setTimeout(()=>el.remove(),200); }, 3000);
+}
+
+/* ═══ Admin Order History ═══ */
+let _ahOrders = [];
+
+async function loadAdminHistory(){
+  var tbody=document.getElementById("ahTableBody");
+  if(tbody) tbody.innerHTML='<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--vf-muted);">Loading...</td></tr>';
+
+  // Always fetch fresh from the correct orders endpoint
+  try{
+    var storeParam=selectedStoreId?"&store_id="+selectedStoreId:"";
+    var r=await fetch("/orders/api/"+( storeParam?"?"+storeParam.slice(1):""));
+    var d=await r.json();
+    var raw=d.orders||[];
+    // Also include currentOrders if fetch returns empty but currentOrders has data
+    if(!raw.length && currentOrders && currentOrders.length) raw=currentOrders;
+    // Only show orders assigned to a personal vendor
+    raw=raw.filter(function(o){ return !!(o.assigned_vendor_name||o.vendor_name); });
+    _ahOrders=raw.slice().sort(function(a,b){return new Date(b.created_at||0)-new Date(a.created_at||0);});
+    renderAdminHistory();
+  }catch(e){
+    // Fallback to currentOrders
+    if(currentOrders && currentOrders.length){
+      _ahOrders=[...currentOrders].filter(function(o){ return !!(o.assigned_vendor_name||o.vendor_name); }).sort(function(a,b){return new Date(b.created_at||0)-new Date(a.created_at||0);});
+      renderAdminHistory();
+    } else {
+      if(tbody) tbody.innerHTML='<tr><td colspan="9" style="text-align:center;padding:40px;color:#dc2626;">'+escapeHtml(e.message)+'</td></tr>';
+    }
+  }
+}
+
+function renderAdminHistory(){
+  var search=(document.getElementById("ahSearch")?.value||"").toLowerCase().trim();
+  var statusFilter=document.getElementById("ahStatusFilter")?.value||"all";
+  var orders=_ahOrders;
+
+  if(search) orders=orders.filter(function(o){
+    return String(o.external_order_id||o.order_number||o.id||"").toLowerCase().includes(search)||
+           String(o.customer_name||"").toLowerCase().includes(search)||
+           String(o.product_name||"").toLowerCase().includes(search);
+  });
+  if(statusFilter!=="all") orders=orders.filter(function(o){return (o.vendor_status||"")==statusFilter;});
+
+  // Stats (from full list)
+  var all=_ahOrders;
+  var set=function(id,v){var el=document.getElementById(id);if(el)el.textContent=v;};
+  set("ahTotal",all.length);
+  set("ahCompleted",all.filter(function(o){return o.vendor_status==="approved"||(o.fulfillment_status||"").toLowerCase().includes("fulfill");}).length);
+  set("ahTracking",all.filter(function(o){return o.vendor_status==="tracking_submitted";}).length);
+  set("ahPending",all.filter(function(o){var s=o.vendor_status||"";return s==="assigned"||s==="in_progress";}).length);
+  set("ahRejected",all.filter(function(o){return o.vendor_status==="rejected";}).length);
+
+  var tbody=document.getElementById("ahTableBody");
+  if(!tbody) return;
+  if(!orders.length){
+    tbody.innerHTML='<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--vf-muted);">No orders found.</td></tr>';
+    return;
+  }
+
+  var vsLabels={approved:"✅ Approved",rejected:"❌ Rejected",tracking_submitted:"📦 Tracking Submitted",in_progress:"🔄 In Progress",assigned:"👤 Assigned"};
+  var vsBg={approved:"#dcfce7",rejected:"#fee2e2",tracking_submitted:"#dbeafe",in_progress:"#fef3c7",assigned:"#f1f5f9"};
+  var vsColor={approved:"#166534",rejected:"#991b1b",tracking_submitted:"#1d4ed8",in_progress:"#92400e",assigned:"#475569"};
+
+  var rows="";
+  for(var i=0;i<orders.length;i++){
+    var o=orders[i];
+    var dateStr=o.created_at?new Date(o.created_at).toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"}):"—";
+    var timeStr=o.created_at?new Date(o.created_at).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"}):"";
+    var items=o.line_items||[];
+    var firstItem=items.length?items[0]:null;
+    var imgSrc=firstItem&&firstItem.image?firstItem.image:"";
+    var imgHtml=imgSrc
+      ?'<img src="'+escapeHtml(imgSrc)+'" style="width:40px;height:40px;object-fit:cover;border-radius:8px;border:1px solid #e2e8f0;" onerror="this.style.display=\'none\'">'
+      :'<div style="width:40px;height:40px;border-radius:8px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-size:16px;">📦</div>';
+    var pName=o.product_name||(firstItem&&firstItem.name)||"—";
+    var vs=o.vendor_status||"";
+    var vsBgC=vsBg[vs]||"#f1f5f9";
+    var vsC=vsColor[vs]||"#475569";
+    var vsL=vsLabels[vs]||vs||"—";
+    var payS=(o.payment_status||"").toLowerCase();
+    var payOk=payS.includes("paid");
+    var trackNum=o.tracking_number&&o.tracking_number!=="pending"?o.tracking_number:"—";
+    var vendorName=o.assigned_vendor_name||o.vendor_name||"—";
+
+    rows+='<tr style="cursor:default;">';
+    rows+='<td style="padding:10px 8px;">'+imgHtml+'</td>';
+    rows+='<td style="padding:12px;"><div style="font-weight:700;font-size:13px;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+escapeHtml(pName)+'</div>'+(firstItem&&firstItem.quantity?'<div style="font-size:11px;color:var(--vf-muted);">Qty: '+firstItem.quantity+'</div>':'')+'</td>';
+    rows+='<td style="padding:12px;font-weight:700;">#'+escapeHtml(String(o.external_order_id||o.order_number||o.id||""))+'</td>';
+    rows+='<td style="padding:12px;"><div style="font-weight:600;">'+escapeHtml(dateStr)+'</div><div style="font-size:11px;color:var(--vf-muted);">'+escapeHtml(timeStr)+'</div></td>';
+    rows+='<td style="padding:12px;"><div style="font-weight:600;">'+escapeHtml(o.customer_name||"—")+'</div><div style="font-size:11px;color:var(--vf-muted);">'+escapeHtml(o.city||o.customer_city||o.customer_country||"")+'</div></td>';
+    rows+='<td style="padding:12px;font-weight:600;">'+escapeHtml(vendorName)+'</td>';
+    rows+='<td style="padding:12px;font-family:monospace;font-size:12px;font-weight:600;">'+escapeHtml(trackNum)+'</td>';
+    rows+='<td style="padding:12px;"><span style="display:inline-flex;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:700;background:'+(payOk?"#dcfce7":"#fef3c7")+';color:'+(payOk?"#166534":"#92400e")+';">'+escapeHtml(o.payment_status||"—")+'</span></td>';
+    rows+='<td style="padding:12px;"><span style="display:inline-flex;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:700;background:'+vsBgC+';color:'+vsC+';">'+escapeHtml(vsL)+'</span></td>';
+    rows+='</tr>';
+  }
+  tbody.innerHTML=rows;
 }
 </script>
 </body>

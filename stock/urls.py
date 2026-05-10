@@ -16,4 +16,12 @@ urlpatterns = [
     path("assign-order/", views.stock_assign_order_api),
     path("order-assignments/", views.stock_order_assignments_api),
     path("orders/", views.stock_orders_api),
+    # Vendor stock assignment system
+    path("vendor-assign/", views.vendor_assign_stock_api),
+    path("vendor-assignments/", views.vendor_assignments_list_api),
+    path("vendor-assignments/<int:assignment_id>/", views.vendor_assignment_detail_api),
+    path("vendor-assignments/<int:assignment_id>/approve/", views.vendor_assignment_approve_api),
+    path("vendor-assignments/<int:assignment_id>/reject/", views.vendor_assignment_reject_api),
+    path("vendor-assignments/<int:assignment_id>/permanent-reject/", views.vendor_assignment_permanent_reject_api),
+    path("vendor-tracker/", views.vendor_stock_tracker_api),
 ]

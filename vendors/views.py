@@ -131,16 +131,11 @@ def vendor_create(request):
         vendor.password_plain = password
         vendor.save()
 
-        from teamapp.models import ChatChannel, ChatMessage
-        general, _ = ChatChannel.objects.get_or_create(slug="general", is_dm=False, defaults={"name": "general", "description": "General team discussion"})
-        if general:
-            general.members.add(user)
-            added_by = request.user.get_full_name() or request.user.username if request.user.is_authenticated else "Admin"
-            ChatMessage.objects.create(
-                channel=general,
-                sender=request.user if request.user.is_authenticated else user,
-                content=f"📢 {vendor.name} has been added to #general. Welcome!",
-            )
+        from teamapp.services import add_user_to_default_channels, get_or_create_admin_dm
+        added_by = request.user if request.user.is_authenticated else None
+        add_user_to_default_channels(user, added_by_user=added_by)
+        if added_by:
+            get_or_create_admin_dm(added_by, user)
 
     return Response({"success": True, "vendor": VendorSerializer(vendor).data})
 
@@ -257,6 +252,12 @@ def approve_tracking_api(request, submission_id):
             log_activity(order, "tracking_approved",
                          f"Tracking approved: {sub.tracking_number}. Customer notified.",
                          actor="Admin")
+        except Exception:
+            pass
+
+        try:
+            from stock.views import deduct_vendor_stock_for_order
+            deduct_vendor_stock_for_order(order, sub.vendor)
         except Exception:
             pass
 
@@ -590,6 +591,11 @@ def vendor_submit_tracking_api(request, order_id):
         log_activity(order, "tracking_approved",
                      f"Tracking auto-approved: {tracking_number}. Customer notified.",
                      actor="System")
+        try:
+            from stock.views import deduct_vendor_stock_for_order
+            deduct_vendor_stock_for_order(order, vendor)
+        except Exception:
+            pass
         return Response({"success": True, "message": "Tracking auto-approved.", "submission_id": sub.id, "auto_approved": True})
 
     order.vendor_status = "tracking_submitted"
@@ -873,3 +879,206 @@ def vendor_reset_password_api(request, vendor_id):
     vendor.password_plain = new_password
     vendor.save(update_fields=["password_plain"])
     return Response({"success": True, "password": new_password})
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# VENDOR PORTAL — STOCK APIs
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _require_vendor(request):
+    if not request.user.is_authenticated:
+        return None, Response({"success": False, "message": "Not authenticated"}, status=401)
+    try:
+        return request.user.vendor_profile, None
+    except Exception:
+        return None, Response({"success": False, "message": "Not a vendor"}, status=403)
+
+
+@api_view(["GET"])
+def vendor_stock_api(request):
+    """Vendor sees their own stock assignments + tracker."""
+    vendor, err = _require_vendor(request)
+    if err:
+        return err
+
+    from stock.models import VendorStockAssignment, VendorStockAssignmentLine
+
+    assignments = (
+        VendorStockAssignment.objects
+        .filter(vendor=vendor)
+        .select_related("store", "product")
+        .prefetch_related("lines__variant")
+        .order_by("-created_at")
+    )
+
+    result = []
+    for a in assignments:
+        lines   = list(a.lines.select_related("variant").all())
+        attempts = list(a.attempts.order_by("attempt_number"))
+        total_qty = sum(l.quantity_assigned for l in lines)
+        result.append({
+            "id":               a.id,
+            "product_id":       a.product.product_id,
+            "product_name":     a.product.product_name,
+            "product_image":    a.product.image_url or "",
+            "store_name":       a.store.name,
+            "status":           a.status,
+            "admin_note":       a.admin_note,
+            "vendor_note":      a.vendor_note,
+            "reject_reason":    a.reject_reason,
+            # Quotation
+            "per_unit_price":   str(a.per_unit_price) if a.per_unit_price else "",
+            "estimated_days":   a.estimated_days,
+            "resubmission_count": a.resubmission_count,
+            "days_remaining":   a.days_remaining,
+            "total_price":      str(round(float(a.per_unit_price or 0) * total_qty, 2)),
+            # Payment
+            "payment_amount":   str(a.payment_amount) if a.payment_amount else "",
+            "payment_method":   a.payment_method or "",
+            "approved_at":      a.approved_at.isoformat() if a.approved_at else None,
+            "stock_arrived":    a.stock_arrived,
+            "arrived_at":       a.arrived_at.isoformat() if a.arrived_at else None,
+            "created_at":       a.created_at.date().isoformat(),
+            "total_assigned":   total_qty,
+            "total_sold":       a.total_sold(),
+            "total_on_hand":    a.total_on_hand(),
+            "lines": [
+                {
+                    "id":                l.id,
+                    "variant_id":        l.variant_id,
+                    "color":             l.variant.color,
+                    "size":              l.variant.size,
+                    "sku":               l.variant.sku,
+                    "quantity_assigned": l.quantity_assigned,
+                    "quantity_sold":     l.quantity_sold,
+                    "on_hand":           l.on_hand,
+                    "unit_price":        str(l.unit_price) if l.unit_price is not None else "",
+                }
+                for l in lines
+            ],
+            "attempts": [
+                {
+                    "attempt_number": at.attempt_number,
+                    "per_unit_price": str(at.per_unit_price),
+                    "total_quantity": at.total_quantity,
+                    "total_price":    str(at.total_price),
+                    "estimated_days": at.estimated_days,
+                    "vendor_note":    at.vendor_note,
+                    "submitted_at":   at.submitted_at.strftime("%d %b %Y"),
+                    "status":         at.status,
+                    "admin_note":     at.admin_note,
+                }
+                for at in attempts
+            ],
+        })
+
+    # Stats
+    approved = [a for a in result if a["status"] == "approved"]
+    stats = {
+        "total_assigned":        sum(a["total_assigned"] for a in approved),
+        "total_sold":            sum(a["total_sold"]     for a in approved),
+        "total_on_hand":         sum(a["total_on_hand"]  for a in approved),
+        "pending_pricing":       sum(1 for a in result if a["status"] == "pending_pricing"),
+        "pending_approval":      sum(1 for a in result if a["status"] == "pending_approval"),
+        "approved":              sum(1 for a in result if a["status"] == "approved"),
+        "rejected":              sum(1 for a in result if a["status"] == "rejected"),
+        "permanently_rejected":  sum(1 for a in result if a["status"] == "permanently_rejected"),
+    }
+
+    return Response({"success": True, "assignments": result, "stats": stats})
+
+
+@api_view(["POST"])
+def vendor_stock_submit_pricing_api(request, assignment_id):
+    """Vendor submits a quotation (per_unit_price + estimated_days) for an assignment."""
+    vendor, err = _require_vendor(request)
+    if err:
+        return err
+
+    from stock.models import VendorStockAssignment, VendorQuotationAttempt
+
+    try:
+        assignment = VendorStockAssignment.objects.get(id=assignment_id, vendor=vendor)
+    except VendorStockAssignment.DoesNotExist:
+        return Response({"success": False, "message": "Assignment not found"}, status=404)
+
+    if assignment.status == "permanently_rejected":
+        return Response({"success": False, "message": "This quotation has been permanently rejected. You cannot resubmit."}, status=403)
+
+    if assignment.status not in ("pending_pricing", "rejected"):
+        return Response({"success": False, "message": "Quotation already under review."}, status=400)
+
+    per_unit_price = request.data.get("per_unit_price")
+    estimated_days = request.data.get("estimated_days")
+    vendor_note    = request.data.get("vendor_note", "")
+
+    # Validate
+    try:
+        per_unit_price = float(per_unit_price)
+        if per_unit_price <= 0:
+            raise ValueError()
+    except (TypeError, ValueError):
+        return Response({"success": False, "message": "Per unit price must be greater than 0."}, status=400)
+
+    try:
+        estimated_days = int(estimated_days)
+        if estimated_days < 1:
+            raise ValueError()
+    except (TypeError, ValueError):
+        return Response({"success": False, "message": "Estimated days must be at least 1."}, status=400)
+
+    total_qty   = assignment.total_assigned()
+    total_price = round(per_unit_price * total_qty, 2)
+
+    # Save all lines with same unit price
+    for line in assignment.lines.all():
+        line.unit_price = per_unit_price
+        line.save(update_fields=["unit_price"])
+
+    attempt_number = assignment.attempts.count() + 1
+    VendorQuotationAttempt.objects.create(
+        assignment     = assignment,
+        attempt_number = attempt_number,
+        per_unit_price = per_unit_price,
+        total_quantity = total_qty,
+        total_price    = total_price,
+        estimated_days = estimated_days,
+        vendor_note    = vendor_note,
+    )
+
+    assignment.status        = "pending_approval"
+    assignment.per_unit_price = per_unit_price
+    assignment.estimated_days = estimated_days
+    assignment.vendor_note   = vendor_note
+    assignment.payment_amount = total_price
+    assignment.save(update_fields=["status", "per_unit_price", "estimated_days", "vendor_note", "payment_amount"])
+
+    return Response({"success": True, "message": "Quotation submitted. Awaiting admin review.", "attempt_number": attempt_number})
+
+
+@api_view(["POST"])
+def vendor_stock_mark_arrived_api(request, assignment_id):
+    """Vendor marks stock as physically arrived after admin approval."""
+    vendor, err = _require_vendor(request)
+    if err:
+        return err
+
+    from stock.models import VendorStockAssignment
+    from django.utils import timezone
+
+    try:
+        assignment = VendorStockAssignment.objects.get(id=assignment_id, vendor=vendor)
+    except VendorStockAssignment.DoesNotExist:
+        return Response({"success": False, "message": "Assignment not found"}, status=404)
+
+    if assignment.status != "approved":
+        return Response({"success": False, "message": "Stock can only be marked arrived once approved."}, status=400)
+
+    if assignment.stock_arrived:
+        return Response({"success": False, "message": "Stock already marked as arrived."}, status=400)
+
+    assignment.stock_arrived = True
+    assignment.arrived_at    = timezone.now()
+    assignment.save(update_fields=["stock_arrived", "arrived_at"])
+
+    return Response({"success": True, "message": "Stock marked as arrived. Admin has been notified."})

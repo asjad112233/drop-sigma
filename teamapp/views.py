@@ -9,8 +9,9 @@ from django.utils import timezone
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from .models import TeamMember, AssignmentRule, ChatChannel, ChatMessage, ChatReaction, ChatReadReceipt, EmployeeInvitation
+from .models import TeamMember, AssignmentRule, ChatChannel, ChatMessage, ChatReaction, ChatReadReceipt, ChannelMember, EmployeeInvitation
 from .serializers import TeamMemberSerializer, AssignmentRuleSerializer
+from .services import add_user_to_default_channels, get_or_create_admin_dm
 
 
 # ─── Admin: Team Members ──────────────────────────────────────────────────────
@@ -87,16 +88,9 @@ def create_team_member_api(request):
         is_active=True,
     )
 
-    # Auto-add to the General channel
-    general, _ = ChatChannel.objects.get_or_create(slug="general", is_dm=False, defaults={"name": "general", "description": "General team discussion"})
-    if general:
-        general.members.add(user)
-        added_by = _sender_info(request.user)["name"]
-        ChatMessage.objects.create(
-            channel=general,
-            sender=request.user,
-            content=f"📢 {name} has been added to #general by {added_by}. Welcome!",
-        )
+    # Auto-add to all default channels and create admin DM
+    add_user_to_default_channels(user, added_by_user=request.user)
+    get_or_create_admin_dm(request.user, user)
 
     return Response({"success": True, "member": TeamMemberSerializer(member).data})
 
@@ -474,11 +468,12 @@ def employee_task_update_api(request, task_id):
 
 # ─── Team Chat APIs ───────────────────────────────────────────────────────────
 
-_DEFAULT_CHANNELS = [
+from django.conf import settings as django_settings
+_DEFAULT_CHANNELS = getattr(django_settings, "CHAT_DEFAULT_CHANNELS", [
     {"name": "general",    "slug": "general",    "description": "General team discussion"},
     {"name": "operations", "slug": "operations", "description": "Orders & vendor ops"},
     {"name": "support",    "slug": "support",    "description": "Customer support"},
-]
+])
 
 
 def _sender_info(user):
@@ -610,21 +605,33 @@ def chat_channels_api(request):
         channels = ChatChannel.objects.filter(is_dm=False).order_by("id")
     else:
         channels = ChatChannel.objects.filter(is_dm=False, members=request.user).order_by("id")
+    # Build a map of channel_id → joined_at for the current user (non-superuser)
+    if not request.user.is_superuser:
+        memberships = ChannelMember.objects.filter(user=request.user, is_active=True).values("channel_id", "joined_at")
+        joined_at_map = {m["channel_id"]: m["joined_at"] for m in memberships}
+    else:
+        joined_at_map = {}
+
     data = []
     for ch in channels:
-        last = ch.messages.filter(parent=None).order_by("-created_at").first()
+        joined_at = joined_at_map.get(ch.id)
+        base_qs = ch.messages.filter(parent=None)
+        if joined_at:
+            base_qs = base_qs.filter(created_at__gte=joined_at)
+
+        last = base_qs.order_by("-created_at").first()
         receipt = ChatReadReceipt.objects.filter(user=request.user, channel=ch).first()
         if receipt:
-            unread = ch.messages.filter(parent=None, created_at__gt=receipt.last_read_at).count()
+            unread = base_qs.filter(created_at__gt=receipt.last_read_at).count()
         else:
-            unread = ch.messages.filter(parent=None).count()
+            unread = base_qs.count()
         last_sender = _sender_info(last.sender)["name"] if last else None
         data.append({
             "id":             ch.id,
             "name":           ch.name,
             "slug":           ch.slug,
             "description":    ch.description,
-            "message_count":  ch.messages.filter(parent=None).count(),
+            "message_count":  base_qs.count(),
             "last_message":   last.content[:60] if last else None,
             "last_sender":    last_sender,
             "last_time":      last.created_at.isoformat() if last else None,
@@ -665,16 +672,26 @@ def chat_messages_api(request):
     except ChatChannel.DoesNotExist:
         return Response({"success": False, "message": "Channel not found."}, status=404)
 
-    if not ch.is_dm and not request.user.is_superuser and not ch.members.filter(pk=request.user.pk).exists():
-        return Response({"success": False, "message": "Not a member of this channel."}, status=403)
-
-    msgs = ch.messages.filter(parent=None).select_related("sender").prefetch_related("reactions", "replies__sender", "replies__reactions")
     uid = request.user.id
+    membership = None
+
+    if not ch.is_dm:
+        if not request.user.is_superuser:
+            membership = ChannelMember.objects.filter(channel=ch, user=request.user, is_active=True).first()
+            if not membership:
+                return Response({"success": False, "message": "Not a member of this channel."}, status=403)
+
+    msgs_qs = ch.messages.filter(parent=None).select_related("sender").prefetch_related("reactions", "replies__sender", "replies__reactions")
+
+    # Filter messages to only those sent after the user joined (backend security)
+    if membership:
+        msgs_qs = msgs_qs.filter(created_at__gte=membership.joined_at)
+
     return Response({
         "success":         True,
         "current_user_id": uid,
         "channel":         {"id": ch.id, "name": ch.name, "description": ch.description},
-        "messages":        [_serialize_message(m, uid) for m in msgs],
+        "messages":        [_serialize_message(m, uid) for m in msgs_qs],
     })
 
 
@@ -815,7 +832,7 @@ def chat_channel_members_add_api(request, channel_id):
     except User.DoesNotExist:
         return Response({"success": False, "message": "User not found."}, status=404)
 
-    ch.members.add(u)
+    ChannelMember.objects.get_or_create(channel=ch, user=u, defaults={"is_active": True})
     info = _sender_info(u)
     added_by = _sender_info(request.user)["name"]
     # Post a system notification message so the added user sees it as unread
@@ -840,7 +857,7 @@ def chat_channel_members_remove_api(request, channel_id, user_id):
     except User.DoesNotExist:
         return Response({"success": False, "message": "User not found."}, status=404)
 
-    ch.members.remove(u)
+    ChannelMember.objects.filter(channel=ch, user=u).delete()
     return Response({"success": True})
 
 
@@ -1269,12 +1286,9 @@ def set_invitation_password_api(request, token):
         is_active=True,
     )
 
-    # Auto-add to General channel
-    general, _ = ChatChannel.objects.get_or_create(
-        slug="general", is_dm=False,
-        defaults={"name": "general", "description": "General team discussion"}
-    )
-    general.members.add(user)
+    # Auto-add to all default channels and create admin DM
+    add_user_to_default_channels(user, added_by_user=inv.owner)
+    get_or_create_admin_dm(inv.owner, user)
 
     inv.status = "accepted"
     inv.save(update_fields=["status"])

@@ -41,6 +41,12 @@ REST_FRAMEWORK = {
     ],
 }
 
+CHAT_DEFAULT_CHANNELS = [
+    {"name": "general",    "slug": "general",    "description": "General team discussion"},
+    {"name": "operations", "slug": "operations", "description": "Orders & vendor ops"},
+    {"name": "support",    "slug": "support",    "description": "Customer support"},
+]
+
 INSTALLED_APPS = [
     'daphne',
     'django.contrib.admin',

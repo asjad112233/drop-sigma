@@ -72,11 +72,21 @@ class ChatChannel(models.Model):
     description  = models.CharField(max_length=255, blank=True)
     is_dm        = models.BooleanField(default=False)
     participants = models.ManyToManyField(User, blank=True, related_name="dm_channels")
-    members      = models.ManyToManyField(User, blank=True, related_name="channel_memberships")
+    members      = models.ManyToManyField(User, blank=True, related_name="channel_memberships", through="ChannelMember")
     created_at   = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"#{self.name}"
+
+
+class ChannelMember(models.Model):
+    channel   = models.ForeignKey(ChatChannel, on_delete=models.CASCADE, related_name="memberships")
+    user      = models.ForeignKey(User, on_delete=models.CASCADE, related_name="channel_member_records")
+    joined_at = models.DateTimeField(auto_now_add=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        unique_together = ("channel", "user")
 
 
 class ChatMessage(models.Model):

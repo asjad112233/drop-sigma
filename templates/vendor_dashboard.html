@@ -46,6 +46,68 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
 .vp-nav button[data-tab="orders"]::before{content:"📦";}
 .vp-nav button[data-tab="tracking"]::before{content:"🚚";}
 .vp-nav button[data-tab="profile"]::before{content:"👤";}
+.vp-nav button[data-tab="stock"]::before{content:"🏭";}
+.vp-nav button[data-tab="history"]::before{content:"📋";}
+/* ── Order History Tab ── */
+.oh-table{width:100%;border-collapse:collapse;}
+.oh-table th{font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;padding:10px 12px;text-align:left;border-bottom:1px solid var(--vf-line);background:var(--vf-surface-2);}
+.oh-table td{padding:12px;border-bottom:1px solid var(--vf-line);font-size:12.5px;color:var(--vf-text);vertical-align:middle;}
+.oh-table tr:last-child td{border-bottom:none;}
+.oh-pill{display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:700;}
+.oh-pill.approved{background:#dcfce7;color:#166534;}
+.oh-pill.rejected{background:#fee2e2;color:#991b1b;}
+.oh-pill.tracking_submitted{background:#dbeafe;color:#1d4ed8;}
+.oh-pill.shipped{background:#dbeafe;color:#1d4ed8;}
+.oh-pill.fulfilled{background:#dcfce7;color:#166534;}
+.oh-pill.pending{background:#fef3c7;color:#92400e;}
+.oh-pill.paid{background:#dcfce7;color:#166534;}
+.oh-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
+.oh-stat{background:#fff;border:1px solid var(--vf-line);border-radius:14px;padding:16px;text-align:center;}
+.oh-stat .num{font-size:24px;font-weight:800;color:var(--vf-text);}
+.oh-stat .lbl{font-size:11px;color:var(--vf-muted);margin-top:4px;font-weight:600;}
+.oh-stat.green .num{color:#16a34a;}
+.oh-stat.red .num{color:#dc2626;}
+.oh-stat.blue .num{color:#2563eb;}
+.oh-prod-img{width:40px;height:40px;object-fit:cover;border-radius:8px;border:1px solid #e2e8f0;flex-shrink:0;}
+.oh-prod-placeholder{width:40px;height:40px;border-radius:8px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.oh-timeline{font-size:11px;color:var(--vf-muted);margin-top:3px;}
+
+/* ── Stock Tab ── */
+.vs-inner-tabs{display:flex;gap:6px;margin-bottom:18px;}
+.vs-inner-btn{padding:7px 16px;border:1px solid #e2e8f0;border-radius:999px;background:#fff;font-size:12px;font-weight:600;color:#475569;cursor:pointer;transition:.15s;font-family:inherit;}
+.vs-inner-btn:hover{border-color:#94a3b8;}
+.vs-inner-btn.active{background:#0f172a;border-color:#0f172a;color:#fff;}
+.vs-panel{display:none;}
+.vs-panel.active{display:block;}
+.vs-card{background:#fff;border:1px solid var(--vf-line);border-radius:16px;box-shadow:var(--vf-shadow);margin-bottom:16px;overflow:hidden;}
+.vs-card-hd{padding:14px 18px;border-bottom:1px solid var(--vf-line);display:flex;align-items:center;justify-content:space-between;}
+.vs-card-title{font-size:14px;font-weight:700;color:var(--vf-text);}
+.vs-card-sub{font-size:12px;color:var(--vf-muted);}
+.vs-card-body{padding:18px;}
+.vs-variant-tbl{width:100%;border-collapse:collapse;margin-top:10px;}
+.vs-variant-tbl th{font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;padding:8px 12px;text-align:left;border-bottom:1px solid var(--vf-line);background:#f8fafc;}
+.vs-variant-tbl td{padding:10px 12px;font-size:12px;color:var(--vf-text);border-bottom:1px solid var(--vf-line);}
+.vs-variant-tbl tr:last-child td{border-bottom:none;}
+.vs-variant-tbl tbody tr:hover td{background:#f8fafc;}
+.vs-price-input{width:90px;padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;font-weight:600;color:var(--vf-text);outline:none;font-family:inherit;transition:.15s;}
+.vs-price-input:focus{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.1);}
+.vs-stock-bar{height:6px;border-radius:999px;background:#e2e8f0;overflow:hidden;margin-top:4px;}
+.vs-stock-fill{height:100%;border-radius:999px;background:#16a34a;transition:width .3s;}
+.vs-submit-btn{margin-top:14px;padding:11px 22px;background:#2563eb;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;transition:.15s;font-family:inherit;}
+.vs-submit-btn:hover{background:#1d4ed8;}
+.vs-submit-btn:disabled{background:#94a3b8;cursor:not-allowed;}
+.vs-status-pill{display:inline-flex;align-items:center;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700;}
+.vs-status-pill.pending_pricing{background:#fef9c3;color:#854d0e;}
+.vs-status-pill.pending_approval{background:#dbeafe;color:#1d4ed8;}
+.vs-status-pill.approved{background:#dcfce7;color:#166534;}
+.vs-status-pill.rejected{background:#fee2e2;color:#991b1b;}
+.vs-tracker-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;}
+.vs-tracker-stat{background:#f8fafc;border:1px solid var(--vf-line);border-radius:12px;padding:14px;text-align:center;}
+.vs-tracker-stat .num{font-size:24px;font-weight:800;color:var(--vf-text);}
+.vs-tracker-stat .lbl{font-size:11px;color:var(--vf-muted);font-weight:600;margin-top:3px;}
+.vs-tracker-stat.green .num{color:#16a34a;}
+.vs-tracker-stat.blue .num{color:#2563eb;}
+.vs-tracker-stat.yellow .num{color:#d97706;}
 
 .vp-sidebar-bottom{padding-top:20px;border-top:1px solid #e2e8f0;margin-top:20px;}
 .vp-vendor-card{background:#f1f5f9;border:1px solid #e2e8f0;border-radius:12px;padding:14px;margin-bottom:12px;}
@@ -444,6 +506,8 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
   <nav class="vp-nav">
     <button data-tab="orders" class="active" onclick="switchTab('orders', this)">My Orders</button>
     <button data-tab="tracking" onclick="switchTab('tracking', this)">Tracking History</button>
+    <button data-tab="history" onclick="switchTab('history', this)">Order History</button>
+    <button data-tab="stock" onclick="switchTab('stock', this)">My Stock</button>
     <button data-tab="profile" onclick="switchTab('profile', this)">Profile</button>
     <button data-tab="chat" onclick="switchTab('chat', this)">Team Chat</button>
   </nav>
@@ -518,6 +582,120 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
     </div>
     <div class="vp-panel" id="trackingHistoryPanel">
       <div class="vp-empty"><div class="icon">🚚</div><p>Loading history...</p></div>
+    </div>
+  </div>
+
+  <!-- Order History Tab -->
+  <div id="tabHistory" class="vp-tab">
+    <div class="vp-topbar">
+      <div>
+        <h1>Order History</h1>
+        <p>All completed, approved, and rejected orders.</p>
+      </div>
+      <button class="vp-btn blue" onclick="loadOrderHistory()">Refresh</button>
+    </div>
+
+    <div class="oh-stats">
+      <div class="oh-stat"><div class="num" id="ohTotal">0</div><div class="lbl">Total Orders</div></div>
+      <div class="oh-stat green"><div class="num" id="ohApproved">0</div><div class="lbl">Approved</div></div>
+      <div class="oh-stat red"><div class="num" id="ohRejected">0</div><div class="lbl">Rejected</div></div>
+      <div class="oh-stat blue"><div class="num" id="ohTracking">0</div><div class="lbl">Tracking Submitted</div></div>
+    </div>
+
+    <div style="background:#fff;border:1px solid var(--vf-line);border-radius:16px;box-shadow:var(--vf-shadow);overflow:hidden;">
+      <div style="overflow-x:auto;">
+        <table class="oh-table" style="min-width:900px;">
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>Order #</th>
+              <th>Date</th>
+              <th>Customer</th>
+              <th>Tracking</th>
+              <th>Payment</th>
+              <th>Fulfillment</th>
+              <th>Vendor Status</th>
+            </tr>
+          </thead>
+          <tbody id="ohTableBody">
+            <tr><td colspan="8" style="text-align:center;padding:32px;color:var(--vf-muted);">Loading history...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stock Tab -->
+  <div id="tabStock" class="vp-tab">
+    <div class="vp-topbar">
+      <div>
+        <h1>My Stock</h1>
+        <p>View assigned stock, set pricing, and track inventory.</p>
+      </div>
+      <button class="vp-btn blue" onclick="loadVpStock()">Refresh</button>
+    </div>
+
+    <!-- Summary stats -->
+    <div class="vs-tracker-grid" id="vpStockStats" style="grid-template-columns:repeat(4,1fr);">
+      <div class="vs-tracker-stat"><div class="num" id="vpStat_total">0</div><div class="lbl">Assignments</div></div>
+      <div class="vs-tracker-stat yellow"><div class="num" id="vpStat_pending">0</div><div class="lbl">Needs Pricing</div></div>
+      <div class="vs-tracker-stat blue"><div class="num" id="vpStat_review">0</div><div class="lbl">Under Review</div></div>
+      <div class="vs-tracker-stat green"><div class="num" id="vpStat_active">0</div><div class="lbl">Active Stock</div></div>
+    </div>
+
+    <!-- Inner tabs -->
+    <div class="vs-inner-tabs">
+      <button class="vs-inner-btn active" onclick="vpSetStockInner('pricing',this)">Set Pricing</button>
+      <button class="vs-inner-btn" onclick="vpSetStockInner('tracker',this)">My Inventory</button>
+      <button class="vs-inner-btn" onclick="vpSetStockInner('history',this)">📋 History</button>
+    </div>
+
+    <!-- Set Pricing panel -->
+    <div id="vpStockPricing" class="vs-panel active">
+      <div id="vpPricingCards">
+        <div class="vp-empty"><div class="icon">🏭</div><p>Loading...</p></div>
+      </div>
+    </div>
+
+    <!-- Inventory tracker panel -->
+    <div id="vpStockTracker" class="vs-panel">
+      <div id="vpTrackerCards">
+        <div class="vp-empty"><div class="icon">📊</div><p>Loading...</p></div>
+      </div>
+    </div>
+
+    <!-- Assignment History panel -->
+    <div id="vpStockHistory" class="vs-panel">
+      <div style="background:#fff;border:1px solid var(--vf-line);border-radius:16px;overflow:hidden;width:100%;">
+        <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
+          <colgroup>
+            <col style="width:28%;">
+            <col style="width:12%;">
+            <col style="width:10%;">
+            <col style="width:9%;">
+            <col style="width:9%;">
+            <col style="width:16%;">
+            <col style="width:12%;">
+            <col style="width:14%;">
+          </colgroup>
+          <thead>
+            <tr style="background:#f8fafc;">
+              <th style="padding:12px 14px;font-size:10px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;text-align:left;border-bottom:1px solid var(--vf-line);">Product</th>
+              <th style="padding:12px 14px;font-size:10px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;text-align:left;border-bottom:1px solid var(--vf-line);white-space:nowrap;">Product ID</th>
+              <th style="padding:12px 14px;font-size:10px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;text-align:left;border-bottom:1px solid var(--vf-line);white-space:nowrap;">Date Assigned</th>
+              <th style="padding:12px 14px;font-size:10px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;text-align:center;border-bottom:1px solid var(--vf-line);white-space:nowrap;">Qty Assigned</th>
+              <th style="padding:12px 14px;font-size:10px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;text-align:center;border-bottom:1px solid var(--vf-line);">Sold</th>
+              <th style="padding:12px 14px;font-size:10px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;text-align:center;border-bottom:1px solid var(--vf-line);">On Hand</th>
+              <th style="padding:12px 14px;font-size:10px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;text-align:left;border-bottom:1px solid var(--vf-line);">Status</th>
+              <th style="padding:12px 14px;font-size:10px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;text-align:left;border-bottom:1px solid var(--vf-line);white-space:nowrap;">Approved</th>
+              <th style="padding:12px 14px;font-size:10px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;text-align:left;border-bottom:1px solid var(--vf-line);">Payment</th>
+            </tr>
+          </thead>
+          <tbody id="vpHistTableBody">
+            <tr><td colspan="9" style="text-align:center;padding:40px;color:var(--vf-muted);">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 
@@ -890,6 +1068,8 @@ function switchTab(tab, btn){
   if(tab==="chat"){ main.classList.add("chat-mode"); vcChatInit(); }
   else { main.classList.remove("chat-mode"); }
   if(tab==="tracking") loadTrackingHistory();
+  if(tab==="history") loadOrderHistory();
+  if(tab==="stock") loadVpStock();
 }
 
 function setVendorFilter(f, btn){
@@ -1556,7 +1736,7 @@ function vcSelectChannel(id, name, desc){
   if(!_vcCurrentChannelIsDm) vcRefreshMembersCount();
 }
 
-const _VC_AV_COLORS = ["#7c3aed","#2563eb","#059669","#dc2626","#d97706","#db2777","#0891b2","#65a30d","#9333ea","#0f766e"];
+const _VC_AV_BG_COLORS = ["#7c3aed","#2563eb","#059669","#dc2626","#d97706","#db2777","#0891b2","#65a30d","#9333ea","#0f766e"];
 function _vcRenderMemberAvatars(members){
   const wrap = document.getElementById("vcMembersAvatars");
   if(!wrap) return;
@@ -1565,7 +1745,7 @@ function _vcRenderMemberAvatars(members){
   const shown = members.slice(0, MAX);
   const extra = members.length - shown.length;
   let html = shown.map((m, i) =>
-    `<div style="width:26px;height:26px;border-radius:50%;background:${_VC_AV_COLORS[i%_VC_AV_COLORS.length]};color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;border:2px solid #fff;margin-left:${i>0?"-8px":"0"};position:relative;z-index:${10-i};flex-shrink:0;" title="${m.name}">${m.initials}</div>`
+    `<div style="width:26px;height:26px;border-radius:50%;background:${_VC_AV_BG_COLORS[i%_VC_AV_BG_COLORS.length]};color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;border:2px solid #fff;margin-left:${i>0?"-8px":"0"};position:relative;z-index:${10-i};flex-shrink:0;" title="${m.name}">${m.initials}</div>`
   ).join("");
   if(extra > 0) html += `<div style="width:26px;height:26px;border-radius:50%;background:#e5e7eb;color:#374151;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;border:2px solid #fff;margin-left:-8px;position:relative;z-index:0;flex-shrink:0;">+${extra}</div>`;
   html += `<span style="margin-left:7px;font-size:12px;font-weight:700;color:#5b21b6;">${members.length}</span>`;
@@ -2216,6 +2396,494 @@ async function _vcPollTick(){
 // Init
 loadVendorOrders();
 _vcWsBackground();
+
+/* ═══════════════════════════════════════════════════════════
+   VENDOR STOCK MODULE
+   ═══════════════════════════════════════════════════════════ */
+/* ── Order History ── */
+let _ohAllOrders = [];
+
+function _ohStatusLabel(status){
+  const m={approved:"Approved",rejected:"Rejected",tracking_submitted:"Tracking Submitted",in_progress:"In Progress",assigned:"Assigned"};
+  return m[status]||status||"—";
+}
+function _ohFulLabel(s){
+  s=(s||"").toLowerCase();
+  if(s.includes("fulfill"))return"Fulfilled";
+  if(s.includes("deliver"))return"Delivered";
+  if(s.includes("complet"))return"Completed";
+  if(s.includes("shipped"))return"Shipped";
+  if(s.includes("process"))return"Processing";
+  return s||"—";
+}
+
+async function loadOrderHistory(){
+  const tbody=document.getElementById("ohTableBody");
+  if(tbody) tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:32px;color:#94a3b8;">Loading...</td></tr>';
+
+  try{
+    const res=await fetch("/vendor/api/orders/");
+    const data=await res.json();
+    if(!data.success) throw new Error(data.message||"Error");
+    const orders=data.orders||[];
+    // Also update global vendorOrders so My Orders tab stays in sync
+    if(orders.length) vendorOrders=orders;
+    _renderOhTable(orders, data.stats||{});
+  }catch(e){
+    // Fallback to already-loaded vendorOrders
+    if(vendorOrders && vendorOrders.length){
+      _renderOhTable(vendorOrders, {});
+    } else {
+      if(tbody) tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:32px;color:#dc2626;">'+esc(e.message)+'</td></tr>';
+    }
+  }
+}
+
+function _renderOhTable(orders, stats){
+  const all=[...orders].sort(function(a,b){return new Date(b.created_at||0)-new Date(a.created_at||0);});
+  _ohAllOrders=all;
+  stats=stats||{};
+
+  // Stats — use API stats if available, else compute from data
+  var el=document.getElementById("ohTotal"); if(el) el.textContent=stats.total||all.length;
+  el=document.getElementById("ohApproved"); if(el) el.textContent=stats.approved||all.filter(function(o){return o.vendor_status==="approved";}).length;
+  el=document.getElementById("ohRejected"); if(el) el.textContent=stats.rejected||all.filter(function(o){return o.vendor_status==="rejected";}).length;
+  el=document.getElementById("ohTracking"); if(el) el.textContent=stats.tracking_submitted||all.filter(function(o){return o.vendor_status==="tracking_submitted";}).length;
+
+  var tbody=document.getElementById("ohTableBody");
+  if(!tbody) return;
+  if(!all.length){
+    tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:40px;color:#94a3b8;">No orders yet.</td></tr>';
+    return;
+  }
+
+  var rows="";
+  for(var i=0;i<all.length;i++){
+    var o=all[i];
+    var dateStr=o.created_at ? new Date(o.created_at).toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"}) : "—";
+    var timeStr=o.created_at ? new Date(o.created_at).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"}) : "";
+    var items=o.line_items||[];
+    var firstItem=items.length?items[0]:null;
+    var imgSrc=firstItem&&firstItem.image?firstItem.image:"";
+    var imgHtml=imgSrc
+      ?'<img src="'+esc(imgSrc)+'" class="oh-prod-img" onerror="this.style.display=\'none\'">'
+      :'<div class="oh-prod-placeholder">📦</div>';
+    var productName=o.product_name||(firstItem&&firstItem.name)||"—";
+    var trackingNum=o.tracking_number&&o.tracking_number!=="pending"?o.tracking_number:"—";
+    var courier=o.latest_submission&&o.latest_submission.courier_name?o.latest_submission.courier_name:"";
+    var vsStatus=o.vendor_status||"";
+    var fulStatus=o.fulfillment_status||"";
+    var payStatus=(o.payment_status||"").toLowerCase();
+    var fulLow=fulStatus.toLowerCase();
+
+    var vsLabel={approved:"Approved",rejected:"Rejected",tracking_submitted:"Tracking Submitted",in_progress:"In Progress",assigned:"Assigned"}[vsStatus]||vsStatus||"—";
+    var fulLabel=fulLow.includes("fulfill")?"Fulfilled":fulLow.includes("deliver")?"Delivered":fulLow.includes("complet")?"Completed":fulLow.includes("shipped")?"Shipped":fulLow.includes("process")?"Processing":fulStatus||"—";
+    var fulClass=fulLow.includes("fulfill")||fulLow.includes("deliver")||fulLow.includes("complet")||fulLow.includes("shipped")?"fulfilled":"pending";
+    var payClass=payStatus.includes("paid")?"paid":"pending";
+
+    rows+='<tr>';
+    rows+='<td><div style="display:flex;align-items:center;gap:10px;">'+imgHtml+'<div><div style="font-weight:600;font-size:13px;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+esc(productName)+'</div>'+(firstItem&&firstItem.quantity?'<div class="oh-timeline">Qty: '+firstItem.quantity+'</div>':'')+'</div></div></td>';
+    rows+='<td><span style="font-weight:700;">#'+esc(o.order_number||String(o.id))+'</span></td>';
+    rows+='<td><div style="font-weight:600;">'+esc(dateStr)+'</div><div class="oh-timeline">'+esc(timeStr)+'</div></td>';
+    rows+='<td><div style="font-weight:600;">'+esc(o.customer_name||"—")+'</div><div class="oh-timeline">'+esc(o.customer_city||o.customer_country||"")+'</div></td>';
+    rows+='<td><div style="font-weight:600;font-family:monospace;font-size:12px;">'+esc(trackingNum)+'</div>'+(courier?'<div class="oh-timeline">'+esc(courier)+'</div>':"")+'</td>';
+    rows+='<td><span class="oh-pill '+payClass+'">'+esc(o.payment_status||"—")+'</span></td>';
+    rows+='<td><span class="oh-pill '+fulClass+'">'+esc(fulLabel)+'</span></td>';
+    rows+='<td><span class="oh-pill '+esc(vsStatus)+'">'+esc(vsLabel)+'</span></td>';
+    rows+='</tr>';
+  }
+  tbody.innerHTML=rows;
+}
+
+let _vpStockData = [];
+let _vpStockInner = "pricing";
+
+function vpSetStockInner(name, btn){
+  _vpStockInner = name;
+  document.querySelectorAll(".vs-inner-btn").forEach(b=>b.classList.remove("active"));
+  if(btn) btn.classList.add("active");
+  document.querySelectorAll(".vs-panel").forEach(p=>p.classList.remove("active"));
+  var panelId = name==="pricing"?"vpStockPricing":name==="tracker"?"vpStockTracker":"vpStockHistory";
+  var panel = document.getElementById(panelId);
+  if(panel) panel.classList.add("active");
+  renderVpStock();
+}
+
+async function loadVpStock(){
+  document.getElementById("vpPricingCards").innerHTML='<div class="vp-empty"><div class="icon">⏳</div><p>Loading...</p></div>';
+  document.getElementById("vpTrackerCards").innerHTML='<div class="vp-empty"><div class="icon">⏳</div><p>Loading...</p></div>';
+  try{
+    const r = await fetch("/vendor/api/stock/");
+    const d = await r.json();
+    if(!d.success){ throw new Error(d.error||"Failed"); }
+    _vpStockData = d.assignments || [];
+    // Stats
+    const total = _vpStockData.length;
+    const pending = _vpStockData.filter(a=>a.status==="pending_pricing").length;
+    const review = _vpStockData.filter(a=>a.status==="pending_approval").length;
+    const active = _vpStockData.filter(a=>a.status==="approved").length;
+    document.getElementById("vpStat_total").textContent = total;
+    document.getElementById("vpStat_pending").textContent = pending;
+    document.getElementById("vpStat_review").textContent = review;
+    document.getElementById("vpStat_active").textContent = active;
+    renderVpStock();
+  }catch(e){
+    document.getElementById("vpPricingCards").innerHTML=`<div class="vp-empty"><div class="icon">⚠️</div><p>${esc(e.message)}</p></div>`;
+    document.getElementById("vpTrackerCards").innerHTML=`<div class="vp-empty"><div class="icon">⚠️</div><p>${esc(e.message)}</p></div>`;
+  }
+}
+
+function renderVpStock(){
+  if(_vpStockInner==="pricing") renderVpPricing();
+  else if(_vpStockInner==="tracker") renderVpTracker();
+  else renderVpStockHistory();
+}
+
+function renderVpPricing(){
+  const container = document.getElementById("vpPricingCards");
+  // Show all non-approved, non-tracker items
+  const items = _vpStockData.filter(a=>a.status!=="approved");
+  if(!items.length){
+    container.innerHTML='<div class="vp-empty"><div class="icon">✅</div><p>All assignments approved. Check My Inventory for active stock.</p></div>';
+    return;
+  }
+  container.innerHTML = items.map(a=>_renderQuotationCard(a)).join("");
+}
+
+function _renderQuotationCard(a){
+  const imgHtml = a.product_image
+    ? `<img src="${esc(a.product_image)}" style="width:52px;height:52px;object-fit:cover;border-radius:12px;border:1px solid #e2e8f0;flex-shrink:0;">`
+    : `<div style="width:52px;height:52px;border-radius:12px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">📦</div>`;
+
+  const totalQty = (a.lines||[]).reduce((s,l)=>s+(l.quantity_assigned||0),0);
+
+  // Variants summary (read-only)
+  const variantRows = (a.lines||[]).map(l=>{
+    const dot = l.color?`<span style="width:9px;height:9px;border-radius:50%;background:${esc(l.color_hex||l.color)};border:1px solid #ccc;display:inline-block;margin-right:5px;vertical-align:middle;"></span>`:"";
+    return `<tr>
+      <td style="padding:7px 12px;font-size:12px;">${dot}${esc(l.color||"—")}</td>
+      <td style="padding:7px 12px;font-size:12px;"><span class="meta-chip">${esc(l.size||"—")}</span></td>
+      <td style="padding:7px 12px;font-size:12px;font-weight:700;">${l.quantity_assigned}</td>
+    </tr>`;
+  }).join("");
+
+  // Status-specific content
+  if(a.status==="permanently_rejected"){
+    return `<div class="vs-card" style="border-left:4px solid #dc2626;">
+      <div class="vs-card-hd">
+        <div style="display:flex;align-items:center;gap:12px;">${imgHtml}<div><div class="vs-card-title">${esc(a.product_name)}</div><div class="vs-card-sub">${totalQty} units · Assigned ${esc(a.created_at||"")}</div></div></div>
+        <span class="vs-status-pill" style="background:#fee2e2;color:#991b1b;">⛔ Permanently Rejected</span>
+      </div>
+      <div class="vs-card-body">
+        <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:14px 16px;display:flex;align-items:flex-start;gap:10px;">
+          <span style="font-size:18px;flex-shrink:0;">🚫</span>
+          <div>
+            <div style="font-weight:800;font-size:13px;color:#991b1b;margin-bottom:4px;">This quotation has been permanently rejected.</div>
+            <div style="font-size:12px;color:#7f1d1d;font-weight:600;">You cannot resubmit this request.${a.reject_reason?` Reason: ${esc(a.reject_reason)}`:""}</div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  if(a.status==="pending_approval"){
+    const latest = (a.attempts||[]).slice(-1)[0];
+    return `<div class="vs-card" style="border-left:4px solid #f59e0b;">
+      <div class="vs-card-hd">
+        <div style="display:flex;align-items:center;gap:12px;">${imgHtml}<div><div class="vs-card-title">${esc(a.product_name)}</div><div style="font-size:10px;color:#94a3b8;font-weight:700;margin-bottom:2px;">${esc(a.product_id||"")}</div><div class="vs-card-sub">${totalQty} units · Attempt #${latest?latest.attempt_number:"1"}</div></div></div>
+        <span class="vs-status-pill" style="background:#fff7ed;color:#c2410c;">⏳ Awaiting Admin Review</span>
+      </div>
+      <div class="vs-card-body">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;">
+          <div style="background:#f8fafc;border-radius:10px;padding:12px;text-align:center;"><div style="font-size:18px;font-weight:900;color:#0f172a;">${totalQty}</div><div style="font-size:11px;color:#64748b;font-weight:600;margin-top:2px;">Total Units</div></div>
+          <div style="background:#f0fdf4;border-radius:10px;padding:12px;text-align:center;"><div style="font-size:18px;font-weight:900;color:#059669;">$${latest?parseFloat(latest.per_unit_price).toFixed(2):"—"}</div><div style="font-size:11px;color:#64748b;font-weight:600;margin-top:2px;">Per Unit Price</div></div>
+          <div style="background:#eff6ff;border-radius:10px;padding:12px;text-align:center;"><div style="font-size:18px;font-weight:900;color:#2563eb;">${latest?latest.estimated_days:"—"} days</div><div style="font-size:11px;color:#64748b;font-weight:600;margin-top:2px;">Est. Delivery</div></div>
+        </div>
+        <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:10px 14px;font-size:12px;color:#92400e;font-weight:600;">
+          📬 Your quotation has been sent to the admin. You'll be notified once reviewed.
+        </div>
+        ${_renderAttemptHistory(a.attempts||[])}
+      </div>
+    </div>`;
+  }
+
+  // pending_pricing or rejected — show quotation form
+  const isResubmit = a.status==="rejected";
+  const prevPrice = a.per_unit_price ? parseFloat(a.per_unit_price).toFixed(2) : "";
+  const prevDays  = a.estimated_days || "";
+  const rejectBanner = isResubmit && a.reject_reason
+    ? `<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:11px 14px;margin-bottom:14px;display:flex;gap:8px;align-items:flex-start;">
+        <span style="font-size:15px;flex-shrink:0;">❌</span>
+        <div><div style="font-weight:800;font-size:12px;color:#991b1b;margin-bottom:2px;">Rejected by Admin</div><div style="font-size:12px;color:#7f1d1d;font-weight:600;">${esc(a.reject_reason)}</div></div>
+      </div>` : "";
+  const attemptBadge = isResubmit
+    ? `<span style="font-size:10px;font-weight:800;background:#fef3c7;color:#92400e;border-radius:99px;padding:3px 9px;margin-left:8px;">Resubmission #${(a.resubmission_count||0)+1}</span>` : "";
+
+  return `<div class="vs-card" style="border-left:4px solid ${isResubmit?"#f59e0b":"#2563eb"};">
+    <div class="vs-card-hd">
+      <div style="display:flex;align-items:center;gap:12px;">${imgHtml}
+        <div>
+          <div class="vs-card-title">${esc(a.product_name)}${attemptBadge}</div>
+          <div style="font-size:10px;color:#94a3b8;font-weight:700;margin-bottom:2px;">${esc(a.product_id||"")}</div>
+          <div class="vs-card-sub">${totalQty} units assigned · ${esc(a.created_at||"")}</div>
+        </div>
+      </div>
+      <span class="vs-status-pill" style="background:${isResubmit?"#fef3c7;color:#92400e":"#dbeafe;color:#1d4ed8"};">${isResubmit?"↩ Resubmit Required":"📝 Quotation Required"}</span>
+    </div>
+    <div class="vs-card-body">
+      ${rejectBanner}
+      ${a.admin_note?`<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#0369a1;font-weight:600;">💬 Admin Note: ${esc(a.admin_note)}</div>`:""}
+
+      <!-- Variant summary -->
+      <div style="margin-bottom:16px;">
+        <div style="font-size:11px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Stock Breakdown</div>
+        <div style="background:#f8fafc;border-radius:10px;overflow:hidden;">
+          <table style="width:100%;border-collapse:collapse;">
+            <thead><tr style="background:#f1f5f9;"><th style="padding:7px 12px;font-size:10px;font-weight:800;color:#94a3b8;text-align:left;text-transform:uppercase;">Color</th><th style="padding:7px 12px;font-size:10px;font-weight:800;color:#94a3b8;text-align:left;text-transform:uppercase;">Size</th><th style="padding:7px 12px;font-size:10px;font-weight:800;color:#94a3b8;text-align:left;text-transform:uppercase;">Qty</th></tr></thead>
+            <tbody>${variantRows}</tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Quotation inputs -->
+      <div style="font-size:11px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Your Quotation</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+        <div>
+          <label style="font-size:12px;font-weight:700;color:#374151;margin-bottom:6px;display:block;">Per Unit Price ($)</label>
+          <div style="position:relative;">
+            <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-weight:700;color:#64748b;font-size:13px;">$</span>
+            <input type="number" id="vpUnitPrice_${a.id}" min="0.01" step="0.01" placeholder="0.00" value="${esc(prevPrice)}"
+              oninput="vpUpdateTotal(${a.id},${totalQty})"
+              style="width:100%;padding:11px 12px 11px 26px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;outline:none;box-sizing:border-box;transition:.15s;"
+              onfocus="this.style.borderColor='#2563eb'" onblur="this.style.borderColor='#e2e8f0'">
+          </div>
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:700;color:#374151;margin-bottom:6px;display:block;">Estimated Stock Delivery (Days)</label>
+          <input type="number" id="vpEstDays_${a.id}" min="1" step="1" placeholder="e.g. 10" value="${esc(prevDays)}"
+            style="width:100%;padding:11px 12px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;outline:none;box-sizing:border-box;transition:.15s;"
+            onfocus="this.style.borderColor='#2563eb'" onblur="this.style.borderColor='#e2e8f0'">
+        </div>
+      </div>
+
+      <!-- Auto-calculated total preview -->
+      <div id="vpTotalPreview_${a.id}" style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:12px;padding:14px 16px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-size:12px;font-weight:700;color:#166534;">Total Quotation Value</div>
+        <div style="font-size:20px;font-weight:900;color:#059669;" id="vpTotalAmt_${a.id}">$0.00 <span style="font-size:12px;color:#64748b;font-weight:600;">(${totalQty} units × $0.00)</span></div>
+      </div>
+
+      <div style="display:flex;gap:10px;align-items:center;">
+        <button class="vs-submit-btn" id="vpSubmitBtn_${a.id}" onclick="submitVpQuotation(${a.id},${totalQty})">${isResubmit?"↩ Resubmit Quotation":"📤 Submit Quotation"}</button>
+        <p id="vpPricingMsg_${a.id}" style="font-size:12px;font-weight:700;margin:0;"></p>
+      </div>
+      ${_renderAttemptHistory(a.attempts||[])}
+    </div>
+  </div>`;
+}
+
+function _renderAttemptHistory(attempts){
+  if(!attempts||!attempts.length) return "";
+  const rows = attempts.slice().reverse().map(at=>{
+    const stMap={approved:"background:#dcfce7;color:#166534;",rejected:"background:#fee2e2;color:#991b1b;",permanently_rejected:"background:#fee2e2;color:#7f1d1d;",pending:"background:#fff7ed;color:#92400e;"};
+    const stLabel={approved:"Approved",rejected:"Rejected",permanently_rejected:"Perm. Rejected",pending:"Under Review"};
+    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:12px;">
+      <span style="background:#f1f5f9;color:#64748b;border-radius:99px;padding:2px 8px;font-size:10px;font-weight:800;flex-shrink:0;">Attempt #${at.attempt_number}</span>
+      <span style="flex:1;color:#374151;">$${parseFloat(at.per_unit_price).toFixed(2)}/unit · ${at.total_quantity} units · ${at.estimated_days}d · <b>$${parseFloat(at.total_price).toFixed(2)}</b></span>
+      <span style="${stMap[at.status]||"background:#f1f5f9;color:#64748b;"}border-radius:99px;padding:2px 9px;font-size:10px;font-weight:800;">${stLabel[at.status]||at.status}</span>
+      ${at.admin_note?`<span style="font-size:10px;color:#64748b;font-style:italic;">${esc(at.admin_note)}</span>`:""}
+    </div>`;
+  }).join("");
+  return `<div style="margin-top:16px;"><div style="font-size:10px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Submission History</div><div style="background:#f8fafc;border-radius:10px;padding:4px 12px;">${rows}</div></div>`;
+}
+
+function vpUpdateTotal(assignmentId, totalQty){
+  const priceInput = document.getElementById("vpUnitPrice_"+assignmentId);
+  const amtEl = document.getElementById("vpTotalAmt_"+assignmentId);
+  if(!priceInput||!amtEl) return;
+  const p = parseFloat(priceInput.value)||0;
+  const total = (p*totalQty).toFixed(2);
+  amtEl.innerHTML = `$${total} <span style="font-size:12px;color:#64748b;font-weight:600;">(${totalQty} units × $${p.toFixed(2)})</span>`;
+}
+
+async function submitVpQuotation(assignmentId, totalQty){
+  const priceInput = document.getElementById("vpUnitPrice_"+assignmentId);
+  const daysInput  = document.getElementById("vpEstDays_"+assignmentId);
+  const btn        = document.getElementById("vpSubmitBtn_"+assignmentId);
+  const msgEl      = document.getElementById("vpPricingMsg_"+assignmentId);
+  if(!priceInput||!daysInput) return;
+
+  const price = parseFloat(priceInput.value);
+  const days  = parseInt(daysInput.value);
+
+  // Client-side validation
+  if(!price||price<=0){
+    priceInput.style.borderColor="#dc2626";
+    if(msgEl){msgEl.textContent="Please enter a valid unit price.";msgEl.style.color="#dc2626";}
+    priceInput.focus(); return;
+  }
+  if(!days||days<1){
+    daysInput.style.borderColor="#dc2626";
+    if(msgEl){msgEl.textContent="Estimated days must be at least 1.";msgEl.style.color="#dc2626";}
+    daysInput.focus(); return;
+  }
+
+  if(btn){btn.disabled=true;btn.textContent="Submitting…";}
+  if(msgEl){msgEl.textContent="";}
+
+  try{
+    const r = await fetch(`/vendor/api/stock/${assignmentId}/pricing/`,{
+      method:"POST",
+      headers:{"Content-Type":"application/json","X-CSRFToken":getCsrf()},
+      body:JSON.stringify({per_unit_price:price, estimated_days:days})
+    });
+    const d = await r.json();
+    if(!d.success) throw new Error(d.message||"Submission failed");
+    if(msgEl){msgEl.textContent="✓ Quotation submitted! Awaiting admin review.";msgEl.style.color="#16a34a";}
+    setTimeout(()=>loadVpStock(), 1000);
+  }catch(e){
+    if(btn){btn.disabled=false;btn.textContent="Submit Quotation";}
+    if(msgEl){msgEl.textContent=e.message;msgEl.style.color="#dc2626";}
+  }
+}
+
+function renderVpTracker(){
+  const container = document.getElementById("vpTrackerCards");
+  const approved = _vpStockData.filter(a=>a.status==="approved");
+  if(!approved.length){
+    container.innerHTML='<div class="vp-empty"><div class="icon">📦</div><p>No approved stock yet. Submit pricing to get started.</p></div>';
+    return;
+  }
+  container.innerHTML = approved.map(a=>{
+    const totalAssigned = (a.lines||[]).reduce((s,l)=>s+(l.quantity_assigned||0),0);
+    const totalSold = (a.lines||[]).reduce((s,l)=>s+(l.quantity_sold||0),0);
+    const totalOnHand = totalAssigned - totalSold;
+    const pct = totalAssigned > 0 ? Math.round((totalSold/totalAssigned)*100) : 0;
+    const linesHtml = (a.lines||[]).map(l=>{
+      const onHand = (l.quantity_assigned||0)-(l.quantity_sold||0);
+      const colorDot = l.color ? `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${esc(l.color_hex||l.color)};border:1px solid #ccc;margin-right:4px;vertical-align:middle;"></span>` : "";
+      const linePct = l.quantity_assigned>0 ? Math.round(((l.quantity_sold||0)/l.quantity_assigned)*100) : 0;
+      return `<tr>
+        <td>${colorDot}${esc(l.color||"—")}</td>
+        <td><span class="meta-chip">${esc(l.size||"—")}</span></td>
+        <td style="font-weight:700;">${l.quantity_assigned||0}</td>
+        <td style="color:#dc2626;font-weight:700;">${l.quantity_sold||0}</td>
+        <td style="color:#16a34a;font-weight:800;">${onHand}</td>
+        <td>${l.unit_price ? "$"+parseFloat(l.unit_price).toFixed(2) : "—"}</td>
+        <td>
+          <div style="font-size:11px;font-weight:700;margin-bottom:3px;">${linePct}%</div>
+          <div class="vs-stock-bar"><div class="vs-stock-fill" style="width:${linePct}%;background:${linePct>80?"#dc2626":linePct>50?"#d97706":"#16a34a"};"></div></div>
+        </td>
+      </tr>`;
+    }).join("");
+    const trackerImgHtml = a.product_image
+      ? `<img src="${esc(a.product_image)}" style="width:52px;height:52px;object-fit:cover;border-radius:10px;border:1px solid #e2e8f0;flex-shrink:0;">`
+      : `<div style="width:52px;height:52px;border-radius:10px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">📦</div>`;
+    const dr = a.days_remaining;
+    const countdownHtml = a.estimated_days
+      ? (dr===0
+          ? `<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:12px;font-weight:800;color:#dc2626;">⚠️ Stock Due — Delivery Expected Today</div>`
+          : `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;"><span style="font-size:12px;font-weight:700;color:#166534;">📦 Estimated Delivery Countdown</span><span style="font-size:20px;font-weight:900;color:#059669;">${dr} <span style="font-size:12px;">days left</span></span></div>`)
+      : "";
+    const arrivedBanner = a.stock_arrived
+      ? `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:12px;font-weight:700;color:#166534;display:flex;align-items:center;gap:8px;">📦 Stock arrived on ${a.arrived_at ? new Date(a.arrived_at).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"}) : "—"}</div>`
+      : `<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+           <div><div style="font-size:12px;font-weight:800;color:#1d4ed8;">📦 Stock Not Yet Arrived</div><div style="font-size:11px;color:#3b82f6;margin-top:2px;">Once your physical stock arrives, mark it here to activate selling.</div></div>
+           <button onclick="vpMarkStockArrived(${a.id},this)" style="padding:8px 16px;border-radius:8px;border:none;background:#2563eb;color:#fff;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;font-family:inherit;">Mark Arrived</button>
+         </div>`;
+    return `<div class="vs-card" style="border-left:4px solid ${a.stock_arrived?"#059669":"#2563eb"};">
+      <div class="vs-card-hd">
+        <div style="display:flex;align-items:center;gap:12px;">
+          ${trackerImgHtml}
+          <div>
+            <div class="vs-card-title">${esc(a.product_name||"Product")}</div>
+            <div style="font-size:10px;color:#94a3b8;font-weight:700;margin-bottom:2px;">${esc(a.product_id||"")}</div>
+            <div class="vs-card-sub">✅ Approved · $${parseFloat(a.per_unit_price||0).toFixed(2)}/unit · ${a.estimated_days||"—"} day delivery</div>
+          </div>
+        </div>
+        <span class="vs-status-pill approved">${a.stock_arrived?"✅ Active":"⏳ Awaiting Arrival"}</span>
+      </div>
+      <div class="vs-card-body">
+        ${arrivedBanner}
+        ${countdownHtml}
+        <div class="vs-tracker-grid" style="margin-bottom:16px;grid-template-columns:repeat(4,1fr);">
+          <div class="vs-tracker-stat blue"><div class="num">${totalAssigned}</div><div class="lbl">Assigned</div></div>
+          <div class="vs-tracker-stat"><div class="num" style="color:#dc2626;">${totalSold}</div><div class="lbl">Sold</div></div>
+          <div class="vs-tracker-stat green"><div class="num">${totalOnHand}</div><div class="lbl">On Hand</div></div>
+          <div class="vs-tracker-stat yellow"><div class="num">$${parseFloat(a.payment_amount||0).toFixed(0)}</div><div class="lbl">Total Value</div></div>
+        </div>
+        <div style="font-size:11px;font-weight:700;color:var(--vf-muted);margin-bottom:6px;">Overall sold: ${pct}%</div>
+        <div class="vs-stock-bar" style="height:8px;margin-bottom:16px;"><div class="vs-stock-fill" style="width:${pct}%;background:${pct>80?"#dc2626":pct>50?"#d97706":"#16a34a"};"></div></div>
+        <table class="vs-variant-tbl">
+          <thead><tr><th>Color</th><th>Size</th><th>Assigned</th><th>Sold</th><th>On Hand</th><th>Unit Price</th><th>Sold %</th></tr></thead>
+          <tbody>${linesHtml}</tbody>
+        </table>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+async function vpMarkStockArrived(assignmentId, btn){
+  btn.disabled = true;
+  btn.textContent = "Marking…";
+  try{
+    const r = await fetch(`/vendor/api/stock/${assignmentId}/arrived/`, {method:"POST", headers:{"X-CSRFToken":getCsrf(),"Content-Type":"application/json"}});
+    const d = await r.json();
+    if(d.success){
+      await loadVpStock();
+    } else {
+      alert(d.message||"Could not mark arrived.");
+      btn.disabled = false;
+      btn.textContent = "Mark Arrived";
+    }
+  }catch(e){
+    alert("Network error. Please try again.");
+    btn.disabled = false;
+    btn.textContent = "Mark Arrived";
+  }
+}
+
+function renderVpStockHistory(){
+  var tbody = document.getElementById("vpHistTableBody");
+  if(!tbody) return;
+  var list = _vpStockData.slice().sort(function(a,b){ return new Date(b.created_at)-new Date(a.created_at); });
+  if(!list.length){
+    tbody.innerHTML='<tr><td colspan="9" style="text-align:center;padding:50px;color:var(--vf-muted);font-weight:600;font-size:13px;">No stock assignments yet.</td></tr>';
+    return;
+  }
+  var statusStyle={
+    approved:"background:#dcfce7;color:#166534;",
+    pending_approval:"background:#fff7ed;color:#c2410c;",
+    pending_pricing:"background:#fef9c3;color:#854d0e;",
+    rejected:"background:#fee2e2;color:#991b1b;"
+  };
+  var statusLabel={approved:"✅ Approved",pending_approval:"⏳ Under Review",pending_pricing:"📝 Needs Pricing",rejected:"❌ Rejected"};
+  var rows="";
+  for(var i=0;i<list.length;i++){
+    var a=list[i];
+    var imgHtml=a.product_image
+      ?'<img src="'+esc(a.product_image)+'" style="width:38px;height:38px;object-fit:cover;border-radius:9px;border:1px solid #e2e8f0;flex-shrink:0;" onerror="this.style.display=\'none\'">'
+      :'<div style="width:38px;height:38px;border-radius:9px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">📦</div>';
+    var dateStr=a.created_at?new Date(a.created_at).toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"}):"—";
+    var approvedStr=a.approved_at?new Date(a.approved_at).toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"}):"—";
+    var payStr=a.payment_amount?"$"+parseFloat(a.payment_amount).toFixed(2)+(a.payment_method?" · "+esc(a.payment_method):""):"—";
+    var sStyle=statusStyle[a.status]||"background:#f1f5f9;color:#475569;";
+    var sLabel=statusLabel[a.status]||esc(a.status||"—");
+    var td='padding:13px 14px;border-bottom:1px solid #f1f5f9;vertical-align:middle;';
+    rows+='<tr style="transition:background .12s;" onmouseover="this.style.background=\'#f8fafc\'" onmouseout="this.style.background=\'\'">'
+      +'<td style="'+td+'"><div style="display:flex;align-items:center;gap:10px;">'+imgHtml+'<div style="font-weight:800;font-size:13px;line-height:1.35;color:#0f172a;overflow:hidden;text-overflow:ellipsis;">'+esc(a.product_name||"—")+'</div></div></td>'
+      +'<td style="'+td+'font-size:11px;color:#64748b;font-weight:600;white-space:nowrap;">'+esc(a.product_id||"—")+'</td>'
+      +'<td style="'+td+'color:#64748b;font-size:12px;font-weight:600;white-space:nowrap;">'+dateStr+'</td>'
+      +'<td style="'+td+'font-weight:800;font-size:14px;text-align:center;color:#0f172a;">'+((a.total_assigned||0))+'</td>'
+      +'<td style="'+td+'font-weight:700;font-size:14px;color:#7c3aed;text-align:center;">'+((a.total_sold||0))+'</td>'
+      +'<td style="'+td+'font-weight:800;font-size:14px;color:#059669;text-align:center;">'+((a.total_on_hand||0))+'</td>'
+      +'<td style="'+td+'"><span style="'+sStyle+'border-radius:99px;padding:4px 11px;font-size:11px;font-weight:800;display:inline-block;white-space:nowrap;">'+sLabel+'</span>'+(a.reject_reason?'<div style="font-size:10px;color:#991b1b;margin-top:3px;font-weight:600;">'+esc(a.reject_reason)+'</div>':'')+'</td>'
+      +'<td style="'+td+'color:#64748b;font-size:12px;font-weight:600;white-space:nowrap;">'+approvedStr+'</td>'
+      +'<td style="'+td+'font-weight:700;font-size:12px;color:#059669;">'+payStr+'</td>'
+      +'</tr>';
+  }
+  tbody.innerHTML=rows;
+}
+
 </script>
 
 </body>
