@@ -43,10 +43,12 @@ def team_members_api(request):
         return Response({"success": True, "members": fellow, "admin_contacts": admin_contacts})
 
     # Vendor view: return their store's admin as top contact + store's employees
+    # Guard: if owner == request.user, this is a stale record from an old bug (skip → admin view)
     try:
-        vendor = request.user.vendor_profile
-        owner = vendor.assigned_store.user
-        if owner:
+        from vendors.models import Vendor as _VModel
+        vp = _VModel.objects.select_related("assigned_store__user").get(user=request.user)
+        owner = vp.assigned_store.user if vp.assigned_store else None
+        if owner and owner.id != request.user.id:
             admin_name = owner.get_full_name() or owner.username
             admin_contacts = [{
                 "user": owner.id,
@@ -67,7 +69,7 @@ def team_members_api(request):
     employees = [{"user": m.user_id, "name": m.name, "role": m.role, "status": m.status, "is_admin": False, "is_vendor": False} for m in emp_qs]
     vendor_qs = VendorModel.objects.filter(
         assigned_store__user=request.user, user__isnull=False
-    ).select_related("user").order_by("name")
+    ).exclude(user=request.user).select_related("user").order_by("name")
     vendors = [{"user": v.user_id, "name": v.name, "role": "vendor", "status": "active", "is_admin": False, "is_vendor": True} for v in vendor_qs]
     members = employees + vendors
     return Response({"success": True, "members": members, "admin_contacts": []})
