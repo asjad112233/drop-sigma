@@ -63,11 +63,7 @@ def _get_display_name(user):
         return user.vendor_profile.name
     except Exception:
         pass
-    # Admin — use tenant/business name so it shows e.g. "Drop Sigma" not personal name
-    try:
-        return user.tenant_profile.name
-    except Exception:
-        pass
+    # Admin — use profile full name (updated via profile settings) or username
     return user.get_full_name() or user.username
 
 

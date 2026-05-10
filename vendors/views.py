@@ -1216,10 +1216,7 @@ def send_vendor_invitation_api(request):
     host   = request.get_host()
     invite_url = f"{scheme}://{host}/vendor/invite/accept/{inv.token}/"
 
-    try:
-        invited_by = request.user.tenant_profile.name
-    except Exception:
-        invited_by = request.user.get_full_name() or request.user.username
+    invited_by = request.user.get_full_name() or request.user.username
     html = _build_vendor_invitation_email(name, invite_url, invited_by, store.name)
     _send_vendor_invitation_email(email, f"You're invited as a vendor partner on Drop Sigma", html)
 
@@ -1277,14 +1274,12 @@ def set_vendor_invitation_password_api(request, token):
     user.save()
 
     vendor = Vendor.objects.create(
-        user=inv.owner,  # owner FK for admin scoping (same pattern as employee)
+        user=user,
         name=inv.name,
         email=inv.email,
         assigned_store=inv.store,
         status="active",
     )
-    vendor.user = user
-    vendor.save(update_fields=["user"])
 
     # Auto-add to default channels + admin DM
     from teamapp.services import add_user_to_default_channels, get_or_create_admin_dm

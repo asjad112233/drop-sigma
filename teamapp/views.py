@@ -36,10 +36,7 @@ def team_members_api(request):
     my_profile = request.user.team_profile.first()
     if my_profile and my_profile.owner:
         owner = my_profile.owner
-        try:
-            admin_name = owner.tenant_profile.name
-        except Exception:
-            admin_name = owner.get_full_name() or owner.username
+        admin_name = owner.get_full_name() or owner.username
         admin_contacts = [{
             "user": owner.id,
             "name": admin_name,
@@ -56,10 +53,7 @@ def team_members_api(request):
         vendor = request.user.vendor_profile
         owner = vendor.assigned_store.user
         if owner:
-            try:
-                admin_name = owner.tenant_profile.name
-            except Exception:
-                admin_name = owner.get_full_name() or owner.username
+            admin_name = owner.get_full_name() or owner.username
             admin_contacts = [{
                 "user": owner.id,
                 "name": admin_name,
@@ -515,13 +509,7 @@ def _sender_info(user):
         return {"name": vendor.name, "role": "vendor", "initials": initials}
     except Exception:
         pass
-    # Admin / superuser — use their tenant/business name
-    try:
-        biz = user.tenant_profile.name
-        initials = "".join(w[0].upper() for w in biz.split()[:2]) or "AD"
-        return {"name": biz, "role": "owner", "initials": initials}
-    except Exception:
-        pass
+    # Admin / superuser — use profile full name, then username
     full = user.get_full_name() or user.username
     initials = "".join(w[0].upper() for w in full.split()[:2]) or "AD"
     return {"name": full, "role": "owner", "initials": initials}
@@ -1244,10 +1232,7 @@ def send_employee_invitation_api(request):
     host   = request.get_host()
     invite_url = f"{scheme}://{host}/employee/invite/accept/{inv.token}/"
 
-    try:
-        invited_by = request.user.tenant_profile.name
-    except Exception:
-        invited_by = request.user.get_full_name() or request.user.username
+    invited_by = request.user.get_full_name() or request.user.username
     html = _build_invitation_email(name, invite_url, invited_by)
     _send_invitation_email(email, f"You're invited to join {invited_by} on Drop Sigma", html)
 
