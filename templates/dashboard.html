@@ -16401,7 +16401,7 @@ function selectChannel(id, name, desc){
   const el=document.getElementById("tcCh_"+id);
   if(el){ el.classList.add("active"); el.querySelector(".tc-unread-badge")?.remove(); }
   document.getElementById("tcChName").textContent=name;
-  document.getElementById("tcChDesc").textContent=desc==="Direct Message"?"🔒 Private conversation":desc||"";
+  document.getElementById("tcChDesc").textContent=desc==="Direct Message"?`🔒 Private conversation (ch:${id})`:desc||"";
   document.getElementById("chatInput").dataset.placeholder=(desc==="Direct Message"?`Message ${name}…`:`Message #${name}…`);
   const hashEl = document.getElementById("tcChHash");
   if(hashEl) hashEl.style.display = _tcCurrentChannelIsDm ? "none" : "";
