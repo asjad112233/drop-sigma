@@ -1797,12 +1797,14 @@ async function vcOpenMembersModal(){
 
 async function vcLoadMessages(){
   if(!_vcChannelId) return;
-  const r=await fetch(`/teamapp/chat/messages/?channel_id=${_vcChannelId}`);
-  const d=await r.json();
-  if(!d.success) return;
-  if(d.current_user_id) _vcCurrentUserId = d.current_user_id;
-  d.messages.forEach(m=>{ _vcMsgMap[m.id]=m; (m.replies||[]).forEach(r=>{ _vcMsgMap[r.id]=r; }); });
-  _vcRenderMsgList(d.messages,"vcMessages");
+  try{
+    const r=await fetch(`/teamapp/chat/messages/?channel_id=${_vcChannelId}`);
+    const d=await r.json();
+    if(!d.success){ console.error("vcLoadMessages error:", d.message); return; }
+    if(d.current_user_id) _vcCurrentUserId = d.current_user_id;
+    d.messages.forEach(m=>{ _vcMsgMap[m.id]=m; (m.replies||[]).forEach(r=>{ _vcMsgMap[r.id]=r; }); });
+    _vcRenderMsgList(d.messages,"vcMessages");
+  }catch(e){ console.error("vcLoadMessages exception:", e); }
 }
 
 function _vcCeToMarkdown(el){
