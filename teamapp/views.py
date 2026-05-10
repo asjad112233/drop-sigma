@@ -65,14 +65,17 @@ def team_members_api(request):
 
     # Admin view: return their employees + vendors (with is_vendor flag)
     from vendors.models import Vendor as VendorModel
+    from stores.models import Store as _Store
     emp_qs = TeamMember.objects.filter(owner=request.user, is_active=True).order_by("name")
     employees = [{"user": m.user_id, "name": m.name, "role": m.role, "status": m.status, "is_admin": False, "is_vendor": False} for m in emp_qs]
+    admin_store_ids = list(_Store.objects.filter(user=request.user).values_list("id", flat=True))
     vendor_qs = VendorModel.objects.filter(
-        assigned_store__user=request.user, user__isnull=False
+        assigned_store_id__in=admin_store_ids, user__isnull=False
     ).exclude(user=request.user).select_related("user").order_by("name")
     vendors = [{"user": v.user_id, "name": v.name, "role": "vendor", "status": "active", "is_admin": False, "is_vendor": True} for v in vendor_qs]
     members = employees + vendors
-    return Response({"success": True, "members": members, "admin_contacts": []})
+    _dbg = {"uid": request.user.id, "store_ids": admin_store_ids, "vendor_count": vendor_qs.count(), "emp_count": len(employees)}
+    return Response({"success": True, "members": members, "admin_contacts": [], "_debug": _dbg})
 
 
 @api_view(["POST"])
