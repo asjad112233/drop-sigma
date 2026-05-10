@@ -5869,7 +5869,11 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
 
             <div class="tc-group">
               <div class="tc-group-head" onclick="tcToggleGroup(this)">
-                <span><i class="fa-solid fa-caret-down tc-caret"></i> Team Members</span>
+                <span><i class="fa-solid fa-caret-down tc-caret"></i> Direct Messages</span>
+              </div>
+              <div style="display:flex;gap:4px;padding:2px 8px 8px;">
+                <button id="tcTabTeam" class="tc-dm-tab-btn tc-dm-tab-active" onclick="tcDmTab('team')">Team Members</button>
+                <button id="tcTabVendors" class="tc-dm-tab-btn" onclick="tcDmTab('vendors')">Vendors</button>
               </div>
               <div id="tcMemberList"></div>
             </div>
@@ -6725,6 +6729,9 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
 .tc-br-sub{color:#9a99ad;font-size:11px;margin-top:1px;}
 .tc-channels{flex:1;overflow-y:auto;padding:10px;}
 .tc-group{margin-bottom:16px;}
+.tc-dm-tab-btn{flex:1;padding:5px 0;border:1.5px solid #e8e2f8;border-radius:8px;background:#fff;color:#6b6b7d;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;}
+.tc-dm-tab-btn:hover{background:#f5f3ff;color:#6d28d9;}
+.tc-dm-tab-active{background:#6d28d9!important;color:#fff!important;border-color:#6d28d9!important;}
 .tc-group-head{display:flex;align-items:center;justify-content:space-between;padding:6px 8px;color:#9a99ad;font-size:12px;font-weight:600;cursor:pointer;text-transform:uppercase;letter-spacing:.4px;}
 .tc-group-head:hover{color:#0d0d12;}
 .tc-caret{font-size:10px;margin-right:4px;}
@@ -16241,26 +16248,51 @@ async function loadChatChannels(){
   } catch(e){ console.error("chat channels:",e); }
 }
 
-async function loadChatMembers(){
-  try{
-    const rm=await fetch("/teamapp/members/");
-    const dm=await rm.json();
-    if(dm.success){
-      const adminContacts = dm.admin_contacts||[];
-      const allM = [...adminContacts, ...dm.members];
-      _tcMentionMembers = allM.map(m=>m.name);
-      allM.forEach(m=>{ _tcMentionMap[m.name.toLowerCase()] = m.user; _tcMentionMap[m.name.split(" ")[0].toLowerCase()] = m.user; });
-      document.getElementById("tcMemberList").innerHTML = dm.members.slice(0,12).map((m,i)=>{
-        const ini=m.name.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
-        const col=m.is_vendor?"#7c3aed":DM_COLORS[i%DM_COLORS.length];
-        const badge=m.is_vendor?`<span style="font-size:9px;background:#ede9fe;color:#7c3aed;border-radius:4px;padding:1px 5px;font-weight:700;margin-left:4px;">V</span>`:"";
+let _tcDmTab = "team";
+let _tcTeamList = [];
+let _tcVendorList = [];
+
+function tcDmTab(tab){
+  _tcDmTab = tab;
+  document.getElementById("tcTabTeam").className    = "tc-dm-tab-btn" + (tab==="team"    ? " tc-dm-tab-active" : "");
+  document.getElementById("tcTabVendors").className = "tc-dm-tab-btn" + (tab==="vendors" ? " tc-dm-tab-active" : "");
+  tcRenderDmList();
+}
+
+function tcRenderDmList(){
+  const items = _tcDmTab === "team" ? _tcTeamList : _tcVendorList;
+  const DM_COLORS_LOCAL = ["#6d28d9","#2563eb","#059669","#dc2626","#d97706","#0891b2","#9333ea","#db2777"];
+  document.getElementById("tcMemberList").innerHTML = items.length === 0
+    ? `<div style="padding:10px 12px;font-size:12px;color:#9a99ad;">No ${_tcDmTab === "team" ? "team members" : "vendors"} yet.</div>`
+    : items.map((m,i)=>{
+        const ini = m.name.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
+        const col = m.is_vendor ? "#7c3aed" : DM_COLORS_LOCAL[i % DM_COLORS_LOCAL.length];
+        const role = m.is_admin ? `<span style="font-size:9px;background:#fef3c7;color:#92400e;border-radius:4px;padding:1px 5px;font-weight:700;margin-left:4px;">ADMIN</span>`
+                   : m.is_vendor ? `<span style="font-size:9px;background:#ede9fe;color:#6d28d9;border-radius:4px;padding:1px 5px;font-weight:700;margin-left:4px;">VENDOR</span>` : "";
         return `<div class="tc-dm" id="tcDm_${m.user}" onclick="tcOpenDm(${m.user},'${esc(m.name)}')">
           <div class="tc-dm-av ${m.status||"offline"}" style="background:${col};">${ini}</div>
-          <span class="tc-ch-name-txt">${esc(m.name)}${badge}</span>
+          <span class="tc-ch-name-txt">${esc(m.name)}${role}</span>
         </div>`;
       }).join("");
-    }
-  } catch(e){ console.error("chat members:",e); }
+}
+
+async function loadChatMembers(){
+  try{
+    const r = await fetch("/teamapp/members/");
+    const d = await r.json();
+    if(!d.success) return;
+    const contacts = d.admin_contacts || [];
+    const members  = d.members || [];
+    const all = [...contacts, ...members];
+    _tcMentionMembers = all.map(m=>m.name);
+    all.forEach(m=>{
+      _tcMentionMap[m.name.toLowerCase()] = m.user;
+      _tcMentionMap[m.name.split(" ")[0].toLowerCase()] = m.user;
+    });
+    _tcTeamList   = [...contacts, ...members.filter(m=>!m.is_vendor)];
+    _tcVendorList = members.filter(m=>m.is_vendor);
+    tcRenderDmList();
+  } catch(e){ console.error("loadChatMembers:", e); }
 }
 
 async function tcOpenDm(userId, name){
