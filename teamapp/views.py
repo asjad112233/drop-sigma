@@ -74,8 +74,7 @@ def team_members_api(request):
     ).exclude(user=request.user).select_related("user").order_by("name")
     vendors = [{"user": v.user_id, "name": v.name, "role": "vendor", "status": "active", "is_admin": False, "is_vendor": True} for v in vendor_qs]
     members = employees + vendors
-    _dbg = {"uid": request.user.id, "store_ids": admin_store_ids, "vendor_count": vendor_qs.count(), "emp_count": len(employees)}
-    return Response({"success": True, "members": members, "admin_contacts": [], "_debug": _dbg})
+    return Response({"success": True, "members": members, "admin_contacts": []})
 
 
 @api_view(["POST"])

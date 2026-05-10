@@ -14401,7 +14401,7 @@ async function createVendor(){
       clearVendorForm();
       closeVendorModal();
       loadVendors();
-      loadChatChannels();
+      loadChatMembers();
       // Refresh order vendor dropdowns so new vendor appears immediately
       ensureOrderVendorsLoaded().then(()=>{ if(typeof renderOrders==="function") renderOrders(); });
     },2600);
@@ -16236,7 +16236,12 @@ async function loadChatChannels(){
       loadChatMessages();
     }
 
-    // Team members
+  } catch(e){ console.error("chat channels:",e); }
+  loadChatMembers();
+}
+
+async function loadChatMembers(){
+  try{
     const rm=await fetch("/teamapp/members/");
     const dm=await rm.json();
     if(dm.success){
@@ -16254,7 +16259,7 @@ async function loadChatChannels(){
         </div>`;
       }).join("");
     }
-  } catch(e){ console.error("chat channels:",e); }
+  } catch(e){ console.error("chat members:",e); }
 }
 
 async function tcOpenDm(userId, name){
