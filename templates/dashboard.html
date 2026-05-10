@@ -14401,6 +14401,7 @@ async function createVendor(){
       clearVendorForm();
       closeVendorModal();
       loadVendors();
+      loadChatChannels();
       // Refresh order vendor dropdowns so new vendor appears immediately
       ensureOrderVendorsLoaded().then(()=>{ if(typeof renderOrders==="function") renderOrders(); });
     },2600);
@@ -16243,12 +16244,13 @@ async function loadChatChannels(){
       const allM = [...adminContacts, ...dm.members];
       _tcMentionMembers = allM.map(m=>m.name);
       allM.forEach(m=>{ _tcMentionMap[m.name.toLowerCase()] = m.user; _tcMentionMap[m.name.split(" ")[0].toLowerCase()] = m.user; });
-      document.getElementById("tcMemberList").innerHTML = dm.members.slice(0,8).map((m,i)=>{
+      document.getElementById("tcMemberList").innerHTML = dm.members.slice(0,12).map((m,i)=>{
         const ini=m.name.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
-        const col=DM_COLORS[i%DM_COLORS.length];
+        const col=m.is_vendor?"#7c3aed":DM_COLORS[i%DM_COLORS.length];
+        const badge=m.is_vendor?`<span style="font-size:9px;background:#ede9fe;color:#7c3aed;border-radius:4px;padding:1px 5px;font-weight:700;margin-left:4px;">V</span>`:"";
         return `<div class="tc-dm" id="tcDm_${m.user}" onclick="tcOpenDm(${m.user},'${esc(m.name)}')">
           <div class="tc-dm-av ${m.status||"offline"}" style="background:${col};">${ini}</div>
-          <span class="tc-ch-name-txt">${esc(m.name)}</span>
+          <span class="tc-ch-name-txt">${esc(m.name)}${badge}</span>
         </div>`;
       }).join("");
     }

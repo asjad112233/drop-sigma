@@ -26,12 +26,6 @@ def team_members_api(request):
     if not request.user.is_authenticated:
         return Response({"success": True, "members": [], "admin_contacts": []})
 
-    # Admin view: return their own team members
-    qs = TeamMember.objects.filter(owner=request.user, is_active=True).order_by("name")
-    if qs.exists():
-        serializer = TeamMemberSerializer(qs, many=True)
-        return Response({"success": True, "members": serializer.data, "admin_contacts": []})
-
     # Employee view: return their owner (admin) as contact + fellow employees
     my_profile = request.user.team_profile.first()
     if my_profile and my_profile.owner:
@@ -67,7 +61,16 @@ def team_members_api(request):
     except Exception:
         pass
 
-    return Response({"success": True, "members": [], "admin_contacts": []})
+    # Admin view: return their employees + vendors (with is_vendor flag)
+    from vendors.models import Vendor as VendorModel
+    emp_qs = TeamMember.objects.filter(owner=request.user, is_active=True).order_by("name")
+    employees = [{"user": m.user_id, "name": m.name, "role": m.role, "status": m.status, "is_admin": False, "is_vendor": False} for m in emp_qs]
+    vendor_qs = VendorModel.objects.filter(
+        assigned_store__user=request.user, user__isnull=False
+    ).select_related("user").order_by("name")
+    vendors = [{"user": v.user_id, "name": v.name, "role": "vendor", "status": "active", "is_admin": False, "is_vendor": True} for v in vendor_qs]
+    members = employees + vendors
+    return Response({"success": True, "members": members, "admin_contacts": []})
 
 
 @api_view(["POST"])
