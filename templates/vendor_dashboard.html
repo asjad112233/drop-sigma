@@ -1065,7 +1065,7 @@ function switchTab(tab, btn){
   if(tabEl){ tabEl.classList.add("active"); if(tab==="chat") tabEl.style.display="flex"; }
   btn.classList.add("active");
   const main = document.querySelector(".vp-main");
-  if(tab==="chat"){ main.classList.add("chat-mode"); vcChatInit(); }
+  if(tab==="chat"){ main.classList.add("chat-mode"); vcChatInit(); vcLoadMembers(); }
   else { main.classList.remove("chat-mode"); }
   if(tab==="tracking") loadTrackingHistory();
   if(tab==="history") loadOrderHistory();
@@ -1655,32 +1655,32 @@ async function vcChatInit(){
       vcSelectChannel(gen.id, gen.name, gen.description||"");
     }
 
-    const rm=await fetch("/teamapp/members/");
-    const dm=await rm.json();
-    let dmUnreads = {};
-    try{
-      const ur = await fetch("/teamapp/chat/dm/unreads/");
-      const ud = await ur.json();
-      if(ud.success) dmUnreads = ud.unreads || {};
-    } catch(e){}
-    if(dm.success){
-      const adminContacts = dm.admin_contacts||[];
-      const allM = [...adminContacts, ...dm.members];
-      _vcMentionMembers = allM.map(m=>m.name);
-      allM.forEach(m=>{ _vcMentionMap[m.name.toLowerCase()] = m.user; _vcMentionMap[m.name.split(" ")[0].toLowerCase()] = m.user; });
-      document.getElementById("vcMemberList").innerHTML = allM.slice(0,10).map((m,i)=>{
-        const ini=m.name.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
-        const col=m.is_admin?"linear-gradient(135deg,#1d4ed8,#3b82f6)":_VC_DM_COLORS[i%_VC_DM_COLORS.length];
-        const tick=m.is_admin?`<span class="tc-verified">${_VERIFIED_SVG}</span>`:"";
-        const unread = dmUnreads[String(m.user)]||0;
-        const badge = unread>0?`<span style="margin-left:auto;background:#ef4444;color:#fff;border-radius:99px;font-size:10px;font-weight:700;padding:1px 6px;min-width:18px;text-align:center;">${unread>99?"99+":unread}</span>`:"";
-        return `<div class="tc-dm${unread>0?" unread":""}" id="vcDm_${m.user}" onclick="vcOpenDm(${m.user},'${esc(m.name)}')">
-          <div class="tc-dm-av ${m.status||"available"}" style="background:${col};">${ini}</div>
-          <span class="tc-ch-name-txt">${esc(m.name)}${tick}</span>${badge}
-        </div>`;
-      }).join("");
-    }
   } catch(e){ console.error("vc chat init:",e); }
+  vcLoadMembers();
+}
+
+async function vcLoadMembers(){
+  try{
+    const [mr, ur] = await Promise.all([fetch("/teamapp/members/"), fetch("/teamapp/chat/dm/unreads/")]);
+    const [dm, ud] = await Promise.all([mr.json(), ur.json()]);
+    const dmUnreads = (ud.success && ud.unreads) || {};
+    if(!dm.success) return;
+    const adminContacts = dm.admin_contacts||[];
+    const allM = [...adminContacts, ...dm.members];
+    _vcMentionMembers = allM.map(m=>m.name);
+    allM.forEach(m=>{ _vcMentionMap[m.name.toLowerCase()] = m.user; _vcMentionMap[m.name.split(" ")[0].toLowerCase()] = m.user; });
+    document.getElementById("vcMemberList").innerHTML = allM.map((m,i)=>{
+      const ini=m.name.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
+      const col=m.is_admin?"linear-gradient(135deg,#1d4ed8,#3b82f6)":_VC_DM_COLORS[i%_VC_DM_COLORS.length];
+      const tick=m.is_admin?`<span class="tc-verified">${_VERIFIED_SVG}</span>`:"";
+      const unread = dmUnreads[String(m.user)]||0;
+      const badge = unread>0?`<span style="margin-left:auto;background:#ef4444;color:#fff;border-radius:99px;font-size:10px;font-weight:700;padding:1px 6px;min-width:18px;text-align:center;">${unread>99?"99+":unread}</span>`:"";
+      return `<div class="tc-dm${unread>0?" unread":""}" id="vcDm_${m.user}" onclick="vcOpenDm(${m.user},'${esc(m.name)}')">
+        <div class="tc-dm-av ${m.status||"available"}" style="background:${col};">${ini}</div>
+        <span class="tc-ch-name-txt">${esc(m.name)}${tick}</span>${badge}
+      </div>`;
+    }).join("");
+  } catch(e){ console.error("vcLoadMembers:", e); }
 }
 
 async function vcOpenDm(userId, name){
