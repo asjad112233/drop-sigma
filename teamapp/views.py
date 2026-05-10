@@ -49,8 +49,7 @@ def team_members_api(request):
         vp = _VModel.objects.select_related("assigned_store__user").get(user=request.user)
         owner = vp.assigned_store.user if vp.assigned_store else None
         if owner and owner.id != request.user.id:
-            # Use full_name → store name → username (vendor knows their assigned store)
-            admin_name = owner.get_full_name() or (vp.assigned_store.name if vp.assigned_store else None) or owner.username
+            admin_name = owner.get_full_name() or owner.username
             admin_contacts = [{
                 "user": owner.id,
                 "name": admin_name,
@@ -625,16 +624,6 @@ def chat_dm_api(request):
         return u.get_full_name() or u.username
 
     other_name = _display(target)
-
-    # If requesting user is a vendor and target is their store owner, use store name as display
-    try:
-        from vendors.models import Vendor as _VendM
-        vp2 = _VendM.objects.select_related("assigned_store").get(user=me)
-        if vp2.assigned_store and vp2.assigned_store.user_id == target.id:
-            other_name = vp2.assigned_store.name or other_name
-    except Exception:
-        pass
-
     return Response({"success": True, "channel_id": channel.id, "channel_name": other_name})
 
 
