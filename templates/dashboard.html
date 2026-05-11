@@ -3767,7 +3767,7 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
 .email-card.thread-unread::after{content:'';position:absolute;right:12px;top:50%;transform:translateY(-50%);width:7px;height:7px;border-radius:50%;background:#6366f1;}
 
 /* ── FULL-WIDTH HTML EMAIL CARD ── */
-.em-email-card{align-self:stretch!important;background:var(--vf-surface)!important;border:1px solid var(--vf-line)!important;border-radius:10px!important;overflow:hidden!important;box-shadow:0 1px 4px rgba(0,0,0,.06)!important;}
+.em-email-card{align-self:stretch!important;background:var(--vf-surface)!important;border:1px solid var(--vf-line)!important;border-radius:10px!important;overflow:visible!important;box-shadow:0 1px 4px rgba(0,0,0,.06)!important;}
 .em-email-card-hdr{display:flex!important;align-items:center!important;gap:8px!important;padding:8px 12px!important;border-bottom:1px solid var(--vf-line)!important;background:var(--vf-surface-2,#f8fafc)!important;}
 .em-email-card-av{width:26px!important;height:26px!important;border-radius:50%!important;flex-shrink:0!important;display:flex!important;align-items:center!important;justify-content:center!important;font-size:10px!important;font-weight:700!important;color:#fff!important;}
 .em-email-card-info{display:flex!important;align-items:baseline!important;gap:8px!important;flex:1!important;min-width:0!important;}
@@ -13190,26 +13190,25 @@ function loadEmailIframe(id){
   delete _emailHtmlCache[id];
   const frame = document.getElementById(id);
   if(!frame) return;
+  // Use Blob URL so the iframe fires a real `load` event after full CSS layout
   try{
-    const doc = frame.contentDocument || frame.contentWindow.document;
-    doc.open(); doc.write(html); doc.close();
-    const resize = () => {
+    const blob = new Blob([html], {type:"text/html"});
+    const url  = URL.createObjectURL(blob);
+    frame.onload = function(){
+      URL.revokeObjectURL(url);
       try{
-        const h = doc.body ? doc.body.scrollHeight : 0;
-        if(h > 0) frame.style.height = Math.min(h + 24, 700) + "px";
+        const inner = frame.contentDocument || frame.contentWindow.document;
+        const h = inner.body.scrollHeight;
+        if(h > 0) frame.style.height = Math.min(h + 32, 800) + "px";
       }catch(e){}
     };
-    resize();
-    setTimeout(resize, 200);
-    setTimeout(resize, 800); // catch late-loading images
-  }catch(e){ frame.style.height = "200px"; }
+    frame.src = url;
+  }catch(e){ frame.style.height = "300px"; }
 }
 
-// Called after innerHTML is set — flushes all pending email iframes immediately
-// (onload on blank iframes is unreliable across browsers)
+// Flush all pending email iframes right after innerHTML is set
 function flushEmailIframes(){
-  const pending = Object.keys(_emailHtmlCache);
-  pending.forEach(id => loadEmailIframe(id));
+  Object.keys(_emailHtmlCache).forEach(id => loadEmailIframe(id));
 }
 
 function renderAttachments(attachments){
