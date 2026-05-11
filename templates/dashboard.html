@@ -3773,7 +3773,7 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
 .em-email-card-info{display:flex!important;align-items:baseline!important;gap:8px!important;flex:1!important;min-width:0!important;}
 .em-email-card-name{font-size:12px!important;font-weight:600!important;color:var(--vf-text)!important;}
 .em-email-card-time{font-size:10.5px!important;color:#9ca3af!important;}
-.em-email-card-body{width:100%!important;overflow:hidden!important;}
+.em-email-card-body{width:100%!important;overflow:visible!important;}
 
 /* ── COMPACT CHAT MESSAGE LAYOUT (matches sample) ── */
 .em-chat-body .chat-thread{display:contents!important;}
@@ -13015,6 +13015,7 @@ async function openThread(contact, options={}){
     document.getElementById("emailDetailSubject").innerText = threadInfo.latest_subject || lastMsg.subject || "Customer Thread";
     document.getElementById("emailDetailMeta").innerText = `${contact} · ${currentThreadEmails.length} messages`;
     document.getElementById("emailDetailBody").innerHTML = renderThreadChat(currentThreadEmails);
+    requestAnimationFrame(flushEmailIframes); // write HTML email content into iframes
     const _displayName = cleanSenderName(threadInfo.name || contact || "Customer");
     const _replyLabel = document.getElementById("replyToLabel");
     if(_replyLabel) _replyLabel.innerText = `Reply to ${_displayName}`;
@@ -13186,17 +13187,29 @@ function extractEmailAddress(value){
 function loadEmailIframe(id){
   const html = _emailHtmlCache[id];
   if(!html) return;
+  delete _emailHtmlCache[id];
   const frame = document.getElementById(id);
   if(!frame) return;
   try{
     const doc = frame.contentDocument || frame.contentWindow.document;
     doc.open(); doc.write(html); doc.close();
-    // auto-resize after content settles
-    setTimeout(() => {
-      try{ frame.style.height = Math.min(doc.body.scrollHeight + 24, 600) + "px"; }catch(e){}
-    }, 120);
-  }catch(e){}
-  delete _emailHtmlCache[id];
+    const resize = () => {
+      try{
+        const h = doc.body ? doc.body.scrollHeight : 0;
+        if(h > 0) frame.style.height = Math.min(h + 24, 700) + "px";
+      }catch(e){}
+    };
+    resize();
+    setTimeout(resize, 200);
+    setTimeout(resize, 800); // catch late-loading images
+  }catch(e){ frame.style.height = "200px"; }
+}
+
+// Called after innerHTML is set — flushes all pending email iframes immediately
+// (onload on blank iframes is unreliable across browsers)
+function flushEmailIframes(){
+  const pending = Object.keys(_emailHtmlCache);
+  pending.forEach(id => loadEmailIframe(id));
 }
 
 function renderAttachments(attachments){
@@ -13261,7 +13274,7 @@ function renderThreadChat(messages){
             </div>
           </div>
           <div class="em-email-card-body">
-            <iframe id="${iframeId}" style="width:100%;border:none;min-height:80px;max-height:600px;display:block;" scrolling="no" onload="loadEmailIframe('${iframeId}')"></iframe>
+            <iframe id="${iframeId}" style="width:100%;border:none;min-height:120px;display:block;" scrolling="auto"></iframe>
             ${renderAttachments(attachments)}
           </div>
         </div>
