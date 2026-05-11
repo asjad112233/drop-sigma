@@ -3787,6 +3787,9 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
 .em-msg-meta{font-size:10px!important;color:#9ca3af!important;margin-top:4px!important;}
 .em-msg.em-msg-out .em-msg-meta{text-align:right!important;}
 .em-msg-text{margin:0!important;padding:0!important;font-size:12.5px!important;line-height:1.5!important;white-space:pre-wrap!important;word-break:break-word!important;}
+/* Hide quoted-toggle/quoted-text inside email chat — full thread is already visible as separate bubbles */
+.em-chat-body .quoted-toggle{display:none!important;}
+.em-chat-body .quoted-text{display:none!important;}
 /* Date separator */
 .em-day-sep{display:flex!important;align-items:center!important;gap:8px!important;margin:4px 0!important;align-self:stretch!important;}
 .em-day-sep span{font-size:10.5px!important;color:#9ca3af!important;white-space:nowrap!important;background:var(--vf-surface-2,#f8fafc)!important;padding:0 6px!important;}
