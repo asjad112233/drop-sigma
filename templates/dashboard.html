@@ -13233,6 +13233,26 @@ function renderAttachments(attachments){
   return html;
 }
 
+function isRichHtml(html){
+  if(!html) return false;
+  // Only treat as rich HTML if it has tables, images, or significant inline styling
+  return /<table[\s>]|<img[\s>]|<td[\s>]|<th[\s>]|<figure[\s>]|background-color\s*:|font-family\s*:/i.test(html);
+}
+
+function htmlToPlainText(html){
+  return html
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n")
+    .replace(/<\/div>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+    .replace(/&nbsp;/g, " ").replace(/&#39;/g, "'").replace(/&quot;/g, '"')
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 function renderThreadChat(messages){
   let chatHTML = `<div class="chat-thread">`;
   let lastDate = "";
@@ -13241,7 +13261,7 @@ function renderThreadChat(messages){
     const isSupport = isSupportEmail(msg.sender);
     const attachments = msg.attachments || [];
     const hasImages = attachments.some(a => a.content_type && a.content_type.startsWith("image/"));
-    const hasHtml = !!(msg.body_html && msg.body_html.trim());
+    const hasHtml = !!(msg.body_html && msg.body_html.trim()) && isRichHtml(msg.body_html);
 
     const senderName = isSupport ? "Support Team" : cleanSenderName(msg.sender_name || msg.sender || "Customer");
     const timeText = formatEmailDate(msg.created_at || msg.date || msg.received_at) || "";
@@ -13290,7 +13310,8 @@ function renderThreadChat(messages){
     }
 
     // ── Plain text: compact chat bubble ──
-    const cleaned = cleanEmailMessage(msg.body || "");
+    const rawBody = msg.body || (msg.body_html ? htmlToPlainText(msg.body_html) : "");
+    const cleaned = cleanEmailMessage(rawBody);
     let mainText = cleaned.main;
     if(hasImages) mainText = mainText.replace(/\[image:[^\]]*\]/gi, "").replace(/\n{3,}/g, "\n\n").trim();
     const bodyContent = `<div class="em-msg-text">${escapeHtml(mainText)}</div>
