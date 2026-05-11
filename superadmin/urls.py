@@ -12,4 +12,5 @@ urlpatterns = [
     path("api/coupons/",             views.api_coupons,         name="sa_coupons"),
     path("api/coupons/<int:pk>/",    views.api_coupon_detail,   name="sa_coupon_detail"),
     path("api/validate-coupon/",     views.api_validate_coupon, name="sa_validate_coupon"),
+    path("api/locations/",           views.api_locations,       name="sa_locations"),
 ]

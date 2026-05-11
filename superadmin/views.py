@@ -16,7 +16,7 @@ from orders.models import Order
 from vendors.models import Vendor
 from teamapp.models import TeamMember
 
-from .models import Tenant, Subscription, TenantActivity, PLAN_PRICES, Coupon
+from .models import Tenant, Subscription, TenantActivity, PLAN_PRICES, Coupon, UserIPLog
 
 
 # ── Email Templates ───────────────────────────────────────────────────────────
@@ -823,4 +823,107 @@ def api_validate_coupon(request):
         "original":   original,
         "discounted": round(discounted, 2),
         "savings":    round(original - discounted, 2),
+    })
+
+
+# ── Location Intelligence ─────────────────────────────────────────────────────
+
+def _build_user_entry(u, role, now):
+    log = UserIPLog.objects.filter(user=u).order_by("-last_seen").first()
+    if not log:
+        return None
+    delta = (now - log.last_seen).total_seconds()
+    status = "online" if delta < 300 else ("away" if delta < 1800 else "offline")
+    return {
+        "id":           u.pk,
+        "name":         u.get_full_name() or u.username,
+        "email":        u.email,
+        "role":         role,
+        "ip":           log.ip_address,
+        "city":         log.city or "—",
+        "country":      log.country or "—",
+        "country_code": log.country_code or "",
+        "region":       log.region or "",
+        "isp":          log.isp or "—",
+        "lat":          log.lat,
+        "lng":          log.lng,
+        "browser":      log.browser or "—",
+        "os_name":      log.os_name or "—",
+        "device_type":  log.device_type or "desktop",
+        "last_seen":    log.last_seen.strftime("%d %b %Y, %H:%M"),
+        "status":       status,
+    }
+
+
+@require_GET
+def api_locations(request):
+    if not request.user.is_superuser:
+        return JsonResponse({"error": "Forbidden"}, status=403)
+
+    from teamapp.models import TeamMember
+    now = timezone.now()
+
+    # Build tenant → users mapping
+    tenant_map = {t.user_id: t for t in Tenant.objects.filter(is_deleted=False).select_related("user")}
+
+    # All users who have IP logs
+    logged_user_ids = set(UserIPLog.objects.values_list("user_id", flat=True).distinct())
+
+    result = []
+    processed_user_ids = set()
+
+    for tenant in tenant_map.values():
+        users_data = []
+
+        # Owner
+        entry = _build_user_entry(tenant.user, "Owner", now)
+        if entry:
+            users_data.append(entry)
+            processed_user_ids.add(tenant.user_id)
+
+        # Team members under this tenant
+        for tm in TeamMember.objects.filter(owner=tenant.user).select_related("user"):
+            if tm.user_id not in processed_user_ids:
+                e = _build_user_entry(tm.user, tm.role.capitalize() if hasattr(tm, "role") else "Member", now)
+                if e:
+                    users_data.append(e)
+                    processed_user_ids.add(tm.user_id)
+
+        online_count = sum(1 for u in users_data if u["status"] == "online")
+        result.append({
+            "id":           tenant.pk,
+            "name":         tenant.name,
+            "plan":         tenant.plan,
+            "users":        users_data,
+            "online_count": online_count,
+        })
+
+    # Users with IP logs NOT linked to any tenant (e.g. superadmin visiting dashboard)
+    unlinked_ids = logged_user_ids - processed_user_ids
+    if unlinked_ids:
+        unlinked_users = []
+        for u in User.objects.filter(pk__in=unlinked_ids):
+            role = "Super Admin" if u.is_superuser else "Staff"
+            e = _build_user_entry(u, role, now)
+            if e:
+                unlinked_users.append(e)
+        if unlinked_users:
+            online_count = sum(1 for u in unlinked_users if u["status"] == "online")
+            result.insert(0, {
+                "id":           0,
+                "name":         "Platform Staff",
+                "plan":         "—",
+                "users":        unlinked_users,
+                "online_count": online_count,
+            })
+
+    total_users   = sum(len(t["users"]) for t in result)
+    total_online  = sum(t["online_count"] for t in result)
+    countries     = len({u["country_code"] for t in result for u in t["users"] if u["country_code"] and u["country_code"] != "LO"})
+
+    return JsonResponse({
+        "tenants":      result,
+        "total_users":  total_users,
+        "total_online": total_online,
+        "countries":    countries,
     })

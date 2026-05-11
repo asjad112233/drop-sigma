@@ -132,6 +132,29 @@ class Coupon(models.Model):
         return f"{self.code} ({self.discount_type}: {self.discount_value})"
 
 
+class UserIPLog(models.Model):
+    user         = models.ForeignKey(User, on_delete=models.CASCADE, related_name='ip_logs')
+    ip_address   = models.GenericIPAddressField()
+    country      = models.CharField(max_length=100, blank=True)
+    country_code = models.CharField(max_length=10,  blank=True)
+    city         = models.CharField(max_length=100, blank=True)
+    region       = models.CharField(max_length=100, blank=True)
+    isp          = models.CharField(max_length=200, blank=True)
+    lat          = models.FloatField(null=True, blank=True)
+    lng          = models.FloatField(null=True, blank=True)
+    browser      = models.CharField(max_length=100, blank=True)
+    os_name      = models.CharField(max_length=100, blank=True)
+    device_type  = models.CharField(max_length=50,  blank=True, default='desktop')
+    last_seen    = models.DateTimeField(auto_now=True)
+    created_at   = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-last_seen']
+
+    def __str__(self):
+        return f"{self.user.username} @ {self.ip_address} ({self.city})"
+
+
 class EmailVerificationToken(models.Model):
     user       = models.OneToOneField(User, on_delete=models.CASCADE, related_name="email_verification")
     token      = models.UUIDField(default=uuid.uuid4, unique=True, db_index=True)

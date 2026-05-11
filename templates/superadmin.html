@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Drop Sigma — Super Admin</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
 :root{
   --surface:#fff;--surface-2:#f8fafc;--line:#e2e8f0;
@@ -195,6 +197,7 @@ a{color:inherit;text-decoration:none;}
     <div class="nav-section">Manage</div>
     <button class="nav-item" data-page="plans"><span class="ico">▤</span> Plans</button>
     <button class="nav-item" data-page="coupons"><span class="ico">🏷</span> Coupons</button>
+    <button class="nav-item" data-page="locations"><span class="ico">📍</span> Locations</button>
 
     <div class="me-card">
       <div class="who">Owner Mode</div>
@@ -443,6 +446,7 @@ function setTitle(page){
     analytics: ['Analytics',     'Super Admin · Usage'],
     activity:  ['Activity Log',  'Super Admin · Audit'],
     plans:     ['Plans',         'Super Admin · Manage'],
+    locations: ['Locations',     'Super Admin · IP & Location Intelligence'],
   };
   const [t,c] = map[page] || ['Super Admin',''];
   document.getElementById('pageTitle').textContent  = t;
@@ -486,6 +490,7 @@ async function renderPage(){
     case 'activity':  c.innerHTML = renderActivityPage(); break;
     case 'plans':     c.innerHTML = renderPlans(); break;
     case 'coupons':   await renderCoupons(c); break;
+    case 'locations': await renderLocations(c); break;
     default: c.innerHTML = '<div class="empty"><p>Page not found.</p></div>';
   }
 }
@@ -1418,6 +1423,333 @@ async function withLoadingAsync(btnId, fn){
   if(btn){ btn.disabled=true; btn.textContent='Saving…'; }
   try{ await fn(); }
   finally{ if(btn){ btn.disabled=false; if(orig) btn.textContent=orig; } }
+}
+
+/* ═══════════════════════════════════════════════════════
+   LOCATIONS
+═══════════════════════════════════════════════════════ */
+let _locMap = null;
+let _locMarkers = [];
+let _locData = null;
+let _locFilter = 'all';
+let _locTenant = null;
+
+const FLAG_MAP = {
+  PK:'🇵🇰',US:'🇺🇸',GB:'🇬🇧',AE:'🇦🇪',IN:'🇮🇳',CA:'🇨🇦',
+  CN:'🇨🇳',SA:'🇸🇦',AU:'🇦🇺',DE:'🇩🇪',FR:'🇫🇷',PH:'🇵🇭',
+  NG:'🇳🇬',BD:'🇧🇩',MY:'🇲🇾',SG:'🇸🇬',
+};
+const STATUS_COLOR = {online:'#22c55e', away:'#f59e0b', offline:'#94a3b8'};
+const STATUS_LABEL = {online:'Online', away:'Away', offline:'Offline'};
+const DEVICE_ICON = {
+  mobile:`<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>`,
+  tablet:`<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>`,
+  desktop:`<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>`,
+};
+
+async function renderLocations(c){
+  c.innerHTML = `<div class="empty"><div class="ic">⏳</div><p>Loading location data…</p></div>`;
+  const {ok, data} = await api('/superadmin/api/locations/');
+  if(!ok){ c.innerHTML=`<div class="empty"><p>Failed to load location data.</p></div>`; return; }
+  _locData = data;
+
+  const allUsers = data.tenants.flatMap(t=>t.users);
+  const countries = [...new Set(allUsers.map(u=>u.country).filter(Boolean))];
+
+  c.innerHTML = `
+  <style>
+    /* Location page styles */
+    .loc-kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px;}
+    .loc-stat{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 18px;position:relative;overflow:hidden;}
+    .loc-stat::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--lc,var(--grad));}
+    .loc-stat .lbl{font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}
+    .loc-stat .val{font-size:26px;font-weight:900;letter-spacing:-.5px;margin-top:6px;}
+    .loc-stat .sub{font-size:11px;color:var(--muted);margin-top:3px;}
+
+    .loc-map-card{background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden;margin-bottom:16px;box-shadow:var(--shadow);}
+    .loc-map-head{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid var(--line);}
+    .loc-map-title{font-size:14px;font-weight:900;}
+    .loc-map-right{display:flex;align-items:center;gap:10px;}
+    .loc-live{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:#10b981;}
+    .loc-live::before{content:'';width:6px;height:6px;border-radius:50%;background:#10b981;animation:lp 1.8s infinite;}
+    @keyframes lp{0%,100%{box-shadow:0 0 0 0 rgba(16,185,129,.5);}50%{box-shadow:0 0 0 5px rgba(16,185,129,0);}}
+    .loc-legend{display:flex;gap:12px;}
+    .loc-leg{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--muted);}
+    .loc-leg-dot{width:9px;height:9px;border-radius:50%;}
+    .loc-mf{display:flex;gap:6px;}
+    .loc-mf-btn{height:28px;padding:0 11px;border-radius:7px;border:1px solid var(--line);background:var(--surface-2);font-size:11.5px;font-weight:700;color:var(--muted);cursor:pointer;transition:.12s;}
+    .loc-mf-btn:hover,.loc-mf-btn.on{background:var(--side);color:#fff;border-color:var(--side);}
+    #loc-map{height:360px;}
+
+    /* Leaflet popup override */
+    .leaflet-popup-content-wrapper{border-radius:12px!important;box-shadow:0 8px 28px rgba(0,0,0,.16)!important;border:1px solid #e2e8f0!important;padding:0!important;overflow:hidden;}
+    .leaflet-popup-content{margin:0!important;min-width:210px!important;}
+    .leaflet-popup-tip-container{display:none;}
+    .loc-popup{padding:14px;}
+    .loc-popup-head{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+    .loc-popup-av{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;flex-shrink:0;}
+    .loc-popup-name{font-size:13px;font-weight:800;color:#0f172a;}
+    .loc-popup-sub{font-size:11px;color:#94a3b8;margin-top:1px;}
+    .loc-popup-rows{border-top:1px solid #f1f5f9;padding-top:10px;display:flex;flex-direction:column;gap:5px;}
+    .loc-popup-row{display:flex;gap:8px;font-size:11.5px;align-items:center;}
+    .loc-popup-lbl{color:#94a3b8;font-weight:600;min-width:52px;}
+    .loc-popup-val{color:#334155;font-weight:600;}
+    .loc-popup-ip{font-family:monospace;font-size:11px;background:#f8fafc;padding:2px 6px;border-radius:5px;border:1px solid #f1f5f9;}
+    .loc-status-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-right:3px;}
+
+    /* Tenant table */
+    .loc-tenants{display:flex;flex-direction:column;gap:10px;}
+    .loc-tenant-card{background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:var(--shadow);}
+    .loc-tenant-head{display:flex;align-items:center;gap:12px;padding:14px 18px;cursor:pointer;transition:.12s;border-bottom:1px solid var(--line);}
+    .loc-tenant-head:hover{background:var(--surface-2);}
+    .loc-tenant-av{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--accent),#ef4444);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;flex-shrink:0;}
+    .loc-tenant-name{font-size:13.5px;font-weight:800;color:var(--text);}
+    .loc-tenant-meta{font-size:11px;color:var(--muted);margin-top:2px;}
+    .loc-tenant-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+    .loc-online-badge{font-size:11px;font-weight:700;background:#dcfce7;color:#15803d;padding:3px 10px;border-radius:99px;}
+    .loc-chevron{color:var(--muted);transition:transform .2s;}
+    .loc-tenant-body{display:none;}
+    .loc-tenant-body.open{display:block;}
+    .loc-chev-open{transform:rotate(180deg);}
+
+    .loc-tbl{width:100%;border-collapse:collapse;}
+    .loc-tbl th{font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;padding:10px 16px;text-align:left;background:var(--surface-2);border-bottom:1px solid var(--line);}
+    .loc-tbl td{padding:11px 16px;border-bottom:1px solid var(--line);font-size:12.5px;color:var(--text);vertical-align:middle;}
+    .loc-tbl tr:last-child td{border-bottom:none;}
+    .loc-tbl tr:hover td{background:#fffbeb;}
+    .loc-person{display:flex;align-items:center;gap:10px;}
+    .loc-av{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;}
+    .loc-name{font-size:13px;font-weight:700;}
+    .loc-email{font-size:11px;color:var(--muted);}
+    .loc-role{display:inline-block;font-size:10px;font-weight:800;padding:2px 9px;border-radius:99px;}
+    .loc-role.owner{background:#ede9fe;color:#6d28d9;}
+    .loc-role.admin{background:#dbeafe;color:#1d4ed8;}
+    .loc-role.member{background:#f1f5f9;color:#475569;}
+    .loc-loc{display:flex;align-items:center;gap:7px;}
+    .loc-flag{font-size:18px;}
+    .loc-city{font-size:12.5px;font-weight:600;}
+    .loc-country{font-size:11px;color:var(--muted);}
+    .loc-ip{font-family:monospace;font-size:11.5px;background:var(--surface-2);padding:3px 8px;border-radius:6px;border:1px solid var(--line);}
+    .loc-isp{font-size:12px;color:var(--muted);}
+    .loc-dev{font-size:11px;color:#94a3b8;margin-top:2px;display:flex;align-items:center;gap:4px;}
+    .loc-status{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:99px;font-size:11.5px;font-weight:700;}
+    .loc-status.online{background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;}
+    .loc-status.away{background:#fffbeb;color:#b45309;border:1px solid #fde68a;}
+    .loc-status.offline{background:var(--surface-2);color:#94a3b8;border:1px solid var(--line);}
+    .loc-sdot{width:6px;height:6px;border-radius:50%;}
+    .loc-status.online .loc-sdot{background:#22c55e;animation:lsp 1.8s infinite;}
+    .loc-status.away .loc-sdot{background:#f59e0b;}
+    .loc-status.offline .loc-sdot{background:#cbd5e1;}
+    @keyframes lsp{0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,.5);}50%{box-shadow:0 0 0 3px rgba(34,197,94,0);}}
+    .loc-time{font-size:11.5px;color:var(--muted);}
+    .loc-nodata{text-align:center;padding:32px;color:var(--muted);font-size:12.5px;}
+  </style>
+
+  <!-- KPI Row -->
+  <div class="loc-kpi">
+    <div class="loc-stat" style="--lc:linear-gradient(90deg,#6366f1,#8b5cf6)">
+      <div class="lbl">Total Users Tracked</div>
+      <div class="val" style="color:#6366f1">${data.total_users}</div>
+      <div class="sub">employees + vendors</div>
+    </div>
+    <div class="loc-stat" style="--lc:linear-gradient(90deg,#10b981,#06d6a0)">
+      <div class="lbl">Online Now</div>
+      <div class="val" style="color:#10b981">${data.total_online}</div>
+      <div class="sub">active in last 5 min</div>
+    </div>
+    <div class="loc-stat" style="--lc:linear-gradient(90deg,#3b82f6,#06b6d4)">
+      <div class="lbl">Countries</div>
+      <div class="val" style="color:#3b82f6">${data.countries}</div>
+      <div class="sub">unique locations</div>
+    </div>
+    <div class="loc-stat" style="--lc:linear-gradient(90deg,var(--accent),#ef4444)">
+      <div class="lbl">Tenants</div>
+      <div class="val">${data.tenants.length}</div>
+      <div class="sub">with location data</div>
+    </div>
+  </div>
+
+  <!-- Map -->
+  <div class="loc-map-card">
+    <div class="loc-map-head">
+      <div class="loc-map-title">Live Location Map</div>
+      <div class="loc-map-right">
+        <div class="loc-legend">
+          <div class="loc-leg"><div class="loc-leg-dot" style="background:#22c55e"></div>Online</div>
+          <div class="loc-leg"><div class="loc-leg-dot" style="background:#f59e0b"></div>Away</div>
+          <div class="loc-leg"><div class="loc-leg-dot" style="background:#94a3b8"></div>Offline</div>
+        </div>
+        <div class="loc-mf">
+          <button class="loc-mf-btn on" onclick="locFilter('all',this)">All</button>
+          <button class="loc-mf-btn" onclick="locFilter('online',this)">Online</button>
+          <button class="loc-mf-btn" onclick="locFilter('offline',this)">Offline</button>
+        </div>
+        <div class="loc-live">Live</div>
+      </div>
+    </div>
+    <div id="loc-map"></div>
+  </div>
+
+  <!-- Tenant List -->
+  <div class="loc-tenants" id="locTenantList">
+    ${data.tenants.length === 0
+      ? `<div class="card"><div class="loc-nodata">No location data yet. Users need to visit the dashboard first.</div></div>`
+      : data.tenants.map((t,i) => locTenantCard(t,i)).join('')}
+  </div>`;
+
+  // Init map after DOM is ready
+  requestAnimationFrame(()=> locInitMap(data));
+}
+
+function locTenantCard(t, i){
+  const initials = t.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  const noData = t.users.length === 0;
+  return `
+  <div class="loc-tenant-card">
+    <div class="loc-tenant-head" onclick="locToggleTenant(${i})">
+      <div class="loc-tenant-av">${initials}</div>
+      <div>
+        <div class="loc-tenant-name">${esc(t.name)}</div>
+        <div class="loc-tenant-meta">${t.users.length} user${t.users.length!==1?'s':''} tracked · ${esc(t.plan)} plan</div>
+      </div>
+      <div class="loc-tenant-right">
+        ${t.online_count > 0 ? `<span class="loc-online-badge">🟢 ${t.online_count} online</span>` : ''}
+        <svg class="loc-chevron" id="loc-chev-${i}" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+    </div>
+    <div class="loc-tenant-body" id="loc-body-${i}">
+      ${noData
+        ? `<div class="loc-nodata">No location data for this tenant's users yet.</div>`
+        : `<table class="loc-tbl">
+          <thead><tr>
+            <th>User</th><th>Role</th><th>Location</th><th>IP Address</th>
+            <th>ISP / Device</th><th>Status</th><th>Last Seen</th>
+          </tr></thead>
+          <tbody>
+            ${t.users.map(u => locUserRow(u)).join('')}
+          </tbody>
+        </table>`}
+    </div>
+  </div>`;
+}
+
+function locUserRow(u){
+  const initials = u.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  const flag = FLAG_MAP[u.country_code] || '🌍';
+  const roleClass = u.role.toLowerCase() === 'owner' ? 'owner' : u.role.toLowerCase() === 'admin' ? 'admin' : 'member';
+  const avatarColors = {owner:'linear-gradient(135deg,#6366f1,#8b5cf6)', admin:'linear-gradient(135deg,#3b82f6,#06b6d4)', member:'linear-gradient(135deg,#64748b,#94a3b8)'};
+  const avBg = avatarColors[roleClass] || avatarColors.member;
+  const devIco = DEVICE_ICON[u.device_type] || DEVICE_ICON.desktop;
+  return `<tr>
+    <td>
+      <div class="loc-person">
+        <div class="loc-av" style="background:${avBg}">${initials}</div>
+        <div><div class="loc-name">${esc(u.name)}</div><div class="loc-email">${esc(u.email)}</div></div>
+      </div>
+    </td>
+    <td><span class="loc-role ${roleClass}">${esc(u.role)}</span></td>
+    <td>
+      <div class="loc-loc">
+        <div class="loc-flag">${flag}</div>
+        <div>
+          <div class="loc-city">${esc(u.city || '—')}</div>
+          <div class="loc-country">${esc(u.country || '—')}</div>
+        </div>
+      </div>
+    </td>
+    <td><span class="loc-ip">${esc(u.ip)}</span></td>
+    <td>
+      <div class="loc-isp">${esc(u.isp || '—')}</div>
+      <div class="loc-dev">${devIco} ${esc(u.browser)} · ${esc(u.os_name)}</div>
+    </td>
+    <td><span class="loc-status ${u.status}"><div class="loc-sdot"></div>${STATUS_LABEL[u.status]}</span></td>
+    <td><div class="loc-time">${esc(u.last_seen)}</div></td>
+  </tr>`;
+}
+
+function locToggleTenant(i){
+  const body = document.getElementById(`loc-body-${i}`);
+  const chev = document.getElementById(`loc-chev-${i}`);
+  if(!body) return;
+  body.classList.toggle('open');
+  chev.classList.toggle('loc-chev-open');
+}
+
+function locInitMap(data){
+  if(_locMap){ _locMap.remove(); _locMap = null; }
+  _locMap = L.map('loc-map', {center:[25,30], zoom:2, zoomControl:true, attributionControl:false});
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:18}).addTo(_locMap);
+  locRenderMarkers(data, 'all');
+}
+
+function locRenderMarkers(data, filter){
+  _locMarkers.forEach(m=>_locMap.removeLayer(m));
+  _locMarkers = [];
+
+  data.tenants.forEach(t=>{
+    t.users.forEach(u=>{
+      if(!u.lat || !u.lng) return;
+      if(filter === 'online' && u.status === 'offline') return;
+      if(filter === 'offline' && u.status === 'online') return;
+
+      const sc = STATUS_COLOR[u.status];
+      const icon = L.divIcon({
+        className:'',
+        html:`<div style="position:relative;width:14px;height:14px;">
+          <div style="width:14px;height:14px;border-radius:50%;background:#0f172a;border:2.5px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.25);"></div>
+          <div style="position:absolute;bottom:-2px;right:-2px;width:7px;height:7px;border-radius:50%;background:${sc};border:1.5px solid #fff;${u.status==='online'?'animation:lsp 1.8s infinite':''}"></div>
+        </div>`,
+        iconSize:[14,14], iconAnchor:[7,7], popupAnchor:[0,-10]
+      });
+
+      const flag = FLAG_MAP[u.country_code] || '🌍';
+      const initials = u.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+      const popup = `<div class="loc-popup">
+        <div class="loc-popup-head">
+          <div class="loc-popup-av" style="background:linear-gradient(135deg,#0f172a,#1e293b)">${initials}</div>
+          <div>
+            <div class="loc-popup-name">${esc(u.name)}</div>
+            <div class="loc-popup-sub">${esc(u.role)} · ${esc(t.name)}</div>
+          </div>
+        </div>
+        <div class="loc-popup-rows">
+          <div class="loc-popup-row">
+            <span class="loc-popup-lbl">Status</span>
+            <span class="loc-popup-val"><div class="loc-sdot" style="width:7px;height:7px;border-radius:50%;background:${sc};display:inline-block;margin-right:4px;"></div>${STATUS_LABEL[u.status]}</span>
+          </div>
+          <div class="loc-popup-row">
+            <span class="loc-popup-lbl">Location</span>
+            <span class="loc-popup-val">${flag} ${esc(u.city)}, ${esc(u.country)}</span>
+          </div>
+          <div class="loc-popup-row">
+            <span class="loc-popup-lbl">IP</span>
+            <span class="loc-popup-ip">${esc(u.ip)}</span>
+          </div>
+          <div class="loc-popup-row">
+            <span class="loc-popup-lbl">ISP</span>
+            <span class="loc-popup-val">${esc(u.isp || '—')}</span>
+          </div>
+          <div class="loc-popup-row">
+            <span class="loc-popup-lbl">Device</span>
+            <span class="loc-popup-val">${esc(u.browser)} · ${esc(u.os_name)}</span>
+          </div>
+          <div class="loc-popup-row">
+            <span class="loc-popup-lbl">Last seen</span>
+            <span class="loc-popup-val">${esc(u.last_seen)}</span>
+          </div>
+        </div>
+      </div>`;
+
+      const m = L.marker([u.lat, u.lng], {icon}).addTo(_locMap).bindPopup(popup, {maxWidth:260});
+      _locMarkers.push(m);
+    });
+  });
+}
+
+function locFilter(f, btn){
+  document.querySelectorAll('.loc-mf-btn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  if(_locMap && _locData) locRenderMarkers(_locData, f);
 }
 
 /* ═══════════════════════════════════════════════════════
