@@ -13246,6 +13246,11 @@ function htmlToPlainText(html){
   return html
     .replace(/<style[\s\S]*?<\/style>/gi, "")
     .replace(/<script[\s\S]*?<\/script>/gi, "")
+    // Strip quoted/previous-thread sections that email clients append
+    .replace(/<blockquote[\s\S]*?<\/blockquote>/gi, "")
+    .replace(/<div[^>]+class="[^"]*gmail_quote[^"]*"[\s\S]*/i, "")
+    .replace(/<div[^>]+class="[^"]*yahoo_quoted[^"]*"[\s\S]*/i, "")
+    .replace(/<hr[^>]*>/gi, "\n---\n")
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<\/p>/gi, "\n")
     .replace(/<\/div>/gi, "\n")
@@ -13304,7 +13309,7 @@ function renderThreadChat(messages){
             </div>
           </div>
           <div class="em-email-card-body">
-            <iframe id="${iframeId}" style="width:100%;border:none;min-height:120px;display:block;" scrolling="auto"></iframe>
+            <iframe id="${iframeId}" style="width:100%;border:none;min-height:40px;display:block;" scrolling="auto"></iframe>
             ${renderAttachments(attachments)}
           </div>
         </div>
@@ -13317,11 +13322,8 @@ function renderThreadChat(messages){
     const cleaned = cleanEmailMessage(rawBody);
     let mainText = cleaned.main;
     if(hasImages) mainText = mainText.replace(/\[image:[^\]]*\]/gi, "").replace(/\n{3,}/g, "\n\n").trim();
-    const bodyContent = `<div class="em-msg-text">${escapeHtml(mainText)}</div>
-      ${cleaned.quoted ? `
-        <span class="quoted-toggle" onclick="toggleQuoted('${quotedId}')">View previous conversation</span>
-        <div id="${quotedId}" class="quoted-text">${escapeHtml(cleaned.quoted)}</div>
-      ` : ""}`;
+    // Quoted content is omitted — the full thread is already visible as separate bubbles
+    const bodyContent = `<div class="em-msg-text">${escapeHtml(mainText)}</div>`;
 
     chatHTML += `
       <div class="em-msg ${isSupport ? 'em-msg-out' : 'em-msg-in'}">
