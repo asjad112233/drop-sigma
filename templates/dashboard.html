@@ -13228,9 +13228,15 @@ function renderThreadChat(messages){
     if(hasHtml){
       // ── HTML email: full-width card (renders exactly as sender sent it) ──
       const safeHtml = msg.body_html
-        .replace(/\[image:[^\]]*\]/gi, "")
-        .replace(/<script[\s\S]*?<\/script>/gi, "");
-      const iframeSrcdoc = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;line-height:1.55;color:#111827;}img{max-width:100%;height:auto;}a{color:#2563eb;}</style></head><body>${safeHtml}</body></html>`.replace(/"/g, "&quot;");
+        .replace(/<script[\s\S]*?<\/script>/gi, "");  // strip scripts only
+
+      // If body_html is already a full document, use it directly.
+      // Otherwise wrap it so email CSS/styles are preserved.
+      const isFullDoc = /<html[\s>]/i.test(safeHtml);
+      const iframeDoc = isFullDoc
+        ? safeHtml
+        : `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;padding:12px 16px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;line-height:1.6;color:#111827;}img{max-width:100%;height:auto;}a{color:#2563eb;}</style></head><body>${safeHtml}</body></html>`;
+      const iframeSrcdoc = iframeDoc.replace(/"/g, "&quot;");
       chatHTML += `
         <div class="em-email-card">
           <div class="em-email-card-hdr">
