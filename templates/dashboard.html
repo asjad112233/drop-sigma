@@ -13149,13 +13149,17 @@ function cleanEmailMessage(body){
   let text = (body || "").replace(/\r/g, "").trim();
 
   const splitPatterns = [
-    /\nOn .+ wrote:\s*/i,
-    /\nFrom:\s.+/i,
+    /\nOn .+ wrote:\s*/i,          // Gmail/Outlook reply quote
+    /\nFrom:\s.+/i,                // Forwarded email header
     /\nSent:\s.+/i,
     /\nTo:\s.+/i,
     /\nSubject:\s.+/i,
     /\n-{2,}\s*Original Message\s*-{2,}/i,
-    /\n________________________________\s*/i
+    /\n________________________________\s*/i,
+    /\n--\s*\n/,                   // Standard RFC email signature delimiter
+    /\n_{10,}/,                    // Long underscores used as dividers
+    /\nGet Outlook for/i,          // Outlook mobile footer
+    /\nSent from my/i,             // Mobile email footers
   ];
 
   let cutIndex = -1;
