@@ -3494,44 +3494,84 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
 
 /* ── Stock Section ── */
 #stockSection{padding:28px 32px;}
-.sk-topbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:22px;}
-.sk-topbar h1{font-size:26px;font-weight:900;color:var(--vf-text);margin:0;letter-spacing:-.5px;}
-.sk-topbar p{margin:0;color:var(--vf-muted);font-size:13px;}
-.sk-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:22px;}
-.sk-stat{background:var(--vf-surface);border:1px solid var(--vf-line);border-radius:20px;padding:18px 20px;box-shadow:var(--vf-shadow);}
-.sk-stat span{display:block;font-size:11px;font-weight:700;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;}
-.sk-stat b{font-size:26px;font-weight:900;color:var(--vf-text);}
-.sk-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:18px;}
-.sk-search{flex:1;min-width:180px;padding:10px 14px;border:1px solid var(--vf-line);border-radius:14px;background:var(--vf-surface);color:var(--vf-text);font-size:13px;outline:none;}
-.sk-tab{padding:8px 18px;border-radius:14px;border:1px solid var(--vf-line);background:var(--vf-surface);color:var(--vf-muted);font-size:12px;font-weight:800;cursor:pointer;transition:.15s;}
-.sk-tab.active{background:linear-gradient(135deg,#35cfff,#8b5cf6);color:#fff;border-color:transparent;}
-.sk-table-wrap{border-radius:22px;overflow:auto;background:var(--vf-surface);border:1px solid var(--vf-line);box-shadow:var(--vf-shadow);max-height:calc(100vh - 340px);min-height:200px;}
+.sk-topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:28px;flex-wrap:wrap;}
+.sk-topbar-left h1{font-size:24px;font-weight:900;color:var(--vf-text);margin:0;letter-spacing:-.4px;}
+.sk-topbar-left p{margin:3px 0 0;color:var(--vf-muted);font-size:13.5px;}
+.sk-topbar-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+/* Stock action buttons */
+.sk-btn{display:inline-flex;align-items:center;gap:6px;padding:9px 15px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .18s;white-space:nowrap;font-family:inherit;}
+.sk-btn svg{width:14px;height:14px;flex-shrink:0;}
+.sk-btn-primary{background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;box-shadow:0 2px 8px rgba(99,102,241,.30);}
+.sk-btn-primary:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(99,102,241,.38);}
+.sk-btn-success{background:linear-gradient(135deg,#10b981,#059669);color:#fff;box-shadow:0 2px 8px rgba(16,185,129,.28);}
+.sk-btn-success:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(16,185,129,.36);}
+.sk-btn-outline{background:var(--vf-surface);color:var(--vf-text);border:1.5px solid var(--vf-line);box-shadow:0 1px 3px rgba(0,0,0,.06);}
+.sk-btn-outline:hover{border-color:#6366f1;color:#6366f1;background:rgba(99,102,241,.05);}
+.sk-btn-ghost{background:transparent;color:var(--vf-muted);border:1.5px solid var(--vf-line);}
+.sk-btn-ghost:hover{background:var(--vf-surface);color:var(--vf-text);}
+.sk-btn-drop::after{content:'';display:inline-block;width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:5px solid currentColor;margin-left:2px;opacity:.65;}
+/* Stats */
+.sk-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:28px;}
+.sk-stat{background:var(--vf-surface);border:1.5px solid var(--vf-line);border-radius:14px;padding:20px 20px 16px;box-shadow:var(--vf-shadow);position:relative;overflow:hidden;transition:box-shadow .2s,transform .2s;}
+.sk-stat:hover{transform:translateY(-2px);box-shadow:0 4px 24px rgba(99,102,241,.10);}
+.sk-stat::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--sk-accent,#6366f1);border-radius:14px 14px 0 0;}
+.sk-stat.sk-green::before{--sk-accent:#10b981;}.sk-stat.sk-orange::before{--sk-accent:#f59e0b;}.sk-stat.sk-red::before{--sk-accent:#ef4444;}.sk-stat.sk-blue::before{--sk-accent:#3b82f6;}
+.sk-stat span{display:block;font-size:11px;font-weight:700;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px;}
+.sk-stat b{font-size:32px;font-weight:900;color:var(--vf-text);letter-spacing:-1px;line-height:1;}
+.sk-stat.sk-orange b{color:#f59e0b;}.sk-stat.sk-red b{color:#ef4444;}
+.sk-stat-icon{position:absolute;right:14px;top:14px;width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;background:rgba(99,102,241,.1);}
+.sk-stat.sk-green .sk-stat-icon{background:rgba(16,185,129,.1);}.sk-stat.sk-orange .sk-stat-icon{background:rgba(245,158,11,.1);}.sk-stat.sk-red .sk-stat-icon{background:rgba(239,68,68,.1);}.sk-stat.sk-blue .sk-stat-icon{background:rgba(59,130,246,.1);}
+.sk-stat-sub{font-size:11.5px;color:var(--vf-muted);margin-top:6px;}
+/* Main card */
+.sk-main-card{background:var(--vf-surface);border-radius:14px;border:1.5px solid var(--vf-line);box-shadow:var(--vf-shadow);overflow:hidden;}
+/* Tabs bar — main navigation tabs */
+.sk-tabs-bar{display:flex;align-items:center;padding:0 20px;border-bottom:1.5px solid var(--vf-line);background:var(--vf-surface-2);}
+.sk-tabs-row{display:flex;gap:2px;}
+.sk-tabs-row .sk-tab{padding:14px 18px;border-radius:0;border:none;background:transparent;color:var(--vf-muted);font-size:13.5px;font-weight:600;cursor:pointer;border-bottom:2.5px solid transparent;margin-bottom:-1.5px;transition:all .15s;white-space:nowrap;}
+.sk-tabs-row .sk-tab.active{color:#6366f1;border-bottom-color:#6366f1;background:transparent;}
+.sk-tabs-row .sk-tab:hover:not(.active){color:var(--vf-text);}
+/* Toolbar inside panels */
+.sk-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:14px 20px;border-bottom:1.5px solid var(--vf-line);}
+.sk-search-wrap{flex:1;min-width:200px;position:relative;}
+.sk-search-wrap svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--vf-muted);width:15px;height:15px;pointer-events:none;}
+.sk-search{width:100%;padding:9px 12px 9px 36px;border:1.5px solid var(--vf-line);border-radius:8px;background:var(--vf-surface-2);color:var(--vf-text);font-size:13.5px;outline:none;transition:border-color .15s,box-shadow .15s;font-family:inherit;box-sizing:border-box;}
+.sk-search:focus{border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.10);background:var(--vf-surface);}
+/* Filter chip tabs inside panels */
+.sk-filter-row{display:flex;gap:6px;flex-wrap:wrap;}
+.sk-filter-row .sk-tab{padding:7px 14px;border-radius:20px;border:1.5px solid var(--vf-line);background:var(--vf-surface);color:var(--vf-muted);font-size:12.5px;font-weight:600;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;}
+.sk-filter-row .sk-tab.active{background:#6366f1!important;border-color:#6366f1!important;color:#fff!important;}
+.sk-filter-row .sk-tab:hover:not(.active){border-color:#6366f1;}
+/* Table */
+.sk-table-wrap{overflow:auto;background:var(--vf-surface);max-height:calc(100vh - 380px);min-height:200px;}
 .sk-table-wrap::-webkit-scrollbar{width:6px;height:6px;}
 .sk-table-wrap::-webkit-scrollbar-thumb{background:rgba(148,163,184,.4);border-radius:999px;}
 .sk-table{width:100%;border-collapse:collapse;font-size:13px;}
-.sk-table th{padding:12px 16px;text-align:left;font-size:11px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--vf-line);position:sticky;top:0;background:var(--vf-surface-2);z-index:2;}
-.sk-table td{padding:12px 16px;border-bottom:1px solid var(--vf-line);color:var(--vf-text);vertical-align:middle;}
+.sk-table th{padding:11px 16px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--vf-muted);background:var(--vf-surface-2);border-bottom:1.5px solid var(--vf-line);position:sticky;top:0;z-index:2;white-space:nowrap;}
+.sk-table th:first-child{padding-left:20px;}
+.sk-table td{padding:13px 16px;border-bottom:1px solid var(--vf-line);color:var(--vf-text);vertical-align:middle;}
+.sk-table td:first-child{padding-left:20px;}
 .sk-table tr:last-child td{border-bottom:none;}
-.sk-table tr:hover td{background:var(--vf-surface-2);}
-.sk-badge{display:inline-block;padding:2px 10px;border-radius:999px;font-size:10px;font-weight:800;}
-.sk-badge.ok{background:#dcfce7;color:#166534;}
-.sk-badge.low{background:#fef9c3;color:#854d0e;}
-.sk-badge.out{background:#fee2e2;color:#991b1b;}
+.sk-table tbody tr:hover td{background:var(--vf-surface-2);}
+/* Status badges */
+.sk-badge{display:inline-flex;align-items:center;gap:4px;padding:5px 11px;border-radius:20px;font-size:11.5px;font-weight:700;}
+.sk-badge::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor;}
+.sk-badge.ok{background:#d1fae5;color:#059669;}
+.sk-badge.low{background:#fef3c7;color:#d97706;}
+.sk-badge.out{background:#fee2e2;color:#dc2626;}
+/* Audit action chips */
+.sk-action-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;font-size:11.5px;font-weight:700;white-space:nowrap;}
+.sk-action-chip.add{background:#d1fae5;color:#059669;}
+.sk-action-chip.deduct{background:#fee2e2;color:#dc2626;}
+.sk-action-chip.adjust{background:#ede9fe;color:#7c3aed;}
+.sk-action-chip.sync{background:#f1f5f9;color:#64748b;}
+.sk-action-chip.reserve{background:#fef3c7;color:#92400e;}
+.sk-action-chip.restore{background:#ede9fe;color:#5b21b6;}
+/* Variant expand row */
 .sk-expand-row{background:var(--vf-surface-2)!important;}
 .sk-variant-table{width:100%;border-collapse:collapse;font-size:12px;margin:0;}
 .sk-variant-table th{padding:8px 16px;text-align:left;font-size:10px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.06em;}
 .sk-variant-table td{padding:8px 16px;color:var(--vf-text);}
 .sk-qty-input{width:72px;padding:5px 8px;border:1px solid var(--vf-line);border-radius:8px;background:var(--vf-panel);color:var(--vf-text);font-size:12px;font-weight:700;text-align:center;}
-.sk-audit-wrap{margin-top:20px;}
-.sk-audit-row{display:grid;grid-template-columns:160px 1fr 80px 80px 120px;gap:12px;padding:10px 16px;border-bottom:1px solid var(--vf-line);font-size:12px;align-items:center;}
-.sk-audit-row:last-child{border-bottom:none;}
-.sk-action-chip{display:inline-block;padding:2px 9px;border-radius:999px;font-size:10px;font-weight:800;}
-.sk-action-chip.add{background:#dcfce7;color:#166534;}
-.sk-action-chip.deduct{background:#fee2e2;color:#991b1b;}
-.sk-action-chip.adjust{background:#e0e7ff;color:#3730a3;}
-.sk-action-chip.sync{background:#f3f4f6;color:#6b7280;}
-.sk-action-chip.reserve{background:#fef3c7;color:#92400e;}
-.sk-action-chip.restore{background:#ede9fe;color:#5b21b6;}
 /* ── Tracking Queue redesign ── */
 .tq-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;gap:16px;flex-wrap:wrap;}
 .tq-header-left h1{font-size:22px;font-weight:900;color:var(--vf-text);letter-spacing:-.3px;}
@@ -6041,139 +6081,197 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
 
     <!-- ══════════════════ STOCK MANAGEMENT SECTION ══════════════════ -->
     <section id="stockSection" class="section">
+
+      <!-- Header -->
       <div class="sk-topbar">
-        <div>
-          <h1>Stock Management</h1>
+        <div class="sk-topbar-left">
+          <h1>📦 Stock Management</h1>
           <p>Track inventory levels, sync products, and manage stock across stores.</p>
         </div>
-        <div class="actions" style="margin-top:0;display:flex;gap:10px;flex-wrap:wrap;">
-          <button class="btn" style="background:linear-gradient(135deg,#35cfff,#8b5cf6);color:#fff;border:none;" onclick="openSkImportModal()">⬇ Import from Store</button>
-          <button class="btn green" onclick="openSkAddModal()">+ Add Stock</button>
+        <div class="sk-topbar-actions">
+          <button class="sk-btn sk-btn-outline" onclick="openSkImportModal()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+            Import from Store
+          </button>
+          <button class="sk-btn sk-btn-success" onclick="openSkAddModal()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add Stock
+          </button>
           <div style="position:relative;display:inline-block;" id="skImportFileWrap">
-            <button class="btn" onclick="skToggleImportFileMenu()" style="background:var(--vf-surface-2);">⬆ Import ▾</button>
+            <button class="sk-btn sk-btn-outline sk-btn-drop" onclick="skToggleImportFileMenu()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 8l-5-5-5 5M12 3v12"/></svg>
+              Import
+            </button>
             <div id="skImportFileMenu" style="display:none;position:absolute;top:calc(100% + 6px);left:0;background:var(--vf-panel);border:1px solid var(--vf-line);border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,.12);min-width:180px;overflow:hidden;z-index:999;">
               <button onclick="openSkBulkModal('csv')" style="display:block;width:100%;padding:11px 16px;text-align:left;background:none;border:none;font-size:13px;font-weight:700;color:var(--vf-text);cursor:pointer;" onmouseover="this.style.background='var(--vf-surface-2)'" onmouseout="this.style.background=''">📄 Import CSV</button>
               <button onclick="openSkBulkModal('xlsx')" style="display:block;width:100%;padding:11px 16px;text-align:left;background:none;border:none;font-size:13px;font-weight:700;color:var(--vf-text);cursor:pointer;" onmouseover="this.style.background='var(--vf-surface-2)'" onmouseout="this.style.background=''">📊 Import Excel (.xlsx)</button>
             </div>
           </div>
           <div style="position:relative;display:inline-block;" id="skExportWrap">
-            <button class="btn" onclick="skToggleExportMenu()" style="background:var(--vf-surface-2);">⬇ Export ▾</button>
+            <button class="sk-btn sk-btn-outline sk-btn-drop" onclick="skToggleExportMenu()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 10l5 5 5-5M12 15V3"/></svg>
+              Export
+            </button>
             <div id="skExportMenu" style="display:none;position:absolute;top:calc(100% + 6px);right:0;background:var(--vf-panel);border:1px solid var(--vf-line);border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,.12);min-width:160px;overflow:hidden;z-index:999;">
               <button onclick="skExport('csv')" style="display:block;width:100%;padding:11px 16px;text-align:left;background:none;border:none;font-size:13px;font-weight:700;color:var(--vf-text);cursor:pointer;" onmouseover="this.style.background='var(--vf-surface-2)'" onmouseout="this.style.background=''">📄 Export as CSV</button>
               <button onclick="skExport('xlsx')" style="display:block;width:100%;padding:11px 16px;text-align:left;background:none;border:none;font-size:13px;font-weight:700;color:var(--vf-text);cursor:pointer;" onmouseover="this.style.background='var(--vf-surface-2)'" onmouseout="this.style.background=''">📊 Export as Excel</button>
             </div>
           </div>
-          <button class="btn" onclick="skRefresh()" style="background:var(--vf-surface-2);">↻ Refresh</button>
+          <button class="sk-btn sk-btn-ghost" onclick="skRefresh()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+            Refresh
+          </button>
         </div>
       </div>
 
       <!-- Stats -->
       <div class="sk-stats">
-        <div class="sk-stat"><span>Total Products</span><b id="skStatProducts">—</b></div>
-        <div class="sk-stat"><span>Total Variants</span><b id="skStatVariants">—</b></div>
-        <div class="sk-stat"><span>Total Units</span><b id="skStatQty">—</b></div>
-        <div class="sk-stat"><span style="color:#f59e0b;">⚠ Low Stock (≤5)</span><b id="skStatLow" style="color:#f59e0b;">—</b></div>
-        <div class="sk-stat"><span style="color:#ef4444;">✕ Out of Stock</span><b id="skStatOut" style="color:#ef4444;">—</b></div>
+        <div class="sk-stat">
+          <div class="sk-stat-icon">📦</div>
+          <span>Total Products</span>
+          <b id="skStatProducts">—</b>
+          <div class="sk-stat-sub">Across all stores</div>
+        </div>
+        <div class="sk-stat sk-blue">
+          <div class="sk-stat-icon">🗂️</div>
+          <span>Total Variants</span>
+          <b id="skStatVariants">—</b>
+          <div class="sk-stat-sub">SKUs tracked</div>
+        </div>
+        <div class="sk-stat sk-green">
+          <div class="sk-stat-icon">✅</div>
+          <span>Total Units</span>
+          <b id="skStatQty">—</b>
+          <div class="sk-stat-sub">In stock</div>
+        </div>
+        <div class="sk-stat sk-orange">
+          <div class="sk-stat-icon">⚠️</div>
+          <span>Low Stock (≤5)</span>
+          <b id="skStatLow">—</b>
+          <div class="sk-stat-sub">Below threshold</div>
+        </div>
+        <div class="sk-stat sk-red">
+          <div class="sk-stat-icon">❌</div>
+          <span>Out of Stock</span>
+          <b id="skStatOut">—</b>
+          <div class="sk-stat-sub">Needs restocking</div>
+        </div>
       </div>
 
-      <!-- Sub-tabs -->
-      <div style="display:flex;gap:8px;margin-bottom:18px;">
-        <button class="sk-tab active" id="skTabOrders" onclick="skSwitchTab('orders')">Stock Orders</button>
-        <button class="sk-tab" id="skTabProducts" onclick="skSwitchTab('products')">Products</button>
-        <button class="sk-tab" id="skTabAudit" onclick="skSwitchTab('audit')">Audit Log</button>
-      </div>
+      <!-- Main card with tabs -->
+      <div class="sk-main-card">
 
-      <!-- Bulk action bar (appears when rows selected) -->
-      <div id="skBulkBar" style="display:none;position:sticky;top:0;z-index:10;background:linear-gradient(135deg,#35cfff22,#8b5cf622);border:1.5px solid #8b5cf6;border-radius:16px;padding:12px 18px;margin-bottom:14px;align-items:center;gap:14px;flex-wrap:wrap;">
-        <span id="skBulkCount" style="font-weight:900;font-size:13px;color:#6d28d9;"></span>
-        <button class="btn" onclick="openSkBulkUpdateModal()" style="background:#7c3aed;color:#fff;border:none;font-size:12px;padding:7px 16px;">✏ Update Quantity</button>
-        <button class="btn" onclick="skDeselectAll()" style="background:var(--vf-surface-2);font-size:12px;padding:7px 14px;">✕ Deselect All</button>
-      </div>
-
-      <!-- Products panel -->
-      <div id="skPanelProducts" style="display:none;">
-        <div class="sk-toolbar">
-          <input class="sk-search" id="skSearch" type="text" placeholder="Search product name or SKU…" oninput="skFilterProducts()">
-          <div style="display:flex;gap:6px;">
-            <button class="sk-tab active" id="skF_all" onclick="skSetStockFilter('all',this)">All</button>
-            <button class="sk-tab" id="skF_low" onclick="skSetStockFilter('low',this)" style="color:#f59e0b;">Low</button>
-            <button class="sk-tab" id="skF_out" onclick="skSetStockFilter('out',this)" style="color:#ef4444;">Out</button>
+        <!-- Tabs bar -->
+        <div class="sk-tabs-bar">
+          <div class="sk-tabs-row">
+            <button class="sk-tab active" id="skTabOrders" onclick="skSwitchTab('orders')">Stock Orders</button>
+            <button class="sk-tab" id="skTabProducts" onclick="skSwitchTab('products')">Products</button>
+            <button class="sk-tab" id="skTabAudit" onclick="skSwitchTab('audit')">Audit Log</button>
           </div>
         </div>
 
-        <div class="sk-table-wrap">
-          <table class="sk-table">
-            <thead>
-              <tr>
-                <th style="width:36px;"><input type="checkbox" id="skSelectAll" onchange="skToggleSelectAll(this.checked)" style="width:15px;height:15px;cursor:pointer;"></th>
-                <th>Product</th>
-                <th>SKU</th>
-                <th>Store</th>
-                <th>Variants</th>
-                <th>Total Units</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody id="skProductsBody">
-              <tr><td colspan="8" style="text-align:center;padding:40px;color:var(--vf-muted);">Loading…</td></tr>
-            </tbody>
-          </table>
+        <!-- Bulk action bar (appears when product rows selected) -->
+        <div id="skBulkBar" style="display:none;align-items:center;gap:12px;padding:10px 20px;background:rgba(99,102,241,.07);border-bottom:1.5px solid rgba(99,102,241,.2);flex-wrap:wrap;">
+          <span id="skBulkCount" style="font-weight:800;font-size:13px;color:#6d28d9;"></span>
+          <button class="btn" onclick="openSkBulkUpdateModal()" style="background:#7c3aed;color:#fff;border:none;font-size:12px;padding:7px 16px;">✏ Update Quantity</button>
+          <button class="btn" onclick="skDeselectAll()" style="background:var(--vf-surface-2);font-size:12px;padding:7px 14px;">✕ Deselect All</button>
         </div>
-      </div>
 
-      <!-- Stock Orders panel -->
-      <div id="skPanelOrders">
-        <!-- toolbar -->
-        <div class="sk-toolbar" style="margin-bottom:14px;">
-          <input class="sk-search" id="soSearch" type="text" placeholder="Search order #, customer, product…" oninput="soFilterOrders()">
-          <div style="display:flex;gap:6px;">
-            <button class="sk-tab" id="soF_all"          onclick="soSetFilter('all',this)">All <span id="soCntAll" style="margin-left:4px;background:rgba(100,116,139,.15);border-radius:20px;padding:1px 7px;font-size:10px;"></span></button>
-            <button class="sk-tab active" id="soF_no_tracking" onclick="soSetFilter('no_tracking',this)" style="color:#f59e0b;">No Tracking <span id="soCntNoTrack" style="margin-left:4px;background:rgba(245,158,11,.15);border-radius:20px;padding:1px 7px;font-size:10px;"></span></button>
-            <button class="sk-tab" id="soF_completed"   onclick="soSetFilter('completed',this)"  style="color:#22c55e;">✅ Completed <span id="soCntCompleted" style="margin-left:4px;background:rgba(34,197,94,.15);border-radius:20px;padding:1px 7px;font-size:10px;"></span></button>
+        <!-- Products Panel -->
+        <div id="skPanelProducts" style="display:none;">
+          <div class="sk-toolbar">
+            <div class="sk-search-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input class="sk-search" id="skSearch" type="text" placeholder="Search product name or SKU…" oninput="skFilterProducts()">
+            </div>
+            <div class="sk-filter-row">
+              <button class="sk-tab active" id="skF_all" onclick="skSetStockFilter('all',this)">All</button>
+              <button class="sk-tab" id="skF_low" onclick="skSetStockFilter('low',this)">⚠ Low</button>
+              <button class="sk-tab" id="skF_out" onclick="skSetStockFilter('out',this)">✕ Out</button>
+            </div>
+          </div>
+          <div class="sk-table-wrap">
+            <table class="sk-table">
+              <thead>
+                <tr>
+                  <th style="width:40px;"><input type="checkbox" id="skSelectAll" onchange="skToggleSelectAll(this.checked)" style="width:15px;height:15px;cursor:pointer;accent-color:#6366f1;"></th>
+                  <th>Product</th>
+                  <th>SKU</th>
+                  <th>Store</th>
+                  <th style="text-align:center;">Variants</th>
+                  <th style="text-align:center;">Total Units</th>
+                  <th>Status</th>
+                  <th style="text-align:right;padding-right:20px;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="skProductsBody">
+                <tr><td colspan="8" style="text-align:center;padding:48px;color:var(--vf-muted);">Loading…</td></tr>
+              </tbody>
+            </table>
           </div>
         </div>
 
-        <div class="sk-table-wrap">
-          <table class="sk-table" style="min-width:900px;">
-            <thead>
-              <tr>
-                <th>Order</th>
-                <th>Customer</th>
-                <th>Assigned Stock</th>
-                <th>Order Status</th>
-                <th>Tracking</th>
-                <th>Auto Rule</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody id="soOrdersBody">
-              <tr><td colspan="7" style="text-align:center;padding:40px;color:var(--vf-muted);">Loading…</td></tr>
-            </tbody>
-          </table>
+        <!-- Stock Orders Panel -->
+        <div id="skPanelOrders">
+          <div class="sk-toolbar">
+            <div class="sk-search-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input class="sk-search" id="soSearch" type="text" placeholder="Search order #, customer, product…" oninput="soFilterOrders()">
+            </div>
+            <div class="sk-filter-row">
+              <button class="sk-tab" id="soF_all" onclick="soSetFilter('all',this)">All <span id="soCntAll" style="background:rgba(100,116,139,.15);border-radius:20px;padding:1px 7px;font-size:10px;"></span></button>
+              <button class="sk-tab active" id="soF_no_tracking" onclick="soSetFilter('no_tracking',this)">No Tracking <span id="soCntNoTrack" style="background:rgba(245,158,11,.15);border-radius:20px;padding:1px 7px;font-size:10px;"></span></button>
+              <button class="sk-tab" id="soF_completed" onclick="soSetFilter('completed',this)">✅ Completed <span id="soCntCompleted" style="background:rgba(34,197,94,.15);border-radius:20px;padding:1px 7px;font-size:10px;"></span></button>
+            </div>
+          </div>
+          <div class="sk-table-wrap">
+            <table class="sk-table" style="min-width:900px;">
+              <thead>
+                <tr>
+                  <th>Order</th>
+                  <th>Customer</th>
+                  <th>Assigned Stock</th>
+                  <th>Order Status</th>
+                  <th>Tracking</th>
+                  <th>Auto Rule</th>
+                  <th style="text-align:right;padding-right:20px;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="soOrdersBody">
+                <tr><td colspan="7" style="text-align:center;padding:48px;color:var(--vf-muted);">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
 
-      <!-- Audit Log panel -->
-      <div id="skPanelAudit" style="display:none;">
-        <div class="sk-table-wrap">
-          <table class="sk-table" style="min-width:780px;">
-            <thead>
-              <tr>
-                <th style="width:140px;">Time</th>
-                <th>Product / Variant</th>
-                <th style="width:130px;">Action</th>
-                <th style="width:130px;">Qty Change</th>
-                <th style="width:130px;">Actor</th>
-                <th>Note</th>
-              </tr>
-            </thead>
-            <tbody id="skAuditBody">
-              <tr><td colspan="6" style="text-align:center;padding:40px;color:var(--vf-muted);">Loading audit log…</td></tr>
-            </tbody>
-          </table>
+        <!-- Audit Log Panel -->
+        <div id="skPanelAudit" style="display:none;">
+          <div class="sk-toolbar">
+            <div class="sk-search-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input class="sk-search" type="text" placeholder="Search product, actor, action…" oninput="">
+            </div>
+          </div>
+          <div class="sk-table-wrap">
+            <table class="sk-table" style="min-width:780px;">
+              <thead>
+                <tr>
+                  <th style="width:140px;">Time</th>
+                  <th>Product / Variant</th>
+                  <th style="width:160px;">Action</th>
+                  <th style="width:160px;">Qty Change</th>
+                  <th style="width:130px;">Actor</th>
+                  <th>Note</th>
+                </tr>
+              </thead>
+              <tbody id="skAuditBody">
+                <tr><td colspan="6" style="text-align:center;padding:48px;color:var(--vf-muted);">Loading audit log…</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+
+      </div><!-- /sk-main-card -->
     </section>
     <!-- ══════════════════ END STOCK SECTION ══════════════════ -->
 
@@ -6538,8 +6636,44 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
     <h2 style="margin:0 0 4px;font-size:20px;font-weight:900;color:var(--vf-text);">Import from Store</h2>
     <p style="margin:0 0 18px;font-size:12px;color:var(--vf-muted);">Fetch live products from your store and select which ones to import into stock.</p>
 
-    <div id="skImportLoading" style="text-align:center;padding:40px;color:var(--vf-muted);display:none;">
-      <div style="font-size:28px;margin-bottom:8px;">⏳</div>Fetching products from store…
+    <div id="skImportLoading" style="display:none;">
+      <style>
+        @keyframes skShimmer{0%{background-position:-600px 0}100%{background-position:600px 0}}
+        @keyframes skPulseRing{0%,100%{transform:scale(1);opacity:.4}50%{transform:scale(1.15);opacity:.9}}
+        @keyframes skBarFill{0%{width:0%}100%{width:92%}}
+        @keyframes skFadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+        .sk-shimmer-row{height:58px;border-radius:12px;background:linear-gradient(90deg,var(--vf-surface-2) 25%,var(--vf-line) 50%,var(--vf-surface-2) 75%);background-size:600px 100%;animation:skShimmer 1.4s infinite linear;margin-bottom:10px;}
+        .sk-shimmer-row:nth-child(2){animation-delay:.15s;opacity:.85;}
+        .sk-shimmer-row:nth-child(3){animation-delay:.3s;opacity:.7;}
+        .sk-shimmer-row:nth-child(4){animation-delay:.45s;opacity:.55;}
+        .sk-shimmer-row:nth-child(5){animation-delay:.6s;opacity:.4;}
+        .sk-imp-bar-track{height:5px;background:var(--vf-line);border-radius:999px;overflow:hidden;margin:14px 0 6px;}
+        .sk-imp-bar-fill{height:100%;background:linear-gradient(90deg,#6366f1,#8b5cf6);border-radius:999px;animation:skBarFill 3.5s cubic-bezier(.4,0,.2,1) forwards;}
+        .sk-imp-pulse{width:52px;height:52px;border-radius:50%;background:rgba(99,102,241,.12);display:flex;align-items:center;justify-content:center;font-size:26px;animation:skPulseRing 1.8s ease-in-out infinite;margin:0 auto 16px;}
+        .sk-imp-msg{font-size:13.5px;font-weight:600;color:var(--vf-text);text-align:center;min-height:20px;animation:skFadeUp .4s ease;}
+        .sk-imp-sub{font-size:12px;color:var(--vf-muted);text-align:center;margin-top:4px;}
+      </style>
+
+      <!-- Pulse icon -->
+      <div class="sk-imp-pulse">🏪</div>
+
+      <!-- Rotating status message -->
+      <div class="sk-imp-msg" id="skImportMsgText">Connecting to store…</div>
+      <div class="sk-imp-sub">This usually takes a few seconds</div>
+
+      <!-- Progress bar -->
+      <div class="sk-imp-bar-track">
+        <div class="sk-imp-bar-fill" id="skImportBarFill"></div>
+      </div>
+
+      <!-- Skeleton product rows -->
+      <div style="margin-top:18px;">
+        <div class="sk-shimmer-row"></div>
+        <div class="sk-shimmer-row"></div>
+        <div class="sk-shimmer-row"></div>
+        <div class="sk-shimmer-row"></div>
+        <div class="sk-shimmer-row"></div>
+      </div>
     </div>
     <div id="skImportError" style="display:none;padding:14px;background:#fef2f2;border-radius:14px;color:#dc2626;font-size:13px;font-weight:700;margin-bottom:16px;"></div>
 
@@ -16401,7 +16535,7 @@ function selectChannel(id, name, desc){
   const el=document.getElementById("tcCh_"+id);
   if(el){ el.classList.add("active"); el.querySelector(".tc-unread-badge")?.remove(); }
   document.getElementById("tcChName").textContent=name;
-  document.getElementById("tcChDesc").textContent=desc==="Direct Message"?`🔒 Private conversation (ch:${id})`:desc||"";
+  document.getElementById("tcChDesc").textContent=desc==="Direct Message"?"🔒 Private conversation":desc||"";
   document.getElementById("chatInput").dataset.placeholder=(desc==="Direct Message"?`Message ${name}…`:`Message #${name}…`);
   const hashEl = document.getElementById("tcChHash");
   if(hashEl) hashEl.style.display = _tcCurrentChannelIsDm ? "none" : "";
@@ -18193,6 +18327,37 @@ async function submitSkBulkUpdate(){
 }
 
 // ── Import from Store Modal ──
+let _skImportMsgTimer = null;
+const _SK_IMPORT_MSGS = [
+  "Connecting to store…",
+  "Fetching product catalog…",
+  "Loading variants & SKUs…",
+  "Syncing inventory data…",
+  "Almost there…",
+];
+
+function _skStartImportLoader(){
+  const el = document.getElementById("skImportMsgText");
+  const bar = document.getElementById("skImportBarFill");
+  // Reset bar animation by cloning
+  if(bar){ const b2 = bar.cloneNode(true); bar.parentNode.replaceChild(b2, bar); }
+  let idx = 0;
+  if(el) el.textContent = _SK_IMPORT_MSGS[0];
+  _skImportMsgTimer = setInterval(()=>{
+    idx = (idx + 1) % _SK_IMPORT_MSGS.length;
+    if(el){
+      el.style.animation = "none";
+      el.offsetHeight; // reflow
+      el.style.animation = "";
+      el.textContent = _SK_IMPORT_MSGS[idx];
+    }
+  }, 900);
+}
+
+function _skStopImportLoader(){
+  if(_skImportMsgTimer){ clearInterval(_skImportMsgTimer); _skImportMsgTimer = null; }
+}
+
 async function openSkImportModal(){
   const storeId = selectedStoreId;
   if(!storeId){ alert("Please select a store from the sidebar first."); return; }
@@ -18203,10 +18368,12 @@ async function openSkImportModal(){
   document.getElementById("skImportError").style.display = "none";
   document.getElementById("skImportResult").style.display = "none";
   _skImportProducts = [];
+  _skStartImportLoader();
 
   try{
     const r = await fetch(`/stock/fetch-products/?store_id=${storeId}`);
     const d = await r.json();
+    _skStopImportLoader();
     document.getElementById("skImportLoading").style.display = "none";
     if(!d.success){
       document.getElementById("skImportError").textContent = d.message || "Failed to fetch products.";
@@ -18218,6 +18385,7 @@ async function openSkImportModal(){
     document.getElementById("skImportList").style.display = "block";
     document.getElementById("skImportCount").textContent = `${_skImportProducts.length} products found`;
   }catch(e){
+    _skStopImportLoader();
     document.getElementById("skImportLoading").style.display = "none";
     document.getElementById("skImportError").textContent = "Network error fetching products.";
     document.getElementById("skImportError").style.display = "block";
@@ -18225,6 +18393,7 @@ async function openSkImportModal(){
 }
 
 function closeSkImportModal(){
+  _skStopImportLoader();
   document.getElementById("skImportModal").style.display = "none";
 }
 

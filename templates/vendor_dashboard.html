@@ -1736,7 +1736,7 @@ function vcSelectChannel(id, name, desc){
   const el=document.getElementById("vcCh_"+id);
   if(el){ el.classList.add("active"); el.querySelector(".vc-unread-badge")?.remove(); }
   document.getElementById("vcChName").textContent=name;
-  document.getElementById("vcChDesc").textContent=desc==="Direct Message"?`🔒 Private conversation (ch:${id})`:desc||"";
+  document.getElementById("vcChDesc").textContent=desc==="Direct Message"?"🔒 Private conversation":desc||"";
   document.getElementById("vcChatInput").dataset.placeholder=(desc==="Direct Message"?`Message ${name}…`:`Message #${name}…`);
   const avatarsEl = document.getElementById("vcMembersAvatars");
   if(avatarsEl) avatarsEl.style.display = _vcCurrentChannelIsDm ? "none" : "flex";
