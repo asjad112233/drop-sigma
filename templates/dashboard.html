@@ -3655,6 +3655,116 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
 .tq-reject-box .tq-reject-btns{display:flex;gap:10px;margin-top:14px;justify-content:flex-end;}
 @media(max-width:900px){.tq-stats{flex-wrap:wrap;}.tq-controls{flex-wrap:wrap;}.tq-controls-right{margin-left:0;width:100%;justify-content:space-between;}}
 
+/* ===== PREMIUM COMPACT INBOX v2 — FINAL OVERRIDE ===== */
+#emailsSection.active{display:flex!important;flex-direction:column!important;height:calc(100vh - 36px)!important;min-height:0!important;overflow:hidden!important;padding:0!important;gap:0!important;}
+.em-hdr{flex-shrink:0!important;margin-bottom:0!important;padding:0!important;background:var(--vf-surface)!important;}
+.em-hdr-top{height:48px!important;min-height:48px!important;display:flex!important;align-items:center!important;justify-content:space-between!important;padding:0 16px!important;gap:10px!important;margin:0!important;border-bottom:1px solid var(--vf-line)!important;background:var(--vf-surface)!important;}
+.em-hdr-left{display:flex!important;align-items:center!important;gap:8px!important;}
+.em-hdr-h1{font-size:14px!important;font-weight:700!important;margin:0!important;letter-spacing:0!important;display:flex!important;align-items:center!important;gap:8px!important;}
+.em-hdr-sub{display:none!important;}
+.em-live-chip{display:inline-flex!important;align-items:center!important;gap:5px!important;font-size:11.5px!important;font-weight:400!important;color:var(--vf-muted)!important;}
+.em-live-dot{width:7px!important;height:7px!important;border-radius:50%!important;background:#10b981!important;box-shadow:0 0 0 2px rgba(16,185,129,.2)!important;animation:emLivePulse 2s infinite!important;flex-shrink:0!important;}
+@keyframes emLivePulse{0%,100%{box-shadow:0 0 0 2px rgba(16,185,129,.2)}50%{box-shadow:0 0 0 4px rgba(16,185,129,.08)}}
+.em-nav-chips{display:flex!important;align-items:center!important;gap:5px!important;}
+.em-nav-chip{height:30px!important;padding:0 13px!important;border-radius:999px!important;border:1px solid var(--vf-line)!important;background:var(--vf-surface)!important;color:var(--vf-muted)!important;font-size:12px!important;font-weight:500!important;cursor:pointer!important;display:inline-flex!important;align-items:center!important;gap:5px!important;transition:all .15s!important;white-space:nowrap!important;}
+.em-nav-chip:hover{border-color:#6366f1!important;color:#6366f1!important;background:var(--vf-surface)!important;}
+.em-nav-chip.active{background:var(--vf-text,#1a1f2e)!important;border-color:var(--vf-text,#1a1f2e)!important;color:#fff!important;}
+.em-nav-badge{background:rgba(255,255,255,.22)!important;color:#fff!important;border-radius:999px!important;font-size:10px!important;font-weight:700!important;padding:1px 7px!important;min-width:18px!important;text-align:center!important;}
+.em-nav-chip:not(.active) .em-nav-badge{background:rgba(15,23,42,.1)!important;color:var(--vf-muted)!important;}
+.em-controls-bar{height:40px!important;min-height:40px!important;display:flex!important;align-items:center!important;gap:7px!important;padding:0 14px!important;background:var(--vf-surface-2,#f8fafc)!important;border-bottom:1px solid var(--vf-line)!important;flex-shrink:0!important;overflow:hidden!important;}
+.live-sync-badge{display:inline-flex!important;align-items:center!important;gap:5px!important;font-size:11px!important;font-weight:600!important;color:#059669!important;background:rgba(16,185,129,.08)!important;border:1px solid rgba(16,185,129,.22)!important;border-radius:6px!important;padding:3px 9px!important;white-space:nowrap!important;}
+.live-sync-badge::before{content:''!important;width:6px!important;height:6px!important;border-radius:50%!important;background:#10b981!important;box-shadow:none!important;flex-shrink:0!important;}
+.live-sync-badge.paused{color:#64748b!important;background:rgba(100,116,139,.06)!important;border-color:rgba(100,116,139,.2)!important;}
+.live-sync-badge.paused::before{background:#94a3b8!important;}
+.em-scope{height:30px!important;border-radius:7px!important;border:1px solid var(--vf-line)!important;box-shadow:none!important;background:var(--vf-surface)!important;}
+.em-scope-seg{padding:0 9px!important;}
+.em-scope-lbl{font-size:9.5px!important;}
+.em-scope-val{font-size:12px!important;font-weight:600!important;}
+.em-scope-caret{font-size:8px!important;}
+.em-scope-sep{font-size:12px!important;padding:0 1px!important;}
+.em-sync-btn{width:30px!important;height:30px!important;border-radius:7px!important;font-size:14px!important;}
+.em-more-btn{width:30px!important;height:30px!important;border-radius:7px!important;font-size:15px!important;}
+.em-new-btn{height:30px!important;padding:0 13px!important;font-size:12px!important;font-weight:600!important;border-radius:7px!important;background:linear-gradient(135deg,#6366f1,#4f46e5)!important;box-shadow:0 2px 6px rgba(99,102,241,.28)!important;gap:5px!important;}
+.em-new-btn:hover{filter:brightness(1.07)!important;background:linear-gradient(135deg,#6366f1,#4f46e5)!important;}
+#emTabInbox{overflow:hidden!important;display:flex!important;flex-direction:column!important;flex:1 1 auto!important;min-height:0!important;}
+#emTabInbox .em-stats{display:flex!important;gap:8px!important;padding:10px 14px!important;background:var(--vf-surface)!important;border-bottom:1px solid var(--vf-line)!important;flex-shrink:0!important;grid-template-columns:unset!important;}
+.em-stat{flex:1!important;position:relative!important;overflow:hidden!important;padding:8px 12px!important;border-radius:9px!important;border:1px solid var(--vf-line)!important;background:var(--vf-surface-2,#f8fafc)!important;display:flex!important;flex-direction:column!important;gap:1px!important;cursor:default!important;transition:box-shadow .15s!important;box-shadow:none!important;}
+.em-stat::before{content:''!important;position:absolute!important;top:0!important;left:0!important;right:0!important;height:2.5px!important;background:var(--em-s-c,#6366f1)!important;border-radius:9px 9px 0 0!important;}
+.em-stat{--em-s-c:#6366f1}
+.em-stat.accent{--em-s-c:#3b82f6}
+.em-stat.blue{--em-s-c:#8b5cf6}
+.em-stat.green{--em-s-c:#10b981}
+#emTabInbox .em-stats .em-stat:nth-child(5){--em-s-c:#f59e0b}
+#emTabInbox .em-stats .em-stat:nth-child(6){--em-s-c:#6b7280}
+.em-stat:hover{box-shadow:0 2px 8px rgba(0,0,0,.07)!important;}
+.em-stat-lbl{font-size:10.5px!important;color:var(--vf-muted)!important;font-weight:500!important;}
+.em-stat-val{font-size:18px!important;font-weight:700!important;color:var(--vf-text)!important;margin-top:0!important;letter-spacing:-.3px!important;line-height:1.1!important;}
+.em-stat.accent .em-stat-val,.em-stat.blue .em-stat-val,.em-stat.green .em-stat-val{color:var(--vf-text)!important;}
+#emTabInbox .em-workspace{display:grid!important;grid-template-columns:290px 1fr!important;grid-template-rows:1fr!important;flex:1 1 auto!important;min-height:0!important;overflow:hidden!important;gap:0!important;}
+.em-panel{border:none!important;border-radius:0!important;box-shadow:none!important;background:var(--vf-surface)!important;display:flex!important;flex-direction:column!important;min-height:0!important;height:100%!important;overflow:hidden!important;}
+.em-workspace>.em-panel:first-child{border-right:1px solid var(--vf-line)!important;}
+.em-inbox-hdr{padding:7px 12px!important;min-height:auto!important;border-bottom:1px solid var(--vf-line)!important;flex-shrink:0!important;}
+.em-inbox-av{width:24px!important;height:24px!important;border-radius:50%!important;font-size:10px!important;}
+.em-inbox-email{font-size:12px!important;font-weight:600!important;color:var(--vf-text)!important;}
+.em-inbox-meta{font-size:10.5px!important;color:var(--vf-muted)!important;}
+.em-search-wrap{padding:8px 10px!important;gap:6px!important;background:var(--vf-surface)!important;border-bottom:1px solid var(--vf-line)!important;flex-shrink:0!important;}
+.em-search-wrap span{font-size:13px!important;opacity:.35!important;}
+.em-search-wrap input{font-size:12px!important;font-family:inherit!important;}
+.em-tabs{display:flex!important;gap:1px!important;padding:6px 10px!important;border-bottom:1px solid var(--vf-line)!important;flex-shrink:0!important;overflow-x:auto!important;}
+.em-tabs::-webkit-scrollbar{display:none!important;}
+.em-tab{padding:4px 10px!important;border-radius:6px!important;font-size:11.5px!important;font-weight:500!important;color:var(--vf-muted)!important;cursor:pointer!important;white-space:nowrap!important;transition:all .12s!important;border-bottom:none!important;border:none!important;background:transparent!important;}
+.em-tab.active{background:#6366f1!important;color:#fff!important;border-bottom:none!important;}
+.em-tab:hover:not(.active){background:var(--vf-surface-2,#f8fafc)!important;color:var(--vf-text)!important;}
+.em-list{flex:1!important;overflow-y:auto!important;min-height:0!important;padding:0!important;}
+.em-list::-webkit-scrollbar{width:3px!important;}
+.em-list::-webkit-scrollbar-thumb{background:var(--vf-line)!important;border-radius:3px!important;}
+.email-card{display:flex!important;gap:9px!important;align-items:flex-start!important;padding:9px 12px!important;border-radius:0!important;border:none!important;border-bottom:1px solid var(--vf-line)!important;margin-bottom:0!important;background:var(--vf-surface)!important;transition:background .12s!important;box-shadow:none!important;cursor:pointer!important;position:relative!important;grid-template-columns:unset!important;column-gap:0!important;}
+.email-card:hover{background:var(--vf-surface-2,#f8fafc)!important;transform:none!important;}
+.email-card.active,.email-card.active:hover{background:#f0f0ff!important;}
+.email-card.thread-unread{background:var(--vf-surface)!important;border-left:3px solid #6366f1!important;}
+.email-card.thread-read{background:var(--vf-surface)!important;border-left:1px solid var(--vf-line)!important;}
+.email-card::before{content:attr(data-initial)!important;width:32px!important;min-width:32px!important;height:32px!important;border-radius:50%!important;font-size:12px!important;font-weight:700!important;background:linear-gradient(135deg,#6366f1,#8b5cf6)!important;color:#fff!important;display:flex!important;align-items:center!important;justify-content:center!important;grid-row:auto!important;flex-shrink:0!important;margin-top:1px!important;box-shadow:none!important;}
+.email-card h3{font-size:12.5px!important;margin:0 0 2px!important;line-height:1.3!important;font-weight:500!important;}
+.email-card.thread-unread h3{font-weight:700!important;color:var(--vf-text)!important;}
+.email-card .sub{font-size:11.5px!important;color:var(--vf-muted)!important;line-height:1.35!important;}
+.email-card .pill{font-size:9.5px!important;padding:2px 7px!important;margin-top:4px!important;margin-right:3px!important;}
+#emConvPanel{border-right:none!important;}
+.em-conv-hdr{height:46px!important;min-height:46px!important;padding:0 16px!important;display:flex!important;align-items:center!important;border-bottom:1px solid var(--vf-line)!important;background:var(--vf-surface)!important;flex-shrink:0!important;}
+.em-conv-title-row{width:100%!important;flex-wrap:nowrap!important;align-items:center!important;}
+.em-conv-title{font-size:13px!important;font-weight:700!important;color:var(--vf-text)!important;}
+.em-conv-sub{font-size:11px!important;color:var(--vf-muted)!important;margin-top:1px!important;}
+.em-conv-controls{flex-wrap:nowrap!important;gap:5px!important;}
+.em-btn-soft{height:28px!important;padding:0 10px!important;font-size:11.5px!important;border:1px solid var(--vf-line)!important;border-radius:7px!important;background:var(--vf-surface)!important;color:var(--vf-muted)!important;cursor:pointer!important;font-weight:500!important;}
+.em-btn-soft:hover{border-color:#6366f1!important;color:#6366f1!important;}
+.em-btn-dark{height:28px!important;padding:0 10px!important;font-size:11.5px!important;border-radius:7px!important;border:none!important;background:linear-gradient(135deg,#6366f1,#4f46e5)!important;color:#fff!important;cursor:pointer!important;font-weight:600!important;box-shadow:0 1px 4px rgba(99,102,241,.25)!important;}
+.em-icon-btn-sm{width:28px!important;height:28px!important;border-radius:7px!important;border:1px solid var(--vf-line)!important;background:var(--vf-surface)!important;color:var(--vf-muted)!important;cursor:pointer!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;font-size:14px!important;}
+.em-chat-body{flex:1!important;overflow-y:auto!important;min-height:0!important;padding:12px 16px!important;display:flex!important;flex-direction:column!important;gap:10px!important;background:var(--vf-surface-2,#f8fafc)!important;}
+.em-chat-body::-webkit-scrollbar{width:4px!important;}
+.em-chat-body::-webkit-scrollbar-thumb{background:var(--vf-line)!important;border-radius:3px!important;}
+.em-chat-body .chat-thread{gap:10px!important;}
+.em-chat-body .chat-bubble{max-width:70%!important;border-radius:14px!important;padding:10px 13px!important;font-size:13.5px!important;line-height:1.48!important;}
+.em-chat-body .chat-bubble.customer{background:var(--vf-surface)!important;border:1px solid var(--vf-line)!important;color:var(--vf-text)!important;}
+.em-chat-body .chat-bubble.support{background:#ede9fe!important;border:1px solid #ddd6fe!important;color:#3b0764!important;}
+.em-composer{background:var(--vf-surface)!important;border-top:1px solid var(--vf-line)!important;padding:10px 14px!important;flex-shrink:0!important;box-sizing:border-box!important;}
+.em-composer-toolbar{display:flex!important;align-items:center!important;justify-content:space-between!important;margin-bottom:7px!important;}
+.em-composer-toolbar span{font-size:11px!important;color:var(--vf-muted)!important;font-weight:500!important;}
+.em-composer-toolbar button{font-size:11px!important;color:#6366f1!important;font-weight:600!important;background:none!important;border:none!important;cursor:pointer!important;}
+.em-composer-box{border:1px solid var(--vf-line)!important;border-radius:9px!important;padding:8px 11px!important;background:var(--vf-surface-2,#f8fafc)!important;transition:border-color .15s!important;}
+.em-composer-box:focus-within{border-color:#6366f1!important;background:var(--vf-surface)!important;}
+textarea#emailReplyText{min-height:56px!important;max-height:120px!important;height:auto!important;font-size:13px!important;line-height:1.48!important;padding:0!important;border:none!important;border-radius:0!important;background:transparent!important;}
+textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
+.em-composer-actions{display:flex!important;align-items:center!important;gap:6px!important;margin-top:8px!important;}
+.em-btn-gen{display:inline-flex!important;align-items:center!important;gap:5px!important;height:30px!important;padding:0 12px!important;border-radius:7px!important;border:1.5px solid #c4b5fd!important;background:linear-gradient(135deg,#f5f3ff,#ede9fe)!important;color:#6d28d9!important;font-size:12px!important;font-weight:600!important;cursor:pointer!important;}
+.em-btn-gen:hover{border-color:#8b5cf6!important;background:#ede9fe!important;}
+.em-icon-tool{width:30px!important;height:30px!important;border-radius:7px!important;border:1px solid var(--vf-line)!important;background:var(--vf-surface-2)!important;color:var(--vf-muted)!important;cursor:pointer!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;font-size:13px!important;}
+.em-icon-tool:hover{border-color:#6366f1!important;color:#6366f1!important;}
+.em-btn-send{height:30px!important;padding:0 14px!important;font-size:12px!important;font-weight:600!important;border-radius:7px!important;border:none!important;background:linear-gradient(135deg,#6366f1,#4f46e5)!important;color:#fff!important;cursor:pointer!important;box-shadow:0 2px 6px rgba(99,102,241,.28)!important;margin-left:auto!important;display:inline-flex!important;align-items:center!important;gap:5px!important;}
+.em-btn-send:hover{filter:brightness(1.07)!important;}
+.em-action-msg{font-size:11.5px!important;color:var(--vf-muted)!important;display:block!important;margin-top:5px!important;}
+/* Thread card inline content wrapper (generated by JS) */
+.thread-card-top{grid-column:auto!important;}
+/* Unread dot */
+.email-card.thread-unread::after{content:'';position:absolute;right:12px;top:50%;transform:translateY(-50%);width:7px;height:7px;border-radius:50%;background:#6366f1;}
 
 </style>
 </head>
@@ -4798,17 +4908,18 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
 
       <!-- EMAIL HEADER -->
       <div class="em-hdr">
+        <!-- Top bar: title + nav buttons -->
         <div class="em-hdr-top">
           <div class="em-hdr-left">
             <h1 class="em-hdr-h1">Customer Inbox <span class="em-live-chip"><span class="em-live-dot"></span> Live</span></h1>
-            <p class="em-hdr-sub">Real-time Gmail sync, AI drafts, and chat-style customer support.</p>
           </div>
           <div class="em-nav-chips">
-            <button class="em-nav-chip active" id="emNavInbox" onclick="switchEmailView('inbox',this)">📥 Inbox <span class="em-nav-badge" id="emNavInboxCount">0</span></button>
-            <button class="em-nav-chip" id="emNavTemplates" onclick="switchEmailView('templates',this)">📋 Templates</button>
-            <button class="em-nav-chip" id="emNavSettings" onclick="switchEmailView('settings',this)">⚙️ Settings</button>
+            <button class="em-nav-chip active" id="emNavInbox" onclick="switchEmailView('inbox',this)">Inbox <span class="em-nav-badge" id="emNavInboxCount">0</span></button>
+            <button class="em-nav-chip" id="emNavTemplates" onclick="switchEmailView('templates',this)">Templates</button>
+            <button class="em-nav-chip" id="emNavSettings" onclick="switchEmailView('settings',this)">Settings</button>
           </div>
         </div>
+        <!-- Sub bar: live sync + selectors + actions -->
         <div class="em-controls-bar" id="emControlsBar">
           <span id="liveSyncBadge" class="live-sync-badge">Live Sync ON</span>
           <div class="em-scope">
@@ -4832,9 +4943,9 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
             </div>
           </div>
           <button class="em-sync-btn" title="Sync inbox" onclick="syncInboxNow()">↻</button>
-          <button class="em-new-btn" onclick="openComposeModal()">＋ New Email</button>
+          <button class="em-new-btn" onclick="openComposeModal()">+ New Email</button>
           <div class="em-more-wrap" id="emMoreWrap">
-            <button class="em-more-btn" onclick="document.getElementById('emMoreWrap').classList.toggle('open')">⋯</button>
+            <button class="em-more-btn" onclick="document.getElementById('emMoreWrap').classList.toggle('open')">···</button>
             <div class="em-more-menu" onclick="event.stopPropagation()">
               <div class="em-menu-item" onclick="toggleLiveSync()"><span id="liveSyncMenuText">⏸ Pause Live Sync</span></div>
               <div class="em-menu-item" onclick="syncInboxNow()">↻ Sync Inbox</div>
@@ -4867,7 +4978,7 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
         <!-- LEFT: Email list panel -->
         <div class="em-panel">
 
-          <!-- Inbox header -->
+          <!-- Inbox header (compact) -->
           <div class="em-inbox-hdr" id="emInboxHdr">
             <div class="em-inbox-av" id="eibIcon">?</div>
             <div class="em-inbox-info">
@@ -4895,8 +5006,8 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
 
           <!-- Search -->
           <div class="em-search-wrap" id="emSearchWrap">
-            <span>🔍</span>
-            <input id="emailSearch" placeholder="Search emails..." oninput="renderEmails()">
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none" style="flex-shrink:0;opacity:.4"><circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1.5"/><path d="M10 10l2.5 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            <input id="emailSearch" placeholder="Search conversations…" oninput="renderEmails()">
           </div>
 
           <!-- Filter tabs -->
@@ -4918,7 +5029,7 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
         <!-- RIGHT: Conversation panel -->
         <div class="em-panel" id="emConvPanel">
 
-          <!-- Conversation header -->
+          <!-- Conversation header (compact) -->
           <div class="em-conv-hdr">
             <div class="em-conv-title-row">
               <div style="min-width:0;flex:1;">
@@ -4952,9 +5063,9 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
                   </div>
                 </div>
 
-                <button class="em-btn-soft" onclick="openLinkedOrderFromEmail()">📦 Order</button>
-                <button class="em-btn-dark" onclick="generateEmailDraft()">✨ Draft</button>
-                <button class="em-icon-btn-sm" title="More">⋯</button>
+                <button class="em-btn-soft" onclick="openLinkedOrderFromEmail()" title="Linked Order">📦 Order</button>
+                <button class="em-btn-dark" onclick="generateEmailDraft()" title="Generate AI draft">✦ Draft</button>
+                <button class="em-icon-btn-sm" title="More options">···</button>
               </div>
             </div>
           </div>
@@ -4964,15 +5075,14 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
             <div class="empty">No thread selected.</div>
           </div>
 
-
           <!-- Composer -->
           <div class="em-composer">
             <div class="em-composer-toolbar">
-              <span>Reply Box</span>
+              <span>Reply</span>
               <button id="replyExpandBtn" onclick="toggleReplyBoxSize()">↗ Expand</button>
             </div>
             <div class="em-composer-box">
-              <!-- AI Suggestion Card — sits inside the reply box -->
+              <!-- AI Suggestion Card -->
               <div id="aiSuggestionPanel" style="display:none;">
                 <div class="em-sug-body" id="replySuggestionText">Analyzing message tone...</div>
                 <div class="em-sug-footer">
@@ -4981,14 +5091,17 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
                   <button class="em-sug-close" onclick="closeSuggestionBox()" title="Dismiss">✕</button>
                 </div>
               </div>
-              <textarea id="emailReplyText" placeholder="Write reply or click Draft to generate with AI..." onpaste="handleReplyPaste(event)" oninput="autoResizeReply()"></textarea>
+              <textarea id="emailReplyText" placeholder="Write a reply… or use Generate AI" onpaste="handleReplyPaste(event)" oninput="autoResizeReply()"></textarea>
               <div id="attachmentPreview" class="em-att-preview"></div>
               <div class="em-composer-actions">
-                <button class="em-btn-gen" onclick="generateEmailDraft()">✨ Generate AI</button>
+                <button class="em-btn-gen" onclick="generateEmailDraft()">✦ Generate AI</button>
                 <button class="em-icon-tool" title="Improve reply" onclick="improveReplyText()">⚡</button>
                 <button class="em-icon-tool" title="Edit before send" onclick="focusReplyBox()">✏️</button>
                 <button class="em-icon-tool" title="Attach file" onclick="document.getElementById('attachmentInput').click()">📎</button>
-                <button id="sendReplyBtn" class="em-btn-send" onclick="sendEmailReply()">📨 Send →</button>
+                <button id="sendReplyBtn" class="em-btn-send" onclick="sendEmailReply()">
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 5-10 5V7.5l7-1.5-7-1.5V1z" fill="white"/></svg>
+                  Send
+                </button>
               </div>
             </div>
             <span id="emailActionMessage" class="em-action-msg"></span>
