@@ -8021,6 +8021,7 @@ document.addEventListener("DOMContentLoaded", ()=>{
 
 let selectedStoreId = new URLSearchParams(window.location.search).get("store_id") || 2;
 const _emailHtmlCache = {}; // stores raw HTML for email iframes, keyed by iframeId
+window._autoSuggestEnabled = false; // default OFF until settings confirm it's on
 let currentOrderId = null;
 let currentEmailId = null;
 let allEmails = [];
@@ -10839,8 +10840,15 @@ function applyShowCcBcc(show){
 
 function _applyEmailSettings(s){
   window._syncOnTabFocus = s.sync_on_tab_focus !== false;
-  window._autoSuggestEnabled = s.ai_auto_suggest !== false;
-  if(!window._autoSuggestEnabled) closeSuggestionBox();
+  window._autoSuggestEnabled = s.ai_auto_suggest === true;
+  if(!window._autoSuggestEnabled){
+    closeSuggestionBox();
+    // Clear any AI draft from chat body and textarea when toggled off
+    const body = document.getElementById("emailDetailBody");
+    if(body) body.querySelectorAll(".em-ai-banner,.em-draft-row").forEach(el=>el.remove());
+    const box = document.getElementById("emailReplyText");
+    if(box && !box.dataset.userEdited) box.value = "";
+  }
   window._notifySound = !!s.notify_sound;
   window._notifyUnreadOnly = s.notify_unread_only !== false;
   window._notifyAssignedOnly = !!s.notify_assigned_only;
