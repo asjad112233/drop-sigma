@@ -3686,7 +3686,7 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
 .em-more-btn{width:30px!important;height:30px!important;border-radius:7px!important;font-size:15px!important;}
 .em-new-btn{height:30px!important;padding:0 13px!important;font-size:12px!important;font-weight:600!important;border-radius:7px!important;background:linear-gradient(135deg,#6366f1,#4f46e5)!important;box-shadow:0 2px 6px rgba(99,102,241,.28)!important;gap:5px!important;}
 .em-new-btn:hover{filter:brightness(1.07)!important;background:linear-gradient(135deg,#6366f1,#4f46e5)!important;}
-#emTabInbox{overflow:hidden!important;display:flex!important;flex-direction:column!important;flex:1 1 auto!important;min-height:0!important;}
+#emTabInbox{overflow:hidden!important;flex-direction:column!important;flex:1 1 auto!important;min-height:0!important;}
 #emTabInbox .em-stats{display:flex!important;gap:8px!important;padding:10px 14px!important;background:var(--vf-surface)!important;border-bottom:1px solid var(--vf-line)!important;flex-shrink:0!important;grid-template-columns:unset!important;}
 .em-stat{flex:1!important;position:relative!important;overflow:hidden!important;padding:8px 12px!important;border-radius:9px!important;border:1px solid var(--vf-line)!important;background:var(--vf-surface-2,#f8fafc)!important;display:flex!important;flex-direction:column!important;gap:1px!important;cursor:default!important;transition:box-shadow .15s!important;box-shadow:none!important;}
 .em-stat::before{content:''!important;position:absolute!important;top:0!important;left:0!important;right:0!important;height:2.5px!important;background:var(--em-s-c,#6366f1)!important;border-radius:9px 9px 0 0!important;}
@@ -3765,6 +3765,48 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
 .thread-card-top{grid-column:auto!important;}
 /* Unread dot */
 .email-card.thread-unread::after{content:'';position:absolute;right:12px;top:50%;transform:translateY(-50%);width:7px;height:7px;border-radius:50%;background:#6366f1;}
+
+/* ── COMPACT CHAT MESSAGE LAYOUT (matches sample) ── */
+.em-chat-body .chat-thread{display:contents!important;}
+.em-msg{display:flex!important;gap:9px!important;max-width:90%!important;align-self:flex-start!important;}
+.em-msg.em-msg-out{align-self:flex-end!important;flex-direction:row-reverse!important;}
+.em-msg-av{width:28px!important;height:28px!important;border-radius:50%!important;flex-shrink:0!important;display:flex!important;align-items:center!important;justify-content:center!important;font-size:11px!important;font-weight:700!important;color:#fff!important;margin-top:2px!important;}
+.em-msg-content{display:flex!important;flex-direction:column!important;min-width:0!important;}
+.em-msg-bubble{background:var(--vf-surface)!important;border:1px solid var(--vf-line)!important;border-radius:12px!important;padding:9px 12px!important;font-size:12.5px!important;color:var(--vf-text)!important;line-height:1.5!important;box-shadow:0 1px 4px rgba(0,0,0,.06)!important;white-space:pre-wrap!important;word-break:break-word!important;}
+.em-msg-bubble.em-msg-support{background:#ede9fe!important;border-color:#ddd6fe!important;color:#3b0764!important;}
+.em-msg-bubble.html-email{background:var(--vf-surface)!important;padding:0!important;overflow:hidden!important;border-radius:10px!important;}
+.em-msg-meta{font-size:10px!important;color:#9ca3af!important;margin-top:4px!important;}
+.em-msg.em-msg-out .em-msg-meta{text-align:right!important;}
+.em-msg-text{margin:0!important;padding:0!important;font-size:12.5px!important;line-height:1.5!important;white-space:pre-wrap!important;word-break:break-word!important;}
+/* Date separator */
+.em-day-sep{display:flex!important;align-items:center!important;gap:8px!important;margin:4px 0!important;align-self:stretch!important;}
+.em-day-sep span{font-size:10.5px!important;color:#9ca3af!important;white-space:nowrap!important;background:var(--vf-surface-2,#f8fafc)!important;padding:0 6px!important;}
+.em-day-sep::before,.em-day-sep::after{content:''!important;flex:1!important;height:1px!important;background:var(--vf-line)!important;}
+
+/* ── AI DRAFT BANNER + BUBBLE (matches sample) ── */
+.em-ai-banner{align-self:stretch!important;display:flex!important;align-items:center!important;gap:8px!important;padding:8px 12px!important;border-radius:10px!important;background:#faf5ff!important;border:1px solid #e9d5ff!important;font-size:12px!important;color:#6d28d9!important;margin:4px 0!important;flex-shrink:0!important;}
+.em-ai-banner strong{font-weight:600!important;}
+.em-ai-banner-icon{font-size:15px!important;flex-shrink:0!important;}
+.em-draft-row{display:flex!important;gap:9px!important;max-width:90%!important;align-self:flex-end!important;flex-direction:row-reverse!important;}
+.em-draft-av{width:28px!important;height:28px!important;border-radius:50%!important;flex-shrink:0!important;display:flex!important;align-items:center!important;justify-content:center!important;font-size:11px!important;font-weight:700!important;color:#fff!important;background:#6d28d9!important;margin-top:2px!important;}
+.em-draft-bubble{background:#ede9fe!important;border:1px solid #ddd6fe!important;border-radius:12px!important;padding:9px 12px!important;font-size:12.5px!important;color:#3b0764!important;line-height:1.5!important;box-shadow:0 1px 4px rgba(0,0,0,.07)!important;white-space:pre-wrap!important;word-break:break-word!important;}
+.em-draft-meta{font-size:10px!important;color:#9ca3af!important;margin-top:4px!important;text-align:right!important;}
+
+/* ── THREAD CARD FLAT LIST STYLE (matches sample) ── */
+.em-tc{border-radius:0!important;border:none!important;border-bottom:1px solid var(--vf-line)!important;margin-bottom:0!important;padding:9px 12px!important;}
+.em-tc:hover{box-shadow:none!important;background:var(--vf-surface-2,#f8fafc)!important;}
+.em-tc.active{background:#f0f0ff!important;border-left:none!important;border-color:var(--vf-line)!important;}
+.em-tc.thread-unread{border-left:3px solid #6366f1!important;background:var(--vf-surface)!important;}
+.em-tc.thread-unread.active{border-left:3px solid #6366f1!important;background:#f0f0ff!important;}
+.em-tc.thread-read{border-left-color:transparent!important;border-left-width:3px!important;background:var(--vf-surface)!important;}
+/* Round avatars */
+.em-tc-av{width:32px!important;height:32px!important;border-radius:50%!important;font-size:12px!important;}
+/* Hide preview text */
+.em-tc-preview{display:none!important;}
+/* Count chip — indigo circle */
+.em-tc-chip.count{background:#6366f1!important;color:#fff!important;width:18px!important;height:18px!important;padding:0!important;justify-content:center!important;border-radius:50%!important;font-size:10.5px!important;font-weight:700!important;}
+/* AI chip — ✦ style */
+.em-tc-chip.ai{background:#ede9fe!important;color:#7c3aed!important;border-radius:12px!important;padding:1.5px 7px!important;}
 
 </style>
 </head>
@@ -5078,8 +5120,10 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
           <!-- Composer -->
           <div class="em-composer">
             <div class="em-composer-toolbar">
-              <span>Reply</span>
-              <button id="replyExpandBtn" onclick="toggleReplyBoxSize()">↗ Expand</button>
+              <span id="replyToLabel">Reply</span>
+              <button class="em-rt-btn" onclick="void(0)" title="Add CC/BCC recipients" style="padding:3px 9px;border-radius:6px;border:1px solid var(--vf-line);background:var(--vf-surface-2,#f8fafc);font-size:11px;font-weight:500;color:var(--vf-muted);cursor:pointer;">CC / BCC</button>
+              <button class="em-rt-btn" onclick="void(0)" title="Add internal note" style="padding:3px 9px;border-radius:6px;border:1px solid var(--vf-line);background:var(--vf-surface-2,#f8fafc);font-size:11px;font-weight:500;color:var(--vf-muted);cursor:pointer;">Note</button>
+              <button id="replyExpandBtn" onclick="toggleReplyBoxSize()" style="margin-left:auto;">↗ Expand</button>
             </div>
             <div class="em-composer-box">
               <!-- AI Suggestion Card -->
@@ -12768,8 +12812,8 @@ function renderEmails(){
           <div class="em-tc-subject">${escapeHtml(thread.latest_subject || "No subject")}</div>
           <div class="em-tc-preview">${escapeHtml(preview)}</div>
           <div class="em-tc-chips">
-            <span class="em-tc-chip">💬 ${msgCount}</span>
-            ${hasDraft ? `<span class="em-tc-chip ai">● AI</span>` : ""}
+            ${hasDraft ? `<span class="em-tc-chip ai">✦ AI Draft</span>` : ""}
+            ${msgCount > 0 ? `<span class="em-tc-chip count">${msgCount}</span>` : ""}
             ${assigneeInitials ? `<span class="em-tc-chip user" title="${escapeHtml(assigneeName)}">${escapeHtml(assigneeInitials)}</span>` : ""}
             ${thread.is_resolved ? `<span class="em-tc-chip resolved">✓ Resolved</span>` : ""}
           </div>
@@ -12961,6 +13005,9 @@ async function openThread(contact, options={}){
     document.getElementById("emailDetailSubject").innerText = threadInfo.latest_subject || lastMsg.subject || "Customer Thread";
     document.getElementById("emailDetailMeta").innerText = `${contact} · ${currentThreadEmails.length} messages`;
     document.getElementById("emailDetailBody").innerHTML = renderThreadChat(currentThreadEmails);
+    const _displayName = cleanSenderName(threadInfo.name || contact || "Customer");
+    const _replyLabel = document.getElementById("replyToLabel");
+    if(_replyLabel) _replyLabel.innerText = `Reply to ${_displayName}`;
 
     // Show assign button now that a thread is open
     const assignWrap = document.getElementById("emManageWrap");
@@ -13142,6 +13189,7 @@ function renderAttachments(attachments){
 
 function renderThreadChat(messages){
   let chatHTML = `<div class="chat-thread">`;
+  let lastDate = "";
 
   messages.forEach(msg => {
     const isSupport = isSupportEmail(msg.sender);
@@ -13154,19 +13202,32 @@ function renderThreadChat(messages){
     const quotedId = `quoted_${msg.id}`;
     const iframeId = `emailIframe_${msg.id}`;
 
+    // Date separator
+    const msgDate = msg.created_at || msg.date || msg.received_at;
+    if(msgDate){
+      const dateLabel = new Date(msgDate).toLocaleDateString([], {weekday:"short", month:"short", day:"numeric"});
+      if(dateLabel !== lastDate){
+        lastDate = dateLabel;
+        chatHTML += `<div class="em-day-sep"><span>${escapeHtml(dateLabel)}</span></div>`;
+      }
+    }
+
+    // Avatar
+    const initial = isSupport ? "ST" : getInitials(senderName);
+    const avColor = isSupport ? "#6366f1" : getAvatarColor(senderName);
+
     let bodyContent;
     if(hasHtml){
-      // Render full HTML email in a sandboxed iframe for proper styling
       const safeHtml = msg.body_html
-        .replace(/\[image:[^\]]*\]/gi, "")  // strip plain-text image placeholders
-        .replace(/<script[\s\S]*?<\/script>/gi, "");  // strip scripts
-      const iframeSrcdoc = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;padding:12px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;line-height:1.55;color:#111827;}img{max-width:100%;height:auto;}a{color:#2563eb;}</style></head><body>${safeHtml}</body></html>`.replace(/"/g, "&quot;");
-      bodyContent = `<iframe id="${iframeId}" srcdoc="${iframeSrcdoc}" style="width:100%;border:none;min-height:60px;max-height:600px;display:block;border-radius:8px;" scrolling="no" onload="(function(f){var d=f.contentDocument||f.contentWindow.document;f.style.height=Math.min(d.body.scrollHeight+24,600)+'px';})(this)"></iframe>`;
+        .replace(/\[image:[^\]]*\]/gi, "")
+        .replace(/<script[\s\S]*?<\/script>/gi, "");
+      const iframeSrcdoc = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;padding:12px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:13px;line-height:1.55;color:#111827;}img{max-width:100%;height:auto;}a{color:#2563eb;}</style></head><body>${safeHtml}</body></html>`.replace(/"/g, "&quot;");
+      bodyContent = `<iframe id="${iframeId}" srcdoc="${iframeSrcdoc}" style="width:100%;border:none;min-height:60px;max-height:500px;display:block;" scrolling="no" onload="(function(f){var d=f.contentDocument||f.contentWindow.document;f.style.height=Math.min(d.body.scrollHeight+24,500)+'px';})(this)"></iframe>`;
     } else {
       const cleaned = cleanEmailMessage(msg.body || "");
       let mainText = cleaned.main;
       if(hasImages) mainText = mainText.replace(/\[image:[^\]]*\]/gi, "").replace(/\n{3,}/g, "\n\n").trim();
-      bodyContent = `<div class="chat-msg-text">${escapeHtml(mainText)}</div>
+      bodyContent = `<div class="em-msg-text">${escapeHtml(mainText)}</div>
         ${cleaned.quoted ? `
           <span class="quoted-toggle" onclick="toggleQuoted('${quotedId}')">View previous conversation</span>
           <div id="${quotedId}" class="quoted-text">${escapeHtml(cleaned.quoted)}</div>
@@ -13174,14 +13235,14 @@ function renderThreadChat(messages){
     }
 
     chatHTML += `
-      <div class="chat-row ${isSupport ? 'support' : 'customer'} msg-wrap ${isSupport ? 'support' : ''}">
-        <div class="chat-message-stack">
-          <div class="chat-name-top sender-name">${escapeHtml(senderName)}</div>
-          <div class="chat-bubble ${isSupport ? 'support' : 'customer'} bubble${hasHtml ? ' html-email' : ''}">
+      <div class="em-msg ${isSupport ? 'em-msg-out' : 'em-msg-in'}">
+        <div class="em-msg-av" style="background:${avColor}">${escapeHtml(initial)}</div>
+        <div class="em-msg-content">
+          <div class="em-msg-bubble${isSupport ? ' em-msg-support' : ''}${hasHtml ? ' html-email' : ''}">
             ${bodyContent}
             ${renderAttachments(attachments)}
           </div>
-          ${timeText ? `<div class="chat-time-bottom msg-time">${escapeHtml(timeText)}</div>` : ""}
+          <div class="em-msg-meta">${escapeHtml(senderName)}${timeText ? ' · ' + escapeHtml(timeText) : ''}</div>
         </div>
       </div>
     `;
@@ -13215,6 +13276,7 @@ function clearEmailDetail(){
   document.getElementById("emailDetailMeta").innerText = "Thread details will show here.";
   document.getElementById("emailDetailBody").innerHTML = `<div class="empty">No thread selected.</div>`;
   document.getElementById("emailReplyText").value = "";
+  const _rl = document.getElementById("replyToLabel"); if(_rl) _rl.innerText = "Reply";
   // Reset chip
   const chip = document.getElementById("assigneeChip");
   if(chip){ chip.classList.add("unassigned"); chip.classList.remove("open"); }
@@ -13278,6 +13340,7 @@ async function generateEmailDraft(){
     autoResizeReply();
     msg.innerText = "AI draft generated.";
     msg.style.color = "green";
+    showAiDraftInChat(data.ai_draft || "");
     await loadEmails({silent:true, preserveSelection:true});
 
   }catch(error){
@@ -13296,20 +13359,31 @@ function closeSuggestionBox(){
 
 function showSuggestionBox(text, tone, toneEmoji){
   latestSuggestedReply = text || "";
+  // Keep panel hidden — AI draft is shown in chat body instead
   const panel = document.getElementById("aiSuggestionPanel");
-  const textEl = document.getElementById("replySuggestionText");
-  const toneEl = document.getElementById("aiSuggestionTone");
-  if(!panel) return;
+  if(panel) panel.style.display = "none";
+  // Pre-fill textarea so user can edit and send immediately (same as sample)
+  const box = document.getElementById("emailReplyText");
+  if(box){ box.value = text || ""; autoResizeReply(); }
+  showAiDraftInChat(text || "");
+}
 
-  if(textEl) textEl.innerText = text || "";
-
-  if(toneEl && tone){
-    const label = toneEmoji + " " + tone.charAt(0).toUpperCase() + tone.slice(1) + " tone";
-    toneEl.textContent = label;
-    toneEl.className = "em-cs-tone " + tone.replace(/[^a-z]/g,"");
-  }
-
-  panel.style.display = "";
+function showAiDraftInChat(draftText){
+  const chatBody = document.getElementById("emailDetailBody");
+  if(!chatBody || !draftText) return;
+  // Remove any existing draft banner+bubble
+  chatBody.querySelectorAll(".em-ai-banner,.em-draft-row").forEach(el => el.remove());
+  // Banner
+  const banner = document.createElement("div");
+  banner.className = "em-ai-banner";
+  banner.innerHTML = `<span class="em-ai-banner-icon">✦</span><div><strong>AI Draft Ready</strong> — Review and send the response below, or edit it before sending.</div>`;
+  chatBody.appendChild(banner);
+  // Draft bubble
+  const row = document.createElement("div");
+  row.className = "em-draft-row";
+  row.innerHTML = `<div class="em-draft-av">AI</div><div><div class="em-draft-bubble">${escapeHtml(draftText)}</div><div class="em-draft-meta">✦ AI Draft · just now</div></div>`;
+  chatBody.appendChild(row);
+  chatBody.scrollTop = chatBody.scrollHeight;
 }
 
 async function autoSuggestReply(contact){
@@ -13322,9 +13396,7 @@ async function autoSuggestReply(contact){
   if(!panel) return;
 
   latestSuggestedReply = "";
-  if(textEl) textEl.innerText = "Analyzing message tone...";
-  if(toneEl){ toneEl.textContent = "⏳ Analyzing..."; toneEl.className = "em-cs-tone neutral"; }
-  panel.style.display = "";
+  if(panel) panel.style.display = "none"; // kept hidden; draft shown in chat bubble instead
 
   try{
     const res = await fetch("/emails/api/suggest-reply/", {
