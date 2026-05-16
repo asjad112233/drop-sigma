@@ -733,6 +733,10 @@ def build_training_system_prompt(profile, snippets, detected_context="",
         "\nT. If the customer is asking about an order that was NOT FOUND at all (no row in DETECTED CUSTOMER CONTEXT), "
         "say: 'I couldn't find that order in our system. Could you double-check the order number and the email used at checkout?'"
         "\nU. NEVER reveal a different customer's name, address, email, phone, or city — even by accident, even to 'explain why you can't help'."
+        "\nV. If the customer DIRECTLY asks for the name/city/etc on an unverified order (e.g. 'whose name is this order under?', 'kis name pa ha order?'), you must REFUSE. Reply: "
+        "'I can't share details on that order until you verify ownership. Please send this email from the address used at checkout, or share the billing postcode.'"
+        "\nW. If the PRIOR CONVERSATION block contains '[redacted]' tokens — those replaced a real customer name or detail that was previously leaked. NEVER try to fill in what '[redacted]' was. NEVER apologize for or reference it. Treat it as if you never had that info."
+        "\nX. Greeting rule on unverified-order requests: use 'Hi there,' instead of a first name. Never use a name pulled from an unverified order's customer record."
 
         "\n\nFACT-CHECK RULES (CRITICAL — never agree with a false premise):"
         "\nK. ALWAYS fact-check the customer's claim against the DETECTED CUSTOMER CONTEXT before responding."
@@ -841,6 +845,64 @@ def _enforce_reply_structure(text):
     return s.strip()
 
 
+def _redact_pii_from_text(text, pii_strings):
+    """
+    Replace each PII string with [redacted].
+    - Multi-char names / cities / phones / emails use \\b word boundaries
+      so 'US' doesn't match inside 'Customer' etc.
+    - Emails are matched whole.
+    - Minimum 3 chars to avoid false positives.
+    """
+    if not text or not pii_strings:
+        return text
+    seen = set()
+    for pii in pii_strings:
+        if not pii or not isinstance(pii, str):
+            continue
+        pii = pii.strip()
+        if len(pii) < 3 or pii.lower() in seen:
+            continue
+        seen.add(pii.lower())
+        try:
+            # Use word boundaries for safer matching
+            text = re.sub(
+                r"\b" + re.escape(pii) + r"\b",
+                "[redacted]",
+                text,
+                flags=re.IGNORECASE,
+            )
+        except Exception:
+            pass
+    return text
+
+
+def _collect_pii_from_unverified_orders(orders):
+    """
+    Pull all PII strings (name, full name + each token, email, phone, city)
+    from any UNVERIFIED order so we can redact them from history text before
+    showing it to Claude. 'country' codes like 'US' / 'UK' are NOT redacted
+    (too short, would false-match inside common words).
+    """
+    pii = []
+    for o in (orders or []):
+        if getattr(o, "_verified_sender", False):
+            continue  # verified — keep PII visible
+        # Only redact reasonably identifying fields (country excluded — too short)
+        for attr in ("customer_name", "customer_email", "customer_phone", "city"):
+            v = (getattr(o, attr, "") or "").strip()
+            if not v:
+                continue
+            if len(v) < 3:
+                continue
+            pii.append(v)
+            # Also redact individual tokens of multi-word fields like full names
+            for tok in v.replace(",", " ").split():
+                tok = tok.strip()
+                if len(tok) > 2 and tok.isalpha():
+                    pii.append(tok)
+    return pii
+
+
 def _build_thread_history_text(email_obj, account, max_messages=8, max_chars_per_msg=600):
     """
     Return a string of prior messages in the same conversation thread so the AI
@@ -929,9 +991,17 @@ def generate_ai_reply(email_obj, account=None):
     # Conversation history (so AI doesn't repeat info already shared in this thread)
     history_text = _build_thread_history_text(email_obj, account)
 
+    # ── DEFENSE IN DEPTH: redact PII from history if any detected order is UNVERIFIED.
+    # An earlier AI reply may have leaked the real customer's name/city before our
+    # privacy fixes were live. Don't let the AI re-leak it now.
+    pii_to_redact = _collect_pii_from_unverified_orders(detected_orders)
+    if pii_to_redact and history_text:
+        history_text = _redact_pii_from_text(history_text, pii_to_redact)
+
     # Customer first-name hint (avoids the AI using the wrong account name)
-    linked_order = (detected_orders[0] if detected_orders else None)
-    customer_first_name = _extract_customer_first_name(email_obj, order=linked_order)
+    # Only use a VERIFIED order's customer_name; never name from an unverified order.
+    verified_order = next((o for o in detected_orders if getattr(o, "_verified_sender", False)), None)
+    customer_first_name = _extract_customer_first_name(email_obj, order=verified_order)
 
     # Detect customer language from the new message (Item 6)
     customer_lang_hint = _detect_customer_language(getattr(email_obj, 'body', '') or '')
