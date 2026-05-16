@@ -320,7 +320,7 @@ def _send_verification_email(email, name, link):
 
 def setup_admin(request):
     user, created = User.objects.get_or_create(username="admin")
-    user.email = "admin@baghawat.com"
+    user.email = "admin@dropsigma.com"
     user.is_staff = True
     user.is_superuser = True
     user.set_password("Admin@1234!")

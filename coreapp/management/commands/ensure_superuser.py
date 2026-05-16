@@ -8,7 +8,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **kwargs):
         username = os.getenv("DJANGO_SUPERUSER_USERNAME", "admin")
-        email = os.getenv("DJANGO_SUPERUSER_EMAIL", "admin@baghawat.com")
+        email = os.getenv("DJANGO_SUPERUSER_EMAIL", "admin@dropsigma.com")
         password = os.getenv("DJANGO_SUPERUSER_PASSWORD", "admin1234")
 
         user, created = User.objects.get_or_create(username=username)

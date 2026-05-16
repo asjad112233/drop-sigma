@@ -52,7 +52,7 @@ def get_base_url(request=None, wait_secs=3):
     Priority:
       1. Live Cloudflare tunnel (dev only — when running locally with public tunnel)
       2. Real request host IF it's a public domain (production canonical — handles
-         multi-domain setups: dropsigma.com, baghawat.com, custom domains all work)
+         multi-domain setups: dropsigma.com, custom domains all work)
       3. WOOCOMMERCE_BASE_URL env override (explicit override for special cases)
       4. RAILWAY_PUBLIC_DOMAIN (auto-detected by Railway)
       5. Whatever request host is available (last resort, even localhost)

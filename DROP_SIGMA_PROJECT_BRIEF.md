@@ -17,7 +17,7 @@ It is a **private SaaS admin panel** — not a public marketplace. A dropshippin
 - Live tracking sync with courier websites
 - AI-powered email drafts
 
-**Live URL:** `https://baghawat.com`  
+**Live URL:** `https://dropsigma.com`  
 **Tech Stack:** Django (Python), PostgreSQL, WhiteNoise, Railway (hosting)  
 **Integrations:** WooCommerce API, Shopify API, Gmail OAuth2, OpenAI / Anthropic AI, Playwright (live tracking scraper)
 
@@ -244,7 +244,7 @@ Login page: `/login/` — unified page with tabs for Admin / Vendor / Team
 
 - **Brand Name:** Drop Sigma
 - **Tagline:** Ecommerce Operations OS
-- **Domain:** baghawat.com
+- **Domain:** dropsigma.com
 - **Color feel:** Dark, premium, modern SaaS — deep navy/indigo + purple gradient accents + cyan highlights
 - **Font:** Inter (Google Fonts)
 - **Logo mark:** "DS" in a purple-indigo gradient rounded square
