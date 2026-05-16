@@ -261,6 +261,9 @@ def connect_success_page(request):
     key_id = request.GET.get("key_id", "")
     user_id_raw = request.GET.get("user_id", "")
 
+    new_store_id = None
+    new_store_name = ""
+
     if consumer_key and consumer_secret and user_id_raw:
         try:
             user_data = json.loads(user_id_raw)
@@ -284,10 +287,20 @@ def connect_success_page(request):
                     "is_active": True,
                 }
             )
+            new_store_id = store.id
+            new_store_name = store.name
             _register_webhook_for_store(store, request)
             _kickoff_initial_sync(store)
 
-    return redirect("/?section=stores&connected=1")
+    # Redirect straight to /dashboard/ so the homepage redirect doesn't strip our query params.
+    # Include connected=1 + connected_store_id so the success modal can target the right store.
+    qs_parts = ["section=stores", "connected=1"]
+    if new_store_id:
+        qs_parts.append(f"connected_store_id={new_store_id}")
+    if new_store_name:
+        from urllib.parse import quote
+        qs_parts.append(f"connected_store_name={quote(new_store_name)}")
+    return redirect(f"/dashboard/?{'&'.join(qs_parts)}")
 
 
 # ✅ STEP 3: Frontend polls this to know when store connected

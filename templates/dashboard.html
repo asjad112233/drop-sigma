@@ -16913,20 +16913,27 @@ async function initDashboard(){
 
   // WooCommerce auto-connect return redirect
   if(params.get("connected") === "1"){
+    const explicitStoreId   = params.get("connected_store_id");
+    const explicitStoreName = params.get("connected_store_name") ? decodeURIComponent(params.get("connected_store_name")) : "";
     window.history.replaceState({}, "", `/dashboard/?section=stores`);
-    /* Load stores then open Success modal for the most recently connected store */
+    /* Make sure we're on the stores section so the user sees their new store underneath the modal */
+    showSection("stores");
+    /* Open Success modal — use explicit store id if provided, else fall back to most recent */
     setTimeout(async () => {
       await loadStores();
+      if(explicitStoreId){
+        scsOpen(parseInt(explicitStoreId, 10), explicitStoreName);
+        return;
+      }
       try {
         const r = await fetch('/stores/api/');
         const d = await r.json();
         if(d?.success && d.stores?.length){
-          /* Pick the most recently added (highest id) */
           const newest = d.stores.reduce((a, b) => (a.id > b.id ? a : b));
           scsOpen(newest.id, newest.name);
         }
-      } catch(e){ /* if anything fails, just stay on stores page */ }
-    }, 500);
+      } catch(e){ /* keep user on stores page if lookup fails */ }
+    }, 400);
   }
 
   // Gmail OAuth callback result
