@@ -388,13 +388,13 @@ def build_training_system_prompt(profile, snippets, detected_context=""):
     tones = getattr(profile, 'tones', []) if profile else []
     rlen  = (getattr(profile, 'reply_length', '')  or 'Medium').strip() if profile else 'Medium'
 
-    tones_str = ', '.join(tones) if tones else 'friendly, empathetic'
+    tones_str = ', '.join(tones) if tones else 'professional, warm'
     length_map = {
-        'Short (1–2 sentences)': '1–2 sentences',
-        'Medium (3–5 sentences)': '3–5 sentences',
-        'Detailed (paragraph)':   'one full paragraph',
+        'Short (1–2 sentences)': '1–2 short sentences (under 40 words total)',
+        'Medium (3–5 sentences)': '3–4 short sentences (under 80 words total)',
+        'Detailed (paragraph)':   'two short paragraphs maximum',
     }
-    length_str = length_map.get(rlen, '3–5 sentences')
+    length_str = length_map.get(rlen, '2–3 short sentences (under 60 words total)')
 
     biz_label = biz or 'our store'
     niche_label = niche or 'an ecommerce brand'
@@ -415,9 +415,18 @@ def build_training_system_prompt(profile, snippets, detected_context=""):
     if detected_context:
         system += f"\n\n{detected_context}"
 
-    system += ("\n\nReply in a natural, on-brand way. Be helpful, accurate, and stay within "
-               "the policies above. NEVER invent order numbers, statuses, or tracking info "
-               "— only use the DETECTED CUSTOMER CONTEXT block (if present).")
+    # Strong formatting + brevity rules — these are the most important part of the prompt.
+    system += (
+        "\n\nSTRICT REPLY RULES (must follow):"
+        "\n1. Be SHORT and to the point. No filler, no over-explaining."
+        "\n2. Open with a brief greeting line (e.g., 'Hi <Name>,'). Use the customer's first name if known."
+        "\n3. Body: one focused short paragraph that answers the question directly."
+        "\n4. Use a BLANK LINE between the greeting, the body, and the sign-off — this is non-negotiable for readability."
+        "\n5. Skip generic phrases like 'Thanks for reaching out!', 'I hope this helps', 'Let me know if you have any other questions' unless they genuinely add value."
+        "\n6. Never invent order numbers, tracking, statuses, or dates — use ONLY the DETECTED CUSTOMER CONTEXT block (if present). If data is missing, ask for it."
+        "\n7. Sound human and confident, not robotic. Match the brand voice example above."
+        "\n8. Output the reply as plain text only — no HTML, no markdown, no subject line."
+    )
     return system
 
 
@@ -518,14 +527,17 @@ def generate_ai_reply(email_obj, account=None):
     prompt = f"""Customer message:
 {email_obj.body}{order_context}{custom_block}
 
-Write a {tone} ecommerce support reply in {language} (3-5 lines). Be human and empathetic.
-- If tracking/shipping question → mention we will share tracking details
-- If refund request → acknowledge and explain next steps
-- If angry/frustrated → sincerely apologize first
-- Keep it concise and warm
-- NEVER invent order numbers, statuses, or tracking — only use the Order context block if present
+Write a {tone} ecommerce support reply in {language}.
 
-Reply only, no subject line, no signature, no extra formatting. The signature will be appended separately."""
+STRICT REPLY RULES (must follow):
+1. SHORT and to the point — 2 to 3 short sentences max (under 60 words total).
+2. Start with a brief greeting on its own line (e.g., "Hi <Name>,").
+3. Leave a BLANK LINE between greeting, body, and sign-off — this is required for readability.
+4. Skip filler phrases like "Thanks for reaching out!", "I hope this helps", "Let me know if you need anything else" unless they genuinely add value.
+5. NEVER invent order numbers, statuses, or tracking — use ONLY the Order context block if present. If data is missing, ask for it.
+6. Sound human and professional, not robotic.
+
+Plain text only — no HTML, no markdown, no subject line. The sign-off will be appended separately."""
 
     try:
         reply = call_claude(prompt)
@@ -628,6 +640,29 @@ def process_ai_reply_mode(email_obj, account):
             )
             email_obj.status = "replied"
             result["sent"] = True
+
+            # Persist the outgoing AI reply as a new EmailMessage so it shows in the
+            # dashboard's chat thread (was previously sent but invisible in UI).
+            try:
+                from_addr = getattr(account, "email", "") or ""
+                EmailMessage.objects.create(
+                    store=account.store,
+                    sender=from_addr,
+                    recipient=recipient,
+                    subject=subject,
+                    body=draft,
+                    status="replied",
+                    is_read=True,
+                    raw_data={
+                        "type": "outgoing",
+                        "source": "ai_auto_reply",
+                        "reply_to_email_id": email_obj.id,
+                        "sent_from": from_addr,
+                    },
+                )
+            except Exception as _e:
+                # Never let logging failure abort the user-visible flow
+                print("AI AUTO-REPLY: could not persist outgoing message:", _e)
         except Exception as e:
             print("AI AUTO-SEND failed, falling back to draft:", e)
             email_obj.status = "drafted"
