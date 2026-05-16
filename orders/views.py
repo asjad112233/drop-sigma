@@ -49,17 +49,80 @@ def orders_poll_api(request):
 
 
 def sync_orders(request, store_id):
+    """
+    Sync orders from the connected store with optional date range filtering.
+
+    Query / body params:
+      - range:      '7d' | '30d' | '90d' | '1y' | 'all' | 'custom'   (default '30d')
+      - start_date: ISO YYYY-MM-DD (only used when range='custom')
+      - end_date:   ISO YYYY-MM-DD (optional, defaults to today, only for custom)
+    """
+    from datetime import datetime, timedelta
+    from django.utils import timezone as _tz
+
     store = get_object_or_404(Store, id=store_id)
 
-    if store.platform == "woocommerce":
-        count = sync_woocommerce_orders(store)
-        return JsonResponse({"success": True, "orders_synced": count})
+    # Read params from either GET or POST body
+    range_key  = (request.GET.get("range") or request.POST.get("range") or "30d").lower()
+    start_raw  = request.GET.get("start_date") or request.POST.get("start_date") or ""
+    end_raw    = request.GET.get("end_date")   or request.POST.get("end_date")   or ""
 
-    if store.platform == "shopify":
-        count = sync_shopify_orders(store)
-        return JsonResponse({"success": True, "orders_synced": count})
+    # Compute the `after` ISO timestamp (and optional end) for the platform sync call
+    after_iso = None
+    range_label = "Last 30 days"
+    now = _tz.now()
 
-    return JsonResponse({"success": False, "message": "Platform not supported yet"})
+    def _iso(dt):
+        return dt.strftime("%Y-%m-%dT%H:%M:%S")
+
+    range_map = {
+        "7d":   (timedelta(days=7),   "Last 7 days"),
+        "30d":  (timedelta(days=30),  "Last 30 days"),
+        "90d":  (timedelta(days=90),  "Last 90 days"),
+        "1y":   (timedelta(days=365), "Last 1 year"),
+    }
+
+    if range_key == "all":
+        after_iso = None
+        range_label = "All time"
+    elif range_key == "custom":
+        try:
+            sd = datetime.strptime(start_raw, "%Y-%m-%d")
+            after_iso = _iso(sd)
+            range_label = f"Custom · from {start_raw}"
+            if end_raw:
+                range_label += f" to {end_raw}"
+        except Exception:
+            return JsonResponse({
+                "success": False,
+                "message": "Invalid start_date — use YYYY-MM-DD format."
+            }, status=400)
+    elif range_key in range_map:
+        delta, range_label = range_map[range_key]
+        after_iso = _iso(now - delta)
+    else:
+        # Unknown range key — default to 30d
+        after_iso = _iso(now - timedelta(days=30))
+        range_label = "Last 30 days"
+
+    try:
+        if store.platform == "woocommerce":
+            count = sync_woocommerce_orders(store, after=after_iso)
+        elif store.platform == "shopify":
+            count = sync_shopify_orders(store, after=after_iso)
+        else:
+            return JsonResponse({"success": False, "message": "Platform not supported yet"})
+    except Exception as e:
+        return JsonResponse({"success": False, "message": f"Sync failed: {e}"}, status=500)
+
+    return JsonResponse({
+        "success": True,
+        "orders_synced": count,
+        "range": range_key,
+        "range_label": range_label,
+        "after": after_iso,
+        "last_synced": store.last_synced.isoformat() if getattr(store, "last_synced", None) else None,
+    })
 
 
 @api_view(["GET"])

@@ -33,6 +33,35 @@ def _register_webhook_for_store(store, request):
         pass
 
 
+def _kickoff_initial_sync(store, days=30):
+    """
+    Trigger a non-blocking initial order sync right after a store is connected.
+    Fetches the last `days` days of orders so the tenant sees data immediately.
+    Failures are swallowed (logged) — the connect response must not block on this.
+    """
+    import threading, logging
+    log = logging.getLogger(__name__)
+
+    def _run():
+        try:
+            from datetime import datetime, timedelta
+            after_iso = (datetime.utcnow() - timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%S")
+            if store.platform == "woocommerce":
+                from orders.services import sync_woocommerce_orders
+                count = sync_woocommerce_orders(store, after=after_iso)
+            elif store.platform == "shopify":
+                from orders.services import sync_shopify_orders
+                count = sync_shopify_orders(store, after=after_iso)
+            else:
+                return
+            log.info(f"Initial sync for store {store.id} ({store.name}): {count} orders fetched")
+        except Exception as e:
+            log.error(f"Initial sync failed for store {store.id}: {e}")
+
+    t = threading.Thread(target=_run, daemon=True)
+    t.start()
+
+
 def stores_page(request):
     return render(request, "dashboard.html")
 
@@ -215,6 +244,7 @@ def wc_callback_api(request):
         return Response({"success": False, "message": str(e)}, status=500)
 
     _register_webhook_for_store(store, request)
+    _kickoff_initial_sync(store)
 
     return Response({
         "success": True,
@@ -255,6 +285,7 @@ def connect_success_page(request):
                 }
             )
             _register_webhook_for_store(store, request)
+            _kickoff_initial_sync(store)
 
     return redirect("/?section=stores&connected=1")
 

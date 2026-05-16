@@ -4378,6 +4378,182 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
       </div>
     </section>
 
+    <!-- ═══════════════ Sync Orders Modal ═══════════════ -->
+    <style>
+      .syo-bg{position:fixed;inset:0;background:rgba(15,23,42,.55);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;z-index:1100;padding:20px;font-family:inherit;}
+      .syo-bg.open{display:flex;animation:syoBgIn .2s}
+      @keyframes syoBgIn{from{opacity:0}to{opacity:1}}
+      .syo-modal{width:100%;max-width:540px;background:var(--vf-surface,#fff);border-radius:22px;box-shadow:0 30px 80px rgba(15,23,42,.25);overflow:hidden;animation:syoIn .3s cubic-bezier(.2,.9,.3,1.2)}
+      @keyframes syoIn{from{opacity:0;transform:translateY(20px) scale(.97)}to{opacity:1;transform:none}}
+      .syo-head{padding:18px 22px;border-bottom:1px solid var(--vf-line,#e5eaf2);display:flex;align-items:center;justify-content:space-between;}
+      .syo-head-l{display:flex;align-items:center;gap:12px}
+      .syo-ic{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,#8b5cf6,#06b6d4);display:flex;align-items:center;justify-content:center;font-size:18px}
+      .syo-head h2{margin:0;font-size:16px;font-weight:800;color:var(--vf-text)}
+      .syo-head p{margin:1px 0 0;font-size:11.5px;color:var(--vf-muted);font-weight:500}
+      .syo-close{width:32px;height:32px;border-radius:9px;border:1px solid var(--vf-line,#e5eaf2);background:var(--vf-surface,#fff);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--vf-muted);font-size:15px;font-family:inherit}
+      .syo-close:hover{color:var(--vf-text);border-color:var(--vf-muted)}
+      .syo-body{padding:18px 22px;}
+      .syo-lbl{font-size:11px;text-transform:uppercase;letter-spacing:.9px;color:var(--vf-muted);font-weight:800;margin-bottom:8px}
+      .syo-ranges{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px}
+      .syo-range{padding:11px 14px;border:1.5px solid var(--vf-line,#e5eaf2);border-radius:11px;background:var(--vf-surface,#fff);cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;color:var(--vf-text);text-align:left;display:flex;align-items:center;gap:9px;transition:.15s;}
+      .syo-range:hover{border-color:#8b5cf6;color:#8b5cf6;transform:translateY(-1px)}
+      .syo-range.selected{background:linear-gradient(135deg,#8b5cf6,#6366f1);color:#fff;border-color:transparent;box-shadow:0 4px 14px rgba(139,92,246,.25);}
+      .syo-range .syo-ic-sm{font-size:14px;flex-shrink:0}
+      .syo-range .syo-sub{font-size:10.5px;opacity:.7;display:block;margin-top:1px;font-weight:500}
+      .syo-range.selected .syo-sub{opacity:.85}
+      .syo-custom{display:none;background:var(--vf-surface-2,#f8fafc);border:1px dashed var(--vf-line,#e5eaf2);border-radius:11px;padding:12px;margin-bottom:14px}
+      .syo-custom.shown{display:block}
+      .syo-custom-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+      .syo-custom-row label{font-size:10.5px;font-weight:700;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px}
+      .syo-custom-row input{width:100%;padding:8px 10px;border:1px solid var(--vf-line,#e5eaf2);border-radius:8px;font-family:inherit;font-size:13px;background:var(--vf-surface,#fff);box-sizing:border-box;color:var(--vf-text)}
+      .syo-tip{font-size:11.5px;color:var(--vf-muted);background:linear-gradient(135deg,rgba(139,92,246,.05),rgba(6,182,212,.04));border:1px dashed rgba(139,92,246,.2);border-radius:10px;padding:10px 12px;margin-top:10px;line-height:1.5}
+      .syo-tip b{color:var(--vf-text);font-weight:700}
+      .syo-result{display:none;padding:14px;border-radius:12px;margin-top:12px;font-size:13px;line-height:1.5;font-weight:500}
+      .syo-result.success{display:block;background:linear-gradient(135deg,rgba(22,163,74,.10),rgba(16,185,129,.06));border:1px solid rgba(22,163,74,.3);color:#15803d}
+      .syo-result.error{display:block;background:linear-gradient(135deg,rgba(239,68,68,.10),rgba(220,38,38,.06));border:1px solid rgba(239,68,68,.3);color:#b91c1c}
+      .syo-result b{font-weight:800}
+      .syo-foot{padding:14px 22px;border-top:1px solid var(--vf-line,#e5eaf2);display:flex;justify-content:flex-end;gap:10px}
+      .syo-btn{padding:10px 18px;border-radius:11px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;border:1px solid var(--vf-line,#e5eaf2);background:var(--vf-surface,#fff);color:var(--vf-text);transition:.15s;display:inline-flex;align-items:center;gap:7px;}
+      .syo-btn:hover{border-color:#8b5cf6;color:#8b5cf6}
+      .syo-btn.primary{background:linear-gradient(135deg,#8b5cf6,#6366f1);color:#fff;border-color:transparent;box-shadow:0 6px 18px rgba(139,92,246,.3)}
+      .syo-btn.primary:hover{transform:translateY(-1px);box-shadow:0 10px 24px rgba(139,92,246,.4);color:#fff}
+      .syo-btn:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+      .syo-spin{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:syoSpin .9s linear infinite}
+      @keyframes syoSpin{to{transform:rotate(360deg)}}
+    </style>
+
+    <div class="syo-bg" id="syoBg">
+      <div class="syo-modal">
+        <div class="syo-head">
+          <div class="syo-head-l">
+            <div class="syo-ic">📥</div>
+            <div>
+              <h2>Sync Orders</h2>
+              <p id="syoStoreName">Choose a date range to fetch orders from your store</p>
+            </div>
+          </div>
+          <button class="syo-close" onclick="syoClose()">✕</button>
+        </div>
+        <div class="syo-body">
+          <div class="syo-lbl">Date Range</div>
+          <div class="syo-ranges" id="syoRanges">
+            <button class="syo-range selected" data-range="7d" onclick="syoSelectRange(this,'7d')">
+              <span class="syo-ic-sm">⚡</span>
+              <span>Last 7 days<span class="syo-sub">Most recent orders</span></span>
+            </button>
+            <button class="syo-range" data-range="30d" onclick="syoSelectRange(this,'30d')">
+              <span class="syo-ic-sm">📅</span>
+              <span>Last 30 days<span class="syo-sub">Recommended</span></span>
+            </button>
+            <button class="syo-range" data-range="90d" onclick="syoSelectRange(this,'90d')">
+              <span class="syo-ic-sm">📆</span>
+              <span>Last 90 days<span class="syo-sub">Quarter view</span></span>
+            </button>
+            <button class="syo-range" data-range="1y" onclick="syoSelectRange(this,'1y')">
+              <span class="syo-ic-sm">🗓️</span>
+              <span>Last 1 year<span class="syo-sub">Annual view</span></span>
+            </button>
+            <button class="syo-range" data-range="all" onclick="syoSelectRange(this,'all')">
+              <span class="syo-ic-sm">♾️</span>
+              <span>All time<span class="syo-sub">Full history</span></span>
+            </button>
+            <button class="syo-range" data-range="custom" onclick="syoSelectRange(this,'custom')">
+              <span class="syo-ic-sm">🎯</span>
+              <span>Custom range<span class="syo-sub">Pick dates</span></span>
+            </button>
+          </div>
+
+          <div class="syo-custom" id="syoCustom">
+            <div class="syo-custom-row">
+              <div>
+                <label>Start date</label>
+                <input type="date" id="syoStart" />
+              </div>
+              <div>
+                <label>End date</label>
+                <input type="date" id="syoEnd" />
+              </div>
+            </div>
+          </div>
+
+          <div class="syo-tip">💡 <b>Live sync is already active.</b> New orders will appear in real-time. Use this to also fetch <b>older orders</b> from your store.</div>
+
+          <div class="syo-result" id="syoResult"></div>
+        </div>
+        <div class="syo-foot">
+          <button class="syo-btn" onclick="syoClose()">Cancel</button>
+          <button class="syo-btn primary" id="syoRunBtn" onclick="syoRun()">
+            <span id="syoRunLabel">📥 Sync Now</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ Store Connected Success Modal ═══════════════ -->
+    <style>
+      .scs-bg{position:fixed;inset:0;background:rgba(15,23,42,.6);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;z-index:1100;padding:20px;font-family:inherit;}
+      .scs-bg.open{display:flex;animation:scsBgIn .25s}
+      @keyframes scsBgIn{from{opacity:0}to{opacity:1}}
+      .scs-modal{width:100%;max-width:520px;background:var(--vf-surface,#fff);border-radius:22px;box-shadow:0 30px 80px rgba(15,23,42,.25);overflow:hidden;animation:scsIn .4s cubic-bezier(.2,.9,.3,1.4);text-align:center;}
+      @keyframes scsIn{from{opacity:0;transform:translateY(30px) scale(.95)}to{opacity:1;transform:none}}
+      .scs-banner{background:linear-gradient(135deg,#10b981,#06b6d4);padding:32px 22px 24px;color:#fff;position:relative;overflow:hidden}
+      .scs-banner::before,.scs-banner::after{content:"";position:absolute;border-radius:50%;background:rgba(255,255,255,.15);pointer-events:none}
+      .scs-banner::before{width:180px;height:180px;top:-50px;right:-30px}
+      .scs-banner::after{width:120px;height:120px;bottom:-60px;left:-30px}
+      .scs-check{width:64px;height:64px;background:#fff;border-radius:50%;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:900;color:#10b981;box-shadow:0 10px 30px rgba(0,0,0,.15);position:relative;z-index:2;animation:scsPop .5s cubic-bezier(.2,.9,.3,1.6) .1s both}
+      @keyframes scsPop{from{transform:scale(0)}to{transform:scale(1)}}
+      .scs-banner h2{margin:0;font-size:22px;font-weight:800;letter-spacing:-.3px;position:relative;z-index:2}
+      .scs-banner p{margin:6px 0 0;font-size:13.5px;opacity:.94;line-height:1.5;position:relative;z-index:2}
+      .scs-body{padding:22px 24px}
+      .scs-stats{display:flex;gap:10px;margin-bottom:18px}
+      .scs-stat{flex:1;padding:12px;background:var(--vf-surface-2,#f8fafc);border:1px solid var(--vf-line,#e5eaf2);border-radius:11px;text-align:left}
+      .scs-stat-l{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--vf-muted);margin-bottom:4px}
+      .scs-stat-v{font-size:18px;font-weight:800;color:var(--vf-text)}
+      .scs-stat-v.pending{color:var(--vf-muted)}
+      .scs-stat-s{font-size:10.5px;color:var(--vf-muted);font-weight:500;margin-top:1px}
+      .scs-live{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:#16a34a;font-weight:700;margin-top:3px}
+      .scs-live::before{content:"";width:6px;height:6px;border-radius:50%;background:#16a34a;box-shadow:0 0 6px #16a34a;animation:scsPulse 1.5s infinite}
+      @keyframes scsPulse{0%,100%{opacity:1}50%{opacity:.3}}
+      .scs-actions{display:flex;gap:10px}
+      .scs-btn{flex:1;padding:11px 16px;border-radius:11px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;border:1px solid var(--vf-line,#e5eaf2);background:var(--vf-surface,#fff);color:var(--vf-text);transition:.15s;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+      .scs-btn:hover{border-color:#8b5cf6;color:#8b5cf6}
+      .scs-btn.primary{background:linear-gradient(135deg,#8b5cf6,#6366f1);color:#fff;border-color:transparent;box-shadow:0 6px 18px rgba(139,92,246,.3)}
+      .scs-btn.primary:hover{transform:translateY(-1px);box-shadow:0 10px 24px rgba(139,92,246,.4);color:#fff}
+    </style>
+
+    <div class="scs-bg" id="scsBg">
+      <div class="scs-modal">
+        <div class="scs-banner">
+          <div class="scs-check">✓</div>
+          <h2>Store Connected Successfully!</h2>
+          <p id="scsStoreName">Your store is now live and ready</p>
+        </div>
+        <div class="scs-body">
+          <div class="scs-stats">
+            <div class="scs-stat">
+              <div class="scs-stat-l">Initial Sync</div>
+              <div class="scs-stat-v pending" id="scsInitialCount">Running…</div>
+              <div class="scs-stat-s">Last 30 days</div>
+            </div>
+            <div class="scs-stat">
+              <div class="scs-stat-l">Live Sync</div>
+              <div class="scs-stat-v" style="color:#16a34a;font-size:14px;display:flex;align-items:center;gap:6px">
+                <span style="width:8px;height:8px;border-radius:50%;background:#16a34a;display:inline-block;box-shadow:0 0 8px #16a34a;animation:scsPulse 1.5s infinite"></span>
+                Active
+              </div>
+              <div class="scs-stat-s">Webhook + polling</div>
+            </div>
+          </div>
+          <div class="scs-actions">
+            <button class="scs-btn" onclick="scsClose()">Done</button>
+            <button class="scs-btn primary" onclick="scsOpenSync()">
+              📥 Sync More Orders
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <section id="ordersSection" class="section premium-orders-page">
 
       <!-- Top Bar -->
@@ -11774,27 +11950,151 @@ async function deleteStore(storeId, storeName){
   }
 }
 
-async function syncOrders(storeId){
-  const syncBtns = document.querySelectorAll(`.sc-btn-sync`);
-  syncBtns.forEach(b=>{ if(b.closest(`[id]`)?.id?.includes(storeId)||true){ b.disabled=true; b.innerHTML=`<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="animation:spin 1s linear infinite"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Syncing...`; }});
-  try{
-    const response = await fetch(`/orders/sync/${storeId}/`);
-    const data = await response.json();
+/* ═══════════════ Sync Orders Modal (date-range picker) ═══════════════ */
+let _syoStoreId = null;
+let _syoRange = '7d';
 
-    if(data.success){
-      _showNewOrderToast2(`✅ ${data.orders_synced} orders synced`);
-      selectedStoreId = String(storeId);
-      const switcher = document.getElementById("projectSwitcher");
-      if(switcher) switcher.value = selectedStoreId;
-      window.history.pushState({}, "", `/dashboard/?store_id=${selectedStoreId}&section=orders`);
-      showSection("orders");
-    }else{
-      await _alert(data.message || "Sync failed", "Sync Error", "❌");
+function syncOrders(storeId){
+  _syoStoreId = storeId;
+  _syoRange = '7d';
+  /* Reset UI */
+  document.querySelectorAll('.syo-range').forEach(r => r.classList.toggle('selected', r.dataset.range === '7d'));
+  document.getElementById('syoCustom').classList.remove('shown');
+  document.getElementById('syoResult').className = 'syo-result';
+  document.getElementById('syoResult').innerHTML = '';
+  document.getElementById('syoRunLabel').textContent = '📥 Sync Now';
+  document.getElementById('syoRunBtn').disabled = false;
+  /* Store name in header */
+  const cardName = document.querySelector(`[onclick*="syncOrders(${storeId})"]`)?.closest('.sc-card')?.querySelector('.sc-name')?.textContent;
+  document.getElementById('syoStoreName').textContent = cardName ? `Choose a date range — ${cardName}` : 'Choose a date range to fetch orders from your store';
+  /* Open */
+  document.getElementById('syoBg').classList.add('open');
+}
+
+function syoClose(){
+  document.getElementById('syoBg').classList.remove('open');
+  _syoStoreId = null;
+}
+
+function syoSelectRange(el, key){
+  document.querySelectorAll('.syo-range').forEach(r => r.classList.remove('selected'));
+  el.classList.add('selected');
+  _syoRange = key;
+  document.getElementById('syoCustom').classList.toggle('shown', key === 'custom');
+  if(key === 'custom'){
+    const start = document.getElementById('syoStart');
+    const end   = document.getElementById('syoEnd');
+    if(start && !start.value){
+      const d = new Date(); d.setDate(d.getDate() - 30);
+      start.value = d.toISOString().slice(0,10);
     }
-  }catch(error){
-    await _alert(error.message, "Error", "❌");
+    if(end && !end.value){
+      end.value = new Date().toISOString().slice(0,10);
+    }
   }
 }
+
+async function syoRun(){
+  if(!_syoStoreId) return;
+  const result  = document.getElementById('syoResult');
+  const btn     = document.getElementById('syoRunBtn');
+  const label   = document.getElementById('syoRunLabel');
+
+  /* Build params */
+  const params = new URLSearchParams({range: _syoRange});
+  if(_syoRange === 'custom'){
+    const s = document.getElementById('syoStart')?.value;
+    const e = document.getElementById('syoEnd')?.value;
+    if(!s){
+      result.className = 'syo-result error';
+      result.innerHTML = '⚠️ Please select a start date for custom range.';
+      return;
+    }
+    params.set('start_date', s);
+    if(e) params.set('end_date', e);
+  }
+
+  /* Loading state */
+  btn.disabled = true;
+  label.innerHTML = '<span class="syo-spin"></span> Syncing…';
+  result.className = 'syo-result';
+  result.innerHTML = '';
+
+  try {
+    const resp = await fetch(`/orders/sync/${_syoStoreId}/?${params.toString()}`);
+    const data = await resp.json();
+    if(data.success){
+      result.className = 'syo-result success';
+      result.innerHTML = `✅ <b>${data.orders_synced}</b> orders synced · <b>${data.range_label || 'Selected range'}</b>`;
+      label.textContent = '✓ Done — Sync Again?';
+      btn.disabled = false;
+      /* Refresh stores grid in the background */
+      setTimeout(() => loadStores(), 600);
+    } else {
+      result.className = 'syo-result error';
+      result.innerHTML = `❌ ${data.message || 'Sync failed.'}`;
+      label.textContent = '🔄 Retry';
+      btn.disabled = false;
+    }
+  } catch(e){
+    result.className = 'syo-result error';
+    result.innerHTML = `❌ Network error: ${e.message}`;
+    label.textContent = '🔄 Retry';
+    btn.disabled = false;
+  }
+}
+
+/* ═══════════════ Store Connected — Success Modal ═══════════════ */
+let _scsStoreId = null;
+
+function scsOpen(storeId, storeName){
+  _scsStoreId = storeId;
+  if(storeName) document.getElementById('scsStoreName').textContent = `${storeName} is now live and ready`;
+  document.getElementById('scsInitialCount').textContent = 'Running…';
+  document.getElementById('scsInitialCount').classList.add('pending');
+  document.getElementById('scsBg').classList.add('open');
+
+  /* Poll for initial sync result — backend kicks it off in a thread */
+  scsWaitForInitialSync(storeId);
+}
+
+function scsClose(){
+  document.getElementById('scsBg').classList.remove('open');
+  _scsStoreId = null;
+}
+
+function scsOpenSync(){
+  const id = _scsStoreId;
+  scsClose();
+  if(id) setTimeout(() => syncOrders(id), 300);
+}
+
+async function scsWaitForInitialSync(storeId, attempts = 0){
+  if(attempts >= 20) {
+    /* Timeout after ~30s — show as completed (sync may still finish in background) */
+    document.getElementById('scsInitialCount').textContent = 'Done';
+    document.getElementById('scsInitialCount').classList.remove('pending');
+    return;
+  }
+  try {
+    const r = await fetch(`/orders/api/poll/?store_id=${storeId}`);
+    const d = await r.json();
+    if(d && typeof d.count === 'number' && d.count > 0){
+      document.getElementById('scsInitialCount').textContent = String(d.count);
+      document.getElementById('scsInitialCount').classList.remove('pending');
+      /* Continue checking to update count as it grows */
+      if(attempts < 8) setTimeout(() => scsWaitForInitialSync(storeId, attempts + 1), 2000);
+      return;
+    }
+  } catch(e){ /* swallow, retry */ }
+  setTimeout(() => scsWaitForInitialSync(storeId, attempts + 1), 1500);
+}
+
+document.addEventListener('keydown', function(e){
+  if(e.key !== 'Escape') return;
+  if(document.getElementById('syoBg')?.classList.contains('open')) syoClose();
+  else if(document.getElementById('scsBg')?.classList.contains('open')) scsClose();
+});
 
 function _showNewOrderToast2(msg){
   let t = document.getElementById("_newOrderToast");
@@ -16614,7 +16914,19 @@ async function initDashboard(){
   // WooCommerce auto-connect return redirect
   if(params.get("connected") === "1"){
     window.history.replaceState({}, "", `/dashboard/?section=stores`);
-    setTimeout(()=>{ loadStores(); }, 500);
+    /* Load stores then open Success modal for the most recently connected store */
+    setTimeout(async () => {
+      await loadStores();
+      try {
+        const r = await fetch('/stores/api/');
+        const d = await r.json();
+        if(d?.success && d.stores?.length){
+          /* Pick the most recently added (highest id) */
+          const newest = d.stores.reduce((a, b) => (a.id > b.id ? a : b));
+          scsOpen(newest.id, newest.name);
+        }
+      } catch(e){ /* if anything fails, just stay on stores page */ }
+    }, 500);
   }
 
   // Gmail OAuth callback result
