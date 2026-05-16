@@ -3408,6 +3408,7 @@ body.vf-dark-mode .em-more-btn,body.vf-dark-mode .em-sync-btn{background:var(--v
 .em-tc-chip{display:inline-flex;align-items:center;gap:3px;padding:3px 7px;border-radius:999px;font-size:10.5px;font-weight:600;background:#f1f5f9;color:#64748b;white-space:nowrap;}
 .em-tc-chip.ai{background:#ede9fe;color:#7c3aed;}
 .em-tc-chip.resolved{background:#dcfce7;color:#15803d;}
+.em-tc-chip.unread{background:#ef4444;color:#fff;font-weight:800;min-width:18px;justify-content:center;}
 .em-tc-chip.user{background:#dbeafe;color:#1d4ed8;padding:3px 8px;border-radius:999px;font-size:10px;font-weight:800;}
 .em-tc-dots{position:absolute;top:10px;right:8px;width:24px;height:24px;border:none;background:transparent;color:#94a3b8;font-size:16px;cursor:pointer;border-radius:6px;display:flex;align-items:center;justify-content:center;line-height:1;opacity:0;transition:opacity .12s,background .12s;}
 .em-tc:hover .em-tc-dots{opacity:1;}
@@ -15553,10 +15554,11 @@ function renderEmails(){
     const latestTime = thread.latest_time ? new Date(thread.latest_time).toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"}) : "";
 
     const avatarColor = getAvatarColor(displayName);
-    const msgCount = Number(thread.total_messages || 0);
     const hasDraft = Number(thread.drafted_count || 0) > 0;
     const assigneeName = thread.assigned_to ? thread.assigned_to.name : null;
     const assigneeInitials = assigneeName ? getInitials(assigneeName) : null;
+    // Only show unread count badge, not total message count
+    const showUnreadBadge = visualUnread && unreadCount > 0;
 
     return `
       <div class="em-tc ${active} ${unreadClass}" onclick="openThread('${escapeJs(thread.contact)}')">
@@ -15570,7 +15572,7 @@ function renderEmails(){
           <div class="em-tc-preview">${escapeHtml(preview)}</div>
           <div class="em-tc-chips">
             ${hasDraft ? `<span class="em-tc-chip ai">✦ AI Draft</span>` : ""}
-            ${msgCount > 0 ? `<span class="em-tc-chip count">${msgCount}</span>` : ""}
+            ${showUnreadBadge ? `<span class="em-tc-chip count unread" title="${unreadCount} unread message${unreadCount !== 1 ? 's' : ''}">${unreadCount}</span>` : ""}
             ${assigneeInitials ? `<span class="em-tc-chip user" title="${escapeHtml(assigneeName)}">${escapeHtml(assigneeInitials)}</span>` : ""}
             ${thread.is_resolved ? `<span class="em-tc-chip resolved">✓ Resolved</span>` : ""}
           </div>
