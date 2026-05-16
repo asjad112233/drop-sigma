@@ -419,15 +419,74 @@ def build_training_system_prompt(profile, snippets, detected_context=""):
     system += (
         "\n\nSTRICT REPLY RULES (must follow):"
         "\n1. Be SHORT and to the point. No filler, no over-explaining."
-        "\n2. Open with a brief greeting line (e.g., 'Hi <Name>,'). Use the customer's first name if known."
-        "\n3. Body: one focused short paragraph that answers the question directly."
+        "\n2. Open with a brief greeting line (e.g., 'Hi <Name>,'). Use the customer's first name if known. SKIP the greeting if you are already mid-conversation and just answering a quick follow-up."
+        "\n3. Body: ONE focused short paragraph that answers the question directly."
         "\n4. Use a BLANK LINE between the greeting, the body, and the sign-off — this is non-negotiable for readability."
         "\n5. Skip generic phrases like 'Thanks for reaching out!', 'I hope this helps', 'Let me know if you have any other questions' unless they genuinely add value."
         "\n6. Never invent order numbers, tracking, statuses, or dates — use ONLY the DETECTED CUSTOMER CONTEXT block (if present). If data is missing, ask for it."
         "\n7. Sound human and confident, not robotic. Match the brand voice example above."
         "\n8. Output the reply as plain text only — no HTML, no markdown, no subject line."
+
+        "\n\nCONVERSATION CONTEXT RULES (very important — read every time):"
+        "\nA. If a PRIOR CONVERSATION block is shown, you are mid-thread. Read it before replying."
+        "\nB. NEVER repeat information you already shared earlier in this thread (e.g. order number, status, ETA, tracking, brand name). The customer already has it."
+        "\nC. If the customer is just CONFIRMING or ACKNOWLEDGING something you said (e.g. 'Ok so it's processing right?', 'Got it', 'Thanks for confirming'), reply in ONE SHORT SENTENCE that simply confirms (e.g. 'Yes, that's right — it's still processing.'). Do not restate the full order details."
+        "\nD. If the customer is asking a NEW question, answer just THAT — don't re-summarize prior context."
+        "\nE. Do not re-greet (e.g. don't say 'Hi <Name>' again) for messages that are clearly part of an ongoing back-and-forth."
+        "\nF. The sign-off rule still applies: drop the sign-off only if you are doing a one-sentence quick confirmation."
     )
     return system
+
+
+def _build_thread_history_text(email_obj, account, max_messages=8, max_chars_per_msg=600):
+    """
+    Return a string of prior messages in the same conversation thread so the AI
+    can see what was already discussed and avoid repeating info.
+    """
+    if not account:
+        return ""
+    try:
+        from .views import get_thread_contact, extract_clean_email
+    except Exception:
+        return ""
+
+    contact = (get_thread_contact(email_obj) or "").lower()
+    if not contact:
+        return ""
+
+    store_email = (getattr(account, "email", "") or "").lower()
+
+    # All prior messages for this store, excluding the current email, oldest first
+    prior_qs = (EmailMessage.objects
+                .filter(store=email_obj.store)
+                .exclude(id=email_obj.id)
+                .order_by("created_at"))
+
+    history = []
+    for m in prior_qs:
+        # Only keep messages that belong to this conversation
+        try:
+            m_contact = (get_thread_contact(m) or "").lower()
+        except Exception:
+            m_contact = ""
+        if m_contact != contact:
+            continue
+
+        m_sender = extract_clean_email(m.sender or "")
+        role = "Support (you)" if m_sender == store_email else "Customer"
+        body = (m.body or "").strip()
+        if not body:
+            continue
+        if len(body) > max_chars_per_msg:
+            body = body[:max_chars_per_msg].rstrip() + " …(truncated)"
+        history.append(f"{role}:\n{body}")
+
+    if not history:
+        return ""
+
+    # Keep only the last N turns to control prompt size
+    history = history[-max_messages:]
+    return "\n\n---\n\n".join(history)
 
 
 def generate_ai_reply(email_obj, account=None):
@@ -437,6 +496,7 @@ def generate_ai_reply(email_obj, account=None):
       2. KnowledgeSnippets  (per store) — FAQs, policies
       3. Auto-detected customer refs   — order #s, emails, tracking
       4. Resolved Order data           — real status, tracking, customer info
+      5. Prior conversation history in the same thread
     Falls back to per-EmailAccount settings if no profile is set.
     """
     # Lookup tenant store via email_obj
@@ -461,14 +521,28 @@ def generate_ai_reply(email_obj, account=None):
     detected_orders = resolved.get('orders') or []
     detected_block  = build_context_block_for_prompt(detected_orders)
 
+    # Conversation history (so AI doesn't repeat info already shared in this thread)
+    history_text = _build_thread_history_text(email_obj, account)
+
     # ── Path A: New training-profile flow ──────────────────────────────────
     if profile or snippets:
         system_prompt = build_training_system_prompt(profile, snippets, detected_block)
 
-        # Compose the user-side message (subject + body)
+        # Compose the user-side message (subject + body), prefixed with prior thread history
         subj = (getattr(email_obj, 'subject', '') or '').strip()
         body = (getattr(email_obj, 'body', '') or '').strip()
-        user_msg = (f"Subject: {subj}\n\n{body}" if subj else body) or "(empty email)"
+        new_msg = (f"Subject: {subj}\n\n{body}" if subj else body) or "(empty email)"
+
+        if history_text:
+            user_msg = (
+                "PRIOR CONVERSATION IN THIS THREAD (oldest → newest):\n\n"
+                f"{history_text}\n\n"
+                "===\n\n"
+                "CUSTOMER'S NEW MESSAGE (reply to THIS only):\n\n"
+                f"{new_msg}"
+            )
+        else:
+            user_msg = new_msg
 
         try:
             reply = call_claude(prompt=user_msg, system=system_prompt, max_tokens=1024)
@@ -524,20 +598,32 @@ def generate_ai_reply(email_obj, account=None):
     if custom_instructions:
         custom_block = f"\n\nTenant-specific instructions (MUST follow):\n{custom_instructions}"
 
-    prompt = f"""Customer message:
+    history_block = ""
+    if history_text:
+        history_block = (
+            "\n\nPRIOR CONVERSATION IN THIS THREAD (oldest → newest):\n"
+            f"{history_text}\n"
+        )
+
+    prompt = f"""{history_block}Customer's new message:
 {email_obj.body}{order_context}{custom_block}
 
 Write a {tone} ecommerce support reply in {language}.
 
 STRICT REPLY RULES (must follow):
 1. SHORT and to the point — 2 to 3 short sentences max (under 60 words total).
-2. Start with a brief greeting on its own line (e.g., "Hi <Name>,").
+2. Start with a brief greeting on its own line (e.g., "Hi <Name>,"). SKIP the greeting if you are already mid-conversation and just answering a quick follow-up.
 3. Leave a BLANK LINE between greeting, body, and sign-off — this is required for readability.
 4. Skip filler phrases like "Thanks for reaching out!", "I hope this helps", "Let me know if you need anything else" unless they genuinely add value.
 5. NEVER invent order numbers, statuses, or tracking — use ONLY the Order context block if present. If data is missing, ask for it.
 6. Sound human and professional, not robotic.
 
-Plain text only — no HTML, no markdown, no subject line. The sign-off will be appended separately."""
+CONVERSATION CONTEXT RULES:
+- If a PRIOR CONVERSATION block is shown above, you are mid-thread. NEVER repeat info you already shared (order #, status, ETA, tracking).
+- If the customer is just CONFIRMING or ACKNOWLEDGING (e.g. "ok so it's processing right?", "got it"), reply in ONE SHORT SENTENCE that simply confirms — no full restate, no greeting, no sign-off.
+- If the customer asks a NEW question, answer just THAT.
+
+Plain text only — no HTML, no markdown, no subject line. The sign-off will be appended separately (unless you skipped greeting because it's a quick confirmation)."""
 
     try:
         reply = call_claude(prompt)
