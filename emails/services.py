@@ -77,16 +77,28 @@ def extract_customer_refs(text):
 def resolve_customer_context(refs, sender_email=None, store=None):
     """
     Take extracted refs + optional sender email, look up matching Orders.
-    Returns dict {orders: [...], notes: [...]}
+    Each order is annotated with a `_verified_sender` attribute:
+      True  → the order's customer_email matches the sender email (trusted)
+      False → no match (DO NOT share details without further verification)
+    Returns dict {orders: [...], notes: [...], sender_email_clean: str}
     """
     found_orders = []
     notes = []
     seen_order_ids = set()
 
+    # Clean the sender email up-front for matching
+    sender_clean = ""
+    if sender_email:
+        m = re.search(r"<([^>]+)>", sender_email)
+        sender_clean = (m.group(1) if m else sender_email).strip().lower()
+
     def _add_order(o):
         if o.id in seen_order_ids:
             return
         seen_order_ids.add(o.id)
+        # Annotate verification status
+        order_email = (o.customer_email or "").strip().lower()
+        o._verified_sender = bool(sender_clean and order_email and sender_clean == order_email)
         found_orders.append(o)
 
     qs_base = Order.objects.all()
@@ -116,19 +128,15 @@ def resolve_customer_context(refs, sender_email=None, store=None):
         except Exception as e:
             notes.append(f"lookup error for {t}={v}: {e}")
 
-    # Also try sender email as a customer email match
-    if sender_email:
-        # Extract clean email if it's "Name <email>"
-        m = re.search(r"<([^>]+)>", sender_email)
-        clean = (m.group(1) if m else sender_email).strip().lower()
-        if clean and "@" in clean:
-            try:
-                for o in qs_base.filter(customer_email__iexact=clean).order_by("-created_at")[:3]:
-                    _add_order(o)
-            except Exception as e:
-                notes.append(f"sender lookup error: {e}")
+    # Also try sender email as a customer email match — these are inherently VERIFIED
+    if sender_clean and "@" in sender_clean:
+        try:
+            for o in qs_base.filter(customer_email__iexact=sender_clean).order_by("-created_at")[:3]:
+                _add_order(o)
+        except Exception as e:
+            notes.append(f"sender lookup error: {e}")
 
-    return {"orders": found_orders[:5], "notes": notes}
+    return {"orders": found_orders[:5], "notes": notes, "sender_email_clean": sender_clean}
 
 
 def serialize_order_for_ai(o):
@@ -163,6 +171,8 @@ def serialize_order_for_ai(o):
         "delivered_at": o.delivered_at.isoformat() if o.delivered_at else "",
         "created_at": o.created_at.isoformat() if o.created_at else "",
         "days_since_order": days_since_order,
+        # ⚠️ Security flag — only show details for verified orders
+        "verified_sender": bool(getattr(o, "_verified_sender", False)),
     }
 
 
@@ -222,7 +232,9 @@ def build_context_block_for_prompt(orders):
     lines = ["DETECTED CUSTOMER CONTEXT (real data from your store):"]
     for o in orders:
         s = serialize_order_for_ai(o)
-        line = f"- Order #{s['order_number']}"
+        verified = s.get("verified_sender", False)
+        verify_tag = "✓ VERIFIED" if verified else "⚠️ UNVERIFIED (sender email does NOT match this order's customer_email)"
+        line = f"- Order #{s['order_number']} [{verify_tag}]"
         if s["customer_name"]:           line += f" · Customer: {s['customer_name']}"
         if s["product"]:                 line += f" · Product: {s['product']}"
         if s["total"]:                   line += f" · Total: {s['total']}"
@@ -681,6 +693,19 @@ def build_training_system_prompt(profile, snippets, detected_context="",
         "Format it on its own line so it's clickable. NEVER paraphrase the URL."
         "\nI. If fulfillment_status is 'completed' or 'shipped' and a tracking URL exists, give the customer the link directly — don't promise to 'send tracking later'."
         "\nJ. If tracking number exists but tracking URL doesn't, include just the tracking number and the courier name (e.g., 'Tracking: 1Z999AA10123456784 — FedEx')."
+
+        "\n\n🔒 ORDER VERIFICATION RULES (CRITICAL — protects customer privacy):"
+        "\nP. Each order in DETECTED CUSTOMER CONTEXT is tagged either [✓ VERIFIED] or [⚠️ UNVERIFIED]."
+        "\nQ. For [✓ VERIFIED] orders — the sender's email matches the order's customer_email, so it's THEIR order. "
+        "You can share full details (status, tracking, product, ETA, etc.)."
+        "\nR. For [⚠️ UNVERIFIED] orders — the sender is asking about an order that is NOT under their email. "
+        "Do NOT share status, tracking, products, customer name, total, or any specific details. "
+        "Politely ask the customer to verify ownership before continuing. Examples:"
+        "\n     • 'To protect your order's privacy, I need to verify it belongs to you. Could you confirm the email address used at checkout, or share the billing postcode?'"
+        "\n     • 'I see that order number, but it's not associated with the email you're writing from. Could you send this from the original order email, or share the billing name + postcode so I can verify?'"
+        "\nS. If the customer is asking about an order that was NOT FOUND in our store at all (no row in DETECTED CUSTOMER CONTEXT), "
+        "say: 'I couldn't find that order in our system. Could you double-check the order number and the email used at checkout?'"
+        "\nT. NEVER reveal customer_name, address, email, phone, or any PII from an UNVERIFIED order — even by accident in a confirmation."
 
         "\n\nFACT-CHECK RULES (CRITICAL — never agree with a false premise):"
         "\nK. ALWAYS fact-check the customer's claim against the DETECTED CUSTOMER CONTEXT before responding."
