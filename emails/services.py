@@ -645,11 +645,22 @@ def build_training_system_prompt(profile, snippets, detected_context="",
 
     # Strong formatting + brevity rules — these are the most important part of the prompt.
     system += (
-        "\n\nSTRICT REPLY RULES (must follow):"
+        "\n\nREQUIRED REPLY FORMAT (output your reply EXACTLY in this structure with real blank lines):"
+        "\n"
+        "\nHi <First Name>,"
+        "\n"
+        "\n<One short paragraph answering the question directly.>"
+        "\n"
+        "\n<Sign-off line>"
+        "\n"
+        "\nEvery section is separated by a TRUE empty line (an actual blank line, i.e. two newlines)."
+        "\nDo NOT put the sign-off on the same line as the body. Do NOT collapse this into a single paragraph."
+        "\n"
+        "\nSTRICT REPLY RULES (must follow):"
         "\n1. Be SHORT and to the point. No filler, no over-explaining."
-        "\n2. Open with a brief greeting line (e.g., 'Hi <Name>,'). Use the customer's first name if known. SKIP the greeting if you are already mid-conversation and just answering a quick follow-up."
+        "\n2. Open with a brief greeting line (e.g., 'Hi <Name>,'). If a CUSTOMER'S FIRST NAME is provided in the user message, USE IT VERBATIM. Otherwise use a generic greeting like 'Hi there,'. SKIP the greeting if you are already mid-conversation and just answering a quick follow-up."
         "\n3. Body: ONE focused short paragraph that answers the question directly."
-        "\n4. Use a BLANK LINE between the greeting, the body, and the sign-off — this is non-negotiable for readability."
+        "\n4. Use a BLANK LINE between the greeting, the body, and the sign-off — this is non-negotiable for readability. The sign-off must NEVER appear inline with the body."
         "\n5. Skip generic phrases like 'Thanks for reaching out!', 'I hope this helps', 'Let me know if you have any other questions' unless they genuinely add value."
         "\n6. Never invent order numbers, tracking, statuses, or dates — use ONLY the DETECTED CUSTOMER CONTEXT block (if present). If data is missing, ask for it."
         "\n7. Sound human and confident, not robotic. Match the brand voice example above."
@@ -688,6 +699,70 @@ def build_training_system_prompt(profile, snippets, detected_context="",
         "ask them to clarify ('Could you share the tracking number you're trying to use?') instead of inventing a confirmation."
     )
     return system
+
+
+def _extract_customer_first_name(email_obj, order=None):
+    """
+    Best-effort: pull the customer's first name for greeting.
+    Priority: Order.customer_name → display name from sender header → ''
+    """
+    # 1. From the linked order's customer_name (most reliable)
+    if order is not None and getattr(order, "customer_name", ""):
+        name = (order.customer_name or "").strip()
+        first = name.split()[0] if name else ""
+        if first and len(first) > 1:
+            return first
+    # 2. From the sender display name (e.g., "Syncere Davis <foo@bar.com>")
+    raw = (getattr(email_obj, "sender", "") or "").strip()
+    m = re.match(r'^\s*"?([^"<]+?)"?\s*<', raw)
+    if m:
+        display = m.group(1).strip()
+        # Skip obvious aliases/team names
+        bad = {"sales", "team", "support", "no-reply", "noreply", "info", "admin", "service"}
+        first = display.split()[0] if display else ""
+        if first and first.lower() not in bad and len(first) > 1 and first.isalpha():
+            return first
+    return ""
+
+
+def _enforce_reply_structure(text):
+    """
+    Post-process AI reply to guarantee proper paragraph spacing.
+    The AI sometimes outputs one-line replies; we force:
+      Greeting,
+      <blank>
+      Body
+      <blank>
+      Sign-off
+    Idempotent — if structure is already correct, leaves it alone.
+    """
+    if not text:
+        return text
+    s = text.strip()
+
+    # 1. Ensure a blank line after a greeting line like "Hi Name," or "Hello Name,"
+    s = re.sub(
+        r"^(Hi|Hello|Hey|Dear|Greetings)\s+[^,\n]{1,40},\s*(?!\n)",
+        lambda m: m.group(0).rstrip() + "\n\n",
+        s,
+        flags=re.IGNORECASE | re.MULTILINE,
+    )
+
+    # 2. Ensure a blank line BEFORE a sign-off — but only on the FIRST signoff occurrence
+    # and only when it's preceded by a sentence-ending punctuation + space (not already on its own line).
+    signoff_starters = [
+        "Best regards", "Best wishes", "Best,",
+        "Warm regards", "Kind regards", "Sincerely", "Cheers,",
+        "Thanks!", "Thank you", "Take care", "Many thanks",
+        "Yours truly", "Yours sincerely", "Regards,",
+    ]
+    pattern = r"([.!?])\s+(" + "|".join(re.escape(p) for p in signoff_starters) + r")"
+    s = re.sub(pattern, lambda m: m.group(1) + "\n\n" + m.group(2), s, count=1)
+
+    # 3. Collapse any run of >2 newlines down to exactly 2
+    s = re.sub(r"\n{3,}", "\n\n", s)
+
+    return s.strip()
 
 
 def _build_thread_history_text(email_obj, account, max_messages=8, max_chars_per_msg=600):
@@ -778,6 +853,10 @@ def generate_ai_reply(email_obj, account=None):
     # Conversation history (so AI doesn't repeat info already shared in this thread)
     history_text = _build_thread_history_text(email_obj, account)
 
+    # Customer first-name hint (avoids the AI using the wrong account name)
+    linked_order = (detected_orders[0] if detected_orders else None)
+    customer_first_name = _extract_customer_first_name(email_obj, order=linked_order)
+
     # Detect customer language from the new message (Item 6)
     customer_lang_hint = _detect_customer_language(getattr(email_obj, 'body', '') or '')
 
@@ -805,6 +884,8 @@ def generate_ai_reply(email_obj, account=None):
         parts = []
         if corrections_block:
             parts.append(corrections_block)
+        if customer_first_name:
+            parts.append(f"CUSTOMER'S FIRST NAME (use this in the greeting): {customer_first_name}")
         if history_text:
             parts.append("PRIOR CONVERSATION IN THIS THREAD (oldest → newest):\n\n" + history_text)
         parts.append("CUSTOMER'S NEW MESSAGE (reply to THIS only):\n\n" + new_msg)
@@ -815,6 +896,9 @@ def generate_ai_reply(email_obj, account=None):
         except Exception as e:
             print("AI REPLY ERROR (training-profile flow):", str(e))
             reply = generate_auto_draft(email_obj)
+
+        # Force proper paragraph structure (greeting / body / sign-off blank lines)
+        reply = _enforce_reply_structure(reply)
 
         # Append per-inbox signature if requested
         if account:
