@@ -11,6 +11,10 @@ from .views import (
     email_threads_api,
     email_thread_detail_api,
     improve_reply_api,
+    ai_playground_api,
+    ai_training_profile_api,
+    ai_training_snippets_api,
+    ai_training_snippet_detail_api,
     auto_suggest_reply_api,
     connect_email_account_api,
     connect_custom_email_api,
@@ -69,6 +73,10 @@ urlpatterns = [
     # =========================
 
     path("api/improve-reply/", improve_reply_api, name="improve_reply_api"),
+    path("api/ai-playground/", ai_playground_api, name="ai_playground_api"),
+    path("api/ai-training/profile/", ai_training_profile_api, name="ai_training_profile_api"),
+    path("api/ai-training/snippets/", ai_training_snippets_api, name="ai_training_snippets_api"),
+    path("api/ai-training/snippets/<int:snippet_id>/", ai_training_snippet_detail_api, name="ai_training_snippet_detail_api"),
     path("api/suggest-reply/", auto_suggest_reply_api, name="auto_suggest_reply_api"),
 
     # =========================

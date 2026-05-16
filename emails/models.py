@@ -41,6 +41,17 @@ class EmailAccount(models.Model):
     ai_auto_draft = models.BooleanField(default=False)
     ai_include_order = models.BooleanField(default=True)
 
+    # AI Auto-Reply mode: off / suggest / auto / hybrid
+    AI_REPLY_MODES = (
+        ("off",     "Off"),
+        ("suggest", "Suggest Draft"),
+        ("auto",    "Auto-Send"),
+        ("hybrid",  "Hybrid (auto for simple, suggest for complex)"),
+    )
+    ai_reply_mode = models.CharField(max_length=20, choices=AI_REPLY_MODES, default="off")
+    ai_custom_instructions = models.TextField(blank=True, default="")
+    ai_use_signature = models.BooleanField(default=True)
+
     # Signature
     signature = models.TextField(blank=True, default="")
 
@@ -215,3 +226,98 @@ class EmailTemplate(models.Model):
 
     def __str__(self):
         return self.name
+
+# ════════════════════════════════════════════════════════════════════════════
+# 🧠 AI Training Studio — Per-store profile + knowledge snippets
+# ════════════════════════════════════════════════════════════════════════════
+
+class AiTrainingProfile(models.Model):
+    """
+    Per-store AI training profile.
+    Built progressively via the AI Setup Wizard, edited in AI Training Studio.
+    Feeds into every AI reply (live emails + playground).
+    """
+    MODE_CHOICES = [
+        ('auto',    'Fully Automatic'),
+        ('draft',   'Draft & Review'),
+        ('suggest', 'Suggest on Open'),
+    ]
+
+    store = models.OneToOneField(
+        'stores.Store', on_delete=models.CASCADE,
+        related_name='ai_training_profile'
+    )
+
+    # Brand identity
+    business_name = models.CharField(max_length=255, blank=True, default='')
+    niche         = models.CharField(max_length=255, blank=True, default='')
+    description   = models.TextField(blank=True, default='')
+    language      = models.CharField(max_length=100, blank=True, default='English')
+    support_hours = models.CharField(max_length=255, blank=True, default='')
+
+    # Tone & voice
+    tones          = models.JSONField(default=list, blank=True)      # ["friendly","empathetic"]
+    reply_length   = models.CharField(max_length=50, blank=True, default='Medium')
+    signoff        = models.CharField(max_length=255, blank=True, default='')
+    voice_example  = models.TextField(blank=True, default='')
+
+    # AI behavior
+    mode           = models.CharField(max_length=20, choices=MODE_CHOICES, default='draft')
+    toggles        = models.JSONField(default=dict, blank=True)
+    # toggles example:
+    #   {"include_order_context": True, "auto_detect_language": True,
+    #    "escalate_low_confidence": True, "use_brand_signature": True}
+
+    # Wizard tracking
+    wizard_answers = models.JSONField(default=dict, blank=True)
+    wizard_completed_at = models.DateTimeField(blank=True, null=True)
+
+    # Raw extras (anything not captured above)
+    extras         = models.JSONField(default=dict, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-updated_at']
+
+    def __str__(self):
+        return f"AI Profile · {self.business_name or self.store_id}"
+
+
+class KnowledgeSnippet(models.Model):
+    """
+    Knowledge base entry for a store's AI.
+    AI picks the most relevant snippets per query to inject into the system prompt.
+    """
+    CATEGORY_CHOICES = [
+        ('Shipping',  'Shipping'),
+        ('Refund',    'Refund'),
+        ('Product',   'Product'),
+        ('Payment',   'Payment'),
+        ('FAQ',       'FAQ'),
+        ('Brand',     'Brand'),
+        ('Support',   'Support'),
+        ('AI',        'AI Behavior'),
+        ('Guardrail', 'Guardrail'),
+    ]
+
+    store    = models.ForeignKey(
+        'stores.Store', on_delete=models.CASCADE,
+        related_name='knowledge_snippets'
+    )
+    category = models.CharField(max_length=30, choices=CATEGORY_CHOICES, default='FAQ')
+    title    = models.CharField(max_length=255)
+    text     = models.TextField()
+
+    from_wizard = models.BooleanField(default=False)
+    order_idx   = models.IntegerField(default=0)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['order_idx', '-updated_at']
+
+    def __str__(self):
+        return f"[{self.category}] {self.title}"

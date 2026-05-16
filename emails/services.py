@@ -27,6 +27,157 @@ def get_claude_client():
     return _claude_client
 
 
+# =========================
+# 🔍 CUSTOMER REFERENCE EXTRACTION + LOOKUP
+# =========================
+def extract_customer_refs(text):
+    """
+    Scan free-text (email body, subject) for customer identifiers.
+    Returns list of dicts: [{type, value}, ...]
+    Types: 'order_id', 'email', 'phone', 'tracking'
+    """
+    text = text or ""
+    refs = []
+    seen = set()
+
+    def _add(t, v):
+        v = (v or "").strip()
+        if not v:
+            return
+        key = f"{t}:{v.lower()}"
+        if key in seen:
+            return
+        seen.add(key)
+        refs.append({"type": t, "value": v})
+
+    # Order numbers — broad patterns
+    # "#1234", "order 1234", "order # 1234", "order number 1234", "order id 1234"
+    for m in re.finditer(r"(?:order\s*(?:#|no\.?|number|id)?\s*[:#]?\s*)(\d{3,10})\b", text, re.IGNORECASE):
+        _add("order_id", m.group(1))
+    for m in re.finditer(r"#(\d{3,10})\b", text):
+        _add("order_id", m.group(1))
+
+    # Email addresses
+    for m in re.finditer(r"\b[\w.+\-]+@[\w-]+\.[\w.\-]+\b", text):
+        _add("email", m.group(0))
+
+    # Phone numbers (loose — 7+ digits, may have +, spaces, dashes, parens)
+    for m in re.finditer(r"\+?\d[\d\s\-().]{7,}\d", text):
+        digits = re.sub(r"\D", "", m.group(0))
+        if 7 <= len(digits) <= 15:
+            _add("phone", m.group(0).strip())
+
+    # Tracking numbers — usually preceded by "tracking" keyword
+    for m in re.finditer(r"tracking\s*(?:#|no\.?|number|id)?\s*[:#]?\s*([A-Z0-9]{8,30})\b", text, re.IGNORECASE):
+        _add("tracking", m.group(1))
+
+    return refs
+
+
+def resolve_customer_context(refs, sender_email=None, store=None):
+    """
+    Take extracted refs + optional sender email, look up matching Orders.
+    Returns dict {orders: [...], notes: [...]}
+    """
+    found_orders = []
+    notes = []
+    seen_order_ids = set()
+
+    def _add_order(o):
+        if o.id in seen_order_ids:
+            return
+        seen_order_ids.add(o.id)
+        found_orders.append(o)
+
+    qs_base = Order.objects.all()
+    if store is not None:
+        qs_base = qs_base.filter(store=store)
+
+    # Lookup by extracted refs
+    for ref in (refs or []):
+        t, v = ref.get("type"), ref.get("value")
+        if not v:
+            continue
+        try:
+            if t == "order_id":
+                for o in qs_base.filter(external_order_id__iendswith=v)[:3]:
+                    _add_order(o)
+            elif t == "email":
+                for o in qs_base.filter(customer_email__iexact=v).order_by("-created_at")[:3]:
+                    _add_order(o)
+            elif t == "phone":
+                digits = re.sub(r"\D", "", v)
+                if digits:
+                    for o in qs_base.filter(customer_phone__contains=digits[-7:]).order_by("-created_at")[:3]:
+                        _add_order(o)
+            elif t == "tracking":
+                for o in qs_base.filter(tracking_number__iexact=v)[:3]:
+                    _add_order(o)
+        except Exception as e:
+            notes.append(f"lookup error for {t}={v}: {e}")
+
+    # Also try sender email as a customer email match
+    if sender_email:
+        # Extract clean email if it's "Name <email>"
+        m = re.search(r"<([^>]+)>", sender_email)
+        clean = (m.group(1) if m else sender_email).strip().lower()
+        if clean and "@" in clean:
+            try:
+                for o in qs_base.filter(customer_email__iexact=clean).order_by("-created_at")[:3]:
+                    _add_order(o)
+            except Exception as e:
+                notes.append(f"sender lookup error: {e}")
+
+    return {"orders": found_orders[:5], "notes": notes}
+
+
+def serialize_order_for_ai(o):
+    """Compact representation of an Order for AI prompt context + UI display."""
+    return {
+        "id": o.id,
+        "order_number": o.external_order_id,
+        "customer_name": o.customer_name or "",
+        "customer_email": o.customer_email or "",
+        "city": o.city or "",
+        "country": o.country or "",
+        "product": o.product_name or "",
+        "total": f"{o.total_price} {o.currency or ''}".strip(),
+        "payment_status": o.payment_status or "",
+        "fulfillment_status": o.fulfillment_status or "",
+        "tracking_status": o.tracking_status or "",
+        "live_tracking_status": o.live_tracking_status or "",
+        "tracking_number": o.tracking_number or "",
+        "tracking_company": o.tracking_company or "",
+        "tracking_url": o.tracking_url or "",
+        "delivered_at": o.delivered_at.isoformat() if o.delivered_at else "",
+        "created_at": o.created_at.isoformat() if o.created_at else "",
+    }
+
+
+def build_context_block_for_prompt(orders):
+    """Turn list of Order objects into a text block suitable for system prompt."""
+    if not orders:
+        return ""
+    lines = ["DETECTED CUSTOMER CONTEXT (real data from your store):"]
+    for o in orders:
+        s = serialize_order_for_ai(o)
+        line = f"- Order #{s['order_number']}"
+        if s["customer_name"]:           line += f" · Customer: {s['customer_name']}"
+        if s["product"]:                 line += f" · Product: {s['product']}"
+        if s["total"]:                   line += f" · Total: {s['total']}"
+        if s["payment_status"]:          line += f" · Payment: {s['payment_status']}"
+        if s["fulfillment_status"]:      line += f" · Fulfillment: {s['fulfillment_status']}"
+        if s["live_tracking_status"]:    line += f" · Live status: {s['live_tracking_status']}"
+        elif s["tracking_status"]:       line += f" · Status: {s['tracking_status']}"
+        if s["tracking_number"]:         line += f" · Tracking #: {s['tracking_number']} ({s['tracking_company']})"
+        if s["tracking_url"]:            line += f" · Tracking URL: {s['tracking_url']}"
+        if s["delivered_at"]:            line += f" · Delivered: {s['delivered_at'][:10]}"
+        if s["city"] or s["country"]:    line += f" · Location: {s['city']} {s['country']}".strip()
+        lines.append(line)
+    lines.append("Use this real data to answer accurately. Never invent order numbers, statuses, or tracking info.")
+    return "\n".join(lines)
+
+
 def call_claude(prompt, system="You are a professional ecommerce customer support assistant.", max_tokens=1024):
     """Single helper to call Claude and return text, or raise on error."""
     client = get_claude_client()
@@ -199,50 +350,193 @@ def hybrid_reply(email_obj):
     return reply
 
 
+def _load_training_profile(store):
+    """Load AiTrainingProfile for a store. Returns None if not configured."""
+    if not store:
+        return None
+    try:
+        from .models import AiTrainingProfile
+        return AiTrainingProfile.objects.filter(store=store).first()
+    except Exception:
+        return None
+
+
+def _load_snippets(store, limit=10):
+    """Load top-N knowledge snippets for the store."""
+    if not store:
+        return []
+    try:
+        from .models import KnowledgeSnippet
+        return list(KnowledgeSnippet.objects.filter(store=store).order_by('order_idx', '-updated_at')[:limit])
+    except Exception:
+        return []
+
+
+def build_training_system_prompt(profile, snippets, detected_context=""):
+    """
+    Compose the full system prompt for Claude using the per-store
+    AiTrainingProfile + KnowledgeSnippets + (optional) detected customer context.
+    Returns a string.
+    """
+    biz   = (getattr(profile, 'business_name', '') or '').strip() if profile else ''
+    niche = (getattr(profile, 'niche', '')         or '').strip() if profile else ''
+    desc  = (getattr(profile, 'description', '')   or '').strip() if profile else ''
+    lang  = (getattr(profile, 'language', '')      or 'English').strip() if profile else 'English'
+    hours = (getattr(profile, 'support_hours', '') or '').strip() if profile else ''
+    signoff = (getattr(profile, 'signoff', '')     or '').strip() if profile else ''
+    voice_eg = (getattr(profile, 'voice_example', '') or '').strip() if profile else ''
+    tones = getattr(profile, 'tones', []) if profile else []
+    rlen  = (getattr(profile, 'reply_length', '')  or 'Medium').strip() if profile else 'Medium'
+
+    tones_str = ', '.join(tones) if tones else 'friendly, empathetic'
+    length_map = {
+        'Short (1–2 sentences)': '1–2 sentences',
+        'Medium (3–5 sentences)': '3–5 sentences',
+        'Detailed (paragraph)':   'one full paragraph',
+    }
+    length_str = length_map.get(rlen, '3–5 sentences')
+
+    biz_label = biz or 'our store'
+    niche_label = niche or 'an ecommerce brand'
+    system = f'You are a customer support agent for "{biz_label}" — {niche_label}.'
+    if desc:    system += f"\n{desc}"
+    if hours:   system += f"\nSupport hours: {hours}."
+    system += f"\n\nTone: {tones_str}. Reply length: {length_str}. Language: {lang}."
+    if signoff: system += f'\nSign-off every reply with: "{signoff}".'
+
+    if voice_eg:
+        system += f"\n\nBRAND VOICE EXAMPLE (mimic this style):\n\"{voice_eg}\""
+
+    if snippets:
+        system += "\n\nRELEVANT KNOWLEDGE BASE:"
+        for i, s in enumerate(snippets[:8], start=1):
+            system += f"\n[{i}] ({s.category}) {s.title}: {s.text}"
+
+    if detected_context:
+        system += f"\n\n{detected_context}"
+
+    system += ("\n\nReply in a natural, on-brand way. Be helpful, accurate, and stay within "
+               "the policies above. NEVER invent order numbers, statuses, or tracking info "
+               "— only use the DETECTED CUSTOMER CONTEXT block (if present).")
+    return system
+
+
 def generate_ai_reply(email_obj, account=None):
+    """
+    Generate an AI reply for a customer email using:
+      1. AiTrainingProfile (per store) — brand, tone, language, voice
+      2. KnowledgeSnippets  (per store) — FAQs, policies
+      3. Auto-detected customer refs   — order #s, emails, tracking
+      4. Resolved Order data           — real status, tracking, customer info
+    Falls back to per-EmailAccount settings if no profile is set.
+    """
+    # Lookup tenant store via email_obj
+    store = getattr(email_obj, 'store', None)
+
+    # Try to load the per-store training profile + snippets
+    profile = _load_training_profile(store)
+    snippets = _load_snippets(store)
+
+    # Auto-extract customer refs from email subject + body + sender
+    scan_text = " ".join([
+        getattr(email_obj, 'subject', '') or '',
+        getattr(email_obj, 'body', '')    or '',
+        getattr(email_obj, 'sender', '')  or '',
+    ])
+    detected_refs = extract_customer_refs(scan_text)
+    resolved = resolve_customer_context(
+        detected_refs,
+        sender_email=getattr(email_obj, 'sender', ''),
+        store=store,
+    )
+    detected_orders = resolved.get('orders') or []
+    detected_block  = build_context_block_for_prompt(detected_orders)
+
+    # ── Path A: New training-profile flow ──────────────────────────────────
+    if profile or snippets:
+        system_prompt = build_training_system_prompt(profile, snippets, detected_block)
+
+        # Compose the user-side message (subject + body)
+        subj = (getattr(email_obj, 'subject', '') or '').strip()
+        body = (getattr(email_obj, 'body', '') or '').strip()
+        user_msg = (f"Subject: {subj}\n\n{body}" if subj else body) or "(empty email)"
+
+        try:
+            reply = call_claude(prompt=user_msg, system=system_prompt, max_tokens=1024)
+        except Exception as e:
+            print("AI REPLY ERROR (training-profile flow):", str(e))
+            reply = generate_auto_draft(email_obj)
+
+        # Append per-inbox signature if requested
+        if account:
+            use_signature = getattr(account, 'ai_use_signature', False)
+            signature = (getattr(account, 'signature', '') or '').strip()
+            if use_signature and signature:
+                reply = reply.rstrip() + "\n\n--\n" + signature
+        return reply
+
+    # ── Path B: Legacy per-EmailAccount flow (backward compatible) ─────────
     tone_map = {
-        "formal": "Formal",
-        "friendly": "Friendly & Professional",
-        "concise": "Concise",
+        "formal":     "Formal",
+        "friendly":   "Friendly & Professional",
+        "concise":    "Concise",
         "empathetic": "Empathetic",
     }
     lang_map = {
-        "english": "English",
-        "arabic": "Arabic",
-        "urdu": "Urdu",
-        "french": "French",
+        "english": "English", "arabic": "Arabic",
+        "urdu":    "Urdu",    "french": "French",
     }
 
     tone = "Friendly & Professional"
     language = "English"
     include_order = True
+    custom_instructions = ""
+    use_signature = True
+    signature = ""
 
     if account:
         tone = tone_map.get(account.ai_tone, "Friendly & Professional")
         language = lang_map.get(account.ai_language, "English")
         include_order = account.ai_include_order
+        custom_instructions = (account.ai_custom_instructions or "").strip()
+        use_signature = account.ai_use_signature
+        signature = (account.signature or "").strip()
 
+    # Use auto-detected context if available, else fall back to the
+    # legacy email_obj.order attribute (set elsewhere in the codebase).
     order_context = ""
-    if include_order and getattr(email_obj, "order", None):
+    if detected_block:
+        order_context = "\n\n" + detected_block
+    elif include_order and getattr(email_obj, "order", None):
         o = email_obj.order
         order_context = f"\n\nOrder context: #{getattr(o, 'external_order_id', o.id)}, Status: {getattr(o, 'status', 'unknown')}"
 
+    custom_block = ""
+    if custom_instructions:
+        custom_block = f"\n\nTenant-specific instructions (MUST follow):\n{custom_instructions}"
+
     prompt = f"""Customer message:
-{email_obj.body}{order_context}
+{email_obj.body}{order_context}{custom_block}
 
 Write a {tone} ecommerce support reply in {language} (3-5 lines). Be human and empathetic.
 - If tracking/shipping question → mention we will share tracking details
 - If refund request → acknowledge and explain next steps
 - If angry/frustrated → sincerely apologize first
 - Keep it concise and warm
+- NEVER invent order numbers, statuses, or tracking — only use the Order context block if present
 
-Reply only, no subject line, no extra formatting."""
+Reply only, no subject line, no signature, no extra formatting. The signature will be appended separately."""
 
     try:
-        return call_claude(prompt)
+        reply = call_claude(prompt)
     except Exception as e:
         print("AI REPLY ERROR:", str(e))
-        return generate_auto_draft(email_obj)
+        reply = generate_auto_draft(email_obj)
+
+    if use_signature and signature:
+        reply = reply.rstrip() + "\n\n--\n" + signature
+
+    return reply
 
 
 def generate_ai_text(prompt):
@@ -251,6 +545,96 @@ def generate_ai_text(prompt):
     except Exception as e:
         print("AI TEXT ERROR:", str(e))
         return None
+
+
+# ────────────────────────────────────────────────────────────────────────
+# AI Auto-Reply Mode Handler
+# ────────────────────────────────────────────────────────────────────────
+
+SIMPLE_AUTO_KEYWORDS = {
+    "tracking", "track", "where is my order", "where is my package",
+    "shipped", "delivery", "delivered",
+    "order status", "status of my order",
+    "thank you", "thanks", "received",
+}
+
+def _is_simple_email(body):
+    """Hybrid mode: decide if email is simple enough for auto-send."""
+    if not body:
+        return False
+    text = body.lower()
+    if len(text) > 600:
+        return False
+    return any(k in text for k in SIMPLE_AUTO_KEYWORDS)
+
+
+def _extract_reply_to(email_obj):
+    """Pull the customer's address from email_obj.sender (e.g. 'Name <a@b.com>')."""
+    raw = (email_obj.sender or "").strip()
+    m = re.search(r"<([^>]+)>", raw)
+    return (m.group(1) if m else raw).strip()
+
+
+def process_ai_reply_mode(email_obj, account):
+    """
+    Generate AI draft and act based on account.ai_reply_mode:
+        off     → save no AI draft, fall back to quick_reply / auto_draft
+        suggest → generate draft, save to ai_draft (do NOT send)
+        auto    → generate draft AND send via tenant Gmail
+        hybrid  → if simple → auto-send, else suggest
+    Returns dict with 'mode_used' and 'sent' boolean.
+    """
+    mode = getattr(account, "ai_reply_mode", "off") or "off"
+    result = {"mode_used": mode, "sent": False, "draft": ""}
+
+    # Off → quick keyword draft only
+    if mode == "off":
+        email_obj.ai_draft = quick_reply(email_obj.body) or generate_auto_draft(email_obj)
+        result["draft"] = email_obj.ai_draft
+        return result
+
+    # Generate the AI draft (used by all other modes)
+    try:
+        draft = generate_ai_reply(email_obj, account)
+    except Exception as e:
+        print("AI REPLY MODE — generation failed:", e)
+        draft = quick_reply(email_obj.body) or generate_auto_draft(email_obj)
+
+    email_obj.ai_draft = draft
+    result["draft"] = draft
+
+    # Decide whether to auto-send
+    should_send = False
+    if mode == "auto":
+        should_send = True
+    elif mode == "hybrid" and _is_simple_email(email_obj.body):
+        should_send = True
+
+    if should_send:
+        try:
+            recipient = _extract_reply_to(email_obj)
+            if not recipient:
+                raise ValueError("No recipient address found")
+
+            subject = email_obj.subject or "Re: Your message"
+            if not subject.lower().startswith("re:"):
+                subject = "Re: " + subject
+
+            # send via tenant's connected Gmail / SMTP
+            from .views import send_email_with_store_account
+            html_body = draft.replace("\n", "<br>")
+            send_email_with_store_account(
+                account.store, recipient, subject, html_body
+            )
+            email_obj.status = "replied"
+            result["sent"] = True
+        except Exception as e:
+            print("AI AUTO-SEND failed, falling back to draft:", e)
+            email_obj.status = "drafted"
+    else:
+        email_obj.status = "drafted"
+
+    return result
 
 
 def generate_smart_suggestion(customer_body, thread_history=""):
@@ -768,10 +1152,7 @@ def _sync_gmail_api(account, store):
 
         save_attachments(email_obj, msg)
 
-        if account.ai_auto_draft:
-            email_obj.ai_draft = generate_ai_reply(email_obj, account)
-        else:
-            email_obj.ai_draft = quick_reply(email_obj.body) or generate_auto_draft(email_obj)
+        process_ai_reply_mode(email_obj, account)
         email_obj.save()
 
         saved_count += 1
@@ -861,10 +1242,7 @@ def sync_gmail_inbox(store_id=2):
                             }
                         )
                         save_attachments(email_obj, msg)
-                        if account.ai_auto_draft:
-                            email_obj.ai_draft = generate_ai_reply(email_obj, account)
-                        else:
-                            email_obj.ai_draft = quick_reply(email_obj.body) or generate_auto_draft(email_obj)
+                        process_ai_reply_mode(email_obj, account)
                         email_obj.save()
                         total_saved += 1
                     else:

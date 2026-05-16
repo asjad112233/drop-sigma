@@ -2317,6 +2317,45 @@ body.vf-dark-mode .em-stg-select{background:rgba(255,255,255,.06)!important;bord
 .em-stg-save-sig-btn{height:27px;padding:0 14px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;border:none;background:#007AFF;color:#fff;letter-spacing:-.1px;transition:background .15s,opacity .12s;}
 .em-stg-save-sig-btn:hover{background:#0071eb;}
 .em-stg-save-sig-btn:active{opacity:.8;}
+
+/* ── AI Reply Mode cards ─────────────────────────────────── */
+.ai-mode-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+@media(max-width:900px){.ai-mode-grid{grid-template-columns:repeat(2,1fr);}}
+.ai-mode-card{
+  position:relative;cursor:pointer;
+  display:flex;flex-direction:column;align-items:flex-start;gap:4px;
+  padding:14px 13px;
+  border:2px solid var(--vf-line);border-radius:12px;
+  background:var(--vf-surface);
+  transition:all .14s;
+}
+.ai-mode-card:hover{border-color:#a5b4fc;background:#f5f3ff;}
+.ai-mode-card input{position:absolute;opacity:0;width:0;height:0;}
+.ai-mode-card.active,
+.ai-mode-card:has(input:checked){
+  border-color:#6366f1;
+  background:linear-gradient(135deg,#eef2ff,#ede9fe);
+  box-shadow:0 4px 14px rgba(99,102,241,.18);
+}
+.ai-mode-ico{font-size:22px;line-height:1;margin-bottom:4px;}
+.ai-mode-title{font-size:13px;font-weight:800;color:var(--vf-text);letter-spacing:-.2px;}
+.ai-mode-desc{font-size:11.5px;color:var(--vf-muted);line-height:1.4;}
+.ai-mode-tag{
+  position:absolute;top:8px;right:8px;
+  font-size:9px;font-weight:800;padding:2px 7px;border-radius:99px;
+  text-transform:uppercase;letter-spacing:.05em;
+}
+.ai-mode-tag.safe{background:#dcfce7;color:#15803d;}
+.ai-mode-tag.risk{background:#fee2e2;color:#b91c1c;}
+.ai-mode-tag.best{background:#fef3c7;color:#a16207;}
+body.vf-dark-mode .ai-mode-card{background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.10);}
+body.vf-dark-mode .ai-mode-card:hover{background:rgba(99,102,241,.08);}
+body.vf-dark-mode .ai-mode-card.active,
+body.vf-dark-mode .ai-mode-card:has(input:checked){
+  background:linear-gradient(135deg,rgba(99,102,241,.18),rgba(168,85,247,.12));
+  border-color:#818cf8;
+}
+
 /* connected account card in settings */
 .em-stg-acc-row{display:flex;align-items:center;gap:10px;padding:10px 18px;}
 .em-stg-acc-av{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:800;flex-shrink:0;}
@@ -3993,6 +4032,15 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
       Tasks
     </button>
 
+    <div class="sb-divider"></div>
+
+    <!-- ── AI ── -->
+    <div class="sb-section-label">AI</div>
+    <button id="navAiTraining" data-tip="AI Training Studio" onclick="showSection('aiTraining')">
+      <svg class="sb-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l1.8 4.6L18 8l-4.2 1.4L12 14l-1.8-4.6L6 8l4.2-1.4L12 2z"/><path d="M19 14l.9 2.3L22 17l-2.1.7L19 20l-.9-2.3L16 17l2.1-.7L19 14z"/><path d="M5 14l.9 2.3L8 17l-2.1.7L5 20l-.9-2.3L2 17l2.1-.7L5 14z"/></svg>
+      AI Training
+    </button>
+
     </div><!-- /sb-nav-area -->
 
     <!-- Project switcher -->
@@ -4142,6 +4190,23 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
 
           </div>
         </div>
+      </div>
+
+      <!-- ★ AI SETUP CTA ★ -->
+      <div id="aisCta" style="background:linear-gradient(135deg,#7c3aed 0%,#6366f1 50%,#06b6d4 100%);color:#fff;border-radius:20px;padding:22px 26px;margin-bottom:22px;display:flex;align-items:center;justify-content:space-between;gap:20px;box-shadow:0 18px 50px rgba(124,58,237,.28);position:relative;overflow:hidden;flex-wrap:wrap;">
+        <div style="position:absolute;right:-40px;top:-40px;width:200px;height:200px;background:radial-gradient(circle,rgba(255,255,255,.18),transparent 60%);border-radius:50%;pointer-events:none;"></div>
+        <div style="display:flex;align-items:center;gap:16px;position:relative;z-index:2;flex:1;min-width:280px;">
+          <div style="width:52px;height:52px;border-radius:14px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:24px;border:1px solid rgba(255,255,255,.25);flex-shrink:0;">🪄</div>
+          <div>
+            <span style="display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:800;background:rgba(255,255,255,.22);padding:4px 10px;border-radius:99px;text-transform:uppercase;letter-spacing:.3px;margin-bottom:6px;">⚡ Recommended · 12 min · 90%+ accuracy</span>
+            <h3 style="margin:0 0 4px;font-size:18px;font-weight:800;letter-spacing:-.3px;color:#fff;">Setup your AI</h3>
+            <p style="margin:0;opacity:.92;font-size:13px;line-height:1.5;max-width:560px;color:#fff;">The AI will ask 25 quick questions and train itself on your business — mostly tap-to-answer, no typing needed. Every chip question also has a "type your own answer" option. Skip anytime, but completing them unlocks 90%+ AI accuracy.</p>
+          </div>
+        </div>
+        <button onclick="aisOpen()" style="background:#fff;color:#6366f1;border:none;font-family:inherit;font-weight:800;padding:12px 22px;border-radius:11px;font-size:13.5px;cursor:pointer;display:flex;align-items:center;gap:8px;box-shadow:0 8px 20px rgba(0,0,0,.18);position:relative;z-index:2;transition:.15s;flex-shrink:0;" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='none'">
+          Start Setup
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </button>
       </div>
 
       <!-- ALERT BANNER -->
@@ -5865,6 +5930,78 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
               </div>
             </div>
             <div class="em-settings-card-body">
+
+              <!-- ▼ NEW: Reply Mode (3 cards) -->
+              <div class="em-stg-row" style="display:block;border-bottom:1px solid #e2e8f0;padding-bottom:18px;">
+                <div class="em-stg-label" style="margin-bottom:12px;">
+                  <h4>Auto-Reply Mode</h4>
+                  <p>Pick how AI handles incoming emails. Only the selected mode is active.</p>
+                </div>
+                <div class="ai-mode-grid">
+                  <label class="ai-mode-card" data-mode="off">
+                    <input type="radio" name="aiReplyMode" value="off"
+                      onchange="emSettingChange('ai_reply_mode', this.value); _updateAiModeUI();">
+                    <div class="ai-mode-ico">⛔</div>
+                    <div class="ai-mode-title">Off</div>
+                    <div class="ai-mode-desc">No AI drafts. Manual replies only.</div>
+                  </label>
+                  <label class="ai-mode-card" data-mode="suggest">
+                    <input type="radio" name="aiReplyMode" value="suggest"
+                      onchange="emSettingChange('ai_reply_mode', this.value); _updateAiModeUI();">
+                    <div class="ai-mode-ico">✍️</div>
+                    <div class="ai-mode-title">Suggest Draft</div>
+                    <div class="ai-mode-desc">AI prepares a draft. You review &amp; send.</div>
+                    <div class="ai-mode-tag safe">Safer</div>
+                  </label>
+                  <label class="ai-mode-card" data-mode="auto">
+                    <input type="radio" name="aiReplyMode" value="auto"
+                      onchange="emSettingChange('ai_reply_mode', this.value); _updateAiModeUI();">
+                    <div class="ai-mode-ico">⚡</div>
+                    <div class="ai-mode-title">Auto-Send</div>
+                    <div class="ai-mode-desc">AI sends every reply automatically.</div>
+                    <div class="ai-mode-tag risk">Risky</div>
+                  </label>
+                  <label class="ai-mode-card" data-mode="hybrid">
+                    <input type="radio" name="aiReplyMode" value="hybrid"
+                      onchange="emSettingChange('ai_reply_mode', this.value); _updateAiModeUI();">
+                    <div class="ai-mode-ico">🧠</div>
+                    <div class="ai-mode-title">Hybrid</div>
+                    <div class="ai-mode-desc">Simple → auto-send · Complex → draft.</div>
+                    <div class="ai-mode-tag best">Recommended</div>
+                  </label>
+                </div>
+              </div>
+
+              <!-- ▼ NEW: Custom Instructions -->
+              <div class="em-stg-row" style="display:block;border-bottom:1px solid #e2e8f0;padding-bottom:18px;">
+                <div class="em-stg-label" style="margin-bottom:8px;">
+                  <h4>Custom AI Instructions</h4>
+                  <p>Tone, policies, signature etc. AI will follow these every reply.</p>
+                </div>
+                <textarea id="settingAiInstructions"
+                  class="em-stg-sig-textarea"
+                  style="min-height:90px;"
+                  placeholder="e.g. Always offer 10% discount on first complaint. Mention our 30-day return policy when relevant. Sign off as 'Drop Sigma Support Team'."
+                  oninput="_debouncedSaveInstructions()"></textarea>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;">
+                  <span id="aiInstructionsStatus" style="font-size:11px;color:#94a3b8;">Saved</span>
+                  <span id="aiInstructionsCount" style="font-size:11px;color:#94a3b8;">0 chars</span>
+                </div>
+              </div>
+
+              <!-- ▼ NEW: Use Signature -->
+              <div class="em-stg-row">
+                <div class="em-stg-label">
+                  <h4>Append Signature to AI Replies</h4>
+                  <p>Uses the signature defined below in every AI-generated reply.</p>
+                </div>
+                <label class="em-stg-toggle em-stg-ctrl">
+                  <input type="checkbox" id="settingAiUseSignature" checked
+                    onchange="emSettingChange('ai_use_signature', this.checked);">
+                  <span class="em-stg-slider"></span>
+                </label>
+              </div>
+
               <div class="em-stg-row">
                 <div class="em-stg-label">
                   <h4>Auto-suggest Reply on Open</h4>
@@ -6590,6 +6727,720 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
 
     </section>
     <!-- ══════════════════ END TASKS SECTION ══════════════════ -->
+
+
+    <!-- ══════════════════ AI TRAINING STUDIO SECTION ══════════════════ -->
+    <style>
+      /* AI Training Studio — theme aligned */
+      #aiTrainingSection{padding:28px 32px;}
+      #aiTrainingSection .ait-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px;gap:16px;flex-wrap:wrap}
+      #aiTrainingSection .ait-head h1{margin:0;font-size:26px;font-weight:800;letter-spacing:-.4px;color:var(--vf-text);display:flex;align-items:center;gap:12px}
+      #aiTrainingSection .ait-badge{font-size:10px;font-weight:800;letter-spacing:.4px;background:linear-gradient(135deg,#8b5cf6,#6366f1,#06b6d4);color:#fff;padding:5px 11px;border-radius:999px;text-transform:uppercase}
+      #aiTrainingSection .ait-head p{margin:6px 0 0;color:var(--vf-muted);font-size:13.5px;max-width:780px;line-height:1.55}
+
+      .ait-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+      .ait-kpi{background:var(--vf-surface,#fff);border:1px solid var(--vf-line,#e5eaf2);border-radius:18px;padding:16px 18px;position:relative;overflow:hidden;box-shadow:var(--vf-shadow,0 12px 30px rgba(15,23,42,.06))}
+      .ait-kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg,#8b5cf6,#06b6d4)}
+      .ait-kpi h5{margin:0 0 6px;font-size:10.5px;text-transform:uppercase;letter-spacing:1.1px;color:var(--vf-muted);font-weight:700}
+      .ait-kpi .val{font-size:24px;font-weight:800;color:var(--vf-text);letter-spacing:-.5px}
+      .ait-kpi .sub{font-size:12px;color:var(--vf-muted);margin-top:3px}
+      .ait-kpi .bar{height:5px;background:var(--vf-surface-2,#f3f6fb);border-radius:99px;margin-top:10px;overflow:hidden}
+      .ait-kpi .bar span{display:block;height:100%;background:linear-gradient(90deg,#8b5cf6,#06b6d4);border-radius:99px}
+
+      .ait-tabs{display:flex;gap:6px;background:var(--vf-surface-2,#f3f4f6);border-radius:14px;padding:5px;margin-bottom:20px;border:1px solid var(--vf-line,#e5eaf2)}
+      .ait-tab{flex:1;padding:10px 14px;border:none;background:none;border-radius:10px;font-size:13px;font-weight:600;color:var(--vf-muted);cursor:pointer;transition:.15s;display:flex;align-items:center;justify-content:center;gap:8px;font-family:inherit}
+      .ait-tab:hover{color:var(--vf-text)}
+      .ait-tab.active{background:#fff;color:var(--vf-text);box-shadow:0 2px 8px rgba(15,23,42,.08)}
+      body.vf-dark-mode .ait-tab.active{background:rgba(255,255,255,.08);color:#fff}
+      .ait-tab .count{background:rgba(99,102,241,.12);color:#6366f1;padding:1px 8px;border-radius:99px;font-size:11px;font-weight:700}
+
+      .ait-pane{display:none}
+      .ait-pane.active{display:block;animation:aitFade .22s}
+      @keyframes aitFade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+      .ait-card{background:var(--vf-surface,#fff);border:1px solid var(--vf-line,#e5eaf2);border-radius:18px;padding:22px 24px;margin-bottom:16px;box-shadow:var(--vf-shadow,0 12px 30px rgba(15,23,42,.06))}
+      .ait-card-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px;gap:16px}
+      .ait-card-title{display:flex;align-items:center;gap:12px;margin:0;font-size:15px;font-weight:700;color:var(--vf-text)}
+      .ait-card-title .ico{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,rgba(139,92,246,.13),rgba(6,182,212,.10));display:flex;align-items:center;justify-content:center;font-size:15px;border:1px solid rgba(139,92,246,.18)}
+      .ait-card-desc{color:var(--vf-muted);font-size:12.5px;margin:3px 0 0;line-height:1.5}
+
+      .ait-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+      .ait-field{display:flex;flex-direction:column;gap:6px}
+      .ait-field.full{grid-column:1/-1}
+      .ait-field label{font-size:11.5px;font-weight:700;color:var(--vf-muted);letter-spacing:.3px;text-transform:uppercase}
+      .ait-field label .req{color:#8b5cf6;margin-left:3px}
+      .ait-field input, .ait-field textarea, .ait-field select{
+        width:100%;padding:11px 13px;border:1px solid var(--vf-line,#e5eaf2);border-radius:11px;background:var(--vf-surface,#fff);color:var(--vf-text);font-family:inherit;font-size:13.5px;outline:none;transition:.15s;box-sizing:border-box;
+      }
+      .ait-field textarea{resize:vertical;min-height:88px;line-height:1.55}
+      .ait-field input:focus, .ait-field textarea:focus, .ait-field select:focus{border-color:#8b5cf6;box-shadow:0 0 0 3px rgba(139,92,246,.12)}
+      .ait-field .hint{font-size:11.5px;color:var(--vf-muted);margin-top:3px;font-weight:500}
+
+      .ait-chips{display:flex;gap:8px;flex-wrap:wrap}
+      .ait-chip{padding:7px 14px;border-radius:999px;background:var(--vf-surface-2,#f4f6fb);border:1px solid var(--vf-line,#e5eaf2);font-size:12.5px;cursor:pointer;color:var(--vf-muted);font-weight:600;transition:.15s;font-family:inherit}
+      .ait-chip:hover{color:var(--vf-text);border-color:#8b5cf6}
+      .ait-chip.on{background:linear-gradient(135deg,rgba(139,92,246,.13),rgba(6,182,212,.08));border-color:rgba(139,92,246,.4);color:var(--vf-text)}
+
+      .ait-toggle-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-top:1px solid var(--vf-line,#e5eaf2);gap:18px}
+      .ait-toggle-row:first-child{border-top:0;padding-top:0}
+      .ait-toggle-row .lbl{font-size:13.5px;font-weight:600;color:var(--vf-text)}
+      .ait-toggle-row .sb{font-size:12px;color:var(--vf-muted);margin-top:3px;max-width:560px;line-height:1.5}
+      .ait-switch{position:relative;width:44px;height:25px;background:var(--vf-surface-2,#f3f6fb);border:1px solid var(--vf-line,#e5eaf2);border-radius:99px;cursor:pointer;transition:.2s;flex-shrink:0}
+      .ait-switch::after{content:"";position:absolute;top:2px;left:2px;width:19px;height:19px;background:#fff;border-radius:50%;transition:.2s;box-shadow:0 2px 4px rgba(15,23,42,.15)}
+      .ait-switch.on{background:linear-gradient(135deg,#8b5cf6,#06b6d4);border-color:transparent}
+      .ait-switch.on::after{left:22px}
+
+      .ait-modes{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+      .ait-mode{padding:18px;border:1px solid var(--vf-line,#e5eaf2);border-radius:14px;background:var(--vf-surface,#fff);cursor:pointer;transition:.15s;position:relative}
+      .ait-mode:hover{border-color:rgba(139,92,246,.35);transform:translateY(-1px)}
+      .ait-mode.selected{border-color:rgba(139,92,246,.55);background:linear-gradient(135deg,rgba(139,92,246,.07),rgba(6,182,212,.04));box-shadow:0 6px 16px rgba(139,92,246,.12)}
+      .ait-mode .check{position:absolute;top:14px;right:14px;width:18px;height:18px;border-radius:50%;border:2px solid var(--vf-line,#e5eaf2);background:#fff}
+      .ait-mode.selected .check{border-color:#8b5cf6;background:#8b5cf6}
+      .ait-mode.selected .check::after{content:"✓";color:#fff;font-size:11px;position:absolute;top:-2px;left:2px;font-weight:800}
+      .ait-mode h6{margin:0 0 6px;font-size:13.5px;font-weight:700;color:var(--vf-text)}
+      .ait-mode p{margin:0;font-size:12px;color:var(--vf-muted);line-height:1.5}
+
+      .ait-snippet{display:flex;gap:14px;padding:16px;border:1px solid var(--vf-line,#e5eaf2);border-radius:14px;margin-bottom:10px;background:var(--vf-surface,#fff);transition:.15s}
+      .ait-snippet:hover{border-color:rgba(139,92,246,.3);box-shadow:0 4px 12px rgba(15,23,42,.05)}
+      .ait-snippet .pill{flex-shrink:0;padding:4px 10px;border-radius:7px;font-size:10.5px;font-weight:800;height:fit-content;letter-spacing:.4px;text-transform:uppercase}
+      .ait-pill-ship{background:#dbeafe;color:#1d4ed8}
+      .ait-pill-ref{background:#fee2e2;color:#991b1b}
+      .ait-pill-prod{background:#dcfce7;color:#166534}
+      .ait-pill-faq{background:#ffedd5;color:#9a3412}
+      body.vf-dark-mode .ait-pill-ship{background:rgba(37,99,235,.18);color:#93c5fd}
+      body.vf-dark-mode .ait-pill-ref{background:rgba(220,38,38,.18);color:#fca5a5}
+      body.vf-dark-mode .ait-pill-prod{background:rgba(22,163,74,.18);color:#86efac}
+      body.vf-dark-mode .ait-pill-faq{background:rgba(245,158,11,.18);color:#fcd34d}
+      .ait-snippet-body{flex:1;min-width:0}
+      .ait-snippet-title{font-weight:700;font-size:13.5px;margin-bottom:4px;color:var(--vf-text)}
+      .ait-snippet-text{font-size:12.5px;color:var(--vf-muted);line-height:1.55}
+      .ait-snippet-actions{display:flex;gap:6px;align-items:flex-start;flex-shrink:0}
+      .ait-icon-btn{width:30px;height:30px;border-radius:8px;background:var(--vf-surface-2,#f4f6fb);border:1px solid var(--vf-line,#e5eaf2);color:var(--vf-muted);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;transition:.15s}
+      .ait-icon-btn:hover{color:#8b5cf6;border-color:rgba(139,92,246,.4)}
+
+      .ait-example{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:16px;border:1px solid var(--vf-line,#e5eaf2);border-radius:14px;margin-bottom:10px;background:var(--vf-surface,#fff)}
+      .ait-example .block{padding:12px 14px;background:var(--vf-surface-2,#f8fafc);border-radius:11px;border:1px solid var(--vf-line,#e5eaf2)}
+      .ait-example h6{margin:0 0 8px;font-size:10.5px;text-transform:uppercase;letter-spacing:1px;color:var(--vf-muted);font-weight:800;display:flex;align-items:center;gap:6px}
+      .ait-example .block.user h6::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:#06b6d4}
+      .ait-example .block.ai h6::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:#8b5cf6}
+      .ait-example .txt{font-size:12.5px;color:var(--vf-text);line-height:1.6}
+
+      .ait-btn{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:11px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;border:1px solid var(--vf-line,#e5eaf2);background:var(--vf-surface,#fff);color:var(--vf-text);transition:.15s}
+      .ait-btn:hover{border-color:#8b5cf6;color:#8b5cf6}
+      .ait-btn.primary{background:linear-gradient(135deg,#8b5cf6,#6366f1);border-color:transparent;color:#fff;box-shadow:0 6px 18px rgba(139,92,246,.3)}
+      .ait-btn.primary:hover{transform:translateY(-1px);box-shadow:0 10px 22px rgba(139,92,246,.4);color:#fff}
+      .ait-btn.sm{padding:7px 12px;font-size:12px;border-radius:9px}
+      .ait-btn.ghost{background:transparent}
+
+      .ait-play{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+      .ait-play-col{background:var(--vf-surface-2,#f8fafc);border:1px solid var(--vf-line,#e5eaf2);border-radius:14px;padding:18px}
+      .ait-play-col h5{margin:0 0 12px;font-size:10.5px;text-transform:uppercase;letter-spacing:1.1px;color:var(--vf-muted);font-weight:800}
+      .ait-play-col textarea{width:100%;min-height:140px;border:1px solid var(--vf-line,#e5eaf2);border-radius:11px;padding:12px;font-family:inherit;font-size:13px;background:var(--vf-surface,#fff);color:var(--vf-text);box-sizing:border-box;resize:vertical}
+      .ait-play-meta{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;font-size:11.5px;color:var(--vf-muted)}
+      .ait-play-meta span{padding:4px 10px;background:var(--vf-surface,#fff);border:1px solid var(--vf-line,#e5eaf2);border-radius:99px;font-weight:600}
+      .ait-output{background:var(--vf-surface,#fff);border:1px solid var(--vf-line,#e5eaf2);border-radius:11px;padding:14px 16px;min-height:140px;font-size:13px;color:var(--vf-text);line-height:1.65;white-space:pre-wrap}
+      .ait-output.placeholder{color:var(--vf-muted);font-style:italic;display:flex;align-items:center;justify-content:center;text-align:center}
+      .ait-output .typing-dots span{display:inline-block;animation:aitBlink 1.4s infinite;font-weight:800}
+      .ait-output .typing-dots span:nth-child(2){animation-delay:.2s}
+      .ait-output .typing-dots span:nth-child(3){animation-delay:.4s}
+      @keyframes aitBlink{0%,100%{opacity:.2}50%{opacity:1}}
+
+      .ait-prompt{background:var(--vf-surface,#fff);border:1px dashed var(--vf-line,#e5eaf2);border-radius:12px;padding:14px 16px;font-family:'SF Mono',Menlo,Consolas,monospace;font-size:11.5px;line-height:1.7;color:var(--vf-text);margin-top:16px;max-height:300px;overflow:auto;white-space:pre-wrap}
+      .ait-prompt .k{color:#06b6d4;font-weight:700}
+      .ait-prompt .v{color:#d97706;font-weight:600}
+      .ait-prompt .h{color:#8b5cf6;font-weight:800}
+
+      .ait-save-bar{position:sticky;bottom:0;margin:22px -32px -28px;padding:14px 32px;background:rgba(255,255,255,.92);backdrop-filter:blur(12px);border-top:1px solid var(--vf-line,#e5eaf2);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+      body.vf-dark-mode .ait-save-bar{background:rgba(5,7,18,.85)}
+      .ait-save-status{font-size:12.5px;color:var(--vf-muted);display:flex;align-items:center;gap:8px;font-weight:600}
+      .ait-save-status .dot{width:8px;height:8px;border-radius:50%;background:#16a34a;box-shadow:0 0 8px #16a34a}
+
+      .ait-tip{margin-top:14px;padding:12px 14px;background:linear-gradient(135deg,rgba(139,92,246,.07),rgba(6,182,212,.04));border:1px dashed rgba(139,92,246,.3);border-radius:11px;font-size:12.5px;color:var(--vf-muted);line-height:1.55}
+      .ait-tip b{color:var(--vf-text)}
+
+      @media(max-width:980px){
+        .ait-kpis{grid-template-columns:repeat(2,1fr)}
+        .ait-grid,.ait-play,.ait-example{grid-template-columns:1fr}
+        .ait-modes{grid-template-columns:1fr}
+      }
+    </style>
+
+    <section id="aiTrainingSection" class="section">
+      <!-- Head -->
+      <div class="ait-head">
+        <div>
+          <h1>AI Training Studio <span class="ait-badge">Claude Haiku 4.5</span></h1>
+          <p>Customize your AI to match your business. The more detail you share, the more accurate and on-brand its replies will be — from Gmail inbox to vendor tracking updates.</p>
+        </div>
+        <button class="ait-btn primary" onclick="aitSaveAll()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>
+          Save &amp; Re-train
+        </button>
+      </div>
+
+      <!-- KPIs -->
+      <div class="ait-kpis">
+        <div class="ait-kpi">
+          <h5>Training Score</h5>
+          <div class="val">82<span style="font-size:14px;color:var(--vf-muted);font-weight:600">/100</span></div>
+          <div class="sub">Mature — replies sound human</div>
+          <div class="bar"><span style="width:82%"></span></div>
+        </div>
+        <div class="ait-kpi">
+          <h5>Knowledge Items</h5>
+          <div class="val" id="aitKbCount">12</div>
+          <div class="sub">FAQs · policies · product info</div>
+          <div class="bar"><span style="width:60%"></span></div>
+        </div>
+        <div class="ait-kpi">
+          <h5>Approved Examples</h5>
+          <div class="val" id="aitExCount">28</div>
+          <div class="sub">Drafts you approved this month</div>
+          <div class="bar"><span style="width:75%"></span></div>
+        </div>
+        <div class="ait-kpi">
+          <h5>AI Drafts Sent</h5>
+          <div class="val">147</div>
+          <div class="sub">94% acceptance rate</div>
+          <div class="bar"><span style="width:94%"></span></div>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="ait-tabs">
+        <button class="ait-tab active" data-aittab="profile" onclick="aitSwitchTab('profile')">🧠 Business Profile</button>
+        <button class="ait-tab" data-aittab="kb" onclick="aitSwitchTab('kb')">📚 Knowledge Base <span class="count" id="aitKbBadge">12</span></button>
+        <button class="ait-tab" data-aittab="ex" onclick="aitSwitchTab('ex')">⚡ Training Examples <span class="count" id="aitExBadge">28</span></button>
+        <button class="ait-tab" data-aittab="play" onclick="aitSwitchTab('play')">🧪 Test Playground</button>
+      </div>
+
+      <!-- ===== TAB: PROFILE ===== -->
+      <div class="ait-pane active" data-aitpane="profile">
+
+        <!-- Brand Identity -->
+        <div class="ait-card">
+          <div class="ait-card-head">
+            <div>
+              <h3 class="ait-card-title"><span class="ico">🏷️</span>Brand Identity</h3>
+              <p class="ait-card-desc">Core info the AI will use in every reply.</p>
+            </div>
+          </div>
+          <div class="ait-grid">
+            <div class="ait-field">
+              <label>Business name <span class="req">*</span></label>
+              <input type="text" id="aitBizName" value="Aurora Beauty" />
+            </div>
+            <div class="ait-field">
+              <label>Industry / Niche</label>
+              <input type="text" id="aitNiche" value="Beauty &amp; Skincare — DTC" />
+            </div>
+            <div class="ait-field full">
+              <label>One-line description</label>
+              <input type="text" id="aitDesc" value="Premium skincare and beauty essentials shipped across the US with 3–5 day delivery." />
+              <div class="hint">The AI will use this line when replying to "what do you sell?" type questions.</div>
+            </div>
+            <div class="ait-field">
+              <label>Primary language</label>
+              <select id="aitLang">
+                <option selected>English</option>
+                <option>English + Spanish (mix)</option>
+                <option>Spanish</option>
+                <option>French</option>
+                <option>German</option>
+              </select>
+            </div>
+            <div class="ait-field">
+              <label>Customer support hours</label>
+              <input type="text" id="aitHours" value="Mon–Fri, 9am–6pm EST" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Tone & Voice -->
+        <div class="ait-card">
+          <div class="ait-card-head">
+            <div>
+              <h3 class="ait-card-title"><span class="ico">🎙️</span>Tone &amp; Voice</h3>
+              <p class="ait-card-desc">The voice and style your AI uses with customers.</p>
+            </div>
+          </div>
+          <div class="ait-field full" style="margin-bottom:18px">
+            <label>Tone (multiple select)</label>
+            <div class="ait-chips" style="margin-top:8px">
+              <div class="ait-chip on" data-tone="friendly">Friendly</div>
+              <div class="ait-chip" data-tone="professional">Professional</div>
+              <div class="ait-chip" data-tone="formal">Formal</div>
+              <div class="ait-chip on" data-tone="empathetic">Empathetic</div>
+              <div class="ait-chip" data-tone="concise">Concise</div>
+              <div class="ait-chip" data-tone="enthusiastic">Enthusiastic</div>
+            </div>
+          </div>
+          <div class="ait-grid">
+            <div class="ait-field">
+              <label>Reply length</label>
+              <select id="aitLen">
+                <option>Short (1–2 sentences)</option>
+                <option selected>Medium (3–5 sentences)</option>
+                <option>Detailed (paragraph)</option>
+              </select>
+            </div>
+            <div class="ait-field">
+              <label>Sign-off</label>
+              <input type="text" id="aitSignoff" value="Warm regards, The Aurora Team 💜" />
+            </div>
+            <div class="ait-field full">
+              <label>Brand voice example</label>
+              <textarea id="aitVoiceEg">Hi Sarah! 👋 I totally understand — waiting for an order is stressful. Your parcel has just left our FedEx hub and will reach you tomorrow. Here's the tracking link. Let us know if there's anything else we can help with — we're here for you. — The Aurora Team 💜</textarea>
+              <div class="hint">The AI will follow this example's tone, formatting, emoji use, and greeting style.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Auto-Reply Mode -->
+        <div class="ait-card">
+          <div class="ait-card-head">
+            <div>
+              <h3 class="ait-card-title"><span class="ico">⚙️</span>Auto-Reply Mode</h3>
+              <p class="ait-card-desc">Choose how your AI handles incoming customer emails.</p>
+            </div>
+          </div>
+          <div class="ait-modes">
+            <div class="ait-mode" data-mode="auto" onclick="aitSelectMode(this)">
+              <div class="check"></div>
+              <h6>🤖 Fully Automatic</h6>
+              <p>AI sends replies automatically without human review — only for high-confidence threads.</p>
+            </div>
+            <div class="ait-mode selected" data-mode="draft" onclick="aitSelectMode(this)">
+              <div class="check"></div>
+              <h6>✋ Draft &amp; Review</h6>
+              <p>AI prepares a draft for you to review, edit, and send. <b>Recommended.</b></p>
+            </div>
+            <div class="ait-mode" data-mode="suggest" onclick="aitSelectMode(this)">
+              <div class="check"></div>
+              <h6>💡 Suggest on Open</h6>
+              <p>AI shows a suggestion only when you open an email — silent otherwise.</p>
+            </div>
+          </div>
+
+          <div style="margin-top:22px">
+            <div class="ait-toggle-row">
+              <div>
+                <div class="lbl">Include order context in every reply</div>
+                <div class="sb">AI automatically knows the customer's order number, status, and tracking.</div>
+              </div>
+              <div class="ait-switch on" onclick="this.classList.toggle('on')"></div>
+            </div>
+            <div class="ait-toggle-row">
+              <div>
+                <div class="lbl">Auto-detect language from customer email</div>
+                <div class="sb">AI replies in the same language the customer writes in.</div>
+              </div>
+              <div class="ait-switch on" onclick="this.classList.toggle('on')"></div>
+            </div>
+            <div class="ait-toggle-row">
+              <div>
+                <div class="lbl">Escalate to human if AI confidence &lt; 70%</div>
+                <div class="sb">Forward complex queries (refund disputes, legal threats) to a team member.</div>
+              </div>
+              <div class="ait-switch on" onclick="this.classList.toggle('on')"></div>
+            </div>
+            <div class="ait-toggle-row">
+              <div>
+                <div class="lbl">Use brand signature</div>
+                <div class="sb">Automatically append your sign-off to every reply.</div>
+              </div>
+              <div class="ait-switch on" onclick="this.classList.toggle('on')"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== TAB: KNOWLEDGE BASE ===== -->
+      <div class="ait-pane" data-aitpane="kb">
+        <div class="ait-card">
+          <div class="ait-card-head">
+            <div>
+              <h3 class="ait-card-title"><span class="ico">📚</span>Knowledge Snippets</h3>
+              <p class="ait-card-desc">FAQs, policies, and product info. The AI pulls relevant info from here.</p>
+            </div>
+            <button class="ait-btn primary sm" onclick="aitAddSnippet()">+ Add Snippet</button>
+          </div>
+
+          <div id="aitSnippetList">
+            <div class="ait-snippet">
+              <div class="pill ait-pill-ship">Shipping</div>
+              <div class="ait-snippet-body">
+                <div class="ait-snippet-title">Standard delivery time</div>
+                <div class="ait-snippet-text">3–5 business days across the continental US. 5–7 days for Hawaii and Alaska. Free shipping on orders over $50. Carriers: FedEx, UPS, USPS.</div>
+              </div>
+              <div class="ait-snippet-actions">
+                <button class="ait-icon-btn" title="Edit">✏️</button>
+                <button class="ait-icon-btn" title="Delete">🗑</button>
+              </div>
+            </div>
+
+            <div class="ait-snippet">
+              <div class="pill ait-pill-ref">Refund</div>
+              <div class="ait-snippet-body">
+                <div class="ait-snippet-title">7-day no-questions-asked return policy</div>
+                <div class="ait-snippet-text">Customers can request a return within 7 days. Product must be unused / sealed. Refund within 5–7 working days to the original payment method. Shipping cost is non-refundable.</div>
+              </div>
+              <div class="ait-snippet-actions">
+                <button class="ait-icon-btn">✏️</button>
+                <button class="ait-icon-btn">🗑</button>
+              </div>
+            </div>
+
+            <div class="ait-snippet">
+              <div class="pill ait-pill-prod">Product</div>
+              <div class="ait-snippet-body">
+                <div class="ait-snippet-title">Skincare authenticity guarantee</div>
+                <div class="ait-snippet-text">All products are original imports directly from Korean / European brands. Batch numbers are verifiable. If a customer suspects a fake, explain how to verify via QR code on the brand's official website.</div>
+              </div>
+              <div class="ait-snippet-actions">
+                <button class="ait-icon-btn">✏️</button>
+                <button class="ait-icon-btn">🗑</button>
+              </div>
+            </div>
+
+            <div class="ait-snippet">
+              <div class="pill ait-pill-faq">FAQ</div>
+              <div class="ait-snippet-body">
+                <div class="ait-snippet-title">"Where is my order?" template answer</div>
+                <div class="ait-snippet-text">AI should check status using the order number. If dispatched, give an ETA. If still processing, say "ships within 24–48 hours." For excessive delays (5+ days), apologize and escalate to a team member.</div>
+              </div>
+              <div class="ait-snippet-actions">
+                <button class="ait-icon-btn">✏️</button>
+                <button class="ait-icon-btn">🗑</button>
+              </div>
+            </div>
+
+            <div class="ait-snippet">
+              <div class="pill ait-pill-faq">FAQ</div>
+              <div class="ait-snippet-body">
+                <div class="ait-snippet-title">Accepted payment methods</div>
+                <div class="ait-snippet-text">We accept all major credit cards (Visa, Mastercard, Amex), Apple Pay, Google Pay, PayPal, and Shop Pay. Payment is required at checkout — we don't offer cash on delivery.</div>
+              </div>
+              <div class="ait-snippet-actions">
+                <button class="ait-icon-btn">✏️</button>
+                <button class="ait-icon-btn">🗑</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="ait-tip">💡 <b>Pro tip:</b> The more detail you provide, the better. The AI automatically picks the most relevant snippets per reply — not every snippet is used every time.</div>
+        </div>
+      </div>
+
+      <!-- ===== TAB: TRAINING EXAMPLES ===== -->
+      <div class="ait-pane" data-aitpane="ex">
+        <div class="ait-card">
+          <div class="ait-card-head">
+            <div>
+              <h3 class="ait-card-title"><span class="ico">⚡</span>Approved Replies (Few-Shot Training)</h3>
+              <p class="ait-card-desc">When you edit or approve an AI draft, it's saved here. Future drafts will follow these same patterns.</p>
+            </div>
+            <button class="ait-btn sm" onclick="aitAddExample()">+ Add Manually</button>
+          </div>
+
+          <div class="ait-example">
+            <div class="block user"><h6>Customer wrote</h6><div class="txt">Hey, my order #4521 still hasn't arrived — it's been 6 days. What's going on? I want a refund!</div></div>
+            <div class="block ai"><h6>Your approved reply</h6><div class="txt">Hi there! I'm so sorry about the delay 🙏 I just checked — your parcel is at the FedEx Memphis hub and will be delivered by tomorrow evening. Tracking: 1Z999AA10123456784. If it doesn't arrive by then, we'll process a full refund — no questions asked. — The Aurora Team 💜</div></div>
+          </div>
+
+          <div class="ait-example">
+            <div class="block user"><h6>Customer wrote</h6><div class="txt">Is this product authentic? I saw the same item on Amazon for half the price.</div></div>
+            <div class="block ai"><h6>Your approved reply</h6><div class="txt">Hi! Great question — yes, 100% authentic. We source directly from the brand, so every product ships sealed with verifiable batch numbers. The cheaper Amazon listings are often counterfeit or near-expiry stock from third-party sellers. We also offer a 30-day no-questions-asked return policy as a quality guarantee. 💜</div></div>
+          </div>
+
+          <div class="ait-example">
+            <div class="block user"><h6>Customer wrote</h6><div class="txt">How long until my order is delivered? Brooklyn, NY.</div></div>
+            <div class="block ai"><h6>Your approved reply</h6><div class="txt">Hi! For Brooklyn, NY, delivery takes 3–4 business days. Your order shipped yesterday, so it should reach you by Friday. We've sent the tracking link to your email and via SMS. — The Aurora Team 💜</div></div>
+          </div>
+
+          <div style="text-align:center;padding:12px">
+            <button class="ait-btn ghost sm">Show 25 more examples</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== TAB: PLAYGROUND ===== -->
+      <div class="ait-pane" data-aitpane="play">
+        <div class="ait-card">
+          <div class="ait-card-head">
+            <div>
+              <h3 class="ait-card-title"><span class="ico">🧪</span>Test Playground</h3>
+              <p class="ait-card-desc">Paste a sample customer email and see how the AI would draft a reply.</p>
+            </div>
+          </div>
+
+          <div class="ait-play">
+            <div class="ait-play-col">
+              <h5>Sample Customer Email</h5>
+              <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+                <input type="email" id="aitPlaySender" placeholder="from: customer@example.com (optional)" style="flex:1;min-width:200px;padding:8px 11px;border:1px solid var(--vf-line,#e5eaf2);border-radius:9px;font-family:inherit;font-size:12.5px;background:var(--vf-surface,#fff);color:var(--vf-text);" value="" />
+                <label style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:var(--vf-text);cursor:pointer;padding:6px 12px;background:var(--vf-surface,#fff);border:1px solid var(--vf-line,#e5eaf2);border-radius:9px;">
+                  <input type="checkbox" id="aitPlayAutoLookup" checked style="margin:0;cursor:pointer;" />
+                  🔍 Auto-detect order
+                </label>
+              </div>
+              <textarea id="aitPlayInput">Subject: Refund needed
+
+Hi, I ordered the Korean glow serum 4 days ago, order #4521. Just received it but the box is damaged and seal is broken. I want a refund or replacement urgently.</textarea>
+              <div id="aitDetectedRefs" class="ait-play-meta" style="display:none;flex-direction:column;align-items:flex-start;gap:8px;padding:10px 12px;background:linear-gradient(135deg,rgba(22,163,74,.08),rgba(6,182,212,.05));border:1px dashed rgba(22,163,74,.35);border-radius:11px;margin-top:10px;"></div>
+              <button class="ait-btn primary" style="margin-top:14px;width:100%;justify-content:center" onclick="aitRunPlayground()">
+                ✨ Generate AI Reply
+              </button>
+            </div>
+
+            <div class="ait-play-col">
+              <h5>AI-Generated Draft</h5>
+              <div class="ait-output placeholder" id="aitPlayOutput">Click "Generate AI Reply" to test how AI would respond using your Business Profile, Knowledge Base, Training Examples — and live order data from your store.</div>
+              <div class="ait-play-meta" style="margin-top:10px">
+                <span id="aitConfBadge" style="display:none">⚡ Generated by Claude Haiku 4.5</span>
+                <span id="aitKbBadgeUsed" style="display:none">📚 Used: 0 knowledge snippets</span>
+                <span id="aitOrdersUsedBadge" style="display:none;background:rgba(6,182,212,.13);color:#06b6d4;font-weight:700;">🔗 0 orders linked</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top:18px">
+            <h5 style="font-size:10.5px;text-transform:uppercase;letter-spacing:1.1px;color:var(--vf-muted);font-weight:800;margin:0 0 8px">🔬 Assembled Prompt (debug view)</h5>
+            <div class="ait-prompt"><span class="h">SYSTEM:</span> You are a customer support agent for <span class="v">"Aurora Beauty"</span> — a premium beauty &amp; skincare DTC brand in the US.
+Tone: <span class="v">Friendly, Empathetic</span>. Length: <span class="v">Medium</span>. Language: <span class="v">English</span>.
+Sign-off: <span class="v">"— The Aurora Team 💜"</span>
+
+<span class="h">BRAND VOICE EXAMPLE:</span>
+"Hi Sarah! 👋 I totally understand — waiting for an order is stressful..."
+
+<span class="h">RELEVANT KNOWLEDGE:</span>
+[1] <span class="k">Refund</span>: 7-day no-questions-asked. Damaged items = full refund or free replacement within 48hrs.
+[2] <span class="k">Product</span>: All products original imported. Damage in transit covered fully.
+
+<span class="h">FEW-SHOT EXAMPLES:</span>
+(3 approved replies for similar scenarios)
+
+<span class="h">ORDER CONTEXT:</span>
+Order #<span class="v">4521</span>, Customer: <span class="v">Sarah Johnson</span>, Status: <span class="v">Delivered</span>, Product: <span class="v">Korean Glow Serum</span>
+
+<span class="h">USER:</span> [customer email here]</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Save Bar -->
+      <div class="ait-save-bar">
+        <div class="ait-save-status">
+          <span class="dot"></span>
+          Auto-saved · Changes apply to all connected inboxes
+        </div>
+        <div style="display:flex;gap:10px">
+          <button class="ait-btn">Discard</button>
+          <button class="ait-btn primary" onclick="aitSaveAll()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>
+            Save &amp; Re-train AI
+          </button>
+        </div>
+      </div>
+    </section>
+    <!-- ══════════════════ END AI TRAINING STUDIO SECTION ══════════════════ -->
+
+
+    <!-- ══════════════════ AI SETUP WIZARD MODAL ══════════════════ -->
+    <style>
+      .ais-bg{position:fixed;inset:0;background:rgba(15,23,42,.55);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;z-index:1000;padding:20px;}
+      .ais-bg.open{display:flex;animation:aisBgIn .25s}
+      @keyframes aisBgIn{from{opacity:0}to{opacity:1}}
+      .ais-modal{width:100%;max-width:1180px;max-height:94vh;background:var(--vf-surface,#fff);border-radius:22px;box-shadow:0 30px 80px rgba(15,23,42,.25);overflow:hidden;display:grid;grid-template-columns:1.4fr 1fr;animation:aisModalIn .35s cubic-bezier(.2,.9,.3,1.2);font-family:inherit;}
+      @keyframes aisModalIn{from{opacity:0;transform:translateY(20px) scale(.97)}to{opacity:1;transform:none}}
+
+      .ais-head{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;padding:16px 26px;border-bottom:1px solid var(--vf-line,#e5eaf2);background:var(--vf-surface,#fff);gap:18px;flex-wrap:wrap;}
+      .ais-head-l{display:flex;align-items:center;gap:14px}
+      .ais-ico{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,#8b5cf6,#06b6d4);display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;font-weight:800}
+      .ais-head-l h2{margin:0;font-size:16px;font-weight:800;letter-spacing:-.2px;color:var(--vf-text)}
+      .ais-head-l p{margin:1px 0 0;font-size:11.5px;color:var(--vf-muted);font-weight:500}
+
+      .ais-progress-wrap{display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+      .ais-progress-row{display:flex;align-items:center;gap:12px}
+      .ais-progress-text{font-size:12px;color:var(--vf-muted);font-weight:700}
+      .ais-progress-bar{width:220px;height:8px;background:var(--vf-surface-2,#f4f6fb);border-radius:99px;overflow:hidden;border:1px solid var(--vf-line,#e5eaf2);position:relative;display:flex;}
+      .ais-prog-ess{height:100%;background:linear-gradient(90deg,#8b5cf6,#6366f1);transition:width .4s ease}
+      .ais-prog-rec{height:100%;background:linear-gradient(90deg,#06b6d4,#10b981);transition:width .4s ease}
+      .ais-prog-adv{height:100%;background:linear-gradient(90deg,#f59e0b,#f97316);transition:width .4s ease}
+      .ais-progress-legend{display:flex;gap:10px;font-size:10.5px;color:var(--vf-muted);font-weight:600;}
+      .ais-progress-legend span{display:inline-flex;align-items:center;gap:4px}
+      .ais-progress-legend span::before{content:"";width:8px;height:8px;border-radius:2px}
+      .ais-progress-legend .e::before{background:linear-gradient(90deg,#8b5cf6,#6366f1)}
+      .ais-progress-legend .r::before{background:linear-gradient(90deg,#06b6d4,#10b981)}
+      .ais-progress-legend .a::before{background:linear-gradient(90deg,#f59e0b,#f97316)}
+      .ais-close{width:32px;height:32px;border-radius:9px;border:1px solid var(--vf-line,#e5eaf2);background:var(--vf-surface,#fff);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--vf-muted);font-size:15px;font-family:inherit;}
+      .ais-close:hover{color:var(--vf-text);border-color:var(--vf-muted)}
+
+      .ais-chat-wrap{display:flex;flex-direction:column;height:calc(94vh - 80px);min-height:0;border-right:1px solid var(--vf-line,#e5eaf2);background:var(--vf-surface,#fff);}
+      .ais-banner{margin:14px 18px 0;padding:11px 14px;border-radius:11px;background:linear-gradient(135deg,rgba(245,158,11,.10),rgba(139,92,246,.06));border:1px dashed rgba(245,158,11,.4);font-size:12px;color:var(--vf-text);display:flex;align-items:flex-start;gap:9px;line-height:1.5;}
+      .ais-banner b{font-weight:700;color:#b45309}
+      .ais-chat{flex:1;overflow-y:auto;padding:18px 22px;display:flex;flex-direction:column;gap:14px;min-height:0}
+      .ais-bub{display:flex;gap:10px;max-width:96%;animation:aisBubIn .3s}
+      @keyframes aisBubIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+      .ais-bub.user{align-self:flex-end;flex-direction:row-reverse}
+      .ais-avatar{width:32px;height:32px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff}
+      .ais-bub.ai .ais-avatar{background:linear-gradient(135deg,#8b5cf6,#06b6d4)}
+      .ais-bub.user .ais-avatar{background:linear-gradient(135deg,#0f172a,#475569)}
+      .ais-body{padding:11px 14px;border-radius:14px;line-height:1.55;font-size:13.5px;max-width:560px;border:1px solid var(--vf-line,#e5eaf2)}
+      .ais-bub.ai .ais-body{background:var(--vf-surface-2,#f4f6fb);color:var(--vf-text);border-top-left-radius:5px}
+      .ais-bub.user .ais-body{background:linear-gradient(135deg,#8b5cf6,#6366f1);color:#fff;border-color:transparent;border-top-right-radius:5px;box-shadow:0 6px 16px rgba(139,92,246,.22)}
+      .ais-meta{font-size:10.5px;color:var(--vf-muted);margin-top:5px;font-weight:600}
+      .ais-qtag{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:800;padding:2px 8px;border-radius:99px;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px}
+      .ais-qtag.essential{background:rgba(139,92,246,.13);color:#8b5cf6}
+      .ais-qtag.recommended{background:rgba(6,182,212,.13);color:#06b6d4}
+      .ais-qtag.advanced{background:rgba(245,158,11,.13);color:#d97706}
+      .ais-tier-div{display:flex;align-items:center;gap:10px;padding:10px 0;color:#16a34a;font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.8px}
+      .ais-tier-div::before,.ais-tier-div::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(22,163,74,.4),transparent)}
+
+      .ais-typing{display:flex;gap:4px;padding:4px 0;align-items:center}
+      .ais-typing span{width:7px;height:7px;border-radius:50%;background:var(--vf-muted);animation:aisTyp 1.2s infinite ease-in-out}
+      .ais-typing span:nth-child(2){animation-delay:.15s}
+      .ais-typing span:nth-child(3){animation-delay:.3s}
+      @keyframes aisTyp{0%,80%,100%{transform:scale(.6);opacity:.4}40%{transform:scale(1);opacity:1}}
+
+      .ais-chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+      .ais-chip{padding:8px 14px;border-radius:99px;font-size:12.5px;font-weight:600;background:var(--vf-surface,#fff);border:1.5px solid var(--vf-line,#e5eaf2);color:var(--vf-text);cursor:pointer;transition:.15s;font-family:inherit;display:inline-flex;align-items:center;gap:6px}
+      .ais-chip:hover{border-color:#8b5cf6;color:#8b5cf6;transform:translateY(-1px)}
+      .ais-chip.selected{background:linear-gradient(135deg,#8b5cf6,#6366f1);color:#fff;border-color:transparent;box-shadow:0 6px 14px rgba(139,92,246,.3)}
+      .ais-chip.selected::before{content:"✓ ";font-weight:800;margin-right:2px}
+      .ais-chip-icon{font-size:14px}
+
+      .ais-multi-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;padding:10px 14px;background:linear-gradient(135deg,rgba(139,92,246,.07),rgba(6,182,212,.05));border:1px dashed rgba(139,92,246,.3);border-radius:12px;}
+      .ais-multi-bar .ais-count{font-size:12px;font-weight:700;color:var(--vf-text)}
+      .ais-multi-bar .ais-count b{color:#8b5cf6}
+      .ais-continue-btn{padding:9px 18px;border:none;border-radius:10px;font-family:inherit;font-size:12.5px;font-weight:700;background:linear-gradient(135deg,#8b5cf6,#6366f1);color:#fff;cursor:pointer;box-shadow:0 4px 12px rgba(139,92,246,.3);transition:.15s;display:inline-flex;align-items:center;gap:6px}
+      .ais-continue-btn:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(139,92,246,.4)}
+      .ais-continue-btn:disabled{opacity:.5;cursor:not-allowed;box-shadow:none;background:var(--vf-surface-2,#f4f6fb);color:var(--vf-muted)}
+
+      .ais-custom-link{display:inline-flex;align-items:center;gap:5px;margin-top:8px;font-size:11.5px;color:var(--vf-muted);font-weight:600;cursor:pointer;background:none;border:none;font-family:inherit;text-decoration:underline}
+      .ais-custom-link:hover{color:#8b5cf6}
+      .ais-custom-input-wrap{display:none;margin-top:10px;background:var(--vf-surface-2,#f4f6fb);border:1px solid var(--vf-line,#e5eaf2);border-radius:12px;padding:10px}
+      .ais-custom-input-wrap.shown{display:block}
+      .ais-custom-input-wrap textarea,.ais-custom-input-wrap input{width:100%;border:none;background:none;outline:none;font-family:inherit;font-size:13px;resize:none;min-height:50px;color:var(--vf-text);box-sizing:border-box}
+      .ais-custom-input-wrap input{min-height:auto;padding:4px 0}
+      .ais-custom-input-wrap .ais-cust-row{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}
+      .ais-mini-btn{padding:6px 14px;border:1px solid var(--vf-line,#e5eaf2);border-radius:8px;background:var(--vf-surface,#fff);font-family:inherit;font-size:11.5px;font-weight:700;cursor:pointer;color:var(--vf-text)}
+      .ais-mini-btn.primary{background:linear-gradient(135deg,#8b5cf6,#6366f1);color:#fff;border-color:transparent}
+
+      .ais-input-area{border-top:1px solid var(--vf-line,#e5eaf2);padding:14px 18px;background:var(--vf-surface,#fff)}
+      .ais-skip-row{display:flex;justify-content:space-between;align-items:center;font-size:11.5px}
+      .ais-skip{color:var(--vf-muted);font-weight:600;cursor:pointer;background:none;border:none;font-family:inherit;font-size:11.5px}
+      .ais-skip:hover{color:var(--vf-text);text-decoration:underline}
+      .ais-skip-all{color:var(--vf-muted);font-weight:500}
+      .ais-skip-all u{cursor:pointer}
+
+      .ais-preview-wrap{background:linear-gradient(180deg,rgba(139,92,246,.04),rgba(6,182,212,.02));display:flex;flex-direction:column;height:calc(94vh - 80px);overflow:hidden}
+      .ais-pv-head{padding:14px 20px 10px;border-bottom:1px dashed var(--vf-line,#e5eaf2);display:flex;align-items:center;justify-content:space-between}
+      .ais-pv-head h4{margin:0;font-size:11px;text-transform:uppercase;letter-spacing:1.1px;color:var(--vf-muted);font-weight:800}
+      .ais-pv-live{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:#16a34a;font-weight:700}
+      .ais-pv-live::before{content:"";width:7px;height:7px;border-radius:50%;background:#16a34a;box-shadow:0 0 8px #16a34a;animation:aisPulse 1.5s infinite}
+      @keyframes aisPulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+      .ais-pv-body{flex:1;overflow-y:auto;padding:14px 20px 14px;display:flex;flex-direction:column;gap:8px}
+      .ais-pv-section{margin-top:8px}
+      .ais-pv-section:first-of-type{margin-top:0}
+      .ais-sec-lbl{display:flex;align-items:center;gap:7px;font-size:10px;text-transform:uppercase;letter-spacing:1px;font-weight:800;margin:0 0 6px}
+      .ais-sec-lbl.e{color:#8b5cf6}
+      .ais-sec-lbl.r{color:#06b6d4}
+      .ais-sec-lbl.a{color:#d97706}
+      .ais-sec-lbl .badge{font-size:9px;background:var(--vf-surface,#fff);border:1px solid var(--vf-line,#e5eaf2);padding:1px 6px;border-radius:99px;font-weight:700;color:var(--vf-muted)}
+
+      .ais-pv-card{background:var(--vf-surface,#fff);border:1px solid var(--vf-line,#e5eaf2);border-radius:10px;padding:8px 11px;transition:all .25s}
+      .ais-pv-card.empty{opacity:.45;border-style:dashed}
+      .ais-pv-card.filled{border-color:rgba(139,92,246,.3);box-shadow:0 2px 8px rgba(139,92,246,.06);opacity:1;border-style:solid}
+      .ais-pv-card.active{border-color:rgba(139,92,246,.5);opacity:1;background:linear-gradient(135deg,rgba(139,92,246,.05),rgba(6,182,212,.03));border-style:solid}
+      .ais-pv-head-row{display:flex;align-items:center;gap:6px;margin-bottom:3px}
+      .ais-pv-icon{width:18px;height:18px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:10px;background:var(--vf-surface-2,#f4f6fb);color:var(--vf-muted)}
+      .ais-pv-card.filled .ais-pv-icon{background:linear-gradient(135deg,#8b5cf6,#06b6d4);color:#fff}
+      .ais-pv-card.active .ais-pv-icon{background:rgba(139,92,246,.15);color:#8b5cf6}
+      .ais-pv-lbl{font-size:9.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--vf-muted);font-weight:800;flex:1}
+      .ais-pv-card.filled .ais-pv-lbl{color:var(--vf-text)}
+      .ais-pv-card.active .ais-pv-lbl{color:#8b5cf6}
+      .ais-pv-status{font-size:9px;color:var(--vf-muted);font-weight:700}
+      .ais-pv-card.filled .ais-pv-status{color:#16a34a}
+      .ais-pv-card.active .ais-pv-status{color:#8b5cf6}
+      .ais-pv-status::before{content:"○ "}
+      .ais-pv-card.filled .ais-pv-status::before{content:"✓ "}
+      .ais-pv-val{font-size:11.5px;color:var(--vf-text);line-height:1.4;font-weight:500;min-height:14px}
+      .ais-pv-card.active .ais-pv-val{color:var(--vf-muted);font-style:italic}
+      .ais-pv-val:empty::before{content:"—";color:var(--vf-muted)}
+
+      .ais-comp{background:var(--vf-surface,#fff);border:1px solid var(--vf-line,#e5eaf2);border-radius:13px;padding:12px 14px;display:flex;align-items:center;gap:12px;margin-bottom:4px}
+      .ais-comp-circle{width:46px;height:46px;border-radius:50%;background:conic-gradient(#8b5cf6 0deg 0deg, var(--vf-surface-2,#f4f6fb) 0deg 360deg);display:flex;align-items:center;justify-content:center;position:relative;flex-shrink:0}
+      .ais-comp-circle::after{content:"";position:absolute;width:36px;height:36px;border-radius:50%;background:var(--vf-surface,#fff)}
+      .ais-comp-circle span{position:relative;z-index:2;font-weight:800;font-size:12.5px;color:var(--vf-text)}
+      .ais-comp .lbl{font-size:13px;font-weight:700;color:var(--vf-text)}
+      .ais-comp .sb{font-size:11.5px;color:var(--vf-muted);margin-top:2px;line-height:1.4}
+
+      .ais-footer{margin-top:auto;padding:10px 22px;border-top:1px solid var(--vf-line,#e5eaf2);background:var(--vf-surface,#fff);font-size:11px;color:var(--vf-muted);text-align:center;font-weight:600}
+      .ais-footer b{color:var(--vf-text)}
+
+      @media(max-width:900px){.ais-modal{grid-template-columns:1fr;max-height:96vh}.ais-chat-wrap,.ais-preview-wrap{height:auto;max-height:50vh}}
+    </style>
+
+    <div class="ais-bg" id="aisBg">
+      <div class="ais-modal">
+        <div class="ais-head">
+          <div class="ais-head-l">
+            <div class="ais-ico">🪄</div>
+            <div>
+              <h2>AI Setup Wizard</h2>
+              <p>25 questions · 12 essential + 10 recommended + 3 advanced · 90%+ AI accuracy</p>
+            </div>
+          </div>
+          <div class="ais-progress-wrap">
+            <div class="ais-progress-row">
+              <span class="ais-progress-text" id="aisProgLbl">Question 1 of 25</span>
+              <div class="ais-progress-bar">
+                <span class="ais-prog-ess" id="aisProgEss" style="width:0%"></span>
+                <span class="ais-prog-rec" id="aisProgRec" style="width:0%"></span>
+                <span class="ais-prog-adv" id="aisProgAdv" style="width:0%"></span>
+              </div>
+              <button class="ais-close" onclick="aisClose()">✕</button>
+            </div>
+            <div class="ais-progress-legend"><span class="e">Essential (12)</span><span class="r">Recommended (10)</span><span class="a">Advanced (3)</span></div>
+          </div>
+        </div>
+
+        <div class="ais-chat-wrap">
+          <div class="ais-banner">
+            <span style="font-size:15px">💡</span>
+            <div>Most questions are <b>tap-to-answer</b>. Every chip question also has a <b>"type your own answer"</b> option below. Multi-select shows a <b>Continue →</b> button. Skip any question — but completing them gives <b>90%+ AI accuracy</b>.</div>
+          </div>
+          <div class="ais-chat" id="aisChat"></div>
+          <div class="ais-input-area">
+            <div class="ais-skip-row">
+              <button class="ais-skip" onclick="aisSkip()">↷ Skip this question</button>
+              <span class="ais-skip-all"><u onclick="aisClose()">Skip entire setup</u></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="ais-preview-wrap">
+          <div class="ais-pv-head">
+            <h4>📋 AI Training Profile (Live)</h4>
+            <span class="ais-pv-live">Auto-filling</span>
+          </div>
+          <div class="ais-pv-body" id="aisPvBody">
+            <div class="ais-comp">
+              <div class="ais-comp-circle" id="aisCompCircle"><span id="aisCompPct">0%</span></div>
+              <div>
+                <div class="lbl">AI Training Progress</div>
+                <div class="sb" id="aisCompSub">0 of 25 answered · 100% accuracy unlocked when complete</div>
+              </div>
+            </div>
+          </div>
+          <div class="ais-footer">Edit any of these later in the <b>AI Training Studio</b></div>
+        </div>
+      </div>
+    </div>
+    <!-- ══════════════════ END AI SETUP WIZARD MODAL ══════════════════ -->
+
 
     <!-- Task Detail Drawer -->
     <div class="tk-drawer-overlay" id="tkDrawerOverlay" onclick="tkCloseDrawer()"></div>
@@ -8249,7 +9100,1281 @@ function showSection(section){
     tkLoad();
   }
 
+  if(section === "aiTraining"){
+    document.getElementById("aiTrainingSection").classList.add("active");
+    document.getElementById("navAiTraining").classList.add("active");
+  }
+
 }
+
+
+/* ═══════════════ AI Training Studio (Functional) ═══════════════ */
+
+const AIT_STATE_KEY = 'dropsigma_ai_training_state_v1';
+
+/* ----- Tabs ----- */
+function aitSwitchTab(name){
+  document.querySelectorAll('#aiTrainingSection .ait-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('#aiTrainingSection .ait-pane').forEach(p => p.classList.remove('active'));
+  const tab  = document.querySelector(`#aiTrainingSection .ait-tab[data-aittab="${name}"]`);
+  const pane = document.querySelector(`#aiTrainingSection .ait-pane[data-aitpane="${name}"]`);
+  if(tab)  tab.classList.add('active');
+  if(pane) pane.classList.add('active');
+}
+
+/* ----- Mode card selection ----- */
+function aitSelectMode(el){
+  document.querySelectorAll('#aiTrainingSection .ait-mode').forEach(m => m.classList.remove('selected'));
+  el.classList.add('selected');
+  aitSaveState();
+}
+
+/* ----- Tone chip toggle (saves on toggle) ----- */
+document.addEventListener('click', function(e){
+  const chip = e.target.closest('#aiTrainingSection .ait-chip');
+  if(chip){
+    chip.classList.toggle('on');
+    aitSaveState();
+  }
+});
+
+/* ----- State Management (localStorage) ----- */
+function aitCollectState(){
+  const $ = id => document.getElementById(id);
+  const get = id => $(id) ? $(id).value : '';
+
+  const tones = [];
+  document.querySelectorAll('#aiTrainingSection .ait-chip.on').forEach(c => {
+    if(c.dataset.tone) tones.push(c.dataset.tone);
+  });
+
+  let mode = 'draft';
+  const selectedMode = document.querySelector('#aiTrainingSection .ait-mode.selected');
+  if(selectedMode) mode = selectedMode.dataset.mode || 'draft';
+
+  const toggles = {};
+  document.querySelectorAll('#aiTrainingSection .ait-toggle-row').forEach((row, i) => {
+    const lbl = row.querySelector('.lbl')?.textContent?.trim();
+    const sw  = row.querySelector('.ait-switch');
+    if(lbl && sw) toggles[lbl] = sw.classList.contains('on');
+  });
+
+  /* Snippets */
+  const snippets = [];
+  document.querySelectorAll('#aiTrainingSection #aitSnippetList .ait-snippet').forEach(s => {
+    const pill  = s.querySelector('.pill')?.textContent?.trim();
+    const title = s.querySelector('.ait-snippet-title')?.childNodes[0]?.textContent?.trim();
+    const text  = s.querySelector('.ait-snippet-text')?.textContent?.trim();
+    const fromWizard = s.dataset.fromWizard === '1';
+    const pillClass = Array.from(s.querySelector('.pill')?.classList || []).find(c => c.startsWith('ait-pill-')) || 'ait-pill-faq';
+    if(title && text) snippets.push({ pill, pillClass, title, text, fromWizard });
+  });
+
+  return {
+    bizName:  get('aitBizName'),
+    niche:    get('aitNiche'),
+    desc:     get('aitDesc'),
+    lang:     get('aitLang'),
+    hours:    get('aitHours'),
+    len:      get('aitLen'),
+    signoff:  get('aitSignoff'),
+    voiceEg:  get('aitVoiceEg'),
+    tones, mode, toggles, snippets
+  };
+}
+
+/* Local cache fallback (used when offline / before first remote load) */
+function aitSaveState(){
+  try {
+    const st = aitCollectState();
+    localStorage.setItem(AIT_STATE_KEY, JSON.stringify(st));
+    /* Debounced server save */
+    if(window._aitSaveTimer) clearTimeout(window._aitSaveTimer);
+    window._aitSaveTimer = setTimeout(aitPersistToServer, 800);
+  } catch(e){ console.warn('aitSaveState failed', e); }
+}
+
+function aitLoadState(){
+  try {
+    const raw = localStorage.getItem(AIT_STATE_KEY);
+    if(!raw) return null;
+    return JSON.parse(raw);
+  } catch(e){ return null; }
+}
+
+/* Server persistence — debounced PUT to /api/ai-training/profile/ */
+async function aitPersistToServer(){
+  const st = aitCollectState();
+  try {
+    await fetch('/emails/api/ai-training/profile/', {
+      method: 'PUT',
+      headers: {'Content-Type':'application/json','X-CSRFToken':aitGetCSRF()},
+      body: JSON.stringify({
+        business_name: st.bizName || '',
+        niche:         st.niche   || '',
+        description:   st.desc    || '',
+        language:      st.lang    || '',
+        support_hours: st.hours   || '',
+        reply_length:  st.len     || '',
+        signoff:       st.signoff || '',
+        voice_example: st.voiceEg || '',
+        tones:         st.tones   || [],
+        mode:          st.mode    || 'draft',
+        toggles:       st.toggles || {}
+      })
+    });
+  } catch(e){ console.warn('aitPersistToServer failed', e); }
+}
+
+/* Load profile + snippets from server */
+async function aitLoadFromServer(){
+  try {
+    const [profileResp, snippetsResp] = await Promise.all([
+      fetch('/emails/api/ai-training/profile/').then(r => r.json()).catch(() => null),
+      fetch('/emails/api/ai-training/snippets/').then(r => r.json()).catch(() => null)
+    ]);
+    if(profileResp?.success && profileResp.profile){
+      const p = profileResp.profile;
+      /* Map server field names back to client state shape */
+      const mapped = {
+        bizName: p.business_name, niche: p.niche, desc: p.description,
+        lang: p.language, hours: p.support_hours,
+        len: p.reply_length, signoff: p.signoff, voiceEg: p.voice_example,
+        tones: p.tones || [], mode: p.mode, toggles: p.toggles || {},
+        snippets: []
+      };
+      localStorage.setItem(AIT_STATE_KEY, JSON.stringify(mapped));
+    }
+    if(snippetsResp?.success && Array.isArray(snippetsResp.snippets)){
+      window._aitServerSnippets = snippetsResp.snippets;
+    }
+  } catch(e){ console.warn('aitLoadFromServer failed', e); }
+}
+
+function aitRenderServerSnippets(){
+  /* Replace snippet list with server-loaded snippets if any */
+  if(!window._aitServerSnippets || !window._aitServerSnippets.length) return;
+  const list = document.getElementById('aitSnippetList');
+  if(!list) return;
+  /* Remove only snippets without a server id (defaults / wizard inserts) */
+  list.querySelectorAll('.ait-snippet:not([data-snip-id])').forEach(s => {
+    /* keep the new-snippet form if open */
+    if(s.id !== 'aitNewSnippetForm') s.remove();
+  });
+  const pillClassMap = {
+    Shipping:'ait-pill-ship', Refund:'ait-pill-ref', Product:'ait-pill-prod',
+    Payment:'ait-pill-faq', FAQ:'ait-pill-faq', Brand:'ait-pill-faq',
+    Support:'ait-pill-faq', AI:'ait-pill-faq', Guardrail:'ait-pill-ref'
+  };
+  window._aitServerSnippets.forEach(s => {
+    if(list.querySelector(`.ait-snippet[data-snip-id="${s.id}"]`)) return;
+    const pillClass = pillClassMap[s.category] || 'ait-pill-faq';
+    const safe = String(s.text).replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const node = document.createElement('div');
+    node.className = 'ait-snippet';
+    node.dataset.snipId = s.id;
+    if(s.from_wizard) node.dataset.fromWizard = '1';
+    const badge = s.from_wizard ? '<span style="font-size:9.5px;color:#16a34a;font-weight:800;background:rgba(22,163,74,.12);padding:2px 7px;border-radius:99px;margin-left:6px;letter-spacing:.4px;text-transform:uppercase;">✓ From Setup</span>' : '';
+    node.innerHTML = `<div class="pill ${pillClass}">${s.category}</div><div class="ait-snippet-body"><div class="ait-snippet-title">${String(s.title).replace(/</g,'&lt;')} ${badge}</div><div class="ait-snippet-text">${safe}</div></div><div class="ait-snippet-actions"><button class="ait-icon-btn" onclick="aitEditSnippet(this)" title="Edit">✏️</button><button class="ait-icon-btn" onclick="aitDeleteSnippet(this)" title="Delete">🗑</button></div>`;
+    list.appendChild(node);
+  });
+  aitUpdateKbCount();
+}
+
+function aitRestoreState(){
+  const st = aitLoadState();
+  if(!st) return;
+  const $ = id => document.getElementById(id);
+  const set = (id, val) => { if($(id) && val !== undefined && val !== null) $(id).value = val; };
+  set('aitBizName', st.bizName);
+  set('aitNiche',   st.niche);
+  set('aitDesc',    st.desc);
+  set('aitHours',   st.hours);
+  set('aitSignoff', st.signoff);
+  set('aitVoiceEg', st.voiceEg);
+  if($('aitLang') && st.lang){
+    Array.from($('aitLang').options).forEach((o, i) => { if(o.value === st.lang || o.textContent === st.lang) $('aitLang').selectedIndex = i; });
+  }
+  if($('aitLen') && st.len){
+    Array.from($('aitLen').options).forEach((o, i) => { if(o.value === st.len || o.textContent === st.len) $('aitLen').selectedIndex = i; });
+  }
+  /* Tones */
+  if(st.tones && Array.isArray(st.tones)){
+    document.querySelectorAll('#aiTrainingSection .ait-chip').forEach(c => {
+      c.classList.toggle('on', !!c.dataset.tone && st.tones.includes(c.dataset.tone));
+    });
+  }
+  /* Mode */
+  if(st.mode){
+    document.querySelectorAll('#aiTrainingSection .ait-mode').forEach(m => {
+      m.classList.toggle('selected', m.dataset.mode === st.mode);
+    });
+  }
+  /* Toggles */
+  if(st.toggles){
+    document.querySelectorAll('#aiTrainingSection .ait-toggle-row').forEach(row => {
+      const lbl = row.querySelector('.lbl')?.textContent?.trim();
+      const sw  = row.querySelector('.ait-switch');
+      if(lbl && sw && st.toggles[lbl] !== undefined) sw.classList.toggle('on', !!st.toggles[lbl]);
+    });
+  }
+  /* Snippets — restore extras (only those marked fromWizard or new ones not in default markup) */
+  if(st.snippets && Array.isArray(st.snippets)){
+    const list = document.getElementById('aitSnippetList');
+    if(list){
+      const existingTitles = new Set();
+      list.querySelectorAll('.ait-snippet-title').forEach(t => existingTitles.add(t.childNodes[0]?.textContent?.trim()));
+      st.snippets.forEach(s => {
+        if(existingTitles.has(s.title)) return;
+        const safe = String(s.text).replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        const node = document.createElement('div');
+        node.className = 'ait-snippet';
+        if(s.fromWizard) node.dataset.fromWizard = '1';
+        const badge = s.fromWizard ? '<span style="font-size:9.5px;color:#16a34a;font-weight:800;background:rgba(22,163,74,.12);padding:2px 7px;border-radius:99px;margin-left:6px;letter-spacing:.4px;text-transform:uppercase;">✓ From Setup</span>' : '';
+        node.innerHTML = `<div class="pill ${s.pillClass}">${s.pill}</div><div class="ait-snippet-body"><div class="ait-snippet-title">${s.title} ${badge}</div><div class="ait-snippet-text">${safe}</div></div><div class="ait-snippet-actions"><button class="ait-icon-btn" onclick="aitEditSnippet(this)" title="Edit">✏️</button><button class="ait-icon-btn" onclick="aitDeleteSnippet(this)" title="Delete">🗑</button></div>`;
+        list.appendChild(node);
+      });
+      aitUpdateKbCount();
+    }
+  }
+}
+
+/* Auto-save on input changes */
+function aitWireAutoSave(){
+  const ids = ['aitBizName','aitNiche','aitDesc','aitLang','aitHours','aitLen','aitSignoff','aitVoiceEg'];
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if(el && !el.dataset.aitWired){
+      el.addEventListener('change', aitSaveState);
+      el.addEventListener('input',  aitSaveState);
+      el.dataset.aitWired = '1';
+    }
+  });
+  document.querySelectorAll('#aiTrainingSection .ait-switch').forEach(sw => {
+    if(!sw.dataset.aitWired){
+      sw.addEventListener('click', () => setTimeout(aitSaveState, 50));
+      sw.dataset.aitWired = '1';
+    }
+  });
+}
+
+/* ----- Add Snippet (functional) ----- */
+function aitAddSnippet(){
+  /* Open inline form right above the snippet list */
+  const list = document.getElementById('aitSnippetList');
+  if(!list) return;
+  /* Avoid stacking multiple forms */
+  if(document.getElementById('aitNewSnippetForm')) {
+    document.getElementById('aitNewSnippetForm').querySelector('input')?.focus();
+    return;
+  }
+  const form = document.createElement('div');
+  form.id = 'aitNewSnippetForm';
+  form.className = 'ait-snippet';
+  form.style.cssText = 'flex-direction:column;background:linear-gradient(135deg,rgba(139,92,246,.06),rgba(6,182,212,.04));border:2px dashed rgba(139,92,246,.4);';
+  form.innerHTML = `
+    <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;width:100%">
+      <select id="newSnipCat" style="padding:7px 10px;border:1px solid var(--vf-line,#e5eaf2);border-radius:8px;font-family:inherit;font-size:12px;background:#fff">
+        <option value="Shipping|ait-pill-ship">📦 Shipping</option>
+        <option value="Refund|ait-pill-ref">↩️ Refund</option>
+        <option value="Product|ait-pill-prod">📦 Product</option>
+        <option value="FAQ|ait-pill-faq">❓ FAQ</option>
+      </select>
+      <input type="text" id="newSnipTitle" placeholder="Title (e.g. Delivery time)" style="flex:1;padding:7px 10px;border:1px solid var(--vf-line,#e5eaf2);border-radius:8px;font-family:inherit;font-size:12.5px;background:#fff" />
+    </div>
+    <textarea id="newSnipText" placeholder="Snippet text — what AI should know about this topic..." style="width:100%;min-height:70px;padding:9px 11px;border:1px solid var(--vf-line,#e5eaf2);border-radius:9px;font-family:inherit;font-size:12.5px;background:#fff;resize:vertical;box-sizing:border-box"></textarea>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px;width:100%">
+      <button class="ait-btn sm" onclick="aitCancelNewSnippet()">Cancel</button>
+      <button class="ait-btn primary sm" onclick="aitSaveNewSnippet()">+ Add Snippet</button>
+    </div>
+  `;
+  list.insertBefore(form, list.firstChild);
+  setTimeout(() => document.getElementById('newSnipTitle')?.focus(), 50);
+}
+
+function aitCancelNewSnippet(){
+  document.getElementById('aitNewSnippetForm')?.remove();
+}
+
+async function aitSaveNewSnippet(){
+  const cat   = document.getElementById('newSnipCat')?.value || 'FAQ|ait-pill-faq';
+  const title = (document.getElementById('newSnipTitle')?.value || '').trim();
+  const text  = (document.getElementById('newSnipText')?.value || '').trim();
+  if(!title || !text){
+    alert('Please fill in both Title and Text.');
+    return;
+  }
+  const [pill, pillClass] = cat.split('|');
+  const list = document.getElementById('aitSnippetList');
+  const safe = text.replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const node = document.createElement('div');
+  node.className = 'ait-snippet';
+  node.innerHTML = `<div class="pill ${pillClass}">${pill}</div><div class="ait-snippet-body"><div class="ait-snippet-title">${title.replace(/</g,'&lt;')}</div><div class="ait-snippet-text">${safe}</div></div><div class="ait-snippet-actions"><button class="ait-icon-btn" onclick="aitEditSnippet(this)" title="Edit">✏️</button><button class="ait-icon-btn" onclick="aitDeleteSnippet(this)" title="Delete">🗑</button></div>`;
+  document.getElementById('aitNewSnippetForm').replaceWith(node);
+  aitUpdateKbCount();
+  /* Server save */
+  try {
+    const r = await fetch('/emails/api/ai-training/snippets/', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-CSRFToken':aitGetCSRF()},
+      body: JSON.stringify({ category: pill, title: title, text: text })
+    });
+    const data = await r.json();
+    if(data?.success && data.snippet?.id){
+      node.dataset.snipId = data.snippet.id;
+      aitToast('✓ Snippet saved');
+    } else {
+      aitToast('⚠️ Saved locally (server error)');
+    }
+  } catch(e){
+    aitToast('⚠️ Saved locally (offline)');
+  }
+}
+
+async function aitEditSnippet(btn){
+  const snippet = btn.closest('.ait-snippet');
+  if(!snippet) return;
+  const titleEl = snippet.querySelector('.ait-snippet-title');
+  const textEl  = snippet.querySelector('.ait-snippet-text');
+  const titleText = titleEl?.childNodes[0]?.textContent?.trim() || '';
+  const textText  = textEl?.textContent?.trim() || '';
+  const newTitle = prompt('Edit title:', titleText);
+  if(newTitle === null) return;
+  const newText = prompt('Edit text:', textText);
+  if(newText === null) return;
+  if(titleEl){
+    const badge = titleEl.querySelector('span');
+    titleEl.innerHTML = newTitle.replace(/</g,'&lt;') + (badge ? ' ' + badge.outerHTML : '');
+  }
+  if(textEl) textEl.textContent = newText;
+  /* Server update if it has an id */
+  const sid = snippet.dataset.snipId;
+  if(sid){
+    try {
+      await fetch(`/emails/api/ai-training/snippets/${sid}/`, {
+        method: 'PUT',
+        headers: {'Content-Type':'application/json','X-CSRFToken':aitGetCSRF()},
+        body: JSON.stringify({ title: newTitle, text: newText })
+      });
+      aitToast('✓ Snippet updated');
+    } catch(e){ aitToast('⚠️ Saved locally only'); }
+  } else {
+    aitToast('✓ Snippet updated');
+  }
+}
+
+async function aitDeleteSnippet(btn){
+  if(!confirm('Delete this snippet?')) return;
+  const snippet = btn.closest('.ait-snippet');
+  if(!snippet) return;
+  const sid = snippet.dataset.snipId;
+  snippet.remove();
+  aitUpdateKbCount();
+  if(sid){
+    try {
+      await fetch(`/emails/api/ai-training/snippets/${sid}/`, {
+        method: 'DELETE',
+        headers: {'X-CSRFToken':aitGetCSRF()}
+      });
+      aitToast('🗑 Snippet deleted');
+    } catch(e){ aitToast('⚠️ Removed locally only'); }
+  } else {
+    aitToast('🗑 Snippet deleted');
+  }
+}
+
+function aitUpdateKbCount(){
+  const list = document.getElementById('aitSnippetList');
+  if(!list) return;
+  const count = list.querySelectorAll('.ait-snippet').length;
+  const kbCount = document.getElementById('aitKbCount');
+  const kbBadge = document.getElementById('aitKbBadge');
+  if(kbCount) kbCount.textContent = count;
+  if(kbBadge) kbBadge.textContent = count;
+}
+
+/* ----- Add Example (placeholder until backend) ----- */
+function aitAddExample(){
+  aitToast('Manual example add coming in next backend phase.');
+}
+
+/* ----- Save & Re-train (functional) ----- */
+function aitSaveAll(){
+  aitSaveState();
+  const st = aitCollectState();
+  const tones = (st.tones || []).join(', ');
+  const snipCount = (st.snippets || []).length;
+  aitToast(`✓ Saved — ${snipCount} snippets · tones: ${tones || 'none'}`, 3000);
+}
+
+/* ----- Toast ----- */
+function aitToast(msg, ms){
+  ms = ms || 2000;
+  let t = document.getElementById('aitToast');
+  if(!t){
+    t = document.createElement('div');
+    t.id = 'aitToast';
+    t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:linear-gradient(135deg,#0f172a,#1e293b);color:#fff;padding:12px 22px;border-radius:11px;font-size:13px;font-weight:600;box-shadow:0 12px 32px rgba(15,23,42,.3);z-index:5000;transition:transform .3s cubic-bezier(.2,.9,.3,1.2);font-family:inherit;';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.transform = 'translateX(-50%) translateY(0)';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => { t.style.transform = 'translateX(-50%) translateY(100px)'; }, ms);
+}
+
+/* ----- Hook into showSection: load from server + restore when AI Training opens ----- */
+(function(){
+  const _origShowSection = window.showSection;
+  if(typeof _origShowSection === 'function'){
+    window.showSection = async function(name){
+      _origShowSection.apply(this, arguments);
+      if(name === 'aiTraining'){
+        await aitLoadFromServer();
+        aitRenderServerSnippets();
+        aitRestoreState();
+        aitWireAutoSave();
+        aitUpdateKbCount();
+      }
+    };
+  }
+})();
+
+/* ═══════════════ Test Playground — Functional ═══════════════ */
+function aitAssemblePrompt(){
+  const st = aitCollectState();
+  const tones = (st.tones || []).join(', ') || 'friendly, empathetic';
+  const lang  = st.lang || 'English';
+  const lenMap = { 'Short (1–2 sentences)':'1–2 sentences', 'Medium (3–5 sentences)':'3–5 sentences', 'Detailed (paragraph)':'one full paragraph' };
+  const len = lenMap[st.len] || '3–5 sentences';
+  const signoff = (st.signoff || '').trim();
+  const bizName = (st.bizName || '').trim() || 'our store';
+  const niche   = (st.niche   || '').trim() || 'an ecommerce brand';
+  const desc    = (st.desc    || '').trim();
+  const voiceEg = (st.voiceEg || '').trim();
+  const snippets = (st.snippets || []).slice(0, 8);
+
+  let system = `You are a customer support agent for "${bizName}" — ${niche}.`;
+  if(desc) system += `\n${desc}`;
+  system += `\n\nTone: ${tones}. Reply length: ${len}. Language: ${lang}.`;
+  if(signoff) system += `\nSign-off every reply with: "${signoff}".`;
+  if(voiceEg) system += `\n\nBRAND VOICE EXAMPLE (mimic this style):\n"${voiceEg}"`;
+  if(snippets.length){
+    system += `\n\nRELEVANT KNOWLEDGE BASE:`;
+    snippets.forEach((s, i) => {
+      system += `\n[${i+1}] (${s.pill}) ${s.title}: ${s.text}`;
+    });
+  }
+  system += `\n\nReply in a natural, on-brand way. Be helpful, accurate, and stay within the policies above.`;
+  return system;
+}
+
+function aitFormatPromptForDebug(system){
+  /* Pretty-print with colored spans */
+  const lines = system.split('\n');
+  let html = '';
+  lines.forEach(line => {
+    if(/^[A-Z][A-Z\s&]+:/.test(line.trim())){
+      const idx = line.indexOf(':');
+      const header = line.substring(0, idx + 1);
+      const rest = line.substring(idx + 1);
+      html += `<span class="h">${header}</span>${rest.replace(/&/g,'&amp;').replace(/</g,'&lt;')}\n`;
+    } else if(/^\[\d+\]/.test(line.trim())){
+      const m = line.match(/^(\s*\[\d+\]\s*)\(([^)]+)\)\s*(.+)/);
+      if(m){
+        html += `${m[1]}<span class="k">${m[2]}</span> ${m[3].replace(/&/g,'&amp;').replace(/</g,'&lt;')}\n`;
+      } else html += line.replace(/&/g,'&amp;').replace(/</g,'&lt;') + '\n';
+    } else if(line.includes('"')){
+      html += line.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"([^"]+)"/g, '"<span class="v">$1</span>"') + '\n';
+    } else {
+      html += line.replace(/&/g,'&amp;').replace(/</g,'&lt;') + '\n';
+    }
+  });
+  return html;
+}
+
+function aitGetCSRF(){
+  const m = document.cookie.match(/csrftoken=([^;]+)/);
+  return m ? m[1] : '';
+}
+
+function aitRenderDetectedRefs(detectedRefs, matchedOrders){
+  const box = document.getElementById('aitDetectedRefs');
+  if(!box) return;
+  if(!detectedRefs?.length && !matchedOrders?.length){
+    box.style.display = 'none';
+    box.innerHTML = '';
+    return;
+  }
+  box.style.display = 'flex';
+  let html = '';
+  if(detectedRefs?.length){
+    const refsHtml = detectedRefs.map(r => {
+      const icon = r.type === 'order_id' ? '#' : r.type === 'email' ? '✉️' : r.type === 'phone' ? '📞' : r.type === 'tracking' ? '📦' : '🔍';
+      return `<span style="padding:3px 9px;background:rgba(6,182,212,.13);color:#06b6d4;border:1px solid rgba(6,182,212,.3);border-radius:99px;font-weight:700;font-size:11px;">${icon} ${String(r.value).replace(/</g,'&lt;')}</span>`;
+    }).join(' ');
+    html += `<div style="font-size:11px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.5px;">🔍 Detected references</div><div style="display:flex;flex-wrap:wrap;gap:6px;">${refsHtml}</div>`;
+  }
+  if(matchedOrders?.length){
+    const ordersHtml = matchedOrders.map(o => {
+      const parts = [];
+      if(o.order_number) parts.push(`<b>#${String(o.order_number).replace(/</g,'&lt;')}</b>`);
+      if(o.customer_name) parts.push(o.customer_name);
+      if(o.product) parts.push(o.product);
+      const status = o.live_tracking_status || o.tracking_status || o.fulfillment_status || '';
+      if(status) parts.push(`<span style="color:#16a34a;font-weight:700;">${status}</span>`);
+      if(o.tracking_number) parts.push(`📦 ${o.tracking_number}`);
+      if(o.total) parts.push(o.total);
+      return `<div style="font-size:11.5px;padding:6px 10px;background:#fff;border:1px solid rgba(22,163,74,.25);border-radius:8px;width:100%;box-sizing:border-box;">${parts.join(' · ')}</div>`;
+    }).join('');
+    html += `<div style="font-size:11px;font-weight:800;color:#16a34a;text-transform:uppercase;letter-spacing:.5px;margin-top:4px;">✓ Matched orders from your store</div><div style="display:flex;flex-direction:column;gap:5px;width:100%;">${ordersHtml}</div>`;
+  } else if(detectedRefs?.length){
+    html += `<div style="font-size:11.5px;color:var(--vf-muted);font-style:italic;">No matching orders found in your store — AI will reply without specific order data.</div>`;
+  }
+  box.innerHTML = html;
+}
+
+async function aitRunPlayground(){
+  const out  = document.getElementById('aitPlayOutput');
+  const conf = document.getElementById('aitConfBadge');
+  const kb   = document.getElementById('aitKbBadgeUsed');
+  const ordersBadge = document.getElementById('aitOrdersUsedBadge');
+  const input  = document.getElementById('aitPlayInput');
+  const sender = document.getElementById('aitPlaySender');
+  const autoLookup = document.getElementById('aitPlayAutoLookup');
+  if(!out || !input) return;
+
+  const userMsg = (input.value || '').trim();
+  if(!userMsg){
+    aitToast('Type a customer email first');
+    return;
+  }
+
+  /* Save current state so prompt uses fresh data */
+  aitSaveState();
+  const systemPrompt = aitAssemblePrompt();
+
+  /* Parse subject from email body if present */
+  let subject = '';
+  const subjMatch = userMsg.match(/^Subject:\s*(.+)/im);
+  if(subjMatch) subject = subjMatch[1].trim();
+
+  /* Update debug view with assembled prompt (server may add more) */
+  const promptBox = document.querySelector('#aiTrainingSection .ait-prompt');
+  if(promptBox){
+    promptBox.innerHTML = aitFormatPromptForDebug(systemPrompt) +
+      `\n<span class="h">USER:</span>\n${userMsg.replace(/&/g,'&amp;').replace(/</g,'&lt;')}`;
+  }
+
+  /* Loading state */
+  out.classList.add('placeholder');
+  out.innerHTML = '<span class="typing-dots">AI is reading email & looking up orders<span>.</span><span>.</span><span>.</span></span>';
+  if(conf) conf.style.display = 'none';
+  if(kb)   kb.style.display   = 'none';
+  if(ordersBadge) ordersBadge.style.display = 'none';
+  aitRenderDetectedRefs([], []);
+
+  try {
+    const resp = await fetch('/emails/api/ai-playground/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': aitGetCSRF(),
+      },
+      body: JSON.stringify({
+        system_prompt: systemPrompt,
+        user_message:  userMsg,
+        sender:        (sender?.value || '').trim(),
+        subject:       subject,
+        auto_lookup:   autoLookup ? !!autoLookup.checked : true,
+      })
+    });
+    const data = await resp.json();
+    out.classList.remove('placeholder');
+    if(data.success && data.reply){
+      out.textContent = data.reply;
+      const st = aitCollectState();
+      const snipCount = (st.snippets || []).length;
+      if(conf){
+        conf.style.display = 'inline-block';
+        conf.textContent = `⚡ Generated by Claude Haiku 4.5`;
+      }
+      if(kb){
+        kb.style.display = 'inline-block';
+        kb.textContent = `📚 Used: ${snipCount} knowledge snippet${snipCount !== 1 ? 's' : ''}`;
+      }
+      const orderCount = (data.matched_orders || []).length;
+      if(ordersBadge){
+        ordersBadge.style.display = 'inline-block';
+        ordersBadge.textContent = `🔗 ${orderCount} order${orderCount !== 1 ? 's' : ''} linked`;
+      }
+      aitRenderDetectedRefs(data.detected_refs || [], data.matched_orders || []);
+
+      /* Update debug prompt with the FINAL system prompt (including server-injected context) */
+      if(promptBox && data.final_system_prompt){
+        promptBox.innerHTML = aitFormatPromptForDebug(data.final_system_prompt) +
+          `\n<span class="h">USER:</span>\n${userMsg.replace(/&/g,'&amp;').replace(/</g,'&lt;')}`;
+      }
+    } else {
+      out.textContent = '⚠️ Error: ' + (data.message || 'Failed to generate reply. Check that ANTHROPIC_API_KEY is set.');
+    }
+  } catch(e){
+    out.classList.remove('placeholder');
+    out.textContent = '⚠️ Network error: ' + e.message;
+  }
+}
+
+/* Initial state restore on page load */
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    if(document.getElementById('aiTrainingSection')){
+      aitRestoreState();
+      aitWireAutoSave();
+      aitUpdateKbCount();
+    }
+  }, 200);
+});
+
+/* ═══════════════ AI Setup Wizard (Onboarding) — 25 Q v2 ═══════════════ */
+const AIS_QUESTIONS = [
+  /* ─── A: Brand Identity (Essential 1-5) ─── */
+  { fid:'biz_name', tier:'essential', sec:'A', secLabel:'Brand Identity', icon:'🏷️',
+    text:"Hi there! I'm your AI assistant 🤖<br><br><b>What's your business name?</b>",
+    type:'text', placeholder:'e.g. Aurora Beauty' },
+  { fid:'industry', tier:'essential', sec:'A', secLabel:'Industry', icon:'🏭',
+    text:"<b>What industry are you in?</b>",
+    type:'single', chips:[
+      {icon:'💄',label:'Beauty & Skincare'},{icon:'👗',label:'Fashion & Apparel'},
+      {icon:'📱',label:'Electronics'},{icon:'🏠',label:'Home & Living'},
+      {icon:'🏃',label:'Health & Fitness'},{icon:'🐾',label:'Pet Supplies'},
+      {icon:'🎁',label:'Gifts & Novelty'},{icon:'👶',label:'Baby & Kids'},
+      {icon:'🔧',label:'Tools & Hardware'},{icon:'📦',label:'Other'}
+    ] },
+  { fid:'audience', tier:'essential', sec:'A', secLabel:'Target Customer', icon:'👥',
+    text:"<b>Who's your target customer?</b> Pick all that apply.",
+    type:'multi', chips:[
+      {icon:'🎓',label:'Gen Z (18-25)'},{icon:'💼',label:'Millennials (26-40)'},
+      {icon:'👨‍👩‍👧',label:'Parents'},{icon:'💎',label:'Premium / Luxury buyers'},
+      {icon:'💰',label:'Budget-conscious'},{icon:'🌍',label:'International'},
+      {icon:'🏢',label:'B2B / Businesses'}
+    ] },
+  { fid:'personality', tier:'essential', sec:'A', secLabel:'Brand Personality', icon:'✨',
+    text:"<b>How would you describe your brand personality?</b> Pick 2-3.",
+    type:'multi', chips:[
+      {icon:'😊',label:'Friendly'},{icon:'💼',label:'Professional'},
+      {icon:'💎',label:'Premium'},{icon:'🎉',label:'Playful'},
+      {icon:'⚡',label:'Bold & confident'},{icon:'🤝',label:'Empathetic'},
+      {icon:'🧘',label:'Calm & minimalist'},{icon:'🚀',label:'Innovative'}
+    ] },
+  { fid:'language', tier:'essential', sec:'A', secLabel:'Language', icon:'🗣️',
+    text:"<b>What language should your AI reply in?</b>",
+    type:'single', chips:[
+      {icon:'🇺🇸',label:'English only'},{icon:'🌎',label:'English + Spanish'},
+      {icon:'🇪🇸',label:'Spanish only'},{icon:'🇫🇷',label:'French'},
+      {icon:'🇩🇪',label:'German'},{icon:'🌐',label:'Auto-detect customer'}
+    ] },
+  /* ─── B: Products & Pricing (Essential 6-7) ─── */
+  { fid:'price_range', tier:'essential', sec:'B', secLabel:'Pricing', icon:'💵',
+    text:"<b>What's your typical product price range?</b>",
+    type:'single', chips:[
+      {icon:'💸',label:'Under $25'},{icon:'💵',label:'$25–$75'},
+      {icon:'💰',label:'$75–$200'},{icon:'💎',label:'$200+'},
+      {icon:'📊',label:'Mixed range'}
+    ] },
+  { fid:'sourcing', tier:'essential', sec:'B', secLabel:'Sourcing', icon:'🏭',
+    text:"<b>Where are your products sourced from?</b>",
+    type:'single', chips:[
+      {icon:'🇺🇸',label:'USA-made'},{icon:'🌏',label:'Imported (international brands)'},
+      {icon:'🏷️',label:'Private label'},{icon:'✅',label:'Authorized retailer'},
+      {icon:'🔀',label:'Mixed sources'}
+    ] },
+  /* ─── C: Shipping (Essential 8-9) ─── */
+  { fid:'carriers', tier:'essential', sec:'C', secLabel:'Shipping Carriers', icon:'📦',
+    text:"<b>Which shipping carriers do you use?</b> Multi-select.",
+    type:'multi', chips:[
+      {icon:'📦',label:'FedEx'},{icon:'🟫',label:'UPS'},
+      {icon:'🇺🇸',label:'USPS'},{icon:'🟡',label:'DHL'},
+      {icon:'🚚',label:'OnTrac'},{icon:'🛻',label:'LaserShip'}
+    ] },
+  { fid:'delivery_time', tier:'essential', sec:'C', secLabel:'Delivery Time', icon:'⏱️',
+    text:"<b>What's your standard delivery time?</b>",
+    type:'single', chips:[
+      {icon:'⚡',label:'1–2 days (express)'},{icon:'📅',label:'3–5 days'},
+      {icon:'📆',label:'5–7 days'},{icon:'🌐',label:'7–14 days (international)'}
+    ] },
+  /* ─── D: Returns (Essential 10) ─── */
+  { fid:'return_window', tier:'essential', sec:'D', secLabel:'Return Window', icon:'↩️',
+    text:"<b>How many days for returns?</b>",
+    type:'single', chips:[
+      {icon:'📅',label:'14 days'},{icon:'📅',label:'30 days'},
+      {icon:'📅',label:'60 days'},{icon:'📅',label:'90 days'},
+      {icon:'❌',label:'No returns'}
+    ] },
+  /* ─── E: Payment (Essential 11) ─── */
+  { fid:'payment_methods', tier:'essential', sec:'E', secLabel:'Payment Methods', icon:'💳',
+    text:"<b>Which payment methods do you accept?</b> Multi-select.",
+    type:'multi', chips:[
+      {icon:'💳',label:'Credit/Debit cards'},{icon:'🅿️',label:'PayPal'},
+      {icon:'🍎',label:'Apple Pay'},{icon:'🅖',label:'Google Pay'},
+      {icon:'🛍️',label:'Shop Pay'},{icon:'📅',label:'Buy now, pay later'},
+      {icon:'₿',label:'Crypto'}
+    ] },
+  /* ─── F: Support (Essential 12) ─── */
+  { fid:'support_hours', tier:'essential', sec:'F', secLabel:'Support Hours', icon:'📞',
+    text:"<b>What are your customer support hours?</b>",
+    type:'single', chips:[
+      {icon:'🌐',label:'24/7'},{icon:'🕘',label:'Mon–Fri 9am–6pm EST'},
+      {icon:'🕘',label:'Mon–Fri 9am–6pm PST'},{icon:'📅',label:'Weekdays only'},
+      {icon:'🌞',label:'Weekends only'},{icon:'⏰',label:'Custom hours'}
+    ] },
+  /* ═════ RECOMMENDED (13-22) ═════ */
+  { fid:'tone', tier:'recommended', sec:'G', secLabel:'Tone & Voice', icon:'🎙️',
+    text:"<b>What tone should your AI use?</b> Multi-select (2-3 max).",
+    type:'multi', chips:[
+      {icon:'😊',label:'Friendly'},{icon:'💼',label:'Professional'},
+      {icon:'🤝',label:'Empathetic'},{icon:'⚡',label:'Direct & concise'},
+      {icon:'🎉',label:'Enthusiastic'},{icon:'🎩',label:'Formal'}
+    ] },
+  { fid:'emoji_style', tier:'recommended', sec:'G', secLabel:'Emoji Usage', icon:'😊',
+    text:"<b>How much should your AI use emojis?</b>",
+    type:'single', chips:[
+      {icon:'🎉',label:'Lots of emojis'},{icon:'✨',label:'Occasional emojis'},
+      {icon:'💼',label:'Minimal (1 max)'},{icon:'❌',label:'Never'}
+    ] },
+  { fid:'signoff', tier:'recommended', sec:'G', secLabel:'Sign-off Style', icon:'✍️',
+    text:"<b>How should the AI sign off replies?</b>",
+    type:'single', chips:[
+      {icon:'💌',label:'Best regards'},{icon:'☕',label:'Cheers'},
+      {icon:'🙏',label:'Thanks!'},{icon:'💜',label:'The [Brand] Team'},
+      {icon:'✨',label:'Take care'},{icon:'💝',label:'XO'}
+    ] },
+  { fid:'ship_cost', tier:'recommended', sec:'C', secLabel:'Shipping Cost', icon:'🚚',
+    text:"<b>What's your shipping cost policy?</b>",
+    type:'single', chips:[
+      {icon:'🆓',label:'Free always'},{icon:'💰',label:'Free over $50'},
+      {icon:'💰',label:'Free over $100'},{icon:'💵',label:'Flat fee'},
+      {icon:'📊',label:'Calculated at checkout'}
+    ] },
+  { fid:'coverage', tier:'recommended', sec:'C', secLabel:'Shipping Coverage', icon:'🗺️',
+    text:"<b>Where do you ship to?</b>",
+    type:'single', chips:[
+      {icon:'🇺🇸',label:'All 50 US states'},{icon:'🏞️',label:'Continental US only'},
+      {icon:'🇨🇦',label:'US + Canada'},{icon:'🌎',label:'North America'},
+      {icon:'🌐',label:'Worldwide'}
+    ] },
+  { fid:'return_condition', tier:'recommended', sec:'D', secLabel:'Return Condition', icon:'📦',
+    text:"<b>What condition do you accept returns in?</b>",
+    type:'single', chips:[
+      {icon:'🔒',label:'Unused / sealed only'},{icon:'📦',label:'Original packaging required'},
+      {icon:'👌',label:'Used OK if defective'},{icon:'🔓',label:'Any condition'}
+    ] },
+  { fid:'return_shipping', tier:'recommended', sec:'D', secLabel:'Return Shipping', icon:'💸',
+    text:"<b>Who pays for return shipping?</b>",
+    type:'single', chips:[
+      {icon:'🏢',label:'We pay (free returns)'},{icon:'👤',label:'Customer pays'},
+      {icon:'💰',label:'Free over $X'},{icon:'⚖️',label:'Depends on reason'}
+    ] },
+  { fid:'response_sla', tier:'recommended', sec:'F', secLabel:'Response Time', icon:'⚡',
+    text:"<b>What's your typical response time to customer emails?</b>",
+    type:'single', chips:[
+      {icon:'⚡',label:'Under 1 hour'},{icon:'⏱️',label:'Under 4 hours'},
+      {icon:'📅',label:'Same business day'},{icon:'📆',label:'1–2 business days'}
+    ] },
+  { fid:'ai_mode', tier:'recommended', sec:'H', secLabel:'AI Mode', icon:'🤖',
+    text:"<b>How should the AI handle incoming emails?</b>",
+    type:'single', chips:[
+      {icon:'🤖',label:'Fully automatic (high confidence)'},
+      {icon:'✋',label:'Draft & review (recommended)'},
+      {icon:'💡',label:'Suggest on open only'}
+    ] },
+  { fid:'escalate', tier:'recommended', sec:'H', secLabel:'Escalation Triggers', icon:'🚨',
+    text:"<b>When should AI escalate to a human?</b> Multi-select.",
+    type:'multi', chips:[
+      {icon:'💸',label:'Refund disputes'},{icon:'⚖️',label:'Legal threats'},
+      {icon:'😡',label:'Angry / abusive customers'},{icon:'💎',label:'VIP customers'},
+      {icon:'🌐',label:'Non-English emails'},{icon:'❓',label:'Low confidence (<70%)'}
+    ] },
+  { fid:'top_questions', tier:'recommended', sec:'I', secLabel:'Top Customer Questions', icon:'❓',
+    text:"<b>What are the top questions customers ask?</b> Multi-select.",
+    type:'multi', chips:[
+      {icon:'📦',label:'Where is my order?'},{icon:'📏',label:'Sizing help'},
+      {icon:'↩️',label:'How to return?'},{icon:'❓',label:'Product info / specs'},
+      {icon:'🎁',label:'Discount codes'},{icon:'💳',label:'Payment issues'},
+      {icon:'🔧',label:'How to use product?'},{icon:'✅',label:'Is this authentic?'}
+    ] },
+  /* ═════ ADVANCED (23-25) ═════ */
+  { fid:'guardrails', tier:'advanced', sec:'J', secLabel:'Guardrails (Never Say)', icon:'🚫',
+    text:"<b>What should the AI NEVER say or promise?</b> Multi-select.",
+    type:'multi', chips:[
+      {icon:'⛔',label:'No same-day delivery'},{icon:'⛔',label:'No bulk discounts'},
+      {icon:'⛔',label:'No partial refunds'},{icon:'⛔',label:'No price match'},
+      {icon:'⛔',label:'No medical claims'},{icon:'⛔',label:'No competitor mentions'}
+    ] },
+  { fid:'voice_example', tier:'advanced', sec:'J', secLabel:'Brand Voice Example', icon:'💬',
+    text:"<b>Paste a real customer reply you love.</b> AI will mimic its exact style.",
+    type:'text', placeholder:'Hi Sarah! 👋 I totally understand...', textarea:true, optional:true },
+  { fid:'anything_else', tier:'advanced', sec:'J', secLabel:'Final Notes', icon:'📝',
+    text:"<b>Anything else?</b> Special policies, promotions, or quirks I should know about?",
+    type:'text', placeholder:'Optional — skip if nothing comes to mind', textarea:true, optional:true }
+];
+
+const AIS_SECTIONS = {
+  A:{label:'Brand Identity',tier:'e'},
+  B:{label:'Products & Pricing',tier:'e'},
+  C:{label:'Shipping',tier:'e'},
+  D:{label:'Returns & Refunds',tier:'e'},
+  E:{label:'Payments',tier:'e'},
+  F:{label:'Support',tier:'e'},
+  G:{label:'Tone & Voice',tier:'r'},
+  H:{label:'AI Behavior',tier:'r'},
+  I:{label:'Knowledge',tier:'r'},
+  J:{label:'Advanced',tier:'a'}
+};
+
+let aisIdx = 0;
+let aisAnswers = {};
+let aisMultiSelected = [];
+
+function aisOpen(){
+  const bg = document.getElementById('aisBg');
+  if(!bg) return;
+  bg.classList.add('open');
+  aisIdx = 0;
+  aisAnswers = {};
+  aisMultiSelected = [];
+  document.getElementById('aisChat').innerHTML = '';
+  aisBuildPreview();
+  aisUpdateProgress();
+  aisPushQuestion();
+}
+
+function aisClose(){
+  const bg = document.getElementById('aisBg');
+  if(bg) bg.classList.remove('open');
+}
+
+function aisBuildPreview(){
+  const body = document.getElementById('aisPvBody');
+  if(!body) return;
+  body.querySelectorAll('.ais-pv-section').forEach(s => s.remove());
+  const grouped = {};
+  AIS_QUESTIONS.forEach(q => {
+    if(!grouped[q.sec]) grouped[q.sec] = [];
+    grouped[q.sec].push(q);
+  });
+  Object.keys(grouped).forEach(secKey => {
+    const sec = AIS_SECTIONS[secKey];
+    const wrap = document.createElement('div');
+    wrap.className = 'ais-pv-section';
+    const tierIcon = sec.tier === 'e' ? '⚡' : sec.tier === 'r' ? '🎯' : '⭐';
+    wrap.innerHTML = `<div class="ais-sec-lbl ${sec.tier}">${tierIcon} ${sec.label} <span class="badge">${grouped[secKey].length}</span></div>`;
+    grouped[secKey].forEach(q => {
+      const card = document.createElement('div');
+      card.className = 'ais-pv-card empty';
+      card.dataset.aisfid = q.fid;
+      card.innerHTML = `<div class="ais-pv-head-row"><div class="ais-pv-icon">${q.icon}</div><div class="ais-pv-lbl">${q.secLabel}</div><span class="ais-pv-status">Pending</span></div><div class="ais-pv-val"></div>`;
+      wrap.appendChild(card);
+    });
+    body.appendChild(wrap);
+  });
+}
+
+function aisPushQuestion(){
+  const q = AIS_QUESTIONS[aisIdx];
+  if(!q) return aisDone();
+
+  // Activate preview card
+  document.querySelectorAll('.ais-pv-card.active').forEach(c => {
+    if(!c.classList.contains('filled')) c.className = 'ais-pv-card empty';
+  });
+  const pvCard = document.querySelector(`.ais-pv-card[data-aisfid="${q.fid}"]`);
+  if(pvCard && !pvCard.classList.contains('filled')){
+    pvCard.className = 'ais-pv-card active';
+    pvCard.querySelector('.ais-pv-status').textContent = '○ Asking…';
+    pvCard.querySelector('.ais-pv-val').textContent = 'waiting for your answer…';
+  }
+
+  const chat = document.getElementById('aisChat');
+  if(q.fid === 'tone') chat.appendChild(aisMakeTierDiv('✓ Essential done · Recommended starting'));
+  if(q.fid === 'guardrails') chat.appendChild(aisMakeTierDiv('✓ Recommended done · Advanced starting'));
+
+  aisMultiSelected = [];
+
+  const tagIcon = q.tier === 'essential' ? '⚡' : q.tier === 'recommended' ? '🎯' : '⭐';
+  const tagText = q.tier.charAt(0).toUpperCase() + q.tier.slice(1);
+
+  const bub = document.createElement('div');
+  bub.className = 'ais-bub ai';
+  bub.id = 'aisCurBub';
+
+  let answerArea = '';
+  if(q.type === 'text'){
+    const inputEl = q.textarea ? '<textarea id="aisTxtIn"></textarea>' : '<input type="text" id="aisTxtIn">';
+    answerArea = `<div class="ais-custom-input-wrap shown" style="margin-top:10px">
+      ${inputEl}
+      <div class="ais-cust-row">
+        ${q.optional ? '<button class="ais-mini-btn" onclick="aisSkip()">Skip</button>' : ''}
+        <button class="ais-mini-btn primary" onclick="aisSubmitText()">Send →</button>
+      </div>
+    </div>`;
+  } else {
+    const chipsHTML = q.chips.map((c, i) => `<button class="ais-chip" data-i="${i}" onclick="${q.type === 'multi' ? 'aisToggleChip' : 'aisPickChip'}(this, ${i})"><span class="ais-chip-icon">${c.icon}</span>${c.label}</button>`).join('');
+    answerArea = `<div class="ais-chips">${chipsHTML}</div>`;
+    if(q.type === 'multi'){
+      answerArea += `<div class="ais-multi-bar" id="aisMultiBar" style="display:none">
+        <div class="ais-count">Selected: <b id="aisSelCount">0</b></div>
+        <button class="ais-continue-btn" id="aisContBtn" onclick="aisSubmitMulti()" disabled>Continue →</button>
+      </div>`;
+    }
+    const customLabel = q.type === 'multi' ? '💬 Or type a custom one' : '💬 None of these? Type your own answer';
+    const btnLabel    = q.type === 'multi' ? '+ Add' : 'Use this answer →';
+    const fn          = q.type === 'multi' ? 'aisAddCustomToMulti()' : 'aisSubmitCustomSingle()';
+    answerArea += `<button class="ais-custom-link" onclick="document.getElementById('aisCustomWrap').classList.add('shown');document.getElementById('aisCustomTxt').focus()">${customLabel}</button>
+      <div class="ais-custom-input-wrap" id="aisCustomWrap">
+        <textarea id="aisCustomTxt" placeholder="Type your answer here..."></textarea>
+        <div class="ais-cust-row"><button class="ais-mini-btn primary" onclick="${fn}">${btnLabel}</button></div>
+      </div>`;
+  }
+
+  const placeholder = q.placeholder ? `placeholder="${q.placeholder}"` : '';
+  bub.innerHTML = `<div class="ais-avatar">AI</div><div>
+    <span class="ais-qtag ${q.tier}">${tagIcon} ${tagText} · Q${aisIdx + 1}</span>
+    <div class="ais-body">${q.text}</div>
+    <div class="ais-meta">Drop Sigma AI · just now ${q.type === 'multi' ? '· Multi-select' : ''}</div>
+    ${answerArea}
+  </div>`;
+  chat.appendChild(bub);
+
+  // apply placeholder for text type
+  if(q.type === 'text'){
+    const inp = document.getElementById('aisTxtIn');
+    if(inp && q.placeholder) inp.placeholder = q.placeholder;
+  }
+
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function aisMakeTierDiv(html){
+  const d = document.createElement('div');
+  d.className = 'ais-tier-div';
+  d.innerHTML = html;
+  return d;
+}
+
+function aisPickChip(el, idx){
+  const q = AIS_QUESTIONS[aisIdx];
+  const label = q.chips[idx].label;
+  el.classList.add('selected');
+  setTimeout(() => aisCommitAnswer(label), 280);
+}
+
+function aisToggleChip(el, idx){
+  const q = AIS_QUESTIONS[aisIdx];
+  const label = q.chips[idx].label;
+  if(aisMultiSelected.includes(label)){
+    aisMultiSelected = aisMultiSelected.filter(x => x !== label);
+    el.classList.remove('selected');
+  } else {
+    aisMultiSelected.push(label);
+    el.classList.add('selected');
+  }
+  aisUpdateMultiBar();
+}
+
+function aisUpdateMultiBar(){
+  const bar = document.getElementById('aisMultiBar');
+  const cnt = document.getElementById('aisSelCount');
+  const btn = document.getElementById('aisContBtn');
+  if(!bar || !btn) return;
+  if(aisMultiSelected.length){
+    bar.style.display = 'flex';
+    if(cnt) cnt.textContent = aisMultiSelected.length;
+    btn.disabled = false;
+  } else {
+    bar.style.display = 'none';
+    btn.disabled = true;
+  }
+}
+
+function aisAddCustomToMulti(){
+  const txtEl = document.getElementById('aisCustomTxt');
+  if(!txtEl) return;
+  const txt = txtEl.value.trim();
+  if(!txt) return;
+  aisMultiSelected.push(txt);
+  const chipsDiv = document.querySelector('#aisCurBub .ais-chips');
+  if(chipsDiv){
+    const chip = document.createElement('button');
+    chip.className = 'ais-chip selected';
+    chip.innerHTML = `<span class="ais-chip-icon">✏️</span>${txt.replace(/</g,'&lt;')}`;
+    chip.onclick = function(){
+      aisMultiSelected = aisMultiSelected.filter(x => x !== txt);
+      chip.remove();
+      aisUpdateMultiBar();
+    };
+    chipsDiv.appendChild(chip);
+  }
+  txtEl.value = '';
+  const wrap = document.getElementById('aisCustomWrap');
+  if(wrap) wrap.classList.remove('shown');
+  aisUpdateMultiBar();
+}
+
+function aisSubmitMulti(){
+  if(!aisMultiSelected.length) return;
+  aisCommitAnswer(aisMultiSelected.join(', '));
+}
+
+function aisSubmitCustomSingle(){
+  const txtEl = document.getElementById('aisCustomTxt');
+  if(!txtEl) return;
+  const txt = txtEl.value.trim();
+  if(!txt) return;
+  aisCommitAnswer(txt);
+}
+
+function aisSubmitText(){
+  const inp = document.getElementById('aisTxtIn');
+  if(!inp) return;
+  const txt = (inp.value || '').trim();
+  if(!txt){
+    if(AIS_QUESTIONS[aisIdx]?.optional) return aisSkip();
+    return;
+  }
+  aisCommitAnswer(txt);
+}
+
+function aisCommitAnswer(answer){
+  const q = AIS_QUESTIONS[aisIdx];
+  aisAnswers[q.fid] = answer;
+
+  const cur = document.getElementById('aisCurBub');
+  if(cur){
+    cur.id = '';
+    cur.querySelectorAll('.ais-chips,.ais-multi-bar,.ais-custom-link,.ais-custom-input-wrap').forEach(el => el.remove());
+  }
+
+  aisPushUserBubble(answer);
+
+  const pvCard = document.querySelector(`.ais-pv-card[data-aisfid="${q.fid}"]`);
+  if(pvCard){
+    pvCard.className = 'ais-pv-card filled';
+    pvCard.querySelector('.ais-pv-status').textContent = 'Done';
+    pvCard.querySelector('.ais-pv-val').textContent = answer;
+  }
+
+  aisIdx++;
+  aisUpdateProgress();
+  aisShowTypingThenNext();
+}
+
+function aisPushUserBubble(txt){
+  const chat = document.getElementById('aisChat');
+  const safe = String(txt).replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const b = document.createElement('div');
+  b.className = 'ais-bub user';
+  b.innerHTML = `<div class="ais-avatar">A</div><div><div class="ais-body">${safe}</div><div class="ais-meta" style="text-align:right">You · just now</div></div>`;
+  chat.appendChild(b);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function aisShowTypingThenNext(){
+  if(aisIdx >= AIS_QUESTIONS.length) return aisDone();
+  const chat = document.getElementById('aisChat');
+  const t = document.createElement('div');
+  t.className = 'ais-bub ai';
+  t.id = 'aisTmpType';
+  t.innerHTML = '<div class="ais-avatar">AI</div><div><div class="ais-body"><div class="ais-typing"><span></span><span></span><span></span></div></div></div>';
+  chat.appendChild(t);
+  chat.scrollTop = chat.scrollHeight;
+  setTimeout(() => {
+    document.getElementById('aisTmpType')?.remove();
+    aisPushQuestion();
+  }, 700);
+}
+
+function aisSkip(){
+  const chat = document.getElementById('aisChat');
+  const cur = document.getElementById('aisCurBub');
+  if(cur){
+    cur.id = '';
+    cur.querySelectorAll('.ais-chips,.ais-multi-bar,.ais-custom-link,.ais-custom-input-wrap').forEach(el => el.remove());
+  }
+  const sk = document.createElement('div');
+  sk.style.cssText = 'text-align:center;font-size:11px;color:var(--vf-muted);padding:2px 0;font-weight:600;opacity:.7';
+  sk.textContent = '— question skipped —';
+  chat.appendChild(sk);
+  aisIdx++;
+  aisUpdateProgress();
+  aisShowTypingThenNext();
+}
+
+function aisUpdateProgress(){
+  const total = AIS_QUESTIONS.length;
+  const answered = Object.keys(aisAnswers).length;
+  const lbl = document.getElementById('aisProgLbl');
+  if(lbl) lbl.textContent = aisIdx >= total ? 'All done!' : `Question ${aisIdx + 1} of ${total}`;
+
+  let ess = 0, rec = 0, adv = 0;
+  Object.keys(aisAnswers).forEach(k => {
+    const q = AIS_QUESTIONS.find(x => x.fid === k);
+    if(!q) return;
+    if(q.tier === 'essential') ess++;
+    else if(q.tier === 'recommended') rec++;
+    else adv++;
+  });
+  const e = document.getElementById('aisProgEss');
+  const r = document.getElementById('aisProgRec');
+  const a = document.getElementById('aisProgAdv');
+  if(e) e.style.width = (ess / total * 100).toFixed(1) + '%';
+  if(r) r.style.width = (rec / total * 100).toFixed(1) + '%';
+  if(a) a.style.width = (adv / total * 100).toFixed(1) + '%';
+
+  const accuracy = Math.min(100, Math.round((ess * 5) + (rec * 3) + (adv * 3.4)));
+  const pctEl = document.getElementById('aisCompPct');
+  if(pctEl) pctEl.textContent = accuracy + '%';
+  const cc = document.getElementById('aisCompCircle');
+  if(cc) cc.style.background = `conic-gradient(#8b5cf6 0deg ${accuracy * 3.6}deg, var(--vf-surface-2,#f4f6fb) ${accuracy * 3.6}deg 360deg)`;
+  const sub = document.getElementById('aisCompSub');
+  if(sub) sub.textContent = answered === total
+    ? `🎉 All ${total} answered · ${accuracy}% AI accuracy unlocked!`
+    : `${answered} of ${total} answered · est. ${accuracy}% AI accuracy`;
+}
+
+function aisDone(){
+  aisApplyToTraining();
+  const chat = document.getElementById('aisChat');
+  const ess = Object.keys(aisAnswers).filter(k => AIS_QUESTIONS.find(x => x.fid === k)?.tier === 'essential').length;
+  const rec = Object.keys(aisAnswers).filter(k => AIS_QUESTIONS.find(x => x.fid === k)?.tier === 'recommended').length;
+  const adv = Object.keys(aisAnswers).filter(k => AIS_QUESTIONS.find(x => x.fid === k)?.tier === 'advanced').length;
+  const filledCount = Object.keys(aisAnswers).length;
+  const accuracy = Math.min(100, Math.round((ess * 5) + (rec * 3) + (adv * 3.4)));
+  const d = document.createElement('div');
+  d.className = 'ais-bub ai';
+  d.innerHTML = `<div class="ais-avatar">AI</div><div><div class="ais-body">🎉 <b>All done!</b> I've populated <b>${filledCount} field${filledCount !== 1 ? 's' : ''}</b> in your AI Training Studio.<br><br>📊 <b>${accuracy}%</b> AI accuracy unlocked<br>• ${ess}/12 essential · ${rec}/10 recommended · ${adv}/3 advanced</div><div class="ais-meta">Drop Sigma AI · just now</div><div class="ais-chips" style="margin-top:10px"><button class="ais-chip" onclick="aisClose();showSection('aiTraining')">✨ Open AI Training Studio →</button><button class="ais-chip" onclick="aisClose()">Back to dashboard</button></div></div>`;
+  chat.appendChild(d);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+/* Populate AI Training Studio with wizard answers */
+function aisApplyToTraining(){
+  const a = aisAnswers || {};
+
+  /* Brand Identity */
+  if(a.biz_name){
+    const n = document.getElementById('aitBizName');
+    if(n) n.value = a.biz_name;
+  }
+  if(a.industry){
+    const i = document.getElementById('aitNiche');
+    if(i) i.value = a.industry;
+  }
+  if(a.audience){
+    const d = document.getElementById('aitDesc');
+    if(d && !d.value.includes(a.audience)) d.value = `${d.value || ''} Target customer: ${a.audience}.`.trim();
+  }
+
+  /* Support hours */
+  if(a.support_hours){
+    const h = document.getElementById('aitHours');
+    if(h) h.value = a.support_hours;
+  }
+
+  /* Sign-off */
+  if(a.signoff){
+    const s = document.getElementById('aitSignoff');
+    if(s){
+      const name = a.biz_name || 'Aurora';
+      s.value = a.signoff.replace('[Brand]', name);
+    }
+  }
+
+  /* Brand voice */
+  if(a.voice_example){
+    const v = document.getElementById('aitVoiceEg');
+    if(v) v.value = a.voice_example;
+  }
+
+  /* Language dropdown */
+  if(a.language){
+    const t = a.language.toLowerCase();
+    const langSel = document.getElementById('aitLang');
+    if(langSel){
+      const opts = langSel.options;
+      let pick = -1;
+      if(t.includes('english') && t.includes('spanish')) pick = 1;
+      else if(t.includes('spanish')) pick = 2;
+      else if(t.includes('french')) pick = 3;
+      else if(t.includes('german')) pick = 4;
+      else if(t.includes('english')) pick = 0;
+      if(pick >= 0 && pick < opts.length) langSel.selectedIndex = pick;
+    }
+  }
+
+  /* Tone chips */
+  if(a.tone || a.personality){
+    const combined = ((a.tone || '') + ' ' + (a.personality || '')).toLowerCase();
+    document.querySelectorAll('#aiTrainingSection .ait-chip').forEach(chip => {
+      const k = chip.dataset.tone;
+      if(!k) return;
+      if(combined.includes(k)) chip.classList.add('on');
+    });
+  }
+
+  /* Knowledge snippets */
+  const snippetMap = {
+    industry:        { pill:'Product',  cls:'ait-pill-prod', title:'Industry / Niche' },
+    audience:        { pill:'Brand',    cls:'ait-pill-faq',  title:'Target customer' },
+    personality:     { pill:'Brand',    cls:'ait-pill-faq',  title:'Brand personality' },
+    price_range:     { pill:'Product',  cls:'ait-pill-prod', title:'Price range' },
+    sourcing:        { pill:'Product',  cls:'ait-pill-prod', title:'Product sourcing' },
+    carriers:        { pill:'Shipping', cls:'ait-pill-ship', title:'Shipping carriers' },
+    delivery_time:   { pill:'Shipping', cls:'ait-pill-ship', title:'Standard delivery time' },
+    return_window:   { pill:'Refund',   cls:'ait-pill-ref',  title:'Return window' },
+    payment_methods: { pill:'Payment',  cls:'ait-pill-faq',  title:'Accepted payment methods' },
+    emoji_style:     { pill:'Brand',    cls:'ait-pill-faq',  title:'Emoji usage' },
+    ship_cost:       { pill:'Shipping', cls:'ait-pill-ship', title:'Shipping cost policy' },
+    coverage:        { pill:'Shipping', cls:'ait-pill-ship', title:'Shipping coverage' },
+    return_condition:{ pill:'Refund',   cls:'ait-pill-ref',  title:'Return condition' },
+    return_shipping: { pill:'Refund',   cls:'ait-pill-ref',  title:'Return shipping cost' },
+    response_sla:    { pill:'Support',  cls:'ait-pill-faq',  title:'Response time SLA' },
+    ai_mode:         { pill:'AI',       cls:'ait-pill-faq',  title:'AI reply mode' },
+    escalate:        { pill:'AI',       cls:'ait-pill-faq',  title:'Escalation rules' },
+    top_questions:   { pill:'FAQ',      cls:'ait-pill-faq',  title:'Top customer questions' },
+    guardrails:      { pill:'Guardrail',cls:'ait-pill-ref',  title:'Never say (guardrails)' },
+    anything_else:   { pill:'Brand',    cls:'ait-pill-faq',  title:'Special policies / notes' }
+  };
+
+  const list = document.getElementById('aitSnippetList');
+  if(list){
+    Object.keys(snippetMap).forEach(fid => {
+      if(!a[fid]) return;
+      const m = snippetMap[fid];
+      const safe = String(a[fid]).replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      const node = document.createElement('div');
+      node.className = 'ait-snippet';
+      node.dataset.fromWizard = '1';
+      node.innerHTML = `<div class="pill ${m.cls}">${m.pill}</div><div class="ait-snippet-body"><div class="ait-snippet-title">${m.title} <span style="font-size:9.5px;color:#16a34a;font-weight:800;background:rgba(22,163,74,.12);padding:2px 7px;border-radius:99px;margin-left:6px;letter-spacing:.4px;text-transform:uppercase;">✓ From Setup</span></div><div class="ait-snippet-text">${safe}</div></div><div class="ait-snippet-actions"><button class="ait-icon-btn" title="Edit">✏️</button><button class="ait-icon-btn" title="Delete">🗑</button></div>`;
+      list.insertBefore(node, list.firstChild);
+    });
+    const count = list.querySelectorAll('.ait-snippet').length;
+    const kbCount = document.getElementById('aitKbCount');
+    const kbBadge = document.getElementById('aitKbBadge');
+    if(kbCount) kbCount.textContent = count;
+    if(kbBadge) kbBadge.textContent = count;
+  }
+}
+
+document.addEventListener('keydown', function(e){
+  if(e.key === 'Escape' && document.getElementById('aisBg')?.classList.contains('open')){
+    aisClose();
+  }
+  const txt = document.getElementById('aisTxtIn');
+  if(e.key === 'Enter' && document.activeElement === txt && !e.shiftKey){
+    e.preventDefault();
+    aisSubmitText();
+  }
+});
 
 async function loadOverview(){
   try{
@@ -10787,6 +12912,24 @@ async function loadEmailSettings(){
     _setSel("settingAiLanguage", s.ai_language||"english");
     _setChk("settingAiIncludeOrder", s.ai_include_order !== false);
 
+    // AI Reply Mode
+    const replyMode = s.ai_reply_mode || "off";
+    document.querySelectorAll('input[name="aiReplyMode"]').forEach(r => {
+      r.checked = (r.value === replyMode);
+    });
+    _updateAiModeUI();
+
+    // Custom instructions
+    const instEl = document.getElementById("settingAiInstructions");
+    if(instEl){
+      instEl.value = s.ai_custom_instructions || "";
+      const cnt = document.getElementById("aiInstructionsCount");
+      if(cnt) cnt.textContent = (instEl.value.length) + " chars";
+    }
+
+    // AI use signature
+    _setChk("settingAiUseSignature", s.ai_use_signature !== false);
+
     // Signature
     const sigEl = document.getElementById("settingSignature");
     if(sigEl){ sigEl.value = s.signature||""; updateSignatureCount(); }
@@ -10858,6 +13001,40 @@ function updateSignatureCount(){
   const sigEl = document.getElementById("settingSignature");
   const ct = document.getElementById("sigCharCount");
   if(sigEl&&ct) ct.textContent = sigEl.value.length + " chars";
+}
+
+// AI mode UI sync — adds .active class for browsers without :has()
+function _updateAiModeUI(){
+  document.querySelectorAll(".ai-mode-card").forEach(card => {
+    const inp = card.querySelector('input[type="radio"]');
+    if(inp && inp.checked) card.classList.add("active");
+    else card.classList.remove("active");
+  });
+}
+
+// Debounced save for custom instructions (saves 700ms after user stops typing)
+let _aiInstTimer = null;
+function _debouncedSaveInstructions(){
+  const el = document.getElementById("settingAiInstructions");
+  const st = document.getElementById("aiInstructionsStatus");
+  const cnt = document.getElementById("aiInstructionsCount");
+  if(!el) return;
+  if(cnt) cnt.textContent = el.value.length + " chars";
+  if(st){ st.textContent = "Saving…"; st.style.color = "#94a3b8"; }
+  clearTimeout(_aiInstTimer);
+  _aiInstTimer = setTimeout(async () => {
+    try{
+      await fetch("/emails/api/settings/update/", {
+        method:"PATCH",
+        headers:{"Content-Type":"application/json","X-CSRFToken":getCSRFToken(),"X-Requested-With":"XMLHttpRequest"},
+        body:JSON.stringify({store_id:selectedStoreId, settings:{ai_custom_instructions: el.value}})
+      });
+      emailSettings.ai_custom_instructions = el.value;
+      if(st){ st.textContent = "✓ Saved"; st.style.color = "#16a34a"; }
+    }catch(e){
+      if(st){ st.textContent = "⚠ Failed"; st.style.color = "#dc2626"; }
+    }
+  }, 700);
 }
 
 async function handleBrowserNotifyToggle(checked){

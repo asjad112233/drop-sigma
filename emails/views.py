@@ -438,6 +438,7 @@ _SETTINGS_FIELDS = [
     "fetch_limit", "sync_folder", "mark_read_in_gmail", "sync_on_tab_focus",
     "live_sync_enabled", "sync_interval",
     "ai_tone", "ai_language", "ai_auto_suggest", "ai_auto_draft", "ai_include_order",
+    "ai_reply_mode", "ai_custom_instructions", "ai_use_signature",
     "signature",
     "notify_browser", "notify_sound", "notify_unread_only", "notify_assigned_only",
     "auto_close_after_reply", "auto_mark_read_on_open", "show_cc_bcc",
@@ -605,6 +606,11 @@ def emails_list_api(request):
     store_id = request.GET.get("store_id")
     status = request.GET.get("status")
 
+    # Guard: if a store_id is provided but no active EmailAccount is connected,
+    # return empty (orphan messages from a prior disconnected inbox must not show).
+    if store_id and not EmailAccount.objects.filter(store_id=store_id, is_active=True).exists():
+        return Response({"success": True, "count": 0, "emails": []})
+
     emails = EmailMessage.objects.all().order_by("-created_at")
 
     if store_id:
@@ -636,6 +642,10 @@ def email_detail_api(request, email_id):
 @api_view(["GET"])
 def email_threads_api(request):
     store_id = request.GET.get("store_id")
+
+    # Guard: empty result if no active EmailAccount for this store.
+    if store_id and not EmailAccount.objects.filter(store_id=store_id, is_active=True).exists():
+        return Response({"success": True, "count": 0, "threads": []})
 
     emails = EmailMessage.objects.all().order_by("-created_at")
 
@@ -776,7 +786,9 @@ def email_thread_detail_api(request):
 def generate_ai_draft_api(request, email_id):
     email = get_object_or_404(EmailMessage, id=email_id)
 
-    draft = generate_ai_reply(email)
+    # Load tenant's email account to apply tone, custom instructions, signature
+    account = EmailAccount.objects.filter(store=email.store, is_active=True).first()
+    draft = generate_ai_reply(email, account=account)
 
     email.ai_draft = draft
     email.status = "drafted"
@@ -858,6 +870,238 @@ Corrected:
         "success": True,
         "suggestion": improved
     })
+
+
+def _ai_get_user_store(request, store_id=None):
+    """Resolve a store for the current user (used by AI Training endpoints)."""
+    try:
+        if store_id:
+            return Store.objects.filter(id=store_id).first()
+        if request.user.is_authenticated:
+            return Store.objects.filter(user=request.user, is_active=True).first()
+    except Exception:
+        return None
+    return None
+
+
+@csrf_exempt
+@api_view(["GET", "PUT"])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def ai_training_profile_api(request):
+    """GET or PUT the AI Training Profile for the current user's active store."""
+    from .models import AiTrainingProfile
+    store = _ai_get_user_store(request, request.GET.get("store_id") or request.data.get("store_id"))
+    if not store:
+        return Response({"success": False, "message": "No active store found."}, status=400)
+
+    profile, _ = AiTrainingProfile.objects.get_or_create(store=store)
+
+    if request.method == "GET":
+        return Response({
+            "success": True,
+            "profile": {
+                "business_name":  profile.business_name,
+                "niche":          profile.niche,
+                "description":    profile.description,
+                "language":       profile.language,
+                "support_hours":  profile.support_hours,
+                "tones":          profile.tones or [],
+                "reply_length":   profile.reply_length,
+                "signoff":        profile.signoff,
+                "voice_example":  profile.voice_example,
+                "mode":           profile.mode,
+                "toggles":        profile.toggles or {},
+                "wizard_answers": profile.wizard_answers or {},
+                "wizard_completed_at": profile.wizard_completed_at.isoformat() if profile.wizard_completed_at else None,
+                "extras":         profile.extras or {},
+            }
+        })
+
+    # PUT
+    data = request.data or {}
+    for f in ["business_name", "niche", "description", "language", "support_hours",
+              "reply_length", "signoff", "voice_example", "mode"]:
+        if f in data:
+            setattr(profile, f, data[f] or "")
+    if "tones"          in data: profile.tones          = list(data["tones"] or [])
+    if "toggles"        in data: profile.toggles        = dict(data["toggles"] or {})
+    if "wizard_answers" in data:
+        profile.wizard_answers = dict(data["wizard_answers"] or {})
+        from django.utils import timezone as _tz
+        profile.wizard_completed_at = _tz.now()
+    if "extras"         in data: profile.extras         = dict(data["extras"] or {})
+    profile.save()
+
+    # Sync the AI mode to all EmailAccount(s) under this store so the
+    # live email flow respects the wizard / studio setting.
+    if "mode" in data:
+        mode_map = {"auto": "auto", "draft": "suggest", "suggest": "suggest"}
+        target_mode = mode_map.get(profile.mode, "suggest")
+        try:
+            from .models import EmailAccount
+            EmailAccount.objects.filter(store=store).update(ai_reply_mode=target_mode)
+        except Exception:
+            pass
+
+    return Response({"success": True, "message": "Profile saved."})
+
+
+@csrf_exempt
+@api_view(["GET", "POST"])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def ai_training_snippets_api(request):
+    """GET all snippets for current store. POST creates a new one."""
+    from .models import KnowledgeSnippet
+    store = _ai_get_user_store(request, request.GET.get("store_id") or request.data.get("store_id"))
+    if not store:
+        return Response({"success": False, "message": "No active store found."}, status=400)
+
+    if request.method == "GET":
+        snippets = KnowledgeSnippet.objects.filter(store=store)
+        return Response({
+            "success": True,
+            "snippets": [{
+                "id":          s.id,
+                "category":    s.category,
+                "title":       s.title,
+                "text":        s.text,
+                "from_wizard": s.from_wizard,
+                "order_idx":   s.order_idx,
+            } for s in snippets]
+        })
+
+    # POST
+    title    = (request.data.get("title") or "").strip()
+    text     = (request.data.get("text")  or "").strip()
+    category = (request.data.get("category") or "FAQ").strip()
+    if not title or not text:
+        return Response({"success": False, "message": "title and text required."}, status=400)
+    s = KnowledgeSnippet.objects.create(
+        store=store,
+        category=category,
+        title=title,
+        text=text,
+        from_wizard=bool(request.data.get("from_wizard", False)),
+        order_idx=int(request.data.get("order_idx", 0)),
+    )
+    return Response({
+        "success": True,
+        "snippet": {"id": s.id, "category": s.category, "title": s.title, "text": s.text,
+                    "from_wizard": s.from_wizard, "order_idx": s.order_idx}
+    })
+
+
+@csrf_exempt
+@api_view(["PUT", "DELETE"])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def ai_training_snippet_detail_api(request, snippet_id):
+    """PUT updates, DELETE removes."""
+    from .models import KnowledgeSnippet
+    store = _ai_get_user_store(request, request.data.get("store_id") if hasattr(request, "data") else None)
+    s = KnowledgeSnippet.objects.filter(id=snippet_id).first()
+    if not s:
+        return Response({"success": False, "message": "Snippet not found."}, status=404)
+    # Permission: must belong to user's store
+    if store and s.store_id != store.id:
+        return Response({"success": False, "message": "Forbidden."}, status=403)
+
+    if request.method == "DELETE":
+        s.delete()
+        return Response({"success": True, "message": "Deleted."})
+
+    data = request.data or {}
+    if "title"    in data: s.title    = data["title"]
+    if "text"     in data: s.text     = data["text"]
+    if "category" in data: s.category = data["category"]
+    if "order_idx" in data: s.order_idx = int(data["order_idx"])
+    s.save()
+    return Response({"success": True, "message": "Updated."})
+
+
+@csrf_exempt
+@api_view(["POST"])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def ai_playground_api(request):
+    """
+    Generic Claude playground endpoint for AI Training Studio.
+
+    Accepts:
+      - system_prompt: assembled system prompt from frontend
+      - user_message:  the customer email body
+      - sender:        (optional) sender email — used for customer lookup
+      - subject:       (optional) email subject — scanned for refs
+      - auto_lookup:   (optional, default true) — auto-extract customer refs + lookup orders
+      - store_id:      (optional) — scope lookup to a specific store
+
+    Returns: { success, reply, detected_refs, matched_orders, final_system_prompt }
+    """
+    system_prompt = (request.data.get("system_prompt") or "").strip()
+    user_message  = (request.data.get("user_message")  or "").strip()
+    sender        = (request.data.get("sender")        or "").strip()
+    subject       = (request.data.get("subject")       or "").strip()
+    auto_lookup   = request.data.get("auto_lookup", True)
+    store_id      = request.data.get("store_id")
+
+    if not user_message:
+        return Response({"success": False, "message": "user_message is required."}, status=400)
+
+    detected_refs = []
+    matched_orders = []
+    context_block = ""
+
+    try:
+        from .services import (
+            call_claude,
+            extract_customer_refs,
+            resolve_customer_context,
+            build_context_block_for_prompt,
+            serialize_order_for_ai,
+        )
+
+        if auto_lookup:
+            # Extract from subject + body + sender
+            scan_text = " ".join([subject, user_message, sender])
+            detected_refs = extract_customer_refs(scan_text)
+
+            # Scope to store if provided, else first store of user (best-effort)
+            store = None
+            if store_id:
+                try:
+                    store = Store.objects.filter(id=store_id).first()
+                except Exception:
+                    store = None
+            if store is None and request.user.is_authenticated:
+                store = Store.objects.filter(user=request.user, is_active=True).first()
+
+            resolved = resolve_customer_context(detected_refs, sender_email=sender, store=store)
+            orders = resolved.get("orders") or []
+            matched_orders = [serialize_order_for_ai(o) for o in orders]
+            context_block = build_context_block_for_prompt(orders)
+
+        # Inject context into system prompt if anything found
+        final_system = system_prompt or "You are a professional ecommerce customer support assistant."
+        if context_block:
+            final_system = f"{final_system}\n\n{context_block}"
+
+        reply = call_claude(
+            prompt=user_message,
+            system=final_system,
+            max_tokens=1024,
+        )
+
+        return Response({
+            "success": True,
+            "reply": reply,
+            "detected_refs": detected_refs,
+            "matched_orders": matched_orders,
+            "final_system_prompt": final_system,
+        })
+    except Exception as e:
+        return Response({"success": False, "message": str(e)}, status=500)
 
 
 @csrf_exempt
