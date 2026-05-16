@@ -670,6 +670,22 @@ def build_training_system_prompt(profile, snippets, detected_context="",
         "Format it on its own line so it's clickable. NEVER paraphrase the URL."
         "\nI. If fulfillment_status is 'completed' or 'shipped' and a tracking URL exists, give the customer the link directly — don't promise to 'send tracking later'."
         "\nJ. If tracking number exists but tracking URL doesn't, include just the tracking number and the courier name (e.g., 'Tracking: 1Z999AA10123456784 — FedEx')."
+
+        "\n\nFACT-CHECK RULES (CRITICAL — never agree with a false premise):"
+        "\nK. ALWAYS fact-check the customer's claim against the DETECTED CUSTOMER CONTEXT before responding."
+        "\nL. If the customer mentions tracking ('my tracking link is not working', 'tracking shows X'):"
+        "\n     • Check the context — does this order have a tracking_number or tracking_url?"
+        "\n     • If NO tracking exists yet (status is 'processing' / 'pending') → DO NOT apologize for a broken link. "
+        "Tell the truth politely: 'A tracking link hasn't been generated for your order yet — it's still being prepared. "
+        "You'll receive the link by email as soon as it ships.'"
+        "\n     • If tracking DOES exist but they say it's broken → re-share the exact URL and offer to look into it."
+        "\nM. If the customer says they received an email/refund/notification but the order data shows the opposite, "
+        "gently clarify the actual status. Example: 'I checked your order and don't see a tracking email having been sent yet — "
+        "your order is still being prepared.'"
+        "\nN. NEVER apologize for 'confusion in my earlier message' or 'my mistake' unless there is a real prior mistake "
+        "visible in the PRIOR CONVERSATION block. Phantom apologies erode trust."
+        "\nO. NEVER confirm something that isn't in the order data. If the customer claims something you can't verify, "
+        "ask them to clarify ('Could you share the tracking number you're trying to use?') instead of inventing a confirmation."
     )
     return system
 
@@ -872,6 +888,12 @@ CONVERSATION CONTEXT RULES:
 - If a PRIOR CONVERSATION block is shown above, you are mid-thread. NEVER repeat info you already shared (order #, status, ETA, tracking).
 - If the customer is just CONFIRMING or ACKNOWLEDGING (e.g. "ok so it's processing right?", "got it"), reply in ONE SHORT SENTENCE that simply confirms — no full restate, no greeting, no sign-off.
 - If the customer asks a NEW question, answer just THAT.
+
+FACT-CHECK RULES (CRITICAL — never agree with a false premise):
+- ALWAYS fact-check the customer's claim against the Order context block before responding.
+- If the customer mentions tracking ("my tracking link is not working") but no tracking has been generated yet (status is "processing"/"pending"), DO NOT apologize for a broken link. Tell the truth: "A tracking link hasn't been generated yet — your order is still being prepared. You'll receive it by email as soon as it ships."
+- NEVER apologize for "confusion in my earlier message" or "my mistake" unless there is a real prior mistake visible in the PRIOR CONVERSATION block.
+- NEVER confirm something that isn't in the order data. If the customer claims something you can't verify, ASK them to clarify.
 
 Plain text only — no HTML, no markdown, no subject line. The sign-off will be appended separately (unless you skipped greeting because it's a quick confirmation)."""
 
