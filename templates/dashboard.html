@@ -15351,9 +15351,12 @@ function getVisibleThreads(threads){
 function getThreadUnreadCount(thread){
   ensureThreadUiState();
   const contact = thread.contact;
-  if(threadUiState.unread[contact]) return Math.max(Number(thread.new_count || 0), 1);
+  // unread_count = emails with Gmail UNREAD flag (correct source of truth)
+  // new_count   = emails with status='new' (stale — AI sync sets to 'drafted')
+  const apiUnread = Number(thread.unread_count || thread.new_count || 0);
+  if(threadUiState.unread[contact]) return Math.max(apiUnread, 1);
   if(threadUiState.read[contact]) return 0;
-  return Number(thread.new_count || 0);
+  return apiUnread;
 }
 
 function setThreadReadState(contact, isUnread){
