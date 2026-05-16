@@ -226,14 +226,34 @@ def _humanize_status(value, mapping):
 
 
 def build_context_block_for_prompt(orders):
-    """Turn list of Order objects into a text block suitable for system prompt."""
+    """Turn list of Order objects into a text block suitable for system prompt.
+
+    DEFENSE IN DEPTH: For UNVERIFIED orders, all PII is REDACTED at this layer
+    so the AI literally cannot leak it — even if it ignores the prompt rules.
+    Only the order number is shown (which the customer already knows since
+    they're asking about it) and the verification status.
+    """
     if not orders:
         return ""
     lines = ["DETECTED CUSTOMER CONTEXT (real data from your store):"]
     for o in orders:
         s = serialize_order_for_ai(o)
         verified = s.get("verified_sender", False)
-        verify_tag = "✓ VERIFIED" if verified else "⚠️ UNVERIFIED (sender email does NOT match this order's customer_email)"
+
+        if not verified:
+            # ⚠️ UNVERIFIED — redact all PII. AI gets only the bare minimum it
+            # needs to know that the order EXISTS but doesn't belong to the
+            # sender. No name, city, product, total, status, tracking, etc.
+            lines.append(
+                f"- Order #{s['order_number']} [⚠️ UNVERIFIED — DO NOT SHARE ANY DETAILS] "
+                "· (all customer info redacted because sender email does NOT match this order's customer_email) "
+                "· Required action: ask the customer to verify by providing the email used at checkout, "
+                "or the billing postcode."
+            )
+            continue
+
+        # ✓ VERIFIED — show full details
+        verify_tag = "✓ VERIFIED"
         line = f"- Order #{s['order_number']} [{verify_tag}]"
         if s["customer_name"]:           line += f" · Customer: {s['customer_name']}"
         if s["product"]:                 line += f" · Product: {s['product']}"
@@ -698,14 +718,16 @@ def build_training_system_prompt(profile, snippets, detected_context="",
         "\nP. Each order in DETECTED CUSTOMER CONTEXT is tagged either [✓ VERIFIED] or [⚠️ UNVERIFIED]."
         "\nQ. For [✓ VERIFIED] orders — the sender's email matches the order's customer_email, so it's THEIR order. "
         "You can share full details (status, tracking, product, ETA, etc.)."
-        "\nR. For [⚠️ UNVERIFIED] orders — the sender is asking about an order that is NOT under their email. "
-        "Do NOT share status, tracking, products, customer name, total, or any specific details. "
-        "Politely ask the customer to verify ownership before continuing. Examples:"
-        "\n     • 'To protect your order's privacy, I need to verify it belongs to you. Could you confirm the email address used at checkout, or share the billing postcode?'"
-        "\n     • 'I see that order number, but it's not associated with the email you're writing from. Could you send this from the original order email, or share the billing name + postcode so I can verify?'"
-        "\nS. If the customer is asking about an order that was NOT FOUND in our store at all (no row in DETECTED CUSTOMER CONTEXT), "
+        "\nR. For [⚠️ UNVERIFIED] orders — all customer info has been REDACTED from your context for safety. "
+        "You ONLY know that the order number exists in the system but does NOT belong to the sender. "
+        "You DO NOT have access to the customer's name, city, country, product, total, payment status, fulfillment, tracking, or any other detail. "
+        "Politely ask the sender to verify ownership before you can help further."
+        "\nS. NEVER infer, guess, or mention the real customer's name, city, address, product, or any other identifying detail for an UNVERIFIED order. "
+        "Even saying 'this order is registered to a different account in X city' is a privacy leak. The correct response is: "
+        "'That order number exists in our system but isn't linked to the email you're writing from. To protect customer privacy, I can't share any details until you verify — could you confirm the email used at checkout, or share the billing postcode?'"
+        "\nT. If the customer is asking about an order that was NOT FOUND at all (no row in DETECTED CUSTOMER CONTEXT), "
         "say: 'I couldn't find that order in our system. Could you double-check the order number and the email used at checkout?'"
-        "\nT. NEVER reveal customer_name, address, email, phone, or any PII from an UNVERIFIED order — even by accident in a confirmation."
+        "\nU. NEVER reveal a different customer's name, address, email, phone, or city — even by accident, even to 'explain why you can't help'."
 
         "\n\nFACT-CHECK RULES (CRITICAL — never agree with a false premise):"
         "\nK. ALWAYS fact-check the customer's claim against the DETECTED CUSTOMER CONTEXT before responding."
