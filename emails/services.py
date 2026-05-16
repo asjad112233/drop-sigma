@@ -632,11 +632,23 @@ def process_ai_reply_mode(email_obj, account):
             if not subject.lower().startswith("re:"):
                 subject = "Re: " + subject
 
+            # Pull threading info from raw_data so the reply lands in the SAME
+            # Gmail conversation thread instead of starting a new one each time.
+            raw = getattr(email_obj, "raw_data", None) or {}
+            in_reply_to = (raw.get("message_id") or "").strip() or None
+            prior_refs  = (raw.get("references") or "").strip()
+            references  = (f"{prior_refs} {in_reply_to}".strip()
+                           if (prior_refs and in_reply_to) else (in_reply_to or prior_refs or None))
+            thread_id   = (raw.get("thread_id") or "").strip() or None
+
             # send via tenant's connected Gmail / SMTP
             from .views import send_email_with_store_account
             html_body = draft.replace("\n", "<br>")
             send_email_with_store_account(
-                account.store, recipient, subject, html_body
+                account.store, recipient, subject, html_body,
+                in_reply_to=in_reply_to,
+                references=references,
+                thread_id=thread_id,
             )
             email_obj.status = "replied"
             result["sent"] = True
@@ -1165,6 +1177,10 @@ def _sync_gmail_api(account, store):
         category = classify_email(subject, body)
         linked_order = find_order_from_email(store, subject, body)
 
+        # Capture RFC Message-ID + Gmail threadId so AI auto-reply can thread properly
+        rfc_message_id = (msg.get("Message-ID") or "").strip()
+        gmail_thread_id = msg_data.get("threadId") or ""
+
         email_obj = EmailMessage.objects.create(
             store=store,
             order=linked_order,
@@ -1182,6 +1198,9 @@ def _sync_gmail_api(account, store):
                 "connected_email": account.email,
                 "gmail_uid": msg_id,
                 "is_read": is_read,
+                "message_id": rfc_message_id,
+                "thread_id": gmail_thread_id,
+                "references": (msg.get("References") or "").strip(),
             }
         )
 
@@ -1256,6 +1275,7 @@ def sync_gmail_inbox(store_id=2):
                     gmail_uid = str(num.decode() if isinstance(num, bytes) else num) + "_" + account.email
 
                     if not EmailMessage.objects.filter(store=store, gmail_uid=gmail_uid).exists():
+                        rfc_message_id = (msg.get("Message-ID") or "").strip()
                         email_obj = EmailMessage.objects.create(
                             store=store,
                             order=linked_order,
@@ -1274,6 +1294,8 @@ def sync_gmail_inbox(store_id=2):
                                 "connected_email": account.email,
                                 "gmail_uid": gmail_uid,
                                 "is_read": is_read,
+                                "message_id": rfc_message_id,
+                                "references": (msg.get("References") or "").strip(),
                             }
                         )
                         save_attachments(email_obj, msg)

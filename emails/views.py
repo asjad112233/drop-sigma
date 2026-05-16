@@ -41,7 +41,13 @@ def _get_gmail_access_token(refresh_token):
     return resp.json()["access_token"]
 
 
-def _gmail_api_send(account, recipient, subject, html_body, files=None):
+def _gmail_api_send(account, recipient, subject, html_body, files=None,
+                    in_reply_to=None, references=None, thread_id=None):
+    """
+    Send via Gmail HTTP API.
+    Pass in_reply_to + references (RFC-822 Message-IDs) and thread_id (Gmail's threadId)
+    to keep the reply in the same Gmail conversation thread.
+    """
     import base64 as _b64
     from email.mime.multipart import MIMEMultipart as _MMP
     from email.mime.text import MIMEText as _MMT
@@ -54,6 +60,10 @@ def _gmail_api_send(account, recipient, subject, html_body, files=None):
     msg["From"] = account.email
     msg["To"] = recipient
     msg["Subject"] = subject
+    if in_reply_to:
+        msg["In-Reply-To"] = in_reply_to
+    if references:
+        msg["References"] = references
     msg.attach(_MMT(html_body, "html"))
 
     for f in (files or []):
@@ -64,10 +74,13 @@ def _gmail_api_send(account, recipient, subject, html_body, files=None):
         msg.attach(part)
 
     raw = _b64.urlsafe_b64encode(msg.as_bytes()).decode()
+    payload = {"raw": raw}
+    if thread_id:
+        payload["threadId"] = thread_id
     resp = requests.post(
         "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
         headers={"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"},
-        json={"raw": raw},
+        json=payload,
         timeout=30,
     )
     if not resp.ok:
@@ -114,12 +127,18 @@ def extract_clean_email(value):
     return (addr or value).strip().lower()
 
 
-def _smtp_send_direct(account, recipient, subject, html_body, files=None):
-    """Send via stored SMTP credentials (custom hosting / non-Gmail accounts)."""
+def _smtp_send_direct(account, recipient, subject, html_body, files=None,
+                      in_reply_to=None, references=None, thread_id=None):
+    """Send via stored SMTP credentials (custom hosting / non-Gmail accounts).
+    in_reply_to / references RFC-822 Message-IDs keep replies threaded."""
     msg = MIMEMultipart("alternative")
     msg["From"] = account.email
     msg["To"] = recipient
     msg["Subject"] = subject
+    if in_reply_to:
+        msg["In-Reply-To"] = in_reply_to
+    if references:
+        msg["References"] = references
     msg.attach(MIMEText(html_body, "html"))
 
     for f in (files or []):
@@ -146,16 +165,25 @@ def _smtp_send_direct(account, recipient, subject, html_body, files=None):
             server.sendmail(account.email, recipient, msg.as_string())
 
 
-def send_email_with_store_account(store, recipient, subject, body, files=None):
+def send_email_with_store_account(store, recipient, subject, body, files=None,
+                                  in_reply_to=None, references=None, thread_id=None):
+    """
+    Send an email from the store's connected inbox.
+    in_reply_to + references = RFC Message-IDs (e.g. '<ABC@mail.gmail.com>') so
+    the reply threads under the original conversation in the recipient's inbox.
+    thread_id = Gmail's internal thread id (only meaningful for OAuth/Gmail API path).
+    """
     account = EmailAccount.objects.filter(store=store, is_active=True).first()
 
     if not account:
         raise Exception("No connected email account found for this store.")
 
     if account.auth_type == "oauth" and account.oauth_refresh_token:
-        _gmail_api_send(account, recipient, subject, body, files=files)
+        _gmail_api_send(account, recipient, subject, body, files=files,
+                        in_reply_to=in_reply_to, references=references, thread_id=thread_id)
     elif account.auth_type == "password" and account.app_password:
-        _smtp_send_direct(account, recipient, subject, body, files=files)
+        _smtp_send_direct(account, recipient, subject, body, files=files,
+                          in_reply_to=in_reply_to, references=references, thread_id=thread_id)
     else:
         _brevo_send(account.email, recipient, subject, body, attachments=files)
 
