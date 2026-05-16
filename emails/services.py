@@ -133,6 +133,17 @@ def resolve_customer_context(refs, sender_email=None, store=None):
 
 def serialize_order_for_ai(o):
     """Compact representation of an Order for AI prompt context + UI display."""
+    from datetime import datetime
+    from django.utils import timezone as _tz
+
+    # Days since the order was placed (for ETA reasoning)
+    days_since_order = None
+    if getattr(o, "created_at", None):
+        try:
+            days_since_order = (_tz.now() - o.created_at).days
+        except Exception:
+            days_since_order = None
+
     return {
         "id": o.id,
         "order_number": o.external_order_id,
@@ -151,6 +162,7 @@ def serialize_order_for_ai(o):
         "tracking_url": o.tracking_url or "",
         "delivered_at": o.delivered_at.isoformat() if o.delivered_at else "",
         "created_at": o.created_at.isoformat() if o.created_at else "",
+        "days_since_order": days_since_order,
     }
 
 
@@ -231,10 +243,19 @@ def build_context_block_for_prompt(orders):
 
         if s["live_tracking_status"]:    line += f" · Live status: {s['live_tracking_status']}"
         elif s["tracking_status"]:       line += f" · Status: {s['tracking_status']}"
-        if s["tracking_number"]:         line += f" · Tracking #: {s['tracking_number']} ({s['tracking_company']})"
-        if s["tracking_url"]:            line += f" · Tracking URL: {s['tracking_url']}"
+        if s["tracking_number"]:
+            tracking_part = f"{s['tracking_number']}"
+            if s.get("tracking_company"):
+                tracking_part += f" ({s['tracking_company']})"
+            line += f" · Tracking #: {tracking_part}"
+        if s["tracking_url"]:
+            line += f" · 🔗 TRACKING LINK (use this verbatim in reply if customer asks about tracking): {s['tracking_url']}"
         if s["delivered_at"]:            line += f" · Delivered: {s['delivered_at'][:10]}"
         if s["city"] or s["country"]:    line += f" · Location: {s['city']} {s['country']}".strip()
+
+        # Days since order — for ETA reasoning
+        if s.get("days_since_order") is not None:
+            line += f" · Placed: {s['days_since_order']} day(s) ago"
         lines.append(line)
 
     # Glossary so the AI ALWAYS gets it right, even for codes not pre-translated above.
@@ -446,7 +467,115 @@ def _load_snippets(store, limit=10):
         return []
 
 
-def build_training_system_prompt(profile, snippets, detected_context=""):
+def _load_recent_corrections(store, limit=5):
+    """
+    Pull the most recent admin corrections (Item 11) so the AI can learn
+    what to change in future replies.
+    """
+    if not store:
+        return []
+    try:
+        from .models import AiReplyFeedback
+        qs = AiReplyFeedback.objects.filter(
+            store=store, feedback_type__in=['edit', 'complaint']
+        ).order_by('-created_at')[:limit]
+        return list(qs)
+    except Exception:
+        return []
+
+
+def _format_corrections_block(corrections):
+    """Turn a list of AiReplyFeedback rows into a few-shot 'what not to do' block."""
+    if not corrections:
+        return ""
+    lines = ["PAST CORRECTIONS — patterns the admin previously fixed, so don't repeat the same mistakes:"]
+    for i, c in enumerate(corrections, 1):
+        ai = (c.ai_draft or "").strip().replace("\n", " ")
+        fin = (c.final_text or "").strip().replace("\n", " ")
+        note = (c.correction_note or "").strip()
+        if not ai and not fin and not note:
+            continue
+        snippet = f"\n[{i}] "
+        if c.feedback_type == 'complaint':
+            snippet += "Customer complained about a previous reply."
+            if fin: snippet += f" Better wording: \"{fin[:240]}\""
+        else:
+            if ai:  snippet += f"AI wrote: \"{ai[:200]}\""
+            if fin: snippet += f"\n    Admin sent: \"{fin[:200]}\""
+        if note:    snippet += f"\n    Why: {note[:200]}"
+        lines.append(snippet)
+    return "\n".join(lines)
+
+
+def _is_after_hours(support_hours):
+    """
+    Best-effort: parse support_hours like 'Mon–Fri, 9am–6pm EST' and decide
+    whether right now is OUTSIDE those hours. Returns True/False/None (None=can't tell).
+    """
+    if not support_hours:
+        return None
+    try:
+        from datetime import datetime
+        s = support_hours.lower()
+        if "24/7" in s or "always" in s:
+            return False
+        # Extract first time and second time (e.g. '9am-6pm' / '9 am - 6 pm')
+        m = re.search(r"(\d{1,2})\s*(am|pm)?\s*[-–to]+\s*(\d{1,2})\s*(am|pm)", s)
+        if not m:
+            return None
+        h1 = int(m.group(1))
+        ap1 = m.group(2) or m.group(4)
+        h2 = int(m.group(3))
+        ap2 = m.group(4)
+        def to24(h, ap):
+            if ap == "pm" and h < 12: return h + 12
+            if ap == "am" and h == 12: return 0
+            return h
+        start = to24(h1, ap1 or ap2)
+        end   = to24(h2, ap2)
+        now_h = datetime.utcnow().hour  # approximate; per-timezone parsing is heavy
+        # If the store mentions EST/PST/CST adjust
+        if "est" in s or "edt" in s: now_h = (now_h - 4) % 24
+        elif "pst" in s or "pdt" in s: now_h = (now_h - 7) % 24
+        elif "cst" in s: now_h = (now_h - 6) % 24
+        elif "mst" in s: now_h = (now_h - 7) % 24
+        elif "gmt" in s or "utc" in s: pass
+        in_hours = start <= now_h < end
+        # Weekday check
+        wd = datetime.utcnow().weekday()
+        if ("mon-fri" in s or "mon–fri" in s or "weekday" in s) and wd > 4:
+            return True
+        return not in_hours
+    except Exception:
+        return None
+
+
+def _detect_customer_language(body):
+    """Lightweight heuristic to guess language from email body.
+    Returns a hint string (None = can't tell, stay with default)."""
+    if not body or len(body.strip()) < 8:
+        return None
+    body_l = body.lower()
+    # Simple word-presence check — good enough to nudge the AI
+    hints = [
+        ("Spanish",  ["hola", "gracias", "por favor", "mi pedido", "envío", "dónde", "ayuda"]),
+        ("French",   ["bonjour", "merci", "s'il vous plaît", "ma commande", "livraison", "où"]),
+        ("German",   ["hallo", "danke", "bitte", "meine bestellung", "lieferung", "hilfe"]),
+        ("Italian",  ["ciao", "grazie", "per favore", "il mio ordine", "spedizione"]),
+        ("Portuguese", ["olá", "obrigado", "obrigada", "meu pedido", "entrega"]),
+        ("Arabic",   ["مرحبا", "شكرا", "طلبي", "أين"]),
+        ("Urdu",     ["mera order", "kahan hai", "shukria", "kab aayega"]),
+        ("Roman Urdu+English", ["bhai", "aap ka", "kahan", "kab"]),
+    ]
+    for lang_name, kws in hints:
+        if any(k in body_l for k in kws):
+            return lang_name
+    return None
+
+
+def build_training_system_prompt(profile, snippets, detected_context="",
+                                  customer_lang_hint=None, after_hours=None,
+                                  admin_note_hint=None):
     """
     Compose the full system prompt for Claude using the per-store
     AiTrainingProfile + KnowledgeSnippets + (optional) detected customer context.
@@ -489,6 +618,31 @@ def build_training_system_prompt(profile, snippets, detected_context=""):
     if detected_context:
         system += f"\n\n{detected_context}"
 
+    # Language override placeholder will be replaced; we want corrections in the system prompt too
+    # — but we don't have the corrections var here. The caller injects it via the user message
+    # (see generate_ai_reply). Keep this function focused on profile-derived content. — if the customer wrote in a different language than the profile default
+    if customer_lang_hint and customer_lang_hint.lower() not in lang.lower():
+        system += (
+            f"\n\n🌐 LANGUAGE OVERRIDE: The customer appears to be writing in {customer_lang_hint}. "
+            f"Reply in {customer_lang_hint} (NOT the profile default of {lang})."
+        )
+
+    # After-hours acknowledgment
+    if after_hours is True and hours:
+        system += (
+            f"\n\n🌙 AFTER-HOURS: It's currently outside support hours ({hours}). "
+            "Open the reply with a brief, transparent note like 'Our team is offline right now, but I can help immediately:' "
+            "then answer normally. Do NOT promise human follow-up on a specific timeline unless explicitly known."
+        )
+
+    # Admin-note context — AI is being told this is a flagged email
+    if admin_note_hint:
+        system += (
+            f"\n\n⚠️ INTERNAL FLAG (for your awareness): {admin_note_hint} "
+            "Be EXTRA careful — keep promises minimal, avoid commitments on policy you're unsure about, "
+            "and lean on phrases like 'I'm flagging this for our team for fast review.'"
+        )
+
     # Strong formatting + brevity rules — these are the most important part of the prompt.
     system += (
         "\n\nSTRICT REPLY RULES (must follow):"
@@ -508,6 +662,14 @@ def build_training_system_prompt(profile, snippets, detected_context=""):
         "\nD. If the customer is asking a NEW question, answer just THAT — don't re-summarize prior context."
         "\nE. Do not re-greet (e.g. don't say 'Hi <Name>' again) for messages that are clearly part of an ongoing back-and-forth."
         "\nF. The sign-off rule still applies: drop the sign-off only if you are doing a one-sentence quick confirmation."
+
+        "\n\nETA + TRACKING RULES (use ACTUAL data, not vague promises):"
+        "\nG. If 'Placed: N day(s) ago' is in the context, use that to compute a real ETA. "
+        "Example: 'Your order was placed 3 days ago — typical fulfillment is 1–2 business days, so it ships any day now.'"
+        "\nH. If a 🔗 TRACKING LINK URL is present in the context, INCLUDE IT VERBATIM in the reply when the customer asks about tracking. "
+        "Format it on its own line so it's clickable. NEVER paraphrase the URL."
+        "\nI. If fulfillment_status is 'completed' or 'shipped' and a tracking URL exists, give the customer the link directly — don't promise to 'send tracking later'."
+        "\nJ. If tracking number exists but tracking URL doesn't, include just the tracking number and the courier name (e.g., 'Tracking: 1Z999AA10123456784 — FedEx')."
     )
     return system
 
@@ -576,9 +738,11 @@ def generate_ai_reply(email_obj, account=None):
     # Lookup tenant store via email_obj
     store = getattr(email_obj, 'store', None)
 
-    # Try to load the per-store training profile + snippets
+    # Try to load the per-store training profile + snippets + past corrections (Item 11)
     profile = _load_training_profile(store)
     snippets = _load_snippets(store)
+    corrections = _load_recent_corrections(store)
+    corrections_block = _format_corrections_block(corrections)
 
     # Auto-extract customer refs from email subject + body + sender
     scan_text = " ".join([
@@ -598,25 +762,37 @@ def generate_ai_reply(email_obj, account=None):
     # Conversation history (so AI doesn't repeat info already shared in this thread)
     history_text = _build_thread_history_text(email_obj, account)
 
+    # Detect customer language from the new message (Item 6)
+    customer_lang_hint = _detect_customer_language(getattr(email_obj, 'body', '') or '')
+
+    # After-hours awareness (Item 7)
+    after_hours = _is_after_hours(getattr(profile, 'support_hours', '') if profile else '')
+
+    # Admin note hint (Item 9) — gate may have flagged this email
+    raw = getattr(email_obj, 'raw_data', None) or {}
+    admin_note_hint = raw.get('admin_note') or None
+
     # ── Path A: New training-profile flow ──────────────────────────────────
     if profile or snippets:
-        system_prompt = build_training_system_prompt(profile, snippets, detected_block)
+        system_prompt = build_training_system_prompt(
+            profile, snippets, detected_block,
+            customer_lang_hint=customer_lang_hint,
+            after_hours=after_hours,
+            admin_note_hint=admin_note_hint,
+        )
 
         # Compose the user-side message (subject + body), prefixed with prior thread history
         subj = (getattr(email_obj, 'subject', '') or '').strip()
         body = (getattr(email_obj, 'body', '') or '').strip()
         new_msg = (f"Subject: {subj}\n\n{body}" if subj else body) or "(empty email)"
 
+        parts = []
+        if corrections_block:
+            parts.append(corrections_block)
         if history_text:
-            user_msg = (
-                "PRIOR CONVERSATION IN THIS THREAD (oldest → newest):\n\n"
-                f"{history_text}\n\n"
-                "===\n\n"
-                "CUSTOMER'S NEW MESSAGE (reply to THIS only):\n\n"
-                f"{new_msg}"
-            )
-        else:
-            user_msg = new_msg
+            parts.append("PRIOR CONVERSATION IN THIS THREAD (oldest → newest):\n\n" + history_text)
+        parts.append("CUSTOMER'S NEW MESSAGE (reply to THIS only):\n\n" + new_msg)
+        user_msg = "\n\n===\n\n".join(parts)
 
         try:
             reply = call_claude(prompt=user_msg, system=system_prompt, max_tokens=1024)
@@ -747,6 +923,179 @@ def _extract_reply_to(email_obj):
     return (m.group(1) if m else raw).strip()
 
 
+def score_reply_confidence(customer_message, ai_reply, context_block=""):
+    """
+    Self-rate AI reply quality. Returns a float 0.0–1.0.
+    Uses a small Claude call — keep it short to control cost.
+
+    context_block: the DETECTED CUSTOMER CONTEXT block (real order data the AI
+    used to write the reply). Passing this lets the rater verify whether
+    order numbers / tracking / status mentioned in the reply are REAL vs invented.
+    """
+    ctx_section = ""
+    if context_block:
+        ctx_section = "REAL ORDER/CUSTOMER DATA AVAILABLE TO THE AI:\n" + context_block + "\n\n"
+    rater_prompt = f"""Audit this customer-support AI reply.
+
+{ctx_section}CUSTOMER'S MESSAGE:
+{(customer_message or '')[:1500]}
+
+AI'S DRAFTED REPLY:
+{(ai_reply or '')[:1500]}
+
+Rate from 0–100 how safe it is to AUTO-SEND this reply (no human review).
+
+Scoring guide:
+  90–100 = Reply is accurate, on-topic, no fabrication, safe to send.
+  70–89  = Mostly fine, minor issues but still safe.
+  40–69  = Risky: vague, slightly off-topic, or makes soft promises.
+  0–39   = NOT safe: fabricates order data, hallucinates tracking, off-topic, or could mislead.
+
+If the reply uses order numbers / tracking / dates that are present in the REAL ORDER DATA above, that's GOOD and should score HIGH. Only mark down for INVENTED data that isn't in the context.
+
+Output EXACTLY one line:
+SCORE: <0-100>"""
+    try:
+        text = call_claude(
+            rater_prompt,
+            system="You are a strict but FAIR quality auditor. Output only 'SCORE: N'.",
+            max_tokens=30,
+        )
+        m = re.search(r"SCORE\s*:\s*(\d+)", text or "", re.IGNORECASE)
+        if m:
+            return max(0.0, min(1.0, int(m.group(1)) / 100.0))
+    except Exception as e:
+        print("CONFIDENCE SCORE ERROR:", e)
+    return 1.0  # On rater failure, don't block auto-send
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# 🛡️ AUTO-REPLY SAFETY GATES (run BEFORE generate_ai_reply)
+# ════════════════════════════════════════════════════════════════════════════
+
+# Sender patterns that should NEVER get an auto-reply (newsletters, bots, no-reply)
+_BOT_SENDER_PATTERNS = [
+    r"\bno[-_.]?reply\b",
+    r"\bdo[-_.]?not[-_.]?reply\b",
+    r"\bnoreply\b",
+    r"\bdonotreply\b",
+    r"\bmailer[-_.]?daemon\b",
+    r"\bpostmaster\b",
+    r"\bautomated?[-_.]?(?:reply|response|message)\b",
+    r"\bnotifications?[-_.]?(?:noreply|donotreply)\b",
+    r"\bbounce(?:s)?[-_.]?",
+]
+_BOT_DOMAIN_PATTERNS = [
+    # Subdomain on domain (`@news.brand.com`, `@email.brand.com`, ...)
+    r"@news[-_.]", r"@email[-_.]", r"@mail[-_.]", r"@info[-_.]",
+    r"@notifications?[-_.]", r"@updates?[-_.]", r"@marketing[-_.]",
+    r"@offers?[-_.]", r"@promo[-_.]", r"@newsletter[-_.]?",
+    r"@em[-_.]", r"@e[-_.]?mail", r"@bounce",
+    # Any domain containing 'newsletter'
+    r"@[a-z0-9-]*newsletter[a-z0-9-]*\.",
+    # Common marketing platforms
+    r"@.*\.(?:mailchimp|sendgrid|customeriomail|sparkpostmail|mandrillapp)\.",
+]
+
+# Header patterns that indicate a bulk / automated mail
+_BULK_HEADER_TOKENS = ("unsubscribe", "list-unsubscribe", "auto-submitted")
+
+# Anger / hostile customer keywords — these emails go to human, never auto-send
+_ANGER_KEYWORDS = {
+    "lawsuit", "lawyer", "attorney", "legal action", "sue", "suing",
+    "scam", "scammer", "fraud", "fraudulent", "cheat", "cheated",
+    "rip off", "ripped off", "ripoff",
+    "outrageous", "ridiculous", "disgusting", "pathetic", "useless",
+    "terrible service", "horrible service", "worst service",
+    "report you", "reporting you", "bbb", "trustpilot",
+    "chargeback", "charge back", "dispute the charge",
+    "this is unacceptable", "i'm furious", "i am furious", "fed up",
+    "small claims", "consumer protection",
+}
+
+# High-stakes request keywords — refund / address change → human approval
+_HIGHSTAKES_KEYWORDS = {
+    "refund me", "refund my money", "want a refund", "demand a refund",
+    "change my address", "update my address", "wrong address",
+    "cancel my order", "cancel the order", "cancellation",
+    "didn't receive", "did not receive", "never received",
+    "missing item", "wrong item", "damaged item", "broken",
+    "return this", "i want to return", "send it back",
+}
+
+# Reply-loop detection — our own outbound replies / auto-acknowledgements
+_LOOP_PATTERNS = [
+    r"auto[-_]?submitted:\s*auto[-_](generated|replied)",
+    r"this is an automated message",
+    r"do not reply to this email",
+    r"\bvacation auto[-_]?reply\b",
+]
+
+
+def _matches_any(patterns, text):
+    text = (text or "").lower()
+    return any(re.search(p, text) for p in patterns)
+
+
+def _gate_check(email_obj):
+    """
+    Run all safety/escalation gates BEFORE calling Claude.
+    Returns a dict:
+        {action: 'auto'|'draft'|'skip', reason: str, admin_note: str|None}
+      auto  → safe to auto-send
+      draft → generate AI draft but DO NOT send (admin reviews)
+      skip  → don't even bother generating (newsletter/bot/loop)
+    """
+    sender = (email_obj.sender or "").lower()
+    subject = (email_obj.subject or "")
+    body = (email_obj.body or "")
+    body_l = body.lower()
+    raw_headers = ""
+
+    # raw_data can have message headers we recorded on sync
+    raw = getattr(email_obj, "raw_data", None) or {}
+    # Sender-based bot detection
+    if _matches_any(_BOT_SENDER_PATTERNS, sender):
+        return {"action": "skip",
+                "reason": f"Bot/no-reply sender ({sender[:60]})",
+                "admin_note": None}
+    if _matches_any(_BOT_DOMAIN_PATTERNS, sender):
+        return {"action": "skip",
+                "reason": f"Bulk/marketing domain ({sender[:60]})",
+                "admin_note": None}
+
+    # Auto-submitted / vacation reply / our own auto-reply loop
+    if _matches_any(_LOOP_PATTERNS, body_l) or _matches_any(_LOOP_PATTERNS, subject.lower()):
+        return {"action": "skip",
+                "reason": "Auto-submitted / loop guard",
+                "admin_note": None}
+
+    # Unsubscribe / list-unsubscribe headers in body → newsletter
+    if any(tok in body_l for tok in _BULK_HEADER_TOKENS):
+        # Only skip if it really looks like a newsletter (long + unsubscribe link)
+        if len(body) > 800 and "unsubscribe" in body_l:
+            return {"action": "skip",
+                    "reason": "Newsletter (unsubscribe link present)",
+                    "admin_note": None}
+
+    # Anger / legal threats → escalate to human
+    matched_anger = [k for k in _ANGER_KEYWORDS if k in body_l]
+    if matched_anger:
+        return {"action": "draft",
+                "reason": "Angry / hostile language detected",
+                "admin_note": f"⚠️ ESCALATE: customer used hostile language ({', '.join(matched_anger[:3])}). Review carefully before sending."}
+
+    # High-stakes (refund/cancel/return) → human approval
+    matched_hs = [k for k in _HIGHSTAKES_KEYWORDS if k in body_l]
+    if matched_hs:
+        return {"action": "draft",
+                "reason": "High-stakes request (refund/cancel/return)",
+                "admin_note": f"⚠️ HIGH-STAKES: customer is asking for {matched_hs[0]}. AI drafted a cautious reply — please review."}
+
+    # Empty/very short body → still safe to auto, but flag it
+    return {"action": "auto", "reason": "Safe to auto-send", "admin_note": None}
+
+
 def process_ai_reply_mode(email_obj, account):
     """
     Generate AI draft and act based on account.ai_reply_mode:
@@ -757,12 +1106,25 @@ def process_ai_reply_mode(email_obj, account):
     Returns dict with 'mode_used' and 'sent' boolean.
     """
     mode = getattr(account, "ai_reply_mode", "off") or "off"
-    result = {"mode_used": mode, "sent": False, "draft": ""}
+    result = {"mode_used": mode, "sent": False, "draft": "", "gate": None}
 
     # Off → quick keyword draft only
     if mode == "off":
         email_obj.ai_draft = quick_reply(email_obj.body) or generate_auto_draft(email_obj)
         result["draft"] = email_obj.ai_draft
+        return result
+
+    # ── SAFETY GATE: skip newsletters/bots, escalate angry/high-stakes ─────
+    gate = _gate_check(email_obj)
+    result["gate"] = gate
+
+    if gate["action"] == "skip":
+        # Don't even generate — silently drop. Mark on raw_data so we can audit.
+        email_obj.status = "drafted"  # leaves it visible but unanswered
+        raw = getattr(email_obj, "raw_data", None) or {}
+        raw["ai_auto_reply_skipped"] = gate["reason"]
+        email_obj.raw_data = raw
+        result["draft"] = ""
         return result
 
     # Generate the AI draft (used by all other modes)
@@ -775,12 +1137,62 @@ def process_ai_reply_mode(email_obj, account):
     email_obj.ai_draft = draft
     result["draft"] = draft
 
+    # Persist admin note if gate flagged this email for review
+    if gate.get("admin_note"):
+        raw = getattr(email_obj, "raw_data", None) or {}
+        raw["admin_note"] = gate["admin_note"]
+        raw["escalated_reason"] = gate["reason"]
+        email_obj.raw_data = raw
+
     # Decide whether to auto-send
     should_send = False
-    if mode == "auto":
+    if mode == "auto" and gate["action"] == "auto":
         should_send = True
-    elif mode == "hybrid" and _is_simple_email(email_obj.body):
+    elif mode == "hybrid" and gate["action"] == "auto" and _is_simple_email(email_obj.body):
         should_send = True
+    # If gate said 'draft', we never auto-send regardless of mode
+
+    # ── CONFIDENCE GATE (Item 10) ──
+    # If we're about to auto-send, ask Claude to self-rate the reply first.
+    # If confidence < the profile threshold (default 0.7) → demote to draft.
+    confidence_threshold = 0.7
+    try:
+        store = getattr(email_obj, 'store', None)
+        profile = _load_training_profile(store)
+        # AI Training Studio toggle: "Escalate if confidence < 70%"
+        toggles = (getattr(profile, 'toggles', {}) or {}) if profile else {}
+        # Honor the toggle if explicitly off
+        confidence_enabled = toggles.get('Escalate to human if AI confidence < 70%', True)
+    except Exception:
+        confidence_enabled = True
+
+    if should_send and confidence_enabled:
+        try:
+            # Pass the detected order context so the rater can verify
+            # whether tracking/order numbers in the reply are real vs invented
+            _store = getattr(email_obj, 'store', None)
+            _scan = " ".join([email_obj.subject or "", email_obj.body or "", email_obj.sender or ""])
+            _refs = extract_customer_refs(_scan)
+            _resolved = resolve_customer_context(_refs, sender_email=email_obj.sender, store=_store)
+            _ctx = build_context_block_for_prompt(_resolved.get('orders') or [])
+
+            confidence = score_reply_confidence(
+                customer_message=email_obj.body or "",
+                ai_reply=draft or "",
+                context_block=_ctx,
+            )
+            raw_now = getattr(email_obj, "raw_data", None) or {}
+            raw_now["ai_reply_confidence"] = confidence
+            email_obj.raw_data = raw_now
+            if confidence < confidence_threshold:
+                # Demote: don't auto-send, save as draft for human review
+                should_send = False
+                raw_now["admin_note"] = (
+                    (raw_now.get("admin_note") or "")
+                    + f" ⚠️ AI confidence {int(confidence*100)}% < {int(confidence_threshold*100)}% — demoted to draft."
+                ).strip()
+        except Exception as e:
+            print("AI CONFIDENCE check failed (allow send):", e)
 
     if should_send:
         try:

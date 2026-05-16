@@ -321,3 +321,55 @@ class KnowledgeSnippet(models.Model):
 
     def __str__(self):
         return f"[{self.category}] {self.title}"
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# 📚 AI Reply Feedback / Corrections — quality-improvement loop
+# ════════════════════════════════════════════════════════════════════════════
+
+class AiReplyFeedback(models.Model):
+    """
+    Captures the difference between an AI-drafted reply and the version the
+    admin actually sent (or a customer-complaint correction). Used as
+    few-shot training data for future replies in the same store.
+    """
+    FEEDBACK_TYPES = [
+        ('edit',      'Admin edited before sending'),
+        ('reject',    'Admin discarded the AI draft'),
+        ('approve',   'Admin sent as-is (positive signal)'),
+        ('complaint', 'Customer complained about a sent reply'),
+    ]
+
+    store = models.ForeignKey(
+        'stores.Store', on_delete=models.CASCADE,
+        related_name='ai_reply_feedbacks'
+    )
+    email_message = models.ForeignKey(
+        'emails.EmailMessage', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='ai_feedbacks'
+    )
+
+    feedback_type = models.CharField(max_length=20, choices=FEEDBACK_TYPES, default='edit')
+
+    # Original AI-generated draft
+    ai_draft       = models.TextField(blank=True, default='')
+    # What the admin actually sent (or empty for reject/complaint)
+    final_text     = models.TextField(blank=True, default='')
+    # Optional admin-written note explaining the correction
+    correction_note= models.TextField(blank=True, default='')
+
+    # Customer-facing fields at the time the reply was generated
+    customer_message = models.TextField(blank=True, default='')
+
+    actor = models.ForeignKey(
+        'auth.User', on_delete=models.SET_NULL,
+        null=True, blank=True
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"[{self.feedback_type}] Store={self.store_id} #{self.id}"

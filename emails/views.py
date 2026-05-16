@@ -1240,6 +1240,42 @@ def send_email_reply_api(request, email_id):
         }
     )
 
+    # ── Feedback loop (Item 11) ──
+    # If admin edited the AI draft (or wrote a totally new reply when one was suggested),
+    # save the difference as a learning correction for future replies.
+    try:
+        from .models import AiReplyFeedback
+        original_draft = (email.ai_draft or "").strip()
+        sent_clean     = reply_text.strip()
+        # Strip the signature we appended above so we compare apples-to-apples
+        if account and account.signature:
+            sig = account.signature.strip()
+            if sent_clean.endswith(sig):
+                sent_clean = sent_clean[:-(len(sig))].rstrip().rstrip("-").strip()
+        if original_draft:
+            if original_draft != sent_clean:
+                AiReplyFeedback.objects.create(
+                    store=email.store,
+                    email_message=email,
+                    feedback_type='edit',
+                    ai_draft=original_draft,
+                    final_text=sent_clean,
+                    customer_message=(email.body or "")[:2000],
+                    actor=request.user if request.user.is_authenticated else None,
+                )
+            else:
+                AiReplyFeedback.objects.create(
+                    store=email.store,
+                    email_message=email,
+                    feedback_type='approve',
+                    ai_draft=original_draft,
+                    final_text=sent_clean,
+                    customer_message=(email.body or "")[:2000],
+                    actor=request.user if request.user.is_authenticated else None,
+                )
+    except Exception as _e:
+        print("AI feedback logging failed (non-fatal):", _e)
+
     for f in files:
         f.seek(0)
         EmailAttachment.objects.create(
