@@ -4566,8 +4566,103 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
           <p class="pox-sub">Manage orders across all connected stores · <span id="poxStoreNameLabel">—</span></p>
         </div>
         <div class="pox-topbar-actions">
+          <!-- Bulk Import dropdown -->
+          <div style="position:relative;display:inline-block;" id="ordImportWrap">
+            <button class="btn" onclick="ordToggleImportMenu(event)" title="Import orders" style="display:inline-flex;align-items:center;gap:6px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/><path d="M5 21h14"/></svg>
+              Import ▾
+            </button>
+            <div id="ordImportMenu" style="display:none;position:absolute;top:calc(100% + 6px);right:0;background:var(--vf-surface,#fff);border:1px solid var(--vf-line,#e5eaf2);border-radius:14px;box-shadow:0 12px 32px rgba(15,23,42,.15);min-width:200px;overflow:hidden;z-index:999;">
+              <button onclick="ordOpenImport('csv')" style="display:block;width:100%;padding:12px 16px;text-align:left;background:none;border:none;font-size:13px;font-weight:700;color:var(--vf-text);cursor:pointer;font-family:inherit;" onmouseover="this.style.background='var(--vf-surface-2,#f4f6fb)'" onmouseout="this.style.background=''">📄 Import CSV</button>
+              <button onclick="ordOpenImport('xlsx')" style="display:block;width:100%;padding:12px 16px;text-align:left;background:none;border:none;font-size:13px;font-weight:700;color:var(--vf-text);cursor:pointer;font-family:inherit;border-top:1px solid var(--vf-line,#e5eaf2);" onmouseover="this.style.background='var(--vf-surface-2,#f4f6fb)'" onmouseout="this.style.background=''">📊 Import Excel (.xlsx)</button>
+              <button onclick="ordDownloadTemplate('csv')" style="display:block;width:100%;padding:10px 16px;text-align:left;background:none;border:none;font-size:11.5px;font-weight:600;color:var(--vf-muted);cursor:pointer;font-family:inherit;border-top:1px solid var(--vf-line,#e5eaf2);" onmouseover="this.style.background='var(--vf-surface-2,#f4f6fb)'" onmouseout="this.style.background=''">↓ Download CSV template</button>
+            </div>
+          </div>
+
+          <!-- Bulk Export dropdown -->
+          <div style="position:relative;display:inline-block;" id="ordExportWrap">
+            <button class="btn" onclick="ordToggleExportMenu(event)" title="Export orders" style="display:inline-flex;align-items:center;gap:6px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+              Export ▾
+            </button>
+            <div id="ordExportMenu" style="display:none;position:absolute;top:calc(100% + 6px);right:0;background:var(--vf-surface,#fff);border:1px solid var(--vf-line,#e5eaf2);border-radius:14px;box-shadow:0 12px 32px rgba(15,23,42,.15);min-width:200px;overflow:hidden;z-index:999;">
+              <button onclick="ordExport('csv')" style="display:block;width:100%;padding:12px 16px;text-align:left;background:none;border:none;font-size:13px;font-weight:700;color:var(--vf-text);cursor:pointer;font-family:inherit;" onmouseover="this.style.background='var(--vf-surface-2,#f4f6fb)'" onmouseout="this.style.background=''">📄 Export as CSV</button>
+              <button onclick="ordExport('xlsx')" style="display:block;width:100%;padding:12px 16px;text-align:left;background:none;border:none;font-size:13px;font-weight:700;color:var(--vf-text);cursor:pointer;font-family:inherit;border-top:1px solid var(--vf-line,#e5eaf2);" onmouseover="this.style.background='var(--vf-surface-2,#f4f6fb)'" onmouseout="this.style.background=''">📊 Export as Excel</button>
+            </div>
+          </div>
+
           <button class="btn" onclick="loadOrders()" title="Refresh">↻ Refresh</button>
           <button id="autoAssignBtn" class="btn green" onclick="autoAssignAll()">⚡ Auto Assign</button>
+        </div>
+      </div>
+
+      <!-- ════════════════ Orders Import Modal ════════════════ -->
+      <style>
+        .ord-imp-bg{position:fixed;inset:0;background:rgba(15,23,42,.55);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;z-index:1100;padding:20px;font-family:inherit;}
+        .ord-imp-bg.open{display:flex;animation:ordImpBgIn .2s}
+        @keyframes ordImpBgIn{from{opacity:0}to{opacity:1}}
+        .ord-imp-modal{width:100%;max-width:560px;background:var(--vf-surface,#fff);border-radius:22px;box-shadow:0 30px 80px rgba(15,23,42,.25);overflow:hidden;animation:ordImpIn .3s cubic-bezier(.2,.9,.3,1.2)}
+        @keyframes ordImpIn{from{opacity:0;transform:translateY(20px) scale(.97)}to{opacity:1;transform:none}}
+        .ord-imp-head{padding:18px 22px;border-bottom:1px solid var(--vf-line,#e5eaf2);display:flex;align-items:center;justify-content:space-between;}
+        .ord-imp-head-l{display:flex;align-items:center;gap:12px}
+        .ord-imp-ic{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,#8b5cf6,#06b6d4);display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff}
+        .ord-imp-head h2{margin:0;font-size:16px;font-weight:800;color:var(--vf-text)}
+        .ord-imp-head p{margin:1px 0 0;font-size:11.5px;color:var(--vf-muted);font-weight:500}
+        .ord-imp-close{width:32px;height:32px;border-radius:9px;border:1px solid var(--vf-line,#e5eaf2);background:var(--vf-surface,#fff);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--vf-muted);font-size:15px;font-family:inherit}
+        .ord-imp-body{padding:18px 22px;}
+        .ord-imp-drop{border:2px dashed var(--vf-line,#e5eaf2);border-radius:14px;padding:30px 18px;text-align:center;cursor:pointer;transition:.15s;background:var(--vf-surface-2,#f4f6fb)}
+        .ord-imp-drop:hover,.ord-imp-drop.dragging{border-color:#8b5cf6;background:linear-gradient(135deg,rgba(139,92,246,.05),rgba(6,182,212,.04))}
+        .ord-imp-drop .icon{font-size:34px;margin-bottom:8px}
+        .ord-imp-drop .title{font-size:14px;font-weight:700;color:var(--vf-text);margin-bottom:4px}
+        .ord-imp-drop .sub{font-size:12px;color:var(--vf-muted)}
+        .ord-imp-drop .file{font-size:13px;color:#8b5cf6;font-weight:700;margin-top:8px;word-break:break-all}
+        .ord-imp-tip{font-size:11.5px;color:var(--vf-muted);background:linear-gradient(135deg,rgba(139,92,246,.05),rgba(6,182,212,.04));border:1px dashed rgba(139,92,246,.2);border-radius:10px;padding:10px 12px;margin-top:12px;line-height:1.5}
+        .ord-imp-tip b{color:var(--vf-text)}
+        .ord-imp-tip code{background:var(--vf-surface,#fff);padding:1px 5px;border-radius:4px;border:1px solid var(--vf-line,#e5eaf2);font-size:11px}
+        .ord-imp-result{display:none;padding:14px;border-radius:12px;margin-top:12px;font-size:13px;line-height:1.5}
+        .ord-imp-result.success{display:block;background:linear-gradient(135deg,rgba(22,163,74,.10),rgba(16,185,129,.06));border:1px solid rgba(22,163,74,.3);color:#15803d}
+        .ord-imp-result.error{display:block;background:linear-gradient(135deg,rgba(239,68,68,.10),rgba(220,38,38,.06));border:1px solid rgba(239,68,68,.3);color:#b91c1c}
+        .ord-imp-result b{font-weight:800}
+        .ord-imp-result .err-list{margin-top:8px;max-height:120px;overflow-y:auto;font-size:11.5px;color:#7f1d1d;font-family:'SF Mono',Menlo,monospace}
+        .ord-imp-foot{padding:14px 22px;border-top:1px solid var(--vf-line,#e5eaf2);display:flex;justify-content:flex-end;gap:10px}
+        .ord-imp-btn{padding:10px 18px;border-radius:11px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;border:1px solid var(--vf-line,#e5eaf2);background:var(--vf-surface,#fff);color:var(--vf-text);transition:.15s;display:inline-flex;align-items:center;gap:7px;}
+        .ord-imp-btn:hover{border-color:#8b5cf6;color:#8b5cf6}
+        .ord-imp-btn.primary{background:linear-gradient(135deg,#8b5cf6,#6366f1);color:#fff;border-color:transparent;box-shadow:0 6px 18px rgba(139,92,246,.3)}
+        .ord-imp-btn.primary:hover{transform:translateY(-1px);box-shadow:0 10px 24px rgba(139,92,246,.4);color:#fff}
+        .ord-imp-btn:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+      </style>
+
+      <div class="ord-imp-bg" id="ordImpBg">
+        <div class="ord-imp-modal">
+          <div class="ord-imp-head">
+            <div class="ord-imp-head-l">
+              <div class="ord-imp-ic">📥</div>
+              <div>
+                <h2 id="ordImpTitle">Import Orders (CSV)</h2>
+                <p>Bulk-upload orders for the active store</p>
+              </div>
+            </div>
+            <button class="ord-imp-close" onclick="ordImpClose()">✕</button>
+          </div>
+          <div class="ord-imp-body">
+            <div class="ord-imp-drop" id="ordImpDrop" onclick="document.getElementById('ordImpFile').click()">
+              <div class="icon">📄</div>
+              <div class="title">Click to choose a file or drag &amp; drop</div>
+              <div class="sub" id="ordImpAccept">.csv files only · max 5 MB</div>
+              <div class="file" id="ordImpFileName"></div>
+            </div>
+            <input type="file" id="ordImpFile" accept=".csv" style="display:none" onchange="ordImpFilePicked(event)" />
+            <div class="ord-imp-tip">
+              💡 <b>Required column:</b> <code>order_number</code> (or <code>Order #</code>). Optional: customer_name, customer_email, customer_phone, product, total, payment_status, fulfillment_status, tracking_number, tracking_company, city, country. Existing orders matched by store + order_number will be <b>updated</b>; new rows get <b>created</b>.
+            </div>
+            <div class="ord-imp-result" id="ordImpResult"></div>
+          </div>
+          <div class="ord-imp-foot">
+            <button class="ord-imp-btn" onclick="ordImpClose()">Cancel</button>
+            <button class="ord-imp-btn primary" id="ordImpRunBtn" onclick="ordImpRun()" disabled>
+              <span id="ordImpRunLabel">📥 Upload &amp; Import</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -12109,6 +12204,212 @@ function _showNewOrderToast2(msg){
   clearTimeout(t._hideTimer);
   t._hideTimer = setTimeout(()=>{ if(t) t.style.display="none"; }, 5000);
 }
+
+/* ════════════════ Orders Bulk Import / Export ════════════════ */
+let _ordImpFile = null;
+let _ordImpFormat = 'csv';
+
+function _ordActiveStoreId(){
+  /* Pick from project switcher / selectedStoreId / URL */
+  const sw = document.getElementById('projectSwitcher');
+  if(sw && sw.value) return sw.value;
+  if(typeof selectedStoreId !== 'undefined' && selectedStoreId) return String(selectedStoreId);
+  const p = new URLSearchParams(window.location.search);
+  return p.get('store_id') || '';
+}
+
+function ordToggleImportMenu(e){
+  if(e) e.stopPropagation();
+  const m = document.getElementById('ordImportMenu');
+  const exp = document.getElementById('ordExportMenu');
+  if(exp) exp.style.display = 'none';
+  if(m) m.style.display = m.style.display === 'block' ? 'none' : 'block';
+}
+
+function ordToggleExportMenu(e){
+  if(e) e.stopPropagation();
+  const m = document.getElementById('ordExportMenu');
+  const imp = document.getElementById('ordImportMenu');
+  if(imp) imp.style.display = 'none';
+  if(m) m.style.display = m.style.display === 'block' ? 'none' : 'block';
+}
+
+/* Close dropdowns when clicking outside */
+document.addEventListener('click', function(e){
+  if(!e.target.closest('#ordImportWrap')){
+    const m = document.getElementById('ordImportMenu'); if(m) m.style.display = 'none';
+  }
+  if(!e.target.closest('#ordExportWrap')){
+    const m = document.getElementById('ordExportMenu'); if(m) m.style.display = 'none';
+  }
+});
+
+function ordOpenImport(format){
+  const m1 = document.getElementById('ordImportMenu'); if(m1) m1.style.display = 'none';
+  _ordImpFormat = (format === 'xlsx') ? 'xlsx' : 'csv';
+  _ordImpFile = null;
+  const sid = _ordActiveStoreId();
+  if(!sid){
+    _alert('Please select a store from the project switcher first.', 'No store selected', '⚠️');
+    return;
+  }
+  /* Reset UI */
+  document.getElementById('ordImpTitle').textContent = `Import Orders (${_ordImpFormat.toUpperCase()})`;
+  document.getElementById('ordImpAccept').textContent = _ordImpFormat === 'xlsx'
+    ? '.xlsx and .xls files · max 5 MB'
+    : '.csv files only · max 5 MB';
+  document.getElementById('ordImpFile').accept = _ordImpFormat === 'xlsx' ? '.xlsx,.xls' : '.csv';
+  document.getElementById('ordImpFileName').textContent = '';
+  const result = document.getElementById('ordImpResult');
+  result.className = 'ord-imp-result';
+  result.innerHTML = '';
+  document.getElementById('ordImpRunBtn').disabled = true;
+  document.getElementById('ordImpRunLabel').textContent = '📥 Upload & Import';
+  document.getElementById('ordImpBg').classList.add('open');
+}
+
+function ordImpClose(){
+  document.getElementById('ordImpBg').classList.remove('open');
+  _ordImpFile = null;
+}
+
+function ordImpFilePicked(e){
+  const f = e.target.files && e.target.files[0];
+  if(!f) return;
+  /* Validate size */
+  if(f.size > 5 * 1024 * 1024){
+    _alert('File too large. Max 5 MB.', 'Upload error', '⚠️');
+    e.target.value = '';
+    return;
+  }
+  /* Validate extension matches format */
+  const name = f.name.toLowerCase();
+  if(_ordImpFormat === 'csv' && !name.endsWith('.csv')){
+    _alert('Please select a .csv file.', 'Wrong file type', '⚠️');
+    e.target.value = '';
+    return;
+  }
+  if(_ordImpFormat === 'xlsx' && !name.endsWith('.xlsx') && !name.endsWith('.xls')){
+    _alert('Please select a .xlsx or .xls file.', 'Wrong file type', '⚠️');
+    e.target.value = '';
+    return;
+  }
+  _ordImpFile = f;
+  document.getElementById('ordImpFileName').textContent = `✓ ${f.name} (${(f.size/1024).toFixed(1)} KB)`;
+  document.getElementById('ordImpRunBtn').disabled = false;
+}
+
+/* Drag & drop */
+(function wireOrdImpDrag(){
+  const drop = document.getElementById('ordImpDrop');
+  if(!drop || drop.dataset.wired) return;
+  drop.dataset.wired = '1';
+  ['dragenter','dragover'].forEach(ev => drop.addEventListener(ev, e => {
+    e.preventDefault(); e.stopPropagation(); drop.classList.add('dragging');
+  }));
+  ['dragleave','drop'].forEach(ev => drop.addEventListener(ev, e => {
+    e.preventDefault(); e.stopPropagation(); drop.classList.remove('dragging');
+  }));
+  drop.addEventListener('drop', e => {
+    const file = e.dataTransfer.files && e.dataTransfer.files[0];
+    if(file){
+      const inp = document.getElementById('ordImpFile');
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      inp.files = dt.files;
+      ordImpFilePicked({target: inp});
+    }
+  });
+})();
+
+async function ordImpRun(){
+  if(!_ordImpFile) return;
+  const sid = _ordActiveStoreId();
+  if(!sid){ _alert('No active store.', 'Error', '⚠️'); return; }
+
+  const btn    = document.getElementById('ordImpRunBtn');
+  const label  = document.getElementById('ordImpRunLabel');
+  const result = document.getElementById('ordImpResult');
+
+  btn.disabled = true;
+  label.innerHTML = '<span class="syo-spin"></span> Uploading…';
+  result.className = 'ord-imp-result';
+  result.innerHTML = '';
+
+  const form = new FormData();
+  form.append('store_id', sid);
+  form.append('file', _ordImpFile);
+
+  try {
+    const r = await fetch('/orders/api/import/', {
+      method: 'POST',
+      headers: {'X-CSRFToken': aitGetCSRF()},
+      body: form,
+    });
+    const d = await r.json();
+    if(d.success){
+      result.className = 'ord-imp-result success';
+      let html = `✅ <b>${d.created}</b> created · <b>${d.updated}</b> updated · <b>${d.errors}</b> errors · ${d.total} rows`;
+      if(d.error_details && d.error_details.length){
+        html += `<div class="err-list">${d.error_details.map(e => `• ${e.replace(/</g,'&lt;')}`).join('<br>')}</div>`;
+      }
+      result.innerHTML = html;
+      label.textContent = '✓ Done — Import Another?';
+      btn.disabled = false;
+      /* Refresh orders list in background */
+      setTimeout(() => { if(typeof loadOrders === 'function') loadOrders(); }, 600);
+    } else {
+      result.className = 'ord-imp-result error';
+      result.innerHTML = `❌ ${d.message || 'Import failed.'}`;
+      label.textContent = '🔄 Retry';
+      btn.disabled = false;
+    }
+  } catch(e){
+    result.className = 'ord-imp-result error';
+    result.innerHTML = `❌ Network error: ${e.message}`;
+    label.textContent = '🔄 Retry';
+    btn.disabled = false;
+  }
+}
+
+function ordExport(format){
+  const m = document.getElementById('ordExportMenu'); if(m) m.style.display = 'none';
+  const sid = _ordActiveStoreId();
+  const params = new URLSearchParams({format: format});
+  if(sid) params.set('store_id', sid);
+  /* Trigger download via hidden anchor */
+  const a = document.createElement('a');
+  a.href = `/orders/api/export/?${params.toString()}`;
+  a.download = `orders_export.${format}`;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => a.remove(), 1000);
+  if(typeof aitToast === 'function'){
+    aitToast(`📥 ${format.toUpperCase()} download started`, 2000);
+  }
+}
+
+function ordDownloadTemplate(format){
+  /* Generate a minimal CSV template client-side */
+  const headers = ['order_number','customer_name','customer_email','customer_phone','product','total','currency','payment_status','fulfillment_status','tracking_number','tracking_company','city','country'];
+  const sample  = ['1001','Jane Doe','jane@example.com','+15551234567','Sample Product','49.99','USD','paid','processing','','','New York','US'];
+  const csv = headers.join(',') + '\n' + sample.map(s => `"${String(s).replace(/"/g,'""')}"`).join(',') + '\n';
+  const blob = new Blob([csv], {type: 'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'orders_import_template.csv';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  const m = document.getElementById('ordImportMenu'); if(m) m.style.display = 'none';
+}
+
+/* Esc closes import modal */
+document.addEventListener('keydown', function(e){
+  if(e.key === 'Escape' && document.getElementById('ordImpBg')?.classList.contains('open')){
+    ordImpClose();
+  }
+});
 
 async function autoAssignAll(){
   if(!await _confirm("Auto-assign all unassigned orders to team members?", {title:"Auto Assign", icon:"⚡", confirmText:"Assign All"})) return;

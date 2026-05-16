@@ -750,3 +750,261 @@ def order_lookup_by_number_api(request):
     return Response({"success": True, "id": order.id,
                      "order_number": order.external_order_id,
                      "store_name": order.store.name})
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# 📥📤 BULK CSV / XLSX IMPORT + EXPORT
+# ════════════════════════════════════════════════════════════════════════════
+
+ORDERS_EXPORT_COLUMNS = [
+    "Order #",
+    "Customer Name",
+    "Customer Email",
+    "Customer Phone",
+    "Store",
+    "Product",
+    "Total",
+    "Currency",
+    "Payment Status",
+    "Fulfillment Status",
+    "Tracking Number",
+    "Tracking Company",
+    "Tracking Status",
+    "Live Tracking Status",
+    "City",
+    "Country",
+    "Created At",
+    "Delivered At",
+]
+
+
+def _orders_row(o):
+    return [
+        o.external_order_id or "",
+        o.customer_name or "",
+        o.customer_email or "",
+        o.customer_phone or "",
+        o.store.name if o.store_id else "",
+        o.product_name or "",
+        float(o.total_price) if o.total_price is not None else 0,
+        o.currency or "",
+        o.payment_status or "",
+        o.fulfillment_status or "",
+        o.tracking_number or "",
+        o.tracking_company or "",
+        o.tracking_status or "",
+        o.live_tracking_status or "",
+        o.city or "",
+        o.country or "",
+        o.created_at.strftime("%Y-%m-%d %H:%M:%S") if o.created_at else "",
+        o.delivered_at.strftime("%Y-%m-%d %H:%M:%S") if o.delivered_at else "",
+    ]
+
+
+@csrf_exempt
+def orders_export_api(request):
+    """Export orders as CSV or XLSX with optional filters."""
+    import csv as _csv
+    import io as _io
+    from django.http import HttpResponse
+
+    fmt      = (request.GET.get("format") or "csv").lower()
+    store_id = request.GET.get("store_id")
+    status   = request.GET.get("status")
+    search   = request.GET.get("search")
+
+    qs = Order.objects.select_related("store").order_by("-created_at")
+    if store_id:
+        qs = qs.filter(store_id=store_id)
+    if status:
+        qs = qs.filter(payment_status__icontains=status)
+    if search:
+        qs = (
+            qs.filter(customer_name__icontains=search)
+            | qs.filter(customer_email__icontains=search)
+            | qs.filter(external_order_id__icontains=search)
+        )
+
+    rows = [_orders_row(o) for o in qs]
+
+    if fmt == "xlsx":
+        import openpyxl
+        from openpyxl.styles import Font, PatternFill, Alignment
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Orders"
+
+        header_font = Font(bold=True, color="FFFFFF", size=11)
+        header_fill = PatternFill(fill_type="solid", fgColor="7C3AED")
+        for col, h in enumerate(ORDERS_EXPORT_COLUMNS, 1):
+            cell = ws.cell(row=1, column=col, value=h)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+
+        for row_idx, row in enumerate(rows, 2):
+            for col_idx, val in enumerate(row, 1):
+                ws.cell(row=row_idx, column=col_idx, value=val)
+
+        col_widths = [max(len(str(h)), max((len(str(r[i])) for r in rows), default=0)) + 4
+                      for i, h in enumerate(ORDERS_EXPORT_COLUMNS)]
+        for i, width in enumerate(col_widths, 1):
+            ws.column_dimensions[openpyxl.utils.get_column_letter(i)].width = min(width, 50)
+
+        ws.freeze_panes = "A2"
+
+        output = _io.BytesIO()
+        wb.save(output)
+        output.seek(0)
+        response = HttpResponse(
+            output.read(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        response["Content-Disposition"] = 'attachment; filename="orders_export.xlsx"'
+        return response
+
+    # Default: CSV
+    response = HttpResponse(content_type="text/csv")
+    response["Content-Disposition"] = 'attachment; filename="orders_export.csv"'
+    writer = _csv.writer(response)
+    writer.writerow(ORDERS_EXPORT_COLUMNS)
+    for row in rows:
+        writer.writerow(row)
+    return response
+
+
+# Mapping of import header (lowercased, accepts both " "/" _") → Order field
+_IMPORT_FIELD_MAP = {
+    "order_number":         "external_order_id",
+    "order_#":              "external_order_id",
+    "order#":               "external_order_id",
+    "external_order_id":    "external_order_id",
+    "customer_name":        "customer_name",
+    "customer_email":       "customer_email",
+    "customer_phone":       "customer_phone",
+    "product":              "product_name",
+    "product_name":         "product_name",
+    "total":                "total_price",
+    "total_price":          "total_price",
+    "currency":             "currency",
+    "payment_status":       "payment_status",
+    "fulfillment_status":   "fulfillment_status",
+    "tracking_number":      "tracking_number",
+    "tracking_company":     "tracking_company",
+    "tracking_status":      "tracking_status",
+    "live_tracking_status": "live_tracking_status",
+    "city":                 "city",
+    "country":              "country",
+}
+
+
+def _normalize_key(k):
+    return (k or "").strip().lower().replace(" ", "_")
+
+
+def _parse_orders_upload(file_obj, filename):
+    """Parse CSV / XLSX → list of dicts (lowercased keys). Returns (rows, error)."""
+    import csv as _csv
+    import io as _io
+    name = (filename or "").lower()
+    try:
+        if name.endswith(".xlsx") or name.endswith(".xls"):
+            import openpyxl
+            wb = openpyxl.load_workbook(file_obj, read_only=True, data_only=True)
+            ws = wb.active
+            rows_iter = ws.iter_rows(values_only=True)
+            headers_raw = next(rows_iter, [])
+            headers = [_normalize_key(str(h) if h else "") for h in headers_raw]
+            result = []
+            for row in rows_iter:
+                if all(c is None or (isinstance(c, str) and not c.strip()) for c in row):
+                    continue  # skip blank lines
+                result.append({
+                    headers[i]: (str(row[i]).strip() if i < len(row) and row[i] is not None else "")
+                    for i in range(len(headers))
+                })
+            return result, None
+        else:
+            text = file_obj.read().decode("utf-8-sig")
+            reader = _csv.DictReader(_io.StringIO(text))
+            return [
+                {_normalize_key(k): (v or "").strip() for k, v in row.items()}
+                for row in reader
+            ], None
+    except Exception as e:
+        return [], f"Unable to parse file: {e}"
+
+
+@csrf_exempt
+def orders_import_api(request):
+    """
+    Bulk import orders from CSV or XLSX. Each row creates or updates an Order.
+    Rows are matched/updated by (store, external_order_id).
+    """
+    if request.method != "POST":
+        return JsonResponse({"success": False, "message": "POST required"}, status=405)
+    store_id = request.POST.get("store_id")
+    upload_file = request.FILES.get("file")
+    if not store_id or not upload_file:
+        return JsonResponse({"success": False, "message": "store_id and file are required."}, status=400)
+
+    try:
+        store = Store.objects.get(id=store_id)
+    except Store.DoesNotExist:
+        return JsonResponse({"success": False, "message": "Store not found."}, status=404)
+
+    rows, err = _parse_orders_upload(upload_file, upload_file.name)
+    if err:
+        return JsonResponse({"success": False, "message": err}, status=400)
+    if not rows:
+        return JsonResponse({"success": False, "message": "File contains no rows."}, status=400)
+
+    created_count = 0
+    updated_count = 0
+    error_count   = 0
+    errors        = []
+
+    for i, row in enumerate(rows, start=2):  # row 2 = first data row in the file
+        try:
+            order_no = (row.get("order_number")
+                        or row.get("order_#")
+                        or row.get("order#")
+                        or row.get("external_order_id")
+                        or "").strip()
+            if not order_no:
+                raise ValueError("Missing order number column")
+
+            defaults = {}
+            for k, v in row.items():
+                field = _IMPORT_FIELD_MAP.get(k)
+                if not field or field == "external_order_id":
+                    continue
+                if field == "total_price":
+                    try:
+                        defaults[field] = float(str(v).replace(",", "")) if v else 0
+                    except Exception:
+                        defaults[field] = 0
+                else:
+                    defaults[field] = v or ""
+
+            _, created = Order.objects.update_or_create(
+                store=store,
+                external_order_id=order_no,
+                defaults=defaults,
+            )
+            if created:
+                created_count += 1
+            else:
+                updated_count += 1
+        except Exception as e:
+            error_count += 1
+            errors.append(f"Row {i}: {e}")
+
+    return JsonResponse({
+        "success": True,
+        "created": created_count,
+        "updated": updated_count,
+        "errors":  error_count,
+        "total":   len(rows),
+        "error_details": errors[:20],
+    })

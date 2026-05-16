@@ -32,6 +32,10 @@ urlpatterns = [
     # Overview
     path("overview/", views.overview_api, name="overview_api"),
 
+    # 📥📤 Bulk CSV / XLSX Import + Export
+    path("api/import/", views.orders_import_api, name="orders_import_api"),
+    path("api/export/", views.orders_export_api, name="orders_export_api"),
+
     # WooCommerce Webhook (auto-sync new orders)
     path("webhook/woocommerce/<int:store_id>/", views.woocommerce_webhook, name="woocommerce_webhook"),
     path("webhook/woocommerce/<int:store_id>/setup/", views.setup_webhook_api, name="setup_webhook_api"),
