@@ -49,30 +49,55 @@ def get_url(wait_secs=0):
 def get_base_url(request=None, wait_secs=3):
     """
     Single source of truth for the webhook/callback base URL.
-    Priority: live tunnel → WOOCOMMERCE_BASE_URL env → RAILWAY_PUBLIC_DOMAIN → request host
+    Priority:
+      1. Live Cloudflare tunnel (dev only — when running locally with public tunnel)
+      2. Real request host IF it's a public domain (production canonical — handles
+         multi-domain setups: dropsigma.com, baghawat.com, custom domains all work)
+      3. WOOCOMMERCE_BASE_URL env override (explicit override for special cases)
+      4. RAILWAY_PUBLIC_DOMAIN (auto-detected by Railway)
+      5. Whatever request host is available (last resort, even localhost)
     Always returns an HTTPS URL (or None if nothing is available).
     Call this everywhere — never build callback URLs manually.
     """
     from django.conf import settings
 
-    # 1. Local Cloudflare tunnel (development)
+    def _is_local_host(host):
+        if not host:
+            return True
+        host = host.split(":")[0].lower()
+        return host in ("localhost", "127.0.0.1", "0.0.0.0") or host.endswith(".local")
+
+    # 1. Local Cloudflare tunnel (dev). Only matters when there's actually a tunnel.
     url = get_url(wait_secs=wait_secs)
 
-    # 2. Explicit override env var (must be non-empty to count)
+    # 2. Real request host (production canonical). Prefer this over stale env vars
+    #    so users connecting from dropsigma.com get dropsigma.com callbacks, etc.
+    if not url and request is not None:
+        try:
+            host = request.get_host()
+            if host and not _is_local_host(host):
+                url = request.build_absolute_uri("/")
+        except Exception:
+            pass
+
+    # 3. Explicit override env var (e.g. local dev pointing at a tunnel).
     if not url:
         override = getattr(settings, "WOOCOMMERCE_BASE_URL", "") or ""
         if override and not override.endswith("trycloudflare.com"):
             url = override
 
-    # 3. Railway auto-detected public domain
+    # 4. Railway auto-detected public domain
     if not url:
         railway_domain = os.getenv("RAILWAY_PUBLIC_DOMAIN", "").strip()
         if railway_domain:
             url = f"https://{railway_domain}"
 
-    # 4. Fall back to the actual request host (works on Railway thanks to USE_X_FORWARDED_HOST)
+    # 5. Last resort — request host even if localhost (better than nothing).
     if not url and request is not None:
-        url = request.build_absolute_uri("/")
+        try:
+            url = request.build_absolute_uri("/")
+        except Exception:
+            pass
 
     if not url:
         return None
