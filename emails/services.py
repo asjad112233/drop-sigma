@@ -154,6 +154,55 @@ def serialize_order_for_ai(o):
     }
 
 
+# ─── Status code → plain-English translator ──────────────────────────────────
+# WooCommerce + Shopify use compact status codes that the AI must interpret
+# CORRECTLY. The biggest pitfall: "processing" in WooCommerce means "payment
+# confirmed, order being fulfilled" — NOT "payment is pending verification".
+# Without this translation the AI sometimes tells customers their payment is
+# still being verified when it's actually already paid.
+
+_PAYMENT_STATUS_MEANINGS = {
+    # WooCommerce
+    "processing":    "PAID — payment received, order is being prepared for shipment",
+    "completed":     "PAID and shipped — order fulfilled",
+    "on-hold":       "Payment NOT yet received — awaiting manual confirmation",
+    "pending":       "Payment NOT yet received — order placed but payment still pending",
+    "pending-payment":"Payment NOT yet received — order placed but payment still pending",
+    "failed":        "Payment FAILED — order cannot proceed without retry",
+    "cancelled":     "CANCELLED",
+    "refunded":      "REFUNDED",
+    # Shopify-style
+    "paid":          "PAID — payment captured in full",
+    "partially_paid":"Partial payment captured",
+    "authorized":    "Payment authorized but not yet captured",
+    "partially_refunded":"Partially refunded",
+    "voided":        "Payment voided",
+}
+
+_FULFILLMENT_STATUS_MEANINGS = {
+    # WooCommerce uses the same labels as payment in many setups
+    "processing":    "Order is being prepared for shipment (not yet shipped)",
+    "completed":     "Shipped",
+    "shipped":       "Shipped",
+    "on-hold":       "Fulfillment paused",
+    "pending":       "Awaiting fulfillment to start",
+    "cancelled":     "Cancelled — will not ship",
+    "refunded":      "Refunded — will not ship",
+    # Shopify
+    "fulfilled":     "Shipped",
+    "partial":       "Partially shipped",
+    "unfulfilled":   "Not yet shipped",
+    "restocked":     "Restocked",
+}
+
+def _humanize_status(value, mapping):
+    if not value:
+        return ""
+    key = str(value).strip().lower().replace(" ", "-")
+    # Try with underscores too
+    return mapping.get(key) or mapping.get(key.replace("-", "_")) or ""
+
+
 def build_context_block_for_prompt(orders):
     """Turn list of Order objects into a text block suitable for system prompt."""
     if not orders:
@@ -165,8 +214,21 @@ def build_context_block_for_prompt(orders):
         if s["customer_name"]:           line += f" · Customer: {s['customer_name']}"
         if s["product"]:                 line += f" · Product: {s['product']}"
         if s["total"]:                   line += f" · Total: {s['total']}"
-        if s["payment_status"]:          line += f" · Payment: {s['payment_status']}"
-        if s["fulfillment_status"]:      line += f" · Fulfillment: {s['fulfillment_status']}"
+
+        # Payment + fulfillment — show raw code AND human meaning
+        if s["payment_status"]:
+            meaning = _humanize_status(s["payment_status"], _PAYMENT_STATUS_MEANINGS)
+            if meaning:
+                line += f" · Payment: {s['payment_status']} ({meaning})"
+            else:
+                line += f" · Payment: {s['payment_status']}"
+        if s["fulfillment_status"]:
+            meaning = _humanize_status(s["fulfillment_status"], _FULFILLMENT_STATUS_MEANINGS)
+            if meaning:
+                line += f" · Fulfillment: {s['fulfillment_status']} ({meaning})"
+            else:
+                line += f" · Fulfillment: {s['fulfillment_status']}"
+
         if s["live_tracking_status"]:    line += f" · Live status: {s['live_tracking_status']}"
         elif s["tracking_status"]:       line += f" · Status: {s['tracking_status']}"
         if s["tracking_number"]:         line += f" · Tracking #: {s['tracking_number']} ({s['tracking_company']})"
@@ -174,6 +236,18 @@ def build_context_block_for_prompt(orders):
         if s["delivered_at"]:            line += f" · Delivered: {s['delivered_at'][:10]}"
         if s["city"] or s["country"]:    line += f" · Location: {s['city']} {s['country']}".strip()
         lines.append(line)
+
+    # Glossary so the AI ALWAYS gets it right, even for codes not pre-translated above.
+    lines.append(
+        "\nSTATUS CODE GLOSSARY (critical — never misinterpret):"
+        "\n  • 'processing' = payment RECEIVED, order is being prepared for shipment. "
+        "Do NOT tell the customer their payment is still being verified."
+        "\n  • 'completed' / 'fulfilled' / 'shipped' = order has shipped."
+        "\n  • 'on-hold' or 'pending' = payment NOT yet received."
+        "\n  • 'cancelled' / 'refunded' / 'failed' = self-explanatory."
+        "\n  • If payment_status is 'processing' or 'paid', the customer has ALREADY PAID. "
+        "Their order is in the fulfillment queue."
+    )
     lines.append("Use this real data to answer accurately. Never invent order numbers, statuses, or tracking info.")
     return "\n".join(lines)
 
