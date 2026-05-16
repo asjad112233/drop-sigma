@@ -7153,27 +7153,27 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
       <div class="ait-kpis">
         <div class="ait-kpi">
           <h5>Training Score</h5>
-          <div class="val">82<span style="font-size:14px;color:var(--vf-muted);font-weight:600">/100</span></div>
-          <div class="sub">Mature — replies sound human</div>
-          <div class="bar"><span style="width:82%"></span></div>
+          <div class="val" id="aitTrainingScore">0<span style="font-size:14px;color:var(--vf-muted);font-weight:600">/100</span></div>
+          <div class="sub" id="aitTrainingScoreSub">Setup not started — run the wizard</div>
+          <div class="bar"><span id="aitTrainingScoreBar" style="width:0%"></span></div>
         </div>
         <div class="ait-kpi">
           <h5>Knowledge Items</h5>
-          <div class="val" id="aitKbCount">12</div>
+          <div class="val" id="aitKbCount">0</div>
           <div class="sub">FAQs · policies · product info</div>
-          <div class="bar"><span style="width:60%"></span></div>
+          <div class="bar"><span id="aitKbBar" style="width:0%"></span></div>
         </div>
         <div class="ait-kpi">
           <h5>Approved Examples</h5>
-          <div class="val" id="aitExCount">28</div>
+          <div class="val" id="aitExCount">0</div>
           <div class="sub">Drafts you approved this month</div>
-          <div class="bar"><span style="width:75%"></span></div>
+          <div class="bar"><span id="aitExBar" style="width:0%"></span></div>
         </div>
         <div class="ait-kpi">
           <h5>AI Drafts Sent</h5>
-          <div class="val">147</div>
-          <div class="sub">94% acceptance rate</div>
-          <div class="bar"><span style="width:94%"></span></div>
+          <div class="val" id="aitDraftsSent">0</div>
+          <div class="sub" id="aitAcceptRate">— acceptance rate</div>
+          <div class="bar"><span id="aitDraftsBar" style="width:0%"></span></div>
         </div>
       </div>
 
@@ -7199,15 +7199,15 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
           <div class="ait-grid">
             <div class="ait-field">
               <label>Business name <span class="req">*</span></label>
-              <input type="text" id="aitBizName" value="Aurora Beauty" />
+              <input type="text" id="aitBizName" placeholder="e.g. Aurora Beauty" />
             </div>
             <div class="ait-field">
               <label>Industry / Niche</label>
-              <input type="text" id="aitNiche" value="Beauty &amp; Skincare — DTC" />
+              <input type="text" id="aitNiche" placeholder="e.g. Beauty &amp; Skincare — DTC" />
             </div>
             <div class="ait-field full">
               <label>One-line description</label>
-              <input type="text" id="aitDesc" value="Premium skincare and beauty essentials shipped across the US with 3–5 day delivery." />
+              <input type="text" id="aitDesc" placeholder="One short line describing what you sell (e.g. Premium skincare shipped across the US in 3–5 days)" />
               <div class="hint">The AI will use this line when replying to "what do you sell?" type questions.</div>
             </div>
             <div class="ait-field">
@@ -7222,7 +7222,7 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
             </div>
             <div class="ait-field">
               <label>Customer support hours</label>
-              <input type="text" id="aitHours" value="Mon–Fri, 9am–6pm EST" />
+              <input type="text" id="aitHours" placeholder="e.g. Mon–Fri, 9am–6pm EST" />
             </div>
           </div>
         </div>
@@ -7257,11 +7257,11 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
             </div>
             <div class="ait-field">
               <label>Sign-off</label>
-              <input type="text" id="aitSignoff" value="Warm regards, The Aurora Team 💜" />
+              <input type="text" id="aitSignoff" placeholder="e.g. Warm regards, [Your Brand] Team" />
             </div>
             <div class="ait-field full">
               <label>Brand voice example</label>
-              <textarea id="aitVoiceEg">Hi Sarah! 👋 I totally understand — waiting for an order is stressful. Your parcel has just left our FedEx hub and will reach you tomorrow. Here's the tracking link. Let us know if there's anything else we can help with — we're here for you. — The Aurora Team 💜</textarea>
+              <textarea id="aitVoiceEg" placeholder="Paste a real customer reply you love. AI will mimic this exact style, tone, and emoji use. (e.g. 'Hi [Name]! 👋 Totally understand — your parcel left our hub today and arrives tomorrow. Tracking: [link] — [Brand] Team')"></textarea>
               <div class="hint">The AI will follow this example's tone, formatting, emoji use, and greeting style.</div>
             </div>
           </div>
@@ -7338,64 +7338,12 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
           </div>
 
           <div id="aitSnippetList">
-            <div class="ait-snippet">
-              <div class="pill ait-pill-ship">Shipping</div>
-              <div class="ait-snippet-body">
-                <div class="ait-snippet-title">Standard delivery time</div>
-                <div class="ait-snippet-text">3–5 business days across the continental US. 5–7 days for Hawaii and Alaska. Free shipping on orders over $50. Carriers: FedEx, UPS, USPS.</div>
-              </div>
-              <div class="ait-snippet-actions">
-                <button class="ait-icon-btn" title="Edit">✏️</button>
-                <button class="ait-icon-btn" title="Delete">🗑</button>
-              </div>
-            </div>
-
-            <div class="ait-snippet">
-              <div class="pill ait-pill-ref">Refund</div>
-              <div class="ait-snippet-body">
-                <div class="ait-snippet-title">7-day no-questions-asked return policy</div>
-                <div class="ait-snippet-text">Customers can request a return within 7 days. Product must be unused / sealed. Refund within 5–7 working days to the original payment method. Shipping cost is non-refundable.</div>
-              </div>
-              <div class="ait-snippet-actions">
-                <button class="ait-icon-btn">✏️</button>
-                <button class="ait-icon-btn">🗑</button>
-              </div>
-            </div>
-
-            <div class="ait-snippet">
-              <div class="pill ait-pill-prod">Product</div>
-              <div class="ait-snippet-body">
-                <div class="ait-snippet-title">Skincare authenticity guarantee</div>
-                <div class="ait-snippet-text">All products are original imports directly from Korean / European brands. Batch numbers are verifiable. If a customer suspects a fake, explain how to verify via QR code on the brand's official website.</div>
-              </div>
-              <div class="ait-snippet-actions">
-                <button class="ait-icon-btn">✏️</button>
-                <button class="ait-icon-btn">🗑</button>
-              </div>
-            </div>
-
-            <div class="ait-snippet">
-              <div class="pill ait-pill-faq">FAQ</div>
-              <div class="ait-snippet-body">
-                <div class="ait-snippet-title">"Where is my order?" template answer</div>
-                <div class="ait-snippet-text">AI should check status using the order number. If dispatched, give an ETA. If still processing, say "ships within 24–48 hours." For excessive delays (5+ days), apologize and escalate to a team member.</div>
-              </div>
-              <div class="ait-snippet-actions">
-                <button class="ait-icon-btn">✏️</button>
-                <button class="ait-icon-btn">🗑</button>
-              </div>
-            </div>
-
-            <div class="ait-snippet">
-              <div class="pill ait-pill-faq">FAQ</div>
-              <div class="ait-snippet-body">
-                <div class="ait-snippet-title">Accepted payment methods</div>
-                <div class="ait-snippet-text">We accept all major credit cards (Visa, Mastercard, Amex), Apple Pay, Google Pay, PayPal, and Shop Pay. Payment is required at checkout — we don't offer cash on delivery.</div>
-              </div>
-              <div class="ait-snippet-actions">
-                <button class="ait-icon-btn">✏️</button>
-                <button class="ait-icon-btn">🗑</button>
-              </div>
+            <!-- Snippets are loaded per-tenant from /api/ai-training/snippets/ on section open.
+                 Empty placeholder below is replaced by real data (or shown if tenant has zero snippets). -->
+            <div id="aitSnippetsEmpty" style="padding:36px 22px;text-align:center;background:var(--vf-surface-2,#f4f6fb);border:2px dashed var(--vf-line,#e5eaf2);border-radius:14px;color:var(--vf-muted);">
+              <div style="font-size:32px;margin-bottom:8px">📚</div>
+              <div style="font-size:14px;font-weight:700;color:var(--vf-text);margin-bottom:4px">No knowledge snippets yet</div>
+              <div style="font-size:12px;line-height:1.5;max-width:380px;margin:0 auto">Run the AI Setup Wizard to auto-create snippets from your business info, or click <b>+ Add Snippet</b> above to add one manually.</div>
             </div>
           </div>
 
@@ -7414,23 +7362,14 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
             <button class="ait-btn sm" onclick="aitAddExample()">+ Add Manually</button>
           </div>
 
-          <div class="ait-example">
-            <div class="block user"><h6>Customer wrote</h6><div class="txt">Hey, my order #4521 still hasn't arrived — it's been 6 days. What's going on? I want a refund!</div></div>
-            <div class="block ai"><h6>Your approved reply</h6><div class="txt">Hi there! I'm so sorry about the delay 🙏 I just checked — your parcel is at the FedEx Memphis hub and will be delivered by tomorrow evening. Tracking: 1Z999AA10123456784. If it doesn't arrive by then, we'll process a full refund — no questions asked. — The Aurora Team 💜</div></div>
-          </div>
-
-          <div class="ait-example">
-            <div class="block user"><h6>Customer wrote</h6><div class="txt">Is this product authentic? I saw the same item on Amazon for half the price.</div></div>
-            <div class="block ai"><h6>Your approved reply</h6><div class="txt">Hi! Great question — yes, 100% authentic. We source directly from the brand, so every product ships sealed with verifiable batch numbers. The cheaper Amazon listings are often counterfeit or near-expiry stock from third-party sellers. We also offer a 30-day no-questions-asked return policy as a quality guarantee. 💜</div></div>
-          </div>
-
-          <div class="ait-example">
-            <div class="block user"><h6>Customer wrote</h6><div class="txt">How long until my order is delivered? Brooklyn, NY.</div></div>
-            <div class="block ai"><h6>Your approved reply</h6><div class="txt">Hi! For Brooklyn, NY, delivery takes 3–4 business days. Your order shipped yesterday, so it should reach you by Friday. We've sent the tracking link to your email and via SMS. — The Aurora Team 💜</div></div>
-          </div>
-
-          <div style="text-align:center;padding:12px">
-            <button class="ait-btn ghost sm">Show 25 more examples</button>
+          <div id="aitExamplesList">
+            <!-- Training examples are loaded per-tenant from AiReplyFeedback API on section open.
+                 Empty state shown until tenant has approved/edited at least one AI draft. -->
+            <div id="aitExamplesEmpty" style="padding:36px 22px;text-align:center;background:var(--vf-surface-2,#f4f6fb);border:2px dashed var(--vf-line,#e5eaf2);border-radius:14px;color:var(--vf-muted);">
+              <div style="font-size:32px;margin-bottom:8px">⚡</div>
+              <div style="font-size:14px;font-weight:700;color:var(--vf-text);margin-bottom:4px">No training examples yet</div>
+              <div style="font-size:12px;line-height:1.5;max-width:420px;margin:0 auto">When you edit or approve an AI draft in the Emails section, it gets saved here automatically. Each correction makes future AI replies better.</div>
+            </div>
           </div>
         </div>
       </div>
@@ -7477,24 +7416,7 @@ Hi, I ordered the Korean glow serum 4 days ago, order #4521. Just received it bu
 
           <div style="margin-top:18px">
             <h5 style="font-size:10.5px;text-transform:uppercase;letter-spacing:1.1px;color:var(--vf-muted);font-weight:800;margin:0 0 8px">🔬 Assembled Prompt (debug view)</h5>
-            <div class="ait-prompt"><span class="h">SYSTEM:</span> You are a customer support agent for <span class="v">"Aurora Beauty"</span> — a premium beauty &amp; skincare DTC brand in the US.
-Tone: <span class="v">Friendly, Empathetic</span>. Length: <span class="v">Medium</span>. Language: <span class="v">English</span>.
-Sign-off: <span class="v">"— The Aurora Team 💜"</span>
-
-<span class="h">BRAND VOICE EXAMPLE:</span>
-"Hi Sarah! 👋 I totally understand — waiting for an order is stressful..."
-
-<span class="h">RELEVANT KNOWLEDGE:</span>
-[1] <span class="k">Refund</span>: 7-day no-questions-asked. Damaged items = full refund or free replacement within 48hrs.
-[2] <span class="k">Product</span>: All products original imported. Damage in transit covered fully.
-
-<span class="h">FEW-SHOT EXAMPLES:</span>
-(3 approved replies for similar scenarios)
-
-<span class="h">ORDER CONTEXT:</span>
-Order #<span class="v">4521</span>, Customer: <span class="v">Sarah Johnson</span>, Status: <span class="v">Delivered</span>, Product: <span class="v">Korean Glow Serum</span>
-
-<span class="h">USER:</span> [customer email here]</div>
+            <div class="ait-prompt"><span style="color:var(--vf-muted);font-style:italic">Click "Generate AI Reply" to see the actual assembled prompt used for your reply — populated from your Business Profile, Knowledge Base, and detected customer data.</span></div>
           </div>
         </div>
       </div>
@@ -10555,7 +10477,7 @@ function aisApplyToTraining(){
   if(a.signoff){
     const s = document.getElementById('aitSignoff');
     if(s){
-      const name = a.biz_name || 'Aurora';
+      const name = a.biz_name || 'Our';
       s.value = a.signoff.replace('[Brand]', name);
     }
   }
@@ -15892,8 +15814,10 @@ async function openEmailDetail(emailId, options={}){
 function isSupportEmail(value){
   const email = extractEmailAddress(value || "").toLowerCase();
   if(!email) return true;
-  if(email.includes("inglockswetrust") || email.includes("support")) return true;
+  // Match the tenant's actual connected support inbox (per-store, multi-tenant safe)
   if(connectedStoreEmail && email === connectedStoreEmail.toLowerCase()) return true;
+  // Generic support-pattern fallback for tenants who haven't loaded their account yet
+  if(/^(support|help|hello|service|info|contact|care|sales)@/i.test(email)) return true;
   return false;
 }
 
