@@ -694,6 +694,11 @@ def build_training_system_prompt(profile, snippets, detected_context="",
         "\n3. Body: ONE focused short paragraph that answers the question directly."
         "\n4. Use a BLANK LINE between the greeting, the body, and the sign-off — this is non-negotiable for readability. The sign-off must NEVER appear inline with the body."
         "\n5. Skip generic phrases like 'Thanks for reaching out!', 'I hope this helps', 'Let me know if you have any other questions' unless they genuinely add value."
+        "\n5b. ABSOLUTELY NO em-dashes (—) or en-dashes (–) anywhere in the reply. They are the #1 AI tell. Use a comma, a period, or 'and'/'but'/'so' instead. "
+        "Examples of how to rewrite:"
+        "\n     ❌ 'I checked your order—it's still processing.'  →  ✅ 'I checked your order. It's still processing.'"
+        "\n     ❌ 'Thanks for reaching out—I'll look into it.'   →  ✅ 'Thanks for reaching out. I'll look into it.'"
+        "\n     ❌ 'Your order will arrive in 3–5 days.'          →  ✅ 'Your order will arrive in 3 to 5 days.'"
         "\n6. Never invent order numbers, tracking, statuses, or dates — use ONLY the DETECTED CUSTOMER CONTEXT block (if present). If data is missing, ask for it."
         "\n7. Sound human and confident, not robotic. Match the brand voice example above."
         "\n8. Output the reply as plain text only — no HTML, no markdown, no subject line."
@@ -772,20 +777,44 @@ def _extract_customer_first_name(email_obj, order=None):
     return ""
 
 
+def _strip_ai_tells(text):
+    """
+    Strip the #1 AI tell — em-dashes (—) and en-dashes (–) — replacing them
+    with human-sounding punctuation:
+      em-dash (—) → ", " (comma + space) — usually replaces a comma in formal writing
+      en-dash (–) → "-" (hyphen) — usually a numeric range like 3-5
+    Idempotent. Safe to run on any text.
+    """
+    if not text:
+        return text
+    # em-dash with any surrounding whitespace → ", "
+    text = re.sub(r"\s*—\s*", ", ", text)
+    # en-dash with any surrounding whitespace → "-"
+    text = re.sub(r"\s*–\s*", "-", text)
+    # Clean up multiple spaces, double commas, leading commas
+    text = re.sub(r"[ \t]{2,}", " ", text)
+    text = re.sub(r",\s*,", ",", text)
+    text = re.sub(r"^\s*,\s*", "", text, flags=re.MULTILINE)
+    return text
+
+
 def _enforce_reply_structure(text):
     """
-    Post-process AI reply to guarantee proper paragraph spacing.
+    Post-process AI reply to guarantee proper paragraph spacing + strip AI tells.
     The AI sometimes outputs one-line replies; we force:
       Greeting,
       <blank>
       Body
       <blank>
       Sign-off
-    Idempotent — if structure is already correct, leaves it alone.
+    Idempotent.
     """
     if not text:
         return text
     s = text.strip()
+
+    # 0. Strip em-dashes / en-dashes (major AI tells)
+    s = _strip_ai_tells(s)
 
     # 1. Ensure a blank line after a greeting line like "Hi Name," or "Hello Name,"
     s = re.sub(
