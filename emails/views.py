@@ -2442,6 +2442,88 @@ def send_auto_status_email(order, new_status):
         logging.getLogger(__name__).error(f"send_auto_status_email failed: {e}", exc_info=True)
 
 
+# ─── Gmail real-time diagnostic ──────────────────────────────────────────────
+# Lets the tenant see whether the Pub/Sub env vars are set, whether each
+# OAuth account has an active watch, and trigger a re-registration with
+# detailed error reporting. Read access GET, action POST {action: "start",
+# email: "..."}.
+
+@csrf_exempt
+@api_view(["GET", "POST"])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def gmail_watch_debug_api(request):
+    import logging as _log
+    log = _log.getLogger(__name__)
+
+    from .models import EmailAccount
+
+    topic_env = (getattr(settings, 'GMAIL_PUBSUB_TOPIC', '')
+                 or os.getenv("GMAIL_PUBSUB_TOPIC", "")).strip()
+    sa_env = (getattr(settings, 'GMAIL_PUBSUB_SA', '')
+              or os.getenv("GMAIL_PUBSUB_SA", "")).strip()
+    audience_env = (getattr(settings, 'GMAIL_PUBSUB_AUDIENCE', '')
+                    or os.getenv("GMAIL_PUBSUB_AUDIENCE", "")).strip()
+
+    if request.method == "POST":
+        target_email = (request.data.get("email") or "").strip().lower()
+        if not target_email:
+            return Response({"error": "email field required"}, status=400)
+
+        account = EmailAccount.objects.filter(
+            email__iexact=target_email, auth_type="oauth", is_active=True,
+        ).first()
+        if not account:
+            return Response({"error": f"no OAuth account for {target_email}"}, status=404)
+
+        from .services import start_gmail_watch
+        before = {
+            "history_id": account.gmail_watch_history_id,
+            "expiration": account.gmail_watch_expiration.isoformat() if account.gmail_watch_expiration else None,
+            "has_refresh_token": bool(account.oauth_refresh_token),
+        }
+        try:
+            ok, info = start_gmail_watch(account)
+            result = {"ok": ok, "info": info if isinstance(info, dict) else str(info)[:600]}
+        except Exception as e:
+            log.error("gmail-watch-debug start failed for %s: %s", target_email, e, exc_info=True)
+            result = {"ok": False, "error": str(e)[:600]}
+        account.refresh_from_db()
+        after = {
+            "history_id": account.gmail_watch_history_id,
+            "expiration": account.gmail_watch_expiration.isoformat() if account.gmail_watch_expiration else None,
+        }
+        return Response({
+            "config_loaded": bool(topic_env and sa_env),
+            "topic_env": topic_env,
+            "sa_env": sa_env,
+            "audience_env": audience_env or "(default to push URL)",
+            "before": before,
+            "result": result,
+            "after": after,
+        })
+
+    # GET — list current state for all OAuth accounts
+    from .models import EmailAccount as EA
+    rows = []
+    for a in EA.objects.filter(auth_type="oauth", is_active=True).order_by("email"):
+        rows.append({
+            "email": a.email,
+            "store_id": a.store_id,
+            "history_id": a.gmail_watch_history_id or "(unset)",
+            "expiration": a.gmail_watch_expiration.isoformat() if a.gmail_watch_expiration else "(unset)",
+            "has_refresh_token": bool(a.oauth_refresh_token),
+        })
+    return Response({
+        "config_loaded": bool(topic_env and sa_env),
+        "topic_env": topic_env or "(not set)",
+        "sa_env": sa_env or "(not set)",
+        "audience_env": audience_env or "(default to push URL)",
+        "accounts": rows,
+        "usage_hint": "POST {\"email\": \"your@gmail.com\"} to manually start the watch and see the exact error.",
+    })
+
+
 # ─── Gmail real-time push webhook ────────────────────────────────────────────
 # Pub/Sub POSTs here within ~1-2 sec of any Gmail mailbox change for accounts
 # we've registered via users.watch(). The webhook MUST always return 2xx
