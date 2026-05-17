@@ -3390,11 +3390,23 @@ body.vf-dark-mode .em-more-btn,body.vf-dark-mode .em-sync-btn{background:var(--v
 #emConvPanel.reply-expanded .em-composer-box{flex:1 1 auto!important;overflow:hidden!important;display:flex!important;flex-direction:column!important;}
 #emConvPanel.reply-expanded .em-composer-box #emailReplyText{flex:1 1 auto!important;max-height:none!important;height:auto!important;}
 /* ── Thread Card (new clean design) ── */
-.em-tc{display:flex;align-items:flex-start;gap:10px;padding:11px 12px;border-radius:12px;cursor:pointer;border:1px solid #edf1f6;background:#fff;margin-bottom:6px;position:relative;transition:background .12s,box-shadow .12s;border-left:3px solid transparent;}
+.em-tc{display:flex;align-items:flex-start;gap:10px;padding:11px 12px;border-radius:12px;cursor:pointer;border:1px solid #edf1f6;background:#fff;margin-bottom:6px;position:relative;transition:background .12s,box-shadow .12s,border-color .12s;border-left:3px solid transparent;}
 .em-tc:hover{background:#f8fafd;box-shadow:0 2px 8px rgba(15,23,42,.06);}
-.em-tc.active{background:#f0f6ff;border-color:#bfdbfe;border-left-color:#3b82f6;}
 .em-tc.thread-unread{border-left-color:#3b82f6;background:#fff;}
 .em-tc.thread-read{border-left-color:transparent;background:#fff;opacity:.82;}
+/* Active thread — must win regardless of read/unread state, so listed AFTER
+   the thread-read/unread rules and uses double-class specificity. */
+.em-tc.active,
+.em-tc.active.thread-read,
+.em-tc.active.thread-unread{
+  background:linear-gradient(135deg,rgba(99,102,241,.12) 0%,rgba(139,92,246,.08) 100%)!important;
+  border-color:rgba(99,102,241,.40)!important;
+  border-left:3px solid #6366f1!important;
+  opacity:1!important;
+  box-shadow:0 2px 10px rgba(99,102,241,.18)!important;
+}
+.em-tc.active .em-tc-name,
+.em-tc.active .em-tc-subject{color:#1e1b4b!important;font-weight:700!important;}
 .em-tc-av{width:38px;height:38px;border-radius:11px;color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;letter-spacing:.5px;}
 .em-tc-body{flex:1;min-width:0;}
 .em-tc-row1{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:2px;}
@@ -15675,9 +15687,25 @@ function renderEmails(){
   }
 
   if(!threads.length){
-    list.innerHTML = `<div class="empty">No threads found.</div>`;
+    if(list.dataset.fp !== "empty"){
+      list.innerHTML = `<div class="empty">No threads found.</div>`;
+      list.dataset.fp = "empty";
+    }
     return;
   }
+
+  // Fingerprint includes everything that would change the visual: contact,
+  // latest msg time, unread count, filter, search, and which thread is
+  // active. If unchanged, skip the innerHTML swap so the 3-sec poller
+  // doesn't trigger a flash on every tick.
+  const _listFp = JSON.stringify({
+    f: emailFilter || "",
+    s: search || "",
+    a: currentThreadContact || "",
+    t: threads.map(t => `${t.contact}|${t.latest_time}|${getThreadUnreadCount(t)}|${t.drafted_count||0}|${t.is_resolved?1:0}|${t.assigned_to?t.assigned_to.id:0}`),
+  });
+  if(list.dataset.fp === _listFp) return;
+  list.dataset.fp = _listFp;
 
   list.innerHTML = threads.map(thread => {
     const displayName = cleanSenderName(thread.name || thread.contact || "Customer");
@@ -15931,8 +15959,28 @@ async function openThread(contact, options={}){
 
     document.getElementById("emailDetailSubject").innerText = threadInfo.latest_subject || lastMsg.subject || "Customer Thread";
     document.getElementById("emailDetailMeta").innerText = `${contact} · ${currentThreadEmails.length} messages`;
-    document.getElementById("emailDetailBody").innerHTML = renderThreadChat(currentThreadEmails);
-    requestAnimationFrame(flushEmailIframes); // write HTML email content into iframes
+
+    // Skip re-rendering the chat body when nothing meaningful changed since
+    // the last paint. Without this, the 3-sec poller would replace innerHTML
+    // every tick and the user sees a tiny flash even when no new message
+    // arrived (iframes reload, scroll resets). Fingerprint = (contact, last
+    // msg id, count). If unchanged, leave the existing DOM alone.
+    const _bodyEl = document.getElementById("emailDetailBody");
+    const _fp = `${contact}|${lastMsg.id}|${currentThreadEmails.length}`;
+    if(_bodyEl && _bodyEl.dataset.fp !== _fp){
+      const _wasNearBottom = (() => {
+        if(!_bodyEl) return true;
+        const gap = _bodyEl.scrollHeight - _bodyEl.scrollTop - _bodyEl.clientHeight;
+        return gap < 120; // user is essentially at the bottom
+      })();
+      _bodyEl.innerHTML = renderThreadChat(currentThreadEmails);
+      _bodyEl.dataset.fp = _fp;
+      requestAnimationFrame(flushEmailIframes); // write HTML email content into iframes
+      // If user was reading at the bottom, keep them there as new messages append.
+      if(_wasNearBottom){
+        requestAnimationFrame(() => { _bodyEl.scrollTop = _bodyEl.scrollHeight; });
+      }
+    }
     const _displayName = cleanSenderName(threadInfo.name || contact || "Customer");
     const _replyLabel = document.getElementById("replyToLabel");
     if(_replyLabel) _replyLabel.innerText = `Reply to ${_displayName}`;
