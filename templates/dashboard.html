@@ -2209,8 +2209,8 @@ body.vf-light-mode .sb-toggle:hover{background:rgba(15,23,42,.12)!important;colo
 .em-hdr-left{}
 .em-hdr-h1{font-size:18px!important;font-weight:800!important;letter-spacing:-.3px!important;color:var(--vf-text)!important;margin:0!important;display:flex;align-items:center;gap:8px;}
 .em-hdr-sub{font-size:12px!important;color:var(--vf-muted)!important;margin:3px 0 0!important;}
-/* Controls bar */
-.em-controls-bar{display:flex;align-items:center;gap:7px;flex-wrap:nowrap;}
+/* Controls bar (legacy — merged into em-hdr-top) */
+.em-controls-bar{display:none;}
 /* Nav chips */
 .em-nav-chips{display:flex;align-items:center;gap:5px;flex-shrink:0;}
 .em-nav-chip{height:32px;padding:0 14px;border-radius:999px;border:1px solid var(--vf-line);background:var(--vf-surface);color:var(--vf-muted);font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all .15s;white-space:nowrap;}
@@ -3710,8 +3710,9 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
 /* ===== PREMIUM COMPACT INBOX v2 — FINAL OVERRIDE ===== */
 #emailsSection.active{display:flex!important;flex-direction:column!important;height:calc(100vh - 36px)!important;min-height:0!important;overflow:hidden!important;padding:0!important;gap:0!important;}
 .em-hdr{flex-shrink:0!important;margin-bottom:0!important;padding:0!important;background:var(--vf-surface)!important;}
-.em-hdr-top{height:48px!important;min-height:48px!important;display:flex!important;align-items:center!important;justify-content:space-between!important;padding:0 16px!important;gap:10px!important;margin:0!important;border-bottom:1px solid var(--vf-line)!important;background:var(--vf-surface)!important;}
-.em-hdr-left{display:flex!important;align-items:center!important;gap:8px!important;}
+.em-hdr-top{height:52px!important;min-height:52px!important;display:flex!important;align-items:center!important;justify-content:space-between!important;padding:0 16px!important;gap:14px!important;margin:0!important;border-bottom:1px solid var(--vf-line)!important;background:var(--vf-surface)!important;flex-wrap:nowrap!important;}
+.em-hdr-left{display:flex!important;align-items:center!important;gap:12px!important;min-width:0!important;flex:1 1 auto!important;overflow:hidden!important;}
+.em-hdr-right{display:flex!important;align-items:center!important;gap:8px!important;flex-shrink:0!important;}
 .em-hdr-h1{font-size:14px!important;font-weight:700!important;margin:0!important;letter-spacing:0!important;display:flex!important;align-items:center!important;gap:8px!important;}
 .em-hdr-sub{display:none!important;}
 .em-live-chip{display:inline-flex!important;align-items:center!important;gap:5px!important;font-size:11.5px!important;font-weight:400!important;color:var(--vf-muted)!important;}
@@ -3723,11 +3724,12 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
 .em-nav-chip.active{background:var(--vf-text,#1a1f2e)!important;border-color:var(--vf-text,#1a1f2e)!important;color:#fff!important;}
 .em-nav-badge{background:rgba(255,255,255,.22)!important;color:#fff!important;border-radius:999px!important;font-size:10px!important;font-weight:700!important;padding:1px 7px!important;min-width:18px!important;text-align:center!important;}
 .em-nav-chip:not(.active) .em-nav-badge{background:rgba(15,23,42,.1)!important;color:var(--vf-muted)!important;}
-.em-controls-bar{height:40px!important;min-height:40px!important;display:flex!important;align-items:center!important;gap:7px!important;padding:0 14px!important;background:var(--vf-surface-2,#f8fafc)!important;border-bottom:1px solid var(--vf-line)!important;flex-shrink:0!important;overflow:hidden!important;}
+.em-controls-bar{display:none!important;}
 .live-sync-badge{display:inline-flex!important;align-items:center!important;gap:5px!important;font-size:11px!important;font-weight:600!important;color:#059669!important;background:rgba(16,185,129,.08)!important;border:1px solid rgba(16,185,129,.22)!important;border-radius:6px!important;padding:3px 9px!important;white-space:nowrap!important;}
 .live-sync-badge::before{content:''!important;width:6px!important;height:6px!important;border-radius:50%!important;background:#10b981!important;box-shadow:none!important;flex-shrink:0!important;}
 .live-sync-badge.paused{color:#64748b!important;background:rgba(100,116,139,.06)!important;border-color:rgba(100,116,139,.2)!important;}
 .live-sync-badge.paused::before{background:#94a3b8!important;}
+.live-sync-badge:hover{filter:brightness(.96)!important;transition:filter .12s!important;}
 .em-scope{height:30px!important;border-radius:7px!important;border:1px solid var(--vf-line)!important;box-shadow:none!important;background:var(--vf-surface)!important;}
 .em-scope-seg{padding:0 9px!important;}
 .em-scope-lbl{font-size:9.5px!important;}
@@ -3738,6 +3740,17 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
 .em-more-btn{width:30px!important;height:30px!important;border-radius:7px!important;font-size:15px!important;}
 .em-new-btn{height:30px!important;padding:0 13px!important;font-size:12px!important;font-weight:600!important;border-radius:7px!important;background:linear-gradient(135deg,#6366f1,#4f46e5)!important;box-shadow:0 2px 6px rgba(99,102,241,.28)!important;gap:5px!important;}
 .em-new-btn:hover{filter:brightness(1.07)!important;background:linear-gradient(135deg,#6366f1,#4f46e5)!important;}
+@media(max-width:1280px){
+  .em-hdr-top{padding:0 12px!important;gap:10px!important;}
+  .em-hdr-left{gap:9px!important;}
+  .em-hdr-right{gap:6px!important;}
+  .em-scope-val{max-width:110px!important;}
+  .live-sync-badge{font-size:10.5px!important;padding:3px 7px!important;}
+}
+@media(max-width:1100px){
+  .em-hdr-top{height:auto!important;min-height:52px!important;flex-wrap:wrap!important;padding:8px 12px!important;}
+  .em-hdr-left,.em-hdr-right{flex-wrap:wrap!important;}
+}
 #emTabInbox{overflow:hidden!important;flex-direction:column!important;flex:1 1 auto!important;min-height:0!important;}
 #emTabInbox .em-stats{display:flex!important;gap:8px!important;padding:10px 14px!important;background:var(--vf-surface)!important;border-bottom:1px solid var(--vf-line)!important;flex-shrink:0!important;grid-template-columns:unset!important;}
 .em-stat{flex:1!important;position:relative!important;overflow:hidden!important;padding:8px 12px!important;border-radius:9px!important;border:1px solid var(--vf-line)!important;background:var(--vf-surface-2,#f8fafc)!important;display:flex!important;flex-direction:column!important;gap:1px!important;cursor:default!important;transition:box-shadow .15s!important;box-shadow:none!important;}
@@ -5333,54 +5346,40 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
 
     <section id="emailsSection" class="section">
 
-      <!-- EMAIL HEADER -->
+      <!-- EMAIL HEADER — single compact row -->
       <div class="em-hdr">
-        <!-- Top bar: title + nav buttons -->
         <div class="em-hdr-top">
           <div class="em-hdr-left">
             <h1 class="em-hdr-h1">Customer Inbox <span class="em-live-chip"><span class="em-live-dot"></span> Live</span></h1>
-          </div>
-          <div class="em-nav-chips">
-            <button class="em-nav-chip active" id="emNavInbox" onclick="switchEmailView('inbox',this)">Inbox <span class="em-nav-badge" id="emNavInboxCount">0</span></button>
-            <button class="em-nav-chip" id="emNavTemplates" onclick="switchEmailView('templates',this)">Templates</button>
-            <button class="em-nav-chip" id="emNavSettings" onclick="switchEmailView('settings',this)">Settings</button>
-          </div>
-        </div>
-        <!-- Sub bar: live sync + selectors + actions -->
-        <div class="em-controls-bar" id="emControlsBar">
-          <span id="liveSyncBadge" class="live-sync-badge">Live Sync ON</span>
-          <div class="em-scope">
-            <div class="em-scope-seg">
-              <span class="em-scope-lbl">Project</span>
-              <span class="em-scope-val" id="epStoreName">—</span>
-              <span class="em-scope-caret">▾</span>
-            </div>
-            <span class="em-scope-sep">›</span>
-            <div class="em-scope-seg" style="gap:7px;">
-              <span class="em-scope-dot offline" id="epInboxDot"></span>
-              <div>
-                <div class="em-scope-lbl">Inbox</div>
-                <div class="em-scope-val" id="epInboxLabel">Loading…</div>
+            <div class="em-scope">
+              <div class="em-scope-seg">
+                <span class="em-scope-lbl">Project</span>
+                <span class="em-scope-val" id="epStoreName">—</span>
+                <span class="em-scope-caret">▾</span>
               </div>
-              <span class="em-scope-count zero" id="epBadge">0</span>
-              <span class="em-scope-caret">▾</span>
-              <select id="epInboxSelect" onchange="onEmailInboxChange()">
-                <option value="">Loading…</option>
-              </select>
+              <span class="em-scope-sep">›</span>
+              <div class="em-scope-seg" style="gap:7px;">
+                <span class="em-scope-dot offline" id="epInboxDot"></span>
+                <div>
+                  <div class="em-scope-lbl">Inbox</div>
+                  <div class="em-scope-val" id="epInboxLabel">Loading…</div>
+                </div>
+                <span class="em-scope-count zero" id="epBadge">0</span>
+                <span class="em-scope-caret">▾</span>
+                <select id="epInboxSelect" onchange="onEmailInboxChange()">
+                  <option value="">Loading…</option>
+                </select>
+              </div>
             </div>
           </div>
-          <button class="em-sync-btn" title="Sync inbox" onclick="syncInboxNow()">↻</button>
-          <button class="em-new-btn" onclick="openComposeModal()">+ New Email</button>
-          <div class="em-more-wrap" id="emMoreWrap">
-            <button class="em-more-btn" onclick="document.getElementById('emMoreWrap').classList.toggle('open')">···</button>
-            <div class="em-more-menu" onclick="event.stopPropagation()">
-              <div class="em-menu-item" onclick="toggleLiveSync()"><span id="liveSyncMenuText">⏸ Pause Live Sync</span></div>
-              <div class="em-menu-item" onclick="syncInboxNow()">↻ Sync Inbox</div>
-              <div class="em-menu-divider"></div>
-              <div class="em-menu-item" onclick="loadEmails()">↻ Refresh</div>
-              <div class="em-menu-item" onclick="openConnectEmailModal()">🔗 Connect / Manage Email</div>
-              <div class="em-menu-divider"></div>
-              <div class="em-menu-item" onclick="toggleLiveSync()" id="liveSyncToggleBtn">▶ Resume Live Sync</div>
+          <div class="em-hdr-right">
+            <span id="liveSyncBadge" class="live-sync-badge" onclick="toggleLiveSync()" title="Click to pause/resume live sync" style="cursor:pointer;">Live Sync ON</span>
+            <button class="em-sync-btn" title="Sync inbox now" onclick="syncInboxNow()">↻</button>
+            <button class="em-new-btn" onclick="openComposeModal()">+ New Email</button>
+            <div class="em-nav-chips">
+              <button class="em-nav-chip active" id="emNavInbox" onclick="switchEmailView('inbox',this)">Inbox <span class="em-nav-badge" id="emNavInboxCount">0</span></button>
+              <button class="em-nav-chip" id="emNavTemplates" onclick="switchEmailView('templates',this)">Templates</button>
+              <button class="em-nav-chip" id="emNavSettings" onclick="switchEmailView('settings',this)">Settings</button>
             </div>
           </div>
         </div>
@@ -14906,11 +14905,11 @@ function toggleLiveSync(){
 
   if(liveSyncEnabled){
     startLiveEmailSync();
-    if(badge) badge.textContent = "Live Sync ON";
+    if(badge){ badge.textContent = "Live Sync ON"; badge.classList.remove("paused"); badge.title = "Click to pause live sync"; }
     if(menuText) menuText.textContent = "⏸ Pause Live Sync";
   }else{
     stopLiveEmailSync(true);
-    if(badge) badge.textContent = "Live Sync OFF";
+    if(badge){ badge.textContent = "Live Sync OFF"; badge.classList.add("paused"); badge.title = "Click to resume live sync"; }
     if(menuText) menuText.textContent = "▶ Resume Live Sync";
   }
 }
