@@ -4034,10 +4034,18 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
       <svg class="sb-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>
       Orders
     </button>
-    <button id="navEmails" data-tip="Emails" onclick="showSection('emails')">
+    <button id="navEmails" data-tip="Emails" onclick="showSection('emails');setTimeout(()=>switchEmailView('inbox', document.getElementById('navSubEmailInbox')),30);toggleEmailNavGroup()" style="justify-content:space-between!important;">
       <svg class="sb-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 8l10 7 10-7"/></svg>
-      Emails
+      <span style="flex:1;text-align:left;">Emails</span>
+      <svg id="emailNavChevron" width="12" height="12" viewBox="0 0 12 12" fill="none" style="opacity:.4;transition:transform .25s ease;flex-shrink:0;">
+        <path d="M2 4.5l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
     </button>
+    <div id="emailNavGroup" class="sb-sub-group" style="display:block;">
+      <button class="sb-sub-item active" id="navSubEmailInbox"     onclick="showSection('emails');setTimeout(()=>switchEmailView('inbox', this),30)">Inbox</button>
+      <button class="sb-sub-item"        id="navSubEmailTemplates" onclick="showSection('emails');setTimeout(()=>switchEmailView('templates', this),30)">Templates</button>
+      <button class="sb-sub-item"        id="navSubEmailSettings"  onclick="showSection('emails');setTimeout(()=>switchEmailView('settings', this),30)">Settings</button>
+    </div>
 
     <div class="sb-divider"></div>
 
@@ -5419,7 +5427,11 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
             <span id="liveSyncBadge" class="live-sync-badge" onclick="toggleLiveSync()" title="Click to pause/resume live sync" style="cursor:pointer;">Live Sync ON</span>
             <button class="em-sync-btn" title="Sync inbox now" onclick="syncInboxNow()">↻</button>
             <button class="em-new-btn" onclick="openComposeModal()">+ New Email</button>
-            <div class="em-nav-chips">
+            <!-- Inbox / Templates / Settings tabs moved into the sidebar
+                 (under the Emails group), matching the Vendors pattern.
+                 Keeping the hidden Inbox button so emNavInboxCount badge
+                 reference doesn't break for code that updates it. -->
+            <div class="em-nav-chips" style="display:none;">
               <button class="em-nav-chip active" id="emNavInbox" onclick="switchEmailView('inbox',this)">Inbox <span class="em-nav-badge" id="emNavInboxCount">0</span></button>
               <button class="em-nav-chip" id="emNavTemplates" onclick="switchEmailView('templates',this)">Templates</button>
               <button class="em-nav-chip" id="emNavSettings" onclick="switchEmailView('settings',this)">Settings</button>
@@ -9253,6 +9265,21 @@ function toggleVendorNavGroup(forceOpen){
   group.style.display = open ? "none" : "block";
   if(chevron) chevron.style.transform = open ? "" : "rotate(180deg)";
   if(btn){ btn.style.background = open ? "" : "#1e293b"; btn.style.color = open ? "" : "#fff"; }
+}
+
+function toggleEmailNavGroup(forceOpen){
+  const group   = document.getElementById("emailNavGroup");
+  const chevron = document.getElementById("emailNavChevron");
+  if(!group) return;
+  // Default behavior on click: expand if collapsed, otherwise leave open
+  // (the user is clicking Emails to enter the section, not to hide nav).
+  if(forceOpen === undefined){
+    group.style.display = "block";
+    if(chevron) chevron.style.transform = "rotate(180deg)";
+    return;
+  }
+  group.style.display = forceOpen ? "block" : "none";
+  if(chevron) chevron.style.transform = forceOpen ? "rotate(180deg)" : "";
 }
 
 function showSection(section){
@@ -13456,6 +13483,16 @@ function switchEmailView(tab, btn){
   const target=document.getElementById(tabId);
   if(target) target.style.display="";
   if(btn) btn.classList.add("active");
+
+  // Sync sidebar sub-item active state (Emails group: Inbox / Templates / Settings)
+  ["navSubEmailInbox","navSubEmailTemplates","navSubEmailSettings"].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.classList.remove("active");
+  });
+  const subId = "navSubEmail"+tab.charAt(0).toUpperCase()+tab.slice(1);
+  const subEl = document.getElementById(subId);
+  if(subEl) subEl.classList.add("active");
+
   if(tab==="settings") loadEmailSettings();
   if(tab==="templates"){ loadTemplates(); loadAutoEmailState(); }
 }
