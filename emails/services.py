@@ -825,10 +825,21 @@ def build_training_system_prompt(profile, snippets, detected_context="",
         "\nQ2. CUSTOMER-PROVIDED EMAIL HANDLING: If the EMAILS THE CUSTOMER TYPED IN THEIR MESSAGE section shows: "
         "(a) email → N order(s) found → those orders are tagged [✓ VERIFIED] and you can help with them. Acknowledge them by their actual order numbers. "
         "(b) email → NO orders found → tell the customer honestly: 'I checked and couldn't find any orders associated with [their_email] in our system. Could you double-check the email you used at checkout, or share the billing postcode?' Do NOT make them feel like the system is broken — just be matter-of-fact."
-        "\nQ3. POST-VERIFICATION FULFILLMENT (very important): When verification just completed — either the customer just provided an email/postcode that matched, or they just confirmed an order belongs to them — DO NOT ask 'what can I help you with?'. "
-        "Scroll back through PRIOR CONVERSATION in this thread and find what the customer ORIGINALLY asked for (tracking, status, refund, address change, cancellation, etc.). Then ANSWER THAT directly using the now-verified order's data. "
-        "Example: customer's first message was 'I haven't received the tracking ID for order #11110' → you asked for verification → they verified → your next reply must DELIVER the tracking info (number + URL + ETA), not ask 'what can I help with?'. "
-        "The customer already told you what they need. Don't make them repeat themselves. If the original ask isn't fully answerable from the verified data, address whatever IS answerable and only ask about what's genuinely missing."
+        "\nQ3. POST-VERIFICATION FULFILLMENT (CRITICAL — read carefully): When verification just completed (customer provided matching email/postcode, or confirmed an order is theirs), DO NOT ask the customer what they want — they ALREADY told you in their first message. "
+        "Look at the CUSTOMER'S ORIGINAL OPENING REQUEST block (or the first customer message in PRIOR CONVERSATION) and ANSWER THAT request directly using the now-verified order's data. "
+        "\nBANNED phrases at this stage (NEVER use any of these — they all make the customer repeat themselves):"
+        "\n   ❌ 'What can I help you with?'"
+        "\n   ❌ 'What can I help you with regarding this order?'"
+        "\n   ❌ 'Are you looking for tracking information or have another question?'"
+        "\n   ❌ 'How can I assist you with this order?'"
+        "\n   ❌ 'Let me know what you need.'"
+        "\n   ❌ 'Is there anything specific you'd like to know?'"
+        "\nInstead, READ the original ask and DELIVER the answer:"
+        "\n   • Original ask was tracking + order has tracking → give the tracking number AND URL on its own line."
+        "\n   • Original ask was tracking + order is still 'processing' / 'on-hold' with no tracking yet → say: 'Your order is currently being prepared (placed N days ago). A tracking link will be generated and emailed to you automatically as soon as it ships. Typical fulfillment is 1–2 business days.' Do NOT ask if they want tracking — they already asked."
+        "\n   • Original ask was order status → state the actual status in plain English using the GLOSSARY."
+        "\n   • Original ask was refund / cancellation / address change → start the action and confirm next steps."
+        "\nIf the original ask is genuinely unanswerable from current data, address what IS answerable and ask only about the specific missing piece. Never punt back to a generic 'what can I help with'."
         "\nR. For [⚠️ UNVERIFIED] orders — all customer info has been REDACTED from your context for safety. "
         "You ONLY know that the order number exists in the system but does NOT belong to the sender. "
         "You DO NOT have access to the customer's name, city, country, product, total, payment status, fulfillment, tracking, or any other detail. "
@@ -1022,6 +1033,76 @@ def _normalize_subject_for_thread(subj):
     return re.sub(r"\s+", " ", s).strip()
 
 
+def _extract_first_customer_message_in_thread(email_obj, account, max_chars=600):
+    """Return the body of the customer's VERY FIRST message in this thread.
+
+    This is what the customer originally wrote when opening the conversation —
+    typically the unanswered request (e.g., "I haven't received my tracking
+    ID, please send it"). After verification rounds, the AI tends to ask
+    "what can I help you with?" because it's focused on the latest message;
+    surfacing the original ask in its own context block fixes that.
+
+    Quoted-reply blocks (lines starting with '>', "On ... wrote:" footers)
+    are stripped so we get just what the customer typed.
+    """
+    if not account:
+        return ""
+    try:
+        from .views import get_thread_contact, extract_clean_email
+    except Exception:
+        return ""
+
+    contact = (get_thread_contact(email_obj) or "").lower()
+    if not contact:
+        return ""
+
+    store_email = (getattr(account, "email", "") or "").lower()
+    cur_raw = getattr(email_obj, "raw_data", None) or {}
+    cur_thread_id = (cur_raw.get("thread_id") or "").strip()
+    cur_subject_norm = _normalize_subject_for_thread(getattr(email_obj, "subject", "") or "")
+
+    # Search prior messages oldest-first — first customer-sent message wins.
+    prior_qs = (EmailMessage.objects
+                .filter(store=email_obj.store)
+                .order_by("created_at"))
+
+    for m in prior_qs:
+        try:
+            m_contact = (get_thread_contact(m) or "").lower()
+        except Exception:
+            m_contact = ""
+        if m_contact != contact:
+            continue
+
+        m_raw = getattr(m, "raw_data", None) or {}
+        m_thread_id = (m_raw.get("thread_id") or "").strip()
+        if cur_thread_id and m_thread_id:
+            if cur_thread_id != m_thread_id:
+                continue
+        else:
+            m_subject_norm = _normalize_subject_for_thread(getattr(m, "subject", "") or "")
+            if not cur_subject_norm or not m_subject_norm or cur_subject_norm != m_subject_norm:
+                continue
+
+        m_sender = extract_clean_email(m.sender or "")
+        if m_sender == store_email:
+            continue  # support reply, not a customer message
+
+        body = (m.body or "").strip()
+        if not body:
+            continue
+        # Strip quoted-reply tail: "On <date>, ... wrote:" and lines starting with >
+        body = re.split(r"\n\s*On\s.+wrote:\s*\n", body, maxsplit=1, flags=re.IGNORECASE)[0]
+        body = "\n".join(ln for ln in body.splitlines() if not ln.lstrip().startswith(">"))
+        body = body.strip()
+        if not body:
+            continue
+        if len(body) > max_chars:
+            body = body[:max_chars].rstrip() + " …(truncated)"
+        return body
+    return ""
+
+
 def _build_thread_history_text(email_obj, account, max_messages=8, max_chars_per_msg=600):
     """
     Return a string of prior messages in the SAME conversation thread so the AI
@@ -1136,12 +1217,19 @@ def generate_ai_reply(email_obj, account=None):
     # Conversation history (so AI doesn't repeat info already shared in this thread)
     history_text = _build_thread_history_text(email_obj, account)
 
+    # Customer's FIRST message in this thread — the original ask the AI must
+    # fulfill after verification completes (instead of asking "what can I help
+    # you with?"). Surfaced separately so the AI can't miss it.
+    original_request_text = _extract_first_customer_message_in_thread(email_obj, account)
+
     # ── DEFENSE IN DEPTH: redact PII from history if any detected order is UNVERIFIED.
     # An earlier AI reply may have leaked the real customer's name/city before our
     # privacy fixes were live. Don't let the AI re-leak it now.
     pii_to_redact = _collect_pii_from_unverified_orders(detected_orders)
     if pii_to_redact and history_text:
         history_text = _redact_pii_from_text(history_text, pii_to_redact)
+    if pii_to_redact and original_request_text:
+        original_request_text = _redact_pii_from_text(original_request_text, pii_to_redact)
 
     # Customer first-name hint (avoids the AI using the wrong account name)
     # Only use a VERIFIED order's customer_name; never name from an unverified order.
@@ -1177,6 +1265,13 @@ def generate_ai_reply(email_obj, account=None):
             parts.append(corrections_block)
         if customer_first_name:
             parts.append(f"CUSTOMER'S FIRST NAME (use this in the greeting): {customer_first_name}")
+        if original_request_text and original_request_text.strip() != new_msg.strip():
+            parts.append(
+                "CUSTOMER'S ORIGINAL OPENING REQUEST IN THIS THREAD "
+                "(what they FIRST asked for — this is what you owe them an answer to "
+                "now that verification is complete; do NOT ask 'what can I help you with?'):\n\n"
+                + original_request_text
+            )
         if history_text:
             parts.append("PRIOR CONVERSATION IN THIS THREAD (oldest → newest):\n\n" + history_text)
         parts.append("CUSTOMER'S NEW MESSAGE (reply to THIS only):\n\n" + new_msg)
