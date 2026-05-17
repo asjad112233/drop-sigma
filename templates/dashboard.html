@@ -2212,7 +2212,9 @@ body.vf-light-mode .sb-toggle:hover{background:rgba(15,23,42,.12)!important;colo
 /* Controls bar (legacy — merged into em-hdr-top) */
 .em-controls-bar{display:none;}
 /* Nav chips */
-.em-nav-chips{display:flex;align-items:center;gap:5px;flex-shrink:0;}
+/* Inbox / Templates / Settings tabs moved to the sidebar — chips kept in the
+   DOM only so legacy JS that updates #emNavInboxCount won't crash. */
+.em-nav-chips{display:none!important;}
 .em-nav-chip{height:32px;padding:0 14px;border-radius:999px;border:1px solid var(--vf-line);background:var(--vf-surface);color:var(--vf-muted);font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all .15s;white-space:nowrap;}
 .em-nav-chip:hover{background:var(--vf-surface-2);color:var(--vf-text);}
 .em-nav-chip.active{background:#1a1f2e;color:#fff;border-color:#1a1f2e;}
@@ -3730,7 +3732,7 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
 .em-live-chip{display:inline-flex!important;align-items:center!important;gap:5px!important;font-size:11.5px!important;font-weight:400!important;color:var(--vf-muted)!important;}
 .em-live-dot{width:7px!important;height:7px!important;border-radius:50%!important;background:#10b981!important;box-shadow:0 0 0 2px rgba(16,185,129,.2)!important;animation:emLivePulse 2s infinite!important;flex-shrink:0!important;}
 @keyframes emLivePulse{0%,100%{box-shadow:0 0 0 2px rgba(16,185,129,.2)}50%{box-shadow:0 0 0 4px rgba(16,185,129,.08)}}
-.em-nav-chips{display:flex!important;align-items:center!important;gap:5px!important;}
+.em-nav-chips{display:none!important;}  /* hidden — moved to sidebar */
 .em-nav-chip{height:30px!important;padding:0 13px!important;border-radius:999px!important;border:1px solid var(--vf-line)!important;background:var(--vf-surface)!important;color:var(--vf-muted)!important;font-size:12px!important;font-weight:500!important;cursor:pointer!important;display:inline-flex!important;align-items:center!important;gap:5px!important;transition:all .15s!important;white-space:nowrap!important;}
 .em-nav-chip:hover{border-color:#6366f1!important;color:#6366f1!important;background:var(--vf-surface)!important;}
 .em-nav-chip.active{background:var(--vf-text,#1a1f2e)!important;border-color:var(--vf-text,#1a1f2e)!important;color:#fff!important;}
