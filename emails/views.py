@@ -2442,6 +2442,33 @@ def send_auto_status_email(order, new_status):
         logging.getLogger(__name__).error(f"send_auto_status_email failed: {e}", exc_info=True)
 
 
+# ─── Lightweight "is anything new?" poll endpoint ────────────────────────────
+# Frontend hits this every ~3 sec so the inbox UI can auto-refresh when
+# Pub/Sub saves a new email in the background. Purely a DB query — no Gmail
+# API roundtrip — so it's cheap to hit often. Returns just enough fingerprint
+# data for the frontend to decide "did anything change since last time?".
+
+@api_view(["GET"])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def latest_email_event_api(request):
+    from .models import EmailMessage
+    store_id = request.GET.get("store_id") or ""
+    qs = EmailMessage.objects.all()
+    if store_id:
+        try:
+            qs = qs.filter(store_id=int(store_id))
+        except (TypeError, ValueError):
+            return Response({"max_id": 0, "max_ts": "", "unread": 0})
+    latest = qs.order_by("-id").values("id", "created_at").first() or {}
+    unread = qs.filter(is_read=False).exclude(status__in=["replied", "closed"]).count()
+    return Response({
+        "max_id": latest.get("id") or 0,
+        "max_ts": latest["created_at"].isoformat() if latest.get("created_at") else "",
+        "unread": unread,
+    })
+
+
 # ─── Gmail real-time diagnostic ──────────────────────────────────────────────
 # Lets the tenant see whether the Pub/Sub env vars are set, whether each
 # OAuth account has an active watch, and trigger a re-registration with

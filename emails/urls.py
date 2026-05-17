@@ -35,6 +35,7 @@ from .views import (
     auto_email_toggle_api,
     gmail_push_webhook,
     gmail_watch_debug_api,
+    latest_email_event_api,
 )
 
 urlpatterns = [
@@ -116,4 +117,5 @@ urlpatterns = [
     # Real-time Gmail push (Cloud Pub/Sub)
     path("webhook/gmail-push/", gmail_push_webhook, name="gmail_push_webhook"),
     path("api/gmail-watch-debug/", gmail_watch_debug_api, name="gmail_watch_debug_api"),
+    path("api/latest-event/", latest_email_event_api, name="latest_email_event_api"),
 ]

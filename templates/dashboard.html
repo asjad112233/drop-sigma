@@ -14926,6 +14926,11 @@ function startLiveEmailSync(){
       syncInbox({silent:true, showAlert:false});
     }
   }, liveSyncSeconds * 1000);
+
+  // Also start the fast 3-sec DB poller. Pub/Sub saves new mail in the
+  // background within 1-2 sec; this poller picks that up and refreshes the
+  // UI without waiting for the slow 60-sec Gmail sync cycle.
+  startFastInboxPoller();
 }
 
 function stopLiveEmailSync(updateUi=true){
@@ -14933,10 +14938,70 @@ function stopLiveEmailSync(updateUi=true){
     clearInterval(emailLiveTimer);
     emailLiveTimer = null;
   }
+  stopFastInboxPoller();
   if(updateUi){
     updateLiveSyncStatus("Live Sync Paused", true);
   }
 }
+
+// ── WhatsApp-style fast inbox poller ───────────────────────────────────────
+// Hits a lightweight DB-only endpoint every ~3 sec. When the `max_id`
+// returned changes (Pub/Sub has saved a new email), refresh the inbox list
+// and the currently-open thread so the new message appears instantly without
+// a page refresh. Cheap on the server — no Gmail API calls, just one
+// indexed SELECT per tick.
+let _fastInboxTimer = null;
+let _fastInboxLastMaxId = null;
+const FAST_INBOX_INTERVAL_MS = 3000;
+
+function startFastInboxPoller(){
+  stopFastInboxPoller();
+  _fastInboxTimer = setInterval(fastInboxTick, FAST_INBOX_INTERVAL_MS);
+}
+
+function stopFastInboxPoller(){
+  if(_fastInboxTimer){
+    clearInterval(_fastInboxTimer);
+    _fastInboxTimer = null;
+  }
+}
+
+async function fastInboxTick(){
+  if(!liveSyncEnabled) return;
+  if(!document.getElementById("emailsSection")?.classList.contains("active")) return;
+  // Skip if tab is hidden — saves API calls when the user isn't looking.
+  if(document.hidden) return;
+
+  try{
+    const sid = selectedStoreId || "";
+    const r = await fetch(`/emails/api/latest-event/?store_id=${encodeURIComponent(sid)}`,
+                         {cache:"no-store"});
+    if(!r.ok) return;
+    const d = await r.json();
+    const maxId = d.max_id || 0;
+    if(_fastInboxLastMaxId === null){
+      // First tick — just record the baseline so we don't trigger a refresh on startup.
+      _fastInboxLastMaxId = maxId;
+      return;
+    }
+    if(maxId > _fastInboxLastMaxId){
+      _fastInboxLastMaxId = maxId;
+      // Reload the thread list. If a thread is open, reload its messages too
+      // (with keepUnread so we don't clear unread flags on the user's behalf).
+      try { await loadEmails(); } catch(e){}
+      if(typeof currentThreadContact !== "undefined" && currentThreadContact){
+        try { await openThread(currentThreadContact, {keepUnread: true}); } catch(e){}
+      }
+    }
+  }catch(e){ /* swallow — next tick will retry */ }
+}
+
+// Refresh once when the tab regains focus, so a user returning to the
+// dashboard sees current state immediately rather than waiting for the
+// next tick.
+document.addEventListener("visibilitychange", () => {
+  if(!document.hidden && _fastInboxTimer) fastInboxTick();
+});
 
 /* Collapse / expand the email header (title bar + KPI cards) so the
    thread view gets maximum vertical space. State is per-tenant local. */
