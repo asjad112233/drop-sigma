@@ -157,20 +157,27 @@ def resolve_customer_context(refs, sender_email=None, store=None):
                     _add_order(o)
             elif t == "email":
                 v_lower = v.strip().lower()
-                # Track this body-provided email for the AI context
-                if v_lower not in seen_provided:
-                    seen_provided.add(v_lower)
-                    matching_count = qs_base.filter(customer_email__iexact=v).count()
-                    provided_emails.append({
-                        "email": v_lower,
-                        "order_count": matching_count,
-                    })
                 # Orders matching an email the customer typed in the body are
                 # treated as VERIFIED — the customer is providing this email as
                 # proof of identity (in response to a verification request).
                 # Safe because lookups are scoped to the store.
-                for o in qs_base.filter(customer_email__iexact=v).order_by("-created_at")[:3]:
+                matching_qs = qs_base.filter(customer_email__iexact=v).order_by("-created_at")
+                matched_numbers = []
+                for o in matching_qs[:3]:
                     _add_order(o, verified_via_body_email=True)
+                    if o.external_order_id:
+                        matched_numbers.append(str(o.external_order_id))
+                # Track this body-provided email for the AI context — include
+                # the actual matched order numbers so the AI doesn't think
+                # "the email's order" and "the order # the customer asked
+                # about" are different orders when they're the same one.
+                if v_lower not in seen_provided:
+                    seen_provided.add(v_lower)
+                    provided_emails.append({
+                        "email": v_lower,
+                        "order_count": matching_qs.count(),
+                        "order_numbers": matched_numbers,
+                    })
             elif t == "phone":
                 digits = re.sub(r"\D", "", v)
                 if digits:
@@ -363,11 +370,14 @@ def build_context_block_for_prompt(orders, provided_emails=None):
         for pe in provided_emails:
             email = pe.get("email", "")
             cnt = pe.get("order_count", 0)
+            nums = pe.get("order_numbers") or []
             if cnt > 0:
+                nums_str = ", ".join(f"#{n}" for n in nums) if nums else ""
                 lines.append(
-                    f"  • {email} → {cnt} order(s) found in this store. "
-                    "Customer providing this email counts as VERIFICATION — orders matching this email are tagged [✓ VERIFIED] above. "
-                    "Help them with those orders."
+                    f"  • {email} → {cnt} order(s) found in this store"
+                    f"{': ' + nums_str if nums_str else ''}. "
+                    "Customer providing this email counts as VERIFICATION — these orders are tagged [✓ VERIFIED] above. "
+                    "IMPORTANT: if the order number the customer originally mentioned is in this list, they are the SAME order — do NOT tell the customer 'we found an order but it's not the one you mentioned'. Just help them with it."
                 )
             else:
                 lines.append(
