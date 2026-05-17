@@ -1107,8 +1107,9 @@ def ai_playground_api(request):
 
             resolved = resolve_customer_context(detected_refs, sender_email=sender, store=store)
             orders = resolved.get("orders") or []
+            provided_emails = resolved.get("provided_emails") or []
             matched_orders = [serialize_order_for_ai(o) for o in orders]
-            context_block = build_context_block_for_prompt(orders)
+            context_block = build_context_block_for_prompt(orders, provided_emails=provided_emails)
 
         # Inject context into system prompt if anything found
         final_system = system_prompt or "You are a professional ecommerce customer support assistant."

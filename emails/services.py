@@ -78,13 +78,33 @@ def resolve_customer_context(refs, sender_email=None, store=None):
     """
     Take extracted refs + optional sender email, look up matching Orders.
     Each order is annotated with a `_verified_sender` attribute:
-      True  → the order's customer_email matches the sender email (trusted)
-      False → no match (DO NOT share details without further verification)
-    Returns dict {orders: [...], notes: [...], sender_email_clean: str}
+      True  → trusted, AI may share full order details
+      False → not trusted, AI must NOT share details without further verification
+
+    Verification is granted in any of these cases:
+      a) The order's customer_email matches the sender's From-header email.
+      b) The customer mentioned an email in their message body that matches the
+         order's customer_email — this is the customer providing their identity
+         in reply to a verification request, so we treat orders matching that
+         email as belonging to them (multi-tenant safe: lookups are scoped to
+         the store).
+
+    Returns dict:
+      orders: [...]            — list of Order objects (max 5)
+      notes: [...]             — debug notes
+      sender_email_clean: str  — cleaned sender email
+      provided_emails: [
+        {email: str, order_count: int}
+      ] — emails the customer typed in their message body, plus how many
+          orders we found for each (whether or not they matched). Lets the
+          AI tell the customer honestly: 'I found N orders' / 'no orders
+          found for that email'.
     """
     found_orders = []
     notes = []
     seen_order_ids = set()
+    provided_emails = []
+    seen_provided = set()
 
     # Clean the sender email up-front for matching
     sender_clean = ""
@@ -92,13 +112,34 @@ def resolve_customer_context(refs, sender_email=None, store=None):
         m = re.search(r"<([^>]+)>", sender_email)
         sender_clean = (m.group(1) if m else sender_email).strip().lower()
 
-    def _add_order(o):
+    # Collect emails the customer typed in the body (excluding sender email itself)
+    body_provided_emails = set()
+    for ref in (refs or []):
+        if ref.get("type") == "email":
+            v = (ref.get("value") or "").strip().lower()
+            if v and v != sender_clean:
+                body_provided_emails.add(v)
+
+    def _add_order(o, *, verified_via_body_email=False):
         if o.id in seen_order_ids:
+            # Already added — but maybe upgrade verification status if a
+            # subsequent path (sender or body-email match) verifies it.
+            if verified_via_body_email and not getattr(o, "_verified_sender", False):
+                o._verified_sender = True
+                o._verified_via = "body_email"
             return
         seen_order_ids.add(o.id)
-        # Annotate verification status
         order_email = (o.customer_email or "").strip().lower()
-        o._verified_sender = bool(sender_clean and order_email and sender_clean == order_email)
+        sender_match = bool(sender_clean and order_email and sender_clean == order_email)
+        if sender_match:
+            o._verified_sender = True
+            o._verified_via = "sender"
+        elif verified_via_body_email:
+            o._verified_sender = True
+            o._verified_via = "body_email"
+        else:
+            o._verified_sender = False
+            o._verified_via = ""
         found_orders.append(o)
 
     qs_base = Order.objects.all()
@@ -115,8 +156,21 @@ def resolve_customer_context(refs, sender_email=None, store=None):
                 for o in qs_base.filter(external_order_id__iendswith=v)[:3]:
                     _add_order(o)
             elif t == "email":
+                v_lower = v.strip().lower()
+                # Track this body-provided email for the AI context
+                if v_lower not in seen_provided:
+                    seen_provided.add(v_lower)
+                    matching_count = qs_base.filter(customer_email__iexact=v).count()
+                    provided_emails.append({
+                        "email": v_lower,
+                        "order_count": matching_count,
+                    })
+                # Orders matching an email the customer typed in the body are
+                # treated as VERIFIED — the customer is providing this email as
+                # proof of identity (in response to a verification request).
+                # Safe because lookups are scoped to the store.
                 for o in qs_base.filter(customer_email__iexact=v).order_by("-created_at")[:3]:
-                    _add_order(o)
+                    _add_order(o, verified_via_body_email=True)
             elif t == "phone":
                 digits = re.sub(r"\D", "", v)
                 if digits:
@@ -136,7 +190,12 @@ def resolve_customer_context(refs, sender_email=None, store=None):
         except Exception as e:
             notes.append(f"sender lookup error: {e}")
 
-    return {"orders": found_orders[:5], "notes": notes, "sender_email_clean": sender_clean}
+    return {
+        "orders": found_orders[:5],
+        "notes": notes,
+        "sender_email_clean": sender_clean,
+        "provided_emails": provided_emails,
+    }
 
 
 def serialize_order_for_ai(o):
@@ -225,18 +284,24 @@ def _humanize_status(value, mapping):
     return mapping.get(key) or mapping.get(key.replace("-", "_")) or ""
 
 
-def build_context_block_for_prompt(orders):
+def build_context_block_for_prompt(orders, provided_emails=None):
     """Turn list of Order objects into a text block suitable for system prompt.
 
     DEFENSE IN DEPTH: For UNVERIFIED orders, all PII is REDACTED at this layer
     so the AI literally cannot leak it — even if it ignores the prompt rules.
     Only the order number is shown (which the customer already knows since
     they're asking about it) and the verification status.
+
+    provided_emails: optional list of {email, order_count} dicts describing
+    emails the customer typed in their message body. The AI uses this to
+    respond accurately ("I found N orders for that email" vs. "no orders
+    found for that email") instead of fixating on the originally requested
+    order number.
     """
-    if not orders:
+    if not orders and not provided_emails:
         return ""
     lines = ["DETECTED CUSTOMER CONTEXT (real data from your store):"]
-    for o in orders:
+    for o in (orders or []):
         s = serialize_order_for_ai(o)
         verified = s.get("verified_sender", False)
 
@@ -289,6 +354,27 @@ def build_context_block_for_prompt(orders):
         if s.get("days_since_order") is not None:
             line += f" · Placed: {s['days_since_order']} day(s) ago"
         lines.append(line)
+
+    # Surface what we looked up for each email the customer typed in their body.
+    # Lets the AI answer accurately instead of fixating on a single order number.
+    if provided_emails:
+        lines.append("")
+        lines.append("EMAILS THE CUSTOMER TYPED IN THEIR MESSAGE (lookup results — store-scoped):")
+        for pe in provided_emails:
+            email = pe.get("email", "")
+            cnt = pe.get("order_count", 0)
+            if cnt > 0:
+                lines.append(
+                    f"  • {email} → {cnt} order(s) found in this store. "
+                    "Customer providing this email counts as VERIFICATION — orders matching this email are tagged [✓ VERIFIED] above. "
+                    "Help them with those orders."
+                )
+            else:
+                lines.append(
+                    f"  • {email} → NO orders found in this store for this email. "
+                    "Tell the customer honestly that you couldn't locate any orders associated with that email, "
+                    "and ask them to double-check the email they used at checkout (or share the billing postcode)."
+                )
 
     # Glossary so the AI ALWAYS gets it right, even for codes not pre-translated above.
     lines.append(
@@ -721,8 +807,14 @@ def build_training_system_prompt(profile, snippets, detected_context="",
 
         "\n\n🔒 ORDER VERIFICATION RULES (CRITICAL — protects customer privacy):"
         "\nP. Each order in DETECTED CUSTOMER CONTEXT is tagged either [✓ VERIFIED] or [⚠️ UNVERIFIED]."
-        "\nQ. For [✓ VERIFIED] orders — the sender's email matches the order's customer_email, so it's THEIR order. "
+        "\nQ. For [✓ VERIFIED] orders — the sender's email matches the order's customer_email, OR the customer typed that email in their message body as proof of identity. Either way it's THEIR order. "
         "You can share full details (status, tracking, product, ETA, etc.)."
+        "\nQ1. PIVOT RULE: If the customer originally asked about Order #X and #X is ⚠️ UNVERIFIED, BUT there are other [✓ VERIFIED] orders in the context (their own orders), don't dwell on #X. "
+        "Tell them briefly that #X isn't linked to the email they're writing from, and pivot to their actual verified orders. "
+        "Example: 'I couldn't link Order #11100 to the email you provided, but I do see Order #22045 placed with that email is currently processing. Did you mean that one, or another order?'"
+        "\nQ2. CUSTOMER-PROVIDED EMAIL HANDLING: If the EMAILS THE CUSTOMER TYPED IN THEIR MESSAGE section shows: "
+        "(a) email → N order(s) found → those orders are tagged [✓ VERIFIED] and you can help with them. Acknowledge them by their actual order numbers. "
+        "(b) email → NO orders found → tell the customer honestly: 'I checked and couldn't find any orders associated with [their_email] in our system. Could you double-check the email you used at checkout, or share the billing postcode?' Do NOT make them feel like the system is broken — just be matter-of-fact."
         "\nR. For [⚠️ UNVERIFIED] orders — all customer info has been REDACTED from your context for safety. "
         "You ONLY know that the order number exists in the system but does NOT belong to the sender. "
         "You DO NOT have access to the customer's name, city, country, product, total, payment status, fulfillment, tracking, or any other detail. "
@@ -903,10 +995,29 @@ def _collect_pii_from_unverified_orders(orders):
     return pii
 
 
+def _normalize_subject_for_thread(subj):
+    """Strip Re:/Fwd: prefixes and collapse whitespace so we can compare
+    subjects to detect if two emails belong to the same conversation."""
+    s = (subj or "").strip().lower()
+    # Repeatedly strip Re:, Fwd:, Fw: prefixes (in any language variant we see)
+    for _ in range(5):
+        s2 = re.sub(r"^(re|fwd?|aw|antw)\s*:\s*", "", s, flags=re.IGNORECASE)
+        if s2 == s:
+            break
+        s = s2
+    return re.sub(r"\s+", " ", s).strip()
+
+
 def _build_thread_history_text(email_obj, account, max_messages=8, max_chars_per_msg=600):
     """
-    Return a string of prior messages in the same conversation thread so the AI
+    Return a string of prior messages in the SAME conversation thread so the AI
     can see what was already discussed and avoid repeating info.
+
+    Critical: this must NOT include messages from a different thread with the
+    same customer. Otherwise stale references (e.g., an old unverified order #)
+    leak from past conversations into a fresh email and the AI keeps
+    asking about that wrong order. Thread identity = (Gmail thread_id) OR
+    (normalized subject) — not just the contact email.
     """
     if not account:
         return ""
@@ -921,7 +1032,13 @@ def _build_thread_history_text(email_obj, account, max_messages=8, max_chars_per
 
     store_email = (getattr(account, "email", "") or "").lower()
 
-    # All prior messages for this store, excluding the current email, oldest first
+    # Identify this email's thread by Gmail thread_id (preferred) or by
+    # normalized subject. Whichever we use, prior messages must match.
+    cur_raw = getattr(email_obj, "raw_data", None) or {}
+    cur_thread_id = (cur_raw.get("thread_id") or "").strip()
+    cur_subject_norm = _normalize_subject_for_thread(getattr(email_obj, "subject", "") or "")
+
+    # All prior messages for this store + contact, excluding the current email
     prior_qs = (EmailMessage.objects
                 .filter(store=email_obj.store)
                 .exclude(id=email_obj.id)
@@ -929,13 +1046,26 @@ def _build_thread_history_text(email_obj, account, max_messages=8, max_chars_per
 
     history = []
     for m in prior_qs:
-        # Only keep messages that belong to this conversation
+        # Same contact only
         try:
             m_contact = (get_thread_contact(m) or "").lower()
         except Exception:
             m_contact = ""
         if m_contact != contact:
             continue
+
+        # Same thread only — use Gmail thread_id when both sides have one,
+        # otherwise fall back to normalized subject.
+        m_raw = getattr(m, "raw_data", None) or {}
+        m_thread_id = (m_raw.get("thread_id") or "").strip()
+        if cur_thread_id and m_thread_id:
+            if cur_thread_id != m_thread_id:
+                continue
+        else:
+            m_subject_norm = _normalize_subject_for_thread(getattr(m, "subject", "") or "")
+            # Skip if either side has no subject — we can't safely group it
+            if not cur_subject_norm or not m_subject_norm or cur_subject_norm != m_subject_norm:
+                continue
 
         m_sender = extract_clean_email(m.sender or "")
         role = "Support (you)" if m_sender == store_email else "Customer"
@@ -986,7 +1116,8 @@ def generate_ai_reply(email_obj, account=None):
         store=store,
     )
     detected_orders = resolved.get('orders') or []
-    detected_block  = build_context_block_for_prompt(detected_orders)
+    provided_emails = resolved.get('provided_emails') or []
+    detected_block  = build_context_block_for_prompt(detected_orders, provided_emails=provided_emails)
 
     # Conversation history (so AI doesn't repeat info already shared in this thread)
     history_text = _build_thread_history_text(email_obj, account)
@@ -1449,7 +1580,10 @@ def process_ai_reply_mode(email_obj, account):
             _scan = " ".join([email_obj.subject or "", email_obj.body or "", email_obj.sender or ""])
             _refs = extract_customer_refs(_scan)
             _resolved = resolve_customer_context(_refs, sender_email=email_obj.sender, store=_store)
-            _ctx = build_context_block_for_prompt(_resolved.get('orders') or [])
+            _ctx = build_context_block_for_prompt(
+                _resolved.get('orders') or [],
+                provided_emails=_resolved.get('provided_emails') or [],
+            )
 
             confidence = score_reply_confidence(
                 customer_message=email_obj.body or "",

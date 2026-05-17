@@ -10437,6 +10437,12 @@ function aisUpdateProgress(){
 
 function aisDone(){
   aisApplyToTraining();
+  /* Persist to server so the CTA stays hidden across reloads + devices. */
+  try { aitPersistToServer(); } catch(e) {}
+  /* Immediate local flag — hides the CTA before the server round-trip lands. */
+  try { localStorage.setItem('dropsigma_ais_completed', '1'); } catch(e) {}
+  const cta = document.getElementById('aisCta');
+  if(cta) cta.style.display = 'none';
   const chat = document.getElementById('aisChat');
   const ess = Object.keys(aisAnswers).filter(k => AIS_QUESTIONS.find(x => x.fid === k)?.tier === 'essential').length;
   const rec = Object.keys(aisAnswers).filter(k => AIS_QUESTIONS.find(x => x.fid === k)?.tier === 'recommended').length;
@@ -10448,6 +10454,26 @@ function aisDone(){
   d.innerHTML = `<div class="ais-avatar">AI</div><div><div class="ais-body">🎉 <b>All done!</b> I've populated <b>${filledCount} field${filledCount !== 1 ? 's' : ''}</b> in your AI Training Studio.<br><br>📊 <b>${accuracy}%</b> AI accuracy unlocked<br>• ${ess}/12 essential · ${rec}/10 recommended · ${adv}/3 advanced</div><div class="ais-meta">Drop Sigma AI · just now</div><div class="ais-chips" style="margin-top:10px"><button class="ais-chip" onclick="aisClose();showSection('aiTraining')">✨ Open AI Training Studio →</button><button class="ais-chip" onclick="aisClose()">Back to dashboard</button></div></div>`;
   chat.appendChild(d);
   chat.scrollTop = chat.scrollHeight;
+}
+
+/* Hide the "Setup your AI" CTA on the Overview if the tenant has already
+   completed it (wizard finished OR they've filled in the Training Studio
+   profile directly). Checks the local flag first (instant), then the server
+   profile (truth) so the CTA stays hidden after reload / on another device. */
+async function aisHideCtaIfComplete(){
+  const cta = document.getElementById('aisCta');
+  if(!cta) return;
+  try { if(localStorage.getItem('dropsigma_ais_completed') === '1'){ cta.style.display = 'none'; return; } } catch(e) {}
+  try {
+    const r = await fetch('/emails/api/ai-training/profile/');
+    const d = await r.json();
+    const p = d && d.profile;
+    /* "Complete enough" = the AI has a business_name to anchor its identity. */
+    if(p && (p.business_name || '').trim()){
+      cta.style.display = 'none';
+      try { localStorage.setItem('dropsigma_ais_completed', '1'); } catch(e) {}
+    }
+  } catch(e) {}
 }
 
 /* Populate AI Training Studio with wizard answers */
@@ -10571,6 +10597,10 @@ document.addEventListener('keydown', function(e){
 });
 
 async function loadOverview(){
+  /* Hide the "Setup your AI" CTA if this tenant has already completed it
+     (wizard finished or Training Studio populated). Fire-and-forget — the
+     CTA stays visible until we know for sure. */
+  try { aisHideCtaIfComplete(); } catch(e) {}
   try{
     // Header
     const days = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
