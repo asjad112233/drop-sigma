@@ -2514,12 +2514,19 @@ def gmail_watch_debug_api(request):
             "expiration": a.gmail_watch_expiration.isoformat() if a.gmail_watch_expiration else "(unset)",
             "has_refresh_token": bool(a.oauth_refresh_token),
         })
+    # Snapshot recent webhook events (per-worker — only what this gunicorn
+    # worker has seen). Helps tell us whether Pub/Sub is reaching us at all.
+    with _WEBHOOK_EVENTS_LOCK:
+        recent_events = list(_WEBHOOK_EVENTS[-30:])
+
     return Response({
         "config_loaded": bool(topic_env and sa_env),
         "topic_env": topic_env or "(not set)",
         "sa_env": sa_env or "(not set)",
         "audience_env": audience_env or "(default to push URL)",
         "accounts": rows,
+        "recent_webhook_events": recent_events,
+        "recent_webhook_event_count": len(recent_events),
         "usage_hint": "POST {\"email\": \"your@gmail.com\"} to manually start the watch and see the exact error.",
     })
 
@@ -2532,6 +2539,23 @@ def gmail_watch_debug_api(request):
 # history fetch. If something fails we log and ack — Gmail's next change
 # notification (or the daily cron) will eventually reconcile state.
 
+# In-memory ring buffer for the last N webhook events. Lets the diagnostic
+# endpoint show whether Pub/Sub is actually reaching us — invaluable when
+# real-time isn't working and you don't have shell access to read logs.
+# NOTE: per-worker (gunicorn workers each have their own buffer), so on a
+# 2-worker deploy you may only see ~50% of events.
+import threading as _threading
+_WEBHOOK_EVENTS_LOCK = _threading.Lock()
+_WEBHOOK_EVENTS = []
+_WEBHOOK_EVENTS_MAX = 50
+
+def _record_webhook_event(event):
+    with _WEBHOOK_EVENTS_LOCK:
+        _WEBHOOK_EVENTS.append(event)
+        if len(_WEBHOOK_EVENTS) > _WEBHOOK_EVENTS_MAX:
+            del _WEBHOOK_EVENTS[: len(_WEBHOOK_EVENTS) - _WEBHOOK_EVENTS_MAX]
+
+
 @csrf_exempt
 @api_view(["POST"])
 @authentication_classes([])
@@ -2542,6 +2566,12 @@ def gmail_push_webhook(request):
     import logging
     log = logging.getLogger(__name__)
 
+    event = {
+        "ts": timezone.now().isoformat(),
+        "auth_header_present": bool(request.META.get("HTTP_AUTHORIZATION", "")),
+        "stage": "received",
+    }
+
     # 1. Verify the request is actually from Google Pub/Sub. Pub/Sub signs the
     # JWT with the service account configured on the push subscription. We
     # verify (a) signature, (b) the email claim matches our SA.
@@ -2550,6 +2580,8 @@ def gmail_push_webhook(request):
     if expected_sa:
         auth_header = request.META.get("HTTP_AUTHORIZATION", "")
         if not auth_header.startswith("Bearer "):
+            event["stage"] = "rejected_no_bearer"
+            _record_webhook_event(event)
             return Response({"error": "missing bearer"}, status=401)
         bearer = auth_header[len("Bearer "):].strip()
         try:
@@ -2562,10 +2594,18 @@ def gmail_push_webhook(request):
             )
         except Exception as e:
             log.warning("gmail-push: JWT verify failed: %s", e)
+            event["stage"] = "rejected_jwt_invalid"
+            event["error"] = str(e)[:300]
+            _record_webhook_event(event)
             return Response({"error": "invalid token"}, status=401)
-        if (claims.get("email") or "").lower() != expected_sa or not claims.get("email_verified"):
+        token_email = (claims.get("email") or "").lower()
+        event["token_email"] = token_email
+        if token_email != expected_sa or not claims.get("email_verified"):
             log.warning("gmail-push: unexpected token email %s", claims.get("email"))
+            event["stage"] = "rejected_wrong_principal"
+            _record_webhook_event(event)
             return Response({"error": "wrong principal"}, status=401)
+        event["stage"] = "jwt_ok"
 
     # 2. Decode the Pub/Sub envelope. Gmail watch publishes:
     #    {"emailAddress": "user@example.com", "historyId": "1234"}
@@ -2573,21 +2613,31 @@ def gmail_push_webhook(request):
     try:
         payload = _json.loads(request.body or b"{}")
     except Exception:
-        return Response({"ok": True})  # malformed — ack so Pub/Sub stops retrying
+        event["stage"] = "ack_malformed_body"
+        _record_webhook_event(event)
+        return Response({"ok": True})
 
     message = (payload.get("message") or {}) if isinstance(payload, dict) else {}
     data_b64 = message.get("data") or ""
     if not data_b64:
+        event["stage"] = "ack_empty_data"
+        _record_webhook_event(event)
         return Response({"ok": True})
     try:
         decoded = base64.b64decode(data_b64).decode("utf-8", errors="ignore")
         notification = _json.loads(decoded)
     except Exception:
+        event["stage"] = "ack_undecodable"
+        _record_webhook_event(event)
         return Response({"ok": True})
 
     email_address = (notification.get("emailAddress") or "").strip().lower()
     new_history_id = notification.get("historyId")
+    event["email"] = email_address
+    event["history_id"] = str(new_history_id) if new_history_id else None
     if not email_address or not new_history_id:
+        event["stage"] = "ack_no_email_or_history"
+        _record_webhook_event(event)
         return Response({"ok": True})
 
     # 3. Find the EmailAccount across all stores. (Multi-tenant safe — each
@@ -2600,15 +2650,22 @@ def gmail_push_webhook(request):
     ).first()
     if not account:
         log.info("gmail-push: no account for %s — acking", email_address)
+        event["stage"] = "ack_no_account"
+        _record_webhook_event(event)
         return Response({"ok": True})
 
     # 4. Process the history delta. Errors are swallowed so we always ack.
     try:
         from .services import process_gmail_history
         saved = process_gmail_history(account, new_history_id)
+        event["stage"] = "processed"
+        event["saved_count"] = saved
         if saved:
             log.info("gmail-push: %s ingested %d new message(s)", email_address, saved)
     except Exception as e:
         log.error("gmail-push: process_gmail_history failed for %s: %s", email_address, e, exc_info=True)
+        event["stage"] = "ack_process_failed"
+        event["error"] = str(e)[:300]
 
+    _record_webhook_event(event)
     return Response({"ok": True}, status=200)
