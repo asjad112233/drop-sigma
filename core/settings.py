@@ -207,3 +207,9 @@ WOOCOMMERCE_BASE_URL = os.getenv("WOOCOMMERCE_BASE_URL", "")
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
 GOOGLE_OAUTH_REDIRECT_URI = os.getenv("GOOGLE_OAUTH_REDIRECT_URI", "http://127.0.0.1:8000/emails/oauth/callback/")
+
+# Gmail real-time push via Cloud Pub/Sub. When these are unset the system
+# silently falls back to the existing 60s polling.
+GMAIL_PUBSUB_TOPIC = os.getenv("GMAIL_PUBSUB_TOPIC", "")  # e.g. projects/drop-sigma/topics/gmail-incoming
+GMAIL_PUBSUB_SA    = os.getenv("GMAIL_PUBSUB_SA", "")     # e.g. gmail-push-sa@drop-sigma.iam.gserviceaccount.com
+GMAIL_PUBSUB_AUDIENCE = os.getenv("GMAIL_PUBSUB_AUDIENCE", "")  # optional; defaults to push endpoint URL

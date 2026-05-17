@@ -22,6 +22,12 @@ class EmailAccount(models.Model):
     auth_type = models.CharField(max_length=20, default="password")  # 'password' or 'oauth'
     oauth_refresh_token = models.TextField(blank=True, default="")
 
+    # Gmail real-time push (Pub/Sub) — users.watch() bookkeeping.
+    # history_id = last Gmail historyId we processed (for incremental fetch).
+    # expiration = when the current watch lapses (Gmail caps watches at 7 days).
+    gmail_watch_history_id = models.CharField(max_length=64, blank=True, default="")
+    gmail_watch_expiration = models.DateTimeField(null=True, blank=True)
+
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

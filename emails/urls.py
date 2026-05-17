@@ -33,6 +33,7 @@ from .views import (
     template_sample_data_api,
     set_category_default_api,
     auto_email_toggle_api,
+    gmail_push_webhook,
 )
 
 urlpatterns = [
@@ -110,4 +111,7 @@ urlpatterns = [
     # Gmail OAuth2
     path("oauth/start/", gmail_oauth_start_api, name="gmail_oauth_start"),
     path("oauth/callback/", gmail_oauth_callback, name="gmail_oauth_callback"),
+
+    # Real-time Gmail push (Cloud Pub/Sub)
+    path("webhook/gmail-push/", gmail_push_webhook, name="gmail_push_webhook"),
 ]

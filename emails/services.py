@@ -2210,17 +2210,94 @@ def _gmail_api_get_access_token(account):
     return access_token
 
 
-def _sync_gmail_api(account, store):
-    """Sync inbox using Gmail HTTP API (for OAuth accounts)."""
+def _save_one_gmail_message(account, store, msg_id, access_token):
+    """Fetch one Gmail message by ID and save it as an EmailMessage. Idempotent
+    via gmail_uid uniqueness check. Returns the EmailMessage or None if skipped."""
     import base64
     from email import message_from_bytes
 
+    # Already saved? Skip.
+    if EmailMessage.objects.filter(store=store, gmail_uid=msg_id).exists():
+        return None
+
+    headers = {"Authorization": f"Bearer {access_token}"}
+    base_url = "https://gmail.googleapis.com/gmail/v1/users/me"
+    msg_resp = _requests.get(
+        f"{base_url}/messages/{msg_id}",
+        headers=headers,
+        params={"format": "raw"},
+        timeout=15,
+    )
+    if not msg_resp.ok:
+        return None
+
+    msg_data = msg_resp.json()
+    raw_b64 = msg_data.get("raw", "")
+    raw_bytes = base64.urlsafe_b64decode(raw_b64 + "==")
+
+    label_ids = msg_data.get("labelIds", [])
+    is_read = "UNREAD" not in label_ids
+
+    msg = message_from_bytes(raw_bytes)
+    subject = clean_text(msg.get("Subject"))
+    sender = clean_text(msg.get("From"))
+    recipient = clean_text(msg.get("To")) or account.email
+    body = extract_body(msg)
+    body_html = extract_body_html(msg)
+
+    # Skip messages WE sent — Gmail's "watch" notifies on every label change,
+    # including our own outgoing replies. We don't want to ingest those as
+    # customer emails and trigger AI on them.
+    from .views import extract_clean_email as _xce
+    sender_clean = (_xce(sender) or "").lower()
+    account_email_clean = (account.email or "").strip().lower()
+    if sender_clean and account_email_clean and sender_clean == account_email_clean:
+        return None
+    if "SENT" in label_ids and "INBOX" not in label_ids:
+        return None
+
+    category = classify_email(subject, body)
+    linked_order = find_order_from_email(store, subject, body)
+
+    rfc_message_id = (msg.get("Message-ID") or "").strip()
+    gmail_thread_id = msg_data.get("threadId") or ""
+
+    email_obj = EmailMessage.objects.create(
+        store=store,
+        order=linked_order,
+        sender=sender,
+        recipient=recipient,
+        subject=subject,
+        body=body,
+        body_html=body_html,
+        status="drafted",
+        category=category,
+        is_read=is_read,
+        gmail_uid=msg_id,
+        raw_data={
+            "source": "gmail_api",
+            "connected_email": account.email,
+            "gmail_uid": msg_id,
+            "is_read": is_read,
+            "message_id": rfc_message_id,
+            "thread_id": gmail_thread_id,
+            "references": (msg.get("References") or "").strip(),
+        }
+    )
+
+    save_attachments(email_obj, msg)
+    process_ai_reply_mode(email_obj, account)
+    email_obj.save()
+    return email_obj
+
+
+def _sync_gmail_api(account, store):
+    """Sync inbox using Gmail HTTP API (for OAuth accounts) — list + per-message."""
     access_token = _gmail_api_get_access_token(account)
     headers = {"Authorization": f"Bearer {access_token}"}
     base_url = "https://gmail.googleapis.com/gmail/v1/users/me"
     fetch_limit = max(10, min(account.fetch_limit or 30, 100))
 
-    # List messages in INBOX
     list_resp = _requests.get(
         f"{base_url}/messages",
         headers=headers,
@@ -2235,75 +2312,164 @@ def _sync_gmail_api(account, store):
 
     for msg_ref in messages:
         msg_id = msg_ref["id"]
-
-        # Check already saved (use gmail_uid = message id)
-        if EmailMessage.objects.filter(store=store, gmail_uid=msg_id).exists():
-            continue
-
-        # Fetch full message in RAW format
-        msg_resp = _requests.get(
-            f"{base_url}/messages/{msg_id}",
-            headers=headers,
-            params={"format": "raw"},
-            timeout=15,
-        )
-        if not msg_resp.ok:
-            continue
-
-        msg_data = msg_resp.json()
-        raw_b64 = msg_data.get("raw", "")
-        raw_bytes = base64.urlsafe_b64decode(raw_b64 + "==")
-
-        label_ids = msg_data.get("labelIds", [])
-        is_read = "UNREAD" not in label_ids
-
-        msg = message_from_bytes(raw_bytes)
-        subject = clean_text(msg.get("Subject"))
-        sender = clean_text(msg.get("From"))
-        recipient = clean_text(msg.get("To")) or account.email
-        body = extract_body(msg)
-        body_html = extract_body_html(msg)
-
-        category = classify_email(subject, body)
-        linked_order = find_order_from_email(store, subject, body)
-
-        # Capture RFC Message-ID + Gmail threadId so AI auto-reply can thread properly
-        rfc_message_id = (msg.get("Message-ID") or "").strip()
-        gmail_thread_id = msg_data.get("threadId") or ""
-
-        email_obj = EmailMessage.objects.create(
-            store=store,
-            order=linked_order,
-            sender=sender,
-            recipient=recipient,
-            subject=subject,
-            body=body,
-            body_html=body_html,
-            status="drafted",
-            category=category,
-            is_read=is_read,
-            gmail_uid=msg_id,
-            raw_data={
-                "source": "gmail_api",
-                "connected_email": account.email,
-                "gmail_uid": msg_id,
-                "is_read": is_read,
-                "message_id": rfc_message_id,
-                "thread_id": gmail_thread_id,
-                "references": (msg.get("References") or "").strip(),
-            }
-        )
-
-        save_attachments(email_obj, msg)
-
-        process_ai_reply_mode(email_obj, account)
-        email_obj.save()
-
-        saved_count += 1
+        if _save_one_gmail_message(account, store, msg_id, access_token) is not None:
+            saved_count += 1
 
     account.last_synced = timezone.now()
     account.save(update_fields=["last_synced"])
     return saved_count
+
+
+# ─── Gmail real-time push (Pub/Sub) helpers ───────────────────────────────────
+# `users.watch()` tells Gmail to publish to our Pub/Sub topic when this mailbox
+# changes. Gmail then posts to our /emails/webhook/gmail-push/ endpoint within
+# 1-2 seconds. The watch lasts up to 7 days, so we renew daily via a cron.
+
+def start_gmail_watch(account):
+    """Register a Gmail watch for this OAuth account. Saves the initial
+    historyId + expiration onto the EmailAccount. Returns (ok: bool, info)."""
+    if getattr(account, 'auth_type', '') != 'oauth' or not account.oauth_refresh_token:
+        return False, "not an OAuth account"
+
+    topic = getattr(settings, 'GMAIL_PUBSUB_TOPIC', '') or os.getenv("GMAIL_PUBSUB_TOPIC", "")
+    if not topic:
+        return False, "GMAIL_PUBSUB_TOPIC env not set"
+
+    try:
+        access_token = _gmail_api_get_access_token(account)
+    except Exception as e:
+        return False, f"token refresh failed: {e}"
+
+    url = "https://gmail.googleapis.com/gmail/v1/users/me/watch"
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "topicName": topic,
+        "labelIds": ["INBOX"],
+        "labelFilterAction": "include",
+    }
+    try:
+        r = _requests.post(url, headers=headers, json=payload, timeout=15)
+    except Exception as e:
+        return False, f"watch request failed: {e}"
+
+    if not r.ok:
+        return False, f"watch HTTP {r.status_code}: {r.text[:300]}"
+
+    data = r.json()
+    history_id = str(data.get("historyId") or "")
+    exp_ms = int(data.get("expiration") or 0)
+    from datetime import datetime, timezone as _dttz
+    expiration_dt = (
+        datetime.fromtimestamp(exp_ms / 1000.0, tz=_dttz.utc) if exp_ms else None
+    )
+    account.gmail_watch_history_id = history_id
+    account.gmail_watch_expiration = expiration_dt
+    account.save(update_fields=["gmail_watch_history_id", "gmail_watch_expiration"])
+    return True, {"historyId": history_id, "expiration": expiration_dt.isoformat() if expiration_dt else None}
+
+
+def stop_gmail_watch(account):
+    """Stop Gmail watch for this account (e.g. when user disconnects)."""
+    if getattr(account, 'auth_type', '') != 'oauth' or not account.oauth_refresh_token:
+        return False
+    try:
+        access_token = _gmail_api_get_access_token(account)
+    except Exception:
+        return False
+    try:
+        _requests.post(
+            "https://gmail.googleapis.com/gmail/v1/users/me/stop",
+            headers={"Authorization": f"Bearer {access_token}"},
+            timeout=10,
+        )
+    except Exception:
+        pass
+    account.gmail_watch_history_id = ""
+    account.gmail_watch_expiration = None
+    account.save(update_fields=["gmail_watch_history_id", "gmail_watch_expiration"])
+    return True
+
+
+def process_gmail_history(account, new_history_id):
+    """Called when Pub/Sub notifies us this mailbox changed. Walks Gmail history
+    from the last processed historyId to the new one and saves any new messages.
+    Idempotent — already-saved messages are skipped via gmail_uid."""
+    if getattr(account, 'auth_type', '') != 'oauth' or not account.oauth_refresh_token:
+        return 0
+
+    store = account.store
+    if not store:
+        return 0
+
+    try:
+        access_token = _gmail_api_get_access_token(account)
+    except Exception as e:
+        print(f"[gmail-push] token refresh failed for {account.email}: {e}")
+        return 0
+
+    start_id = account.gmail_watch_history_id or str(new_history_id)
+    base_url = "https://gmail.googleapis.com/gmail/v1/users/me"
+    headers = {"Authorization": f"Bearer {access_token}"}
+
+    saved = 0
+    page_token = None
+    seen_msg_ids = set()
+    safety_pages = 0
+
+    while True:
+        params = {
+            "startHistoryId": start_id,
+            "historyTypes": "messageAdded",
+            "labelId": "INBOX",
+        }
+        if page_token:
+            params["pageToken"] = page_token
+        try:
+            r = _requests.get(f"{base_url}/history", headers=headers, params=params, timeout=15)
+        except Exception as e:
+            print(f"[gmail-push] history.list failed for {account.email}: {e}")
+            break
+
+        if r.status_code == 404:
+            # Old historyId expired (Gmail keeps ~7 days). Fall back to a
+            # bounded inbox sync so we don't miss recent mail.
+            print(f"[gmail-push] history expired for {account.email}, falling back to bounded sync")
+            try:
+                saved += _sync_gmail_api(account, store)
+            except Exception as e:
+                print(f"[gmail-push] fallback sync failed: {e}")
+            break
+
+        if not r.ok:
+            print(f"[gmail-push] history.list HTTP {r.status_code} for {account.email}: {r.text[:200]}")
+            break
+
+        data = r.json()
+        for item in data.get("history", []) or []:
+            for added in item.get("messagesAdded", []) or []:
+                msg_id = (added.get("message") or {}).get("id")
+                if not msg_id or msg_id in seen_msg_ids:
+                    continue
+                seen_msg_ids.add(msg_id)
+                try:
+                    if _save_one_gmail_message(account, store, msg_id, access_token) is not None:
+                        saved += 1
+                except Exception as e:
+                    print(f"[gmail-push] save msg {msg_id} failed: {e}")
+
+        page_token = data.get("nextPageToken")
+        safety_pages += 1
+        if not page_token or safety_pages > 20:
+            break
+
+    # Advance the cursor so the next push starts from here.
+    account.gmail_watch_history_id = str(new_history_id)
+    account.last_synced = timezone.now()
+    account.save(update_fields=["gmail_watch_history_id", "last_synced"])
+    return saved
 
 
 def sync_gmail_inbox(store_id=2):

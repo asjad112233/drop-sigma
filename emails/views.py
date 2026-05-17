@@ -418,7 +418,7 @@ def gmail_oauth_callback(request):
         return _redirect("/dashboard/?gmail_error=store_not_found")
 
     try:
-        EmailAccount.objects.update_or_create(
+        account, _created = EmailAccount.objects.update_or_create(
             store=store,
             email=email,
             defaults={
@@ -435,6 +435,17 @@ def gmail_oauth_callback(request):
     except Exception as exc:
         logger.error("Gmail OAuth save account failed: %s", exc)
         return _redirect("/dashboard/?gmail_error=save_failed")
+
+    # Register the Gmail watch so push notifications flow into our webhook
+    # within seconds of any new email. Best-effort — connection still succeeds
+    # even if the watch fails (the daily renewal cron will retry).
+    try:
+        from .services import start_gmail_watch
+        ok, info = start_gmail_watch(account)
+        if not ok:
+            logger.warning("Gmail watch start failed for %s: %s", account.email, info)
+    except Exception as exc:
+        logger.warning("Gmail watch start raised for %s: %s", account.email, exc)
 
     return _redirect("/dashboard/?gmail_connected=1")
 
@@ -2429,3 +2440,93 @@ def send_auto_status_email(order, new_status):
     except Exception as e:
         import logging
         logging.getLogger(__name__).error(f"send_auto_status_email failed: {e}", exc_info=True)
+
+
+# ─── Gmail real-time push webhook ────────────────────────────────────────────
+# Pub/Sub POSTs here within ~1-2 sec of any Gmail mailbox change for accounts
+# we've registered via users.watch(). The webhook MUST always return 2xx
+# quickly — Pub/Sub retries 4xx/5xx and a stuck handler creates a notification
+# storm. We do the minimal work synchronously: verify, decode, kick off
+# history fetch. If something fails we log and ack — Gmail's next change
+# notification (or the daily cron) will eventually reconcile state.
+
+@csrf_exempt
+@api_view(["POST"])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def gmail_push_webhook(request):
+    import base64
+    import json as _json
+    import logging
+    log = logging.getLogger(__name__)
+
+    # 1. Verify the request is actually from Google Pub/Sub. Pub/Sub signs the
+    # JWT with the service account configured on the push subscription. We
+    # verify (a) signature, (b) the email claim matches our SA.
+    expected_sa = (getattr(settings, 'GMAIL_PUBSUB_SA', '')
+                   or os.getenv("GMAIL_PUBSUB_SA", "")).strip().lower()
+    if expected_sa:
+        auth_header = request.META.get("HTTP_AUTHORIZATION", "")
+        if not auth_header.startswith("Bearer "):
+            return Response({"error": "missing bearer"}, status=401)
+        bearer = auth_header[len("Bearer "):].strip()
+        try:
+            from google.oauth2 import id_token
+            from google.auth.transport import requests as g_requests
+            audience = (getattr(settings, 'GMAIL_PUBSUB_AUDIENCE', '')
+                        or os.getenv("GMAIL_PUBSUB_AUDIENCE", "")).strip() or None
+            claims = id_token.verify_oauth2_token(
+                bearer, g_requests.Request(), audience=audience,
+            )
+        except Exception as e:
+            log.warning("gmail-push: JWT verify failed: %s", e)
+            return Response({"error": "invalid token"}, status=401)
+        if (claims.get("email") or "").lower() != expected_sa or not claims.get("email_verified"):
+            log.warning("gmail-push: unexpected token email %s", claims.get("email"))
+            return Response({"error": "wrong principal"}, status=401)
+
+    # 2. Decode the Pub/Sub envelope. Gmail watch publishes:
+    #    {"emailAddress": "user@example.com", "historyId": "1234"}
+    # (base64-encoded in message.data).
+    try:
+        payload = _json.loads(request.body or b"{}")
+    except Exception:
+        return Response({"ok": True})  # malformed — ack so Pub/Sub stops retrying
+
+    message = (payload.get("message") or {}) if isinstance(payload, dict) else {}
+    data_b64 = message.get("data") or ""
+    if not data_b64:
+        return Response({"ok": True})
+    try:
+        decoded = base64.b64decode(data_b64).decode("utf-8", errors="ignore")
+        notification = _json.loads(decoded)
+    except Exception:
+        return Response({"ok": True})
+
+    email_address = (notification.get("emailAddress") or "").strip().lower()
+    new_history_id = notification.get("historyId")
+    if not email_address or not new_history_id:
+        return Response({"ok": True})
+
+    # 3. Find the EmailAccount across all stores. (Multi-tenant safe — each
+    # connected Gmail address is unique to one tenant's store.)
+    from .models import EmailAccount
+    account = EmailAccount.objects.filter(
+        email__iexact=email_address,
+        auth_type="oauth",
+        is_active=True,
+    ).first()
+    if not account:
+        log.info("gmail-push: no account for %s — acking", email_address)
+        return Response({"ok": True})
+
+    # 4. Process the history delta. Errors are swallowed so we always ack.
+    try:
+        from .services import process_gmail_history
+        saved = process_gmail_history(account, new_history_id)
+        if saved:
+            log.info("gmail-push: %s ingested %d new message(s)", email_address, saved)
+    except Exception as e:
+        log.error("gmail-push: process_gmail_history failed for %s: %s", email_address, e, exc_info=True)
+
+    return Response({"ok": True}, status=200)
