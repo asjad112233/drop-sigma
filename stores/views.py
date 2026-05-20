@@ -498,7 +498,7 @@ def store_health_api(request, store_id):
 
 
 # 🔥 DELETE STORE
-@api_view(["POST"])
+@api_view(["DELETE", "POST"])  # POST kept for backwards-compat with old frontend
 @permission_classes([AllowAny])
 def delete_store_api(request, store_id):
     store = get_object_or_404(Store, id=store_id)

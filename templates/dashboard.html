@@ -4412,6 +4412,7 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
 
       <!-- ★ AI SETUP CTA ★ -->
       <div id="aisCta" style="background:linear-gradient(135deg,#7c3aed 0%,#6366f1 50%,#06b6d4 100%);color:#fff;border-radius:20px;padding:22px 26px;margin-bottom:22px;display:flex;align-items:center;justify-content:space-between;gap:20px;box-shadow:0 18px 50px rgba(124,58,237,.28);position:relative;overflow:hidden;flex-wrap:wrap;">
+        <button onclick="aisDismissCta()" title="Dismiss this card" aria-label="Dismiss" style="position:absolute;top:10px;right:14px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.25);color:#fff;width:26px;height:26px;border-radius:50%;cursor:pointer;font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center;z-index:3;font-family:inherit;">×</button>
         <div style="position:absolute;right:-40px;top:-40px;width:200px;height:200px;background:radial-gradient(circle,rgba(255,255,255,.18),transparent 60%);border-radius:50%;pointer-events:none;"></div>
         <div style="display:flex;align-items:center;gap:16px;position:relative;z-index:2;flex:1;min-width:280px;">
           <div style="width:52px;height:52px;border-radius:14px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:24px;border:1px solid rgba(255,255,255,.25);flex-shrink:0;">🪄</div>
@@ -4958,6 +4959,10 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
           </select>
           <select id="orderVendorFilter" onchange="renderPremiumOrders()"><option value="all">All Vendors</option></select>
           <select id="topVendorAssignSelect"><option value="">Assign Vendor…</option></select>
+          <label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#475569;font-weight:600;cursor:pointer;padding:0 6px;" title="Permanently assign this product to the vendor — future orders for the same product auto-route.">
+            <input type="checkbox" id="topPermanentAssign" style="width:14px;height:14px;accent-color:#6366f1;cursor:pointer;">
+            Permanent
+          </label>
           <button class="btn green" onclick="assignVendorFromTopBar()">Assign</button>
         </div>
       </div>
@@ -5709,7 +5714,17 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
 
                 <button class="em-btn-soft" onclick="openLinkedOrderFromEmail()" title="Linked Order">📦 Order</button>
                 <button class="em-btn-dark" onclick="generateEmailDraft()" title="Generate AI draft">✦ Draft</button>
-                <button class="em-icon-btn-sm" title="More options">···</button>
+                <div class="em-more-wrap" id="emMoreWrap" style="position:relative;">
+                  <button class="em-icon-btn-sm" id="emMoreBtn" title="More options" onclick="toggleEmailMoreMenu(event)">···</button>
+                  <div id="emMoreMenu" style="display:none;position:absolute;right:0;top:100%;margin-top:6px;background:#fff;border:1px solid var(--vf-line);border-radius:12px;padding:6px;min-width:200px;box-shadow:0 10px 30px rgba(15,23,42,.12);z-index:200;">
+                    <button class="em-sp-item" style="width:100%;text-align:left;background:none;border:none;font-family:inherit;font-size:13px;padding:8px 12px;border-radius:8px;cursor:pointer;color:#1e293b;" onclick="emMoreAction('refresh')">🔄 Refresh thread</button>
+                    <button class="em-sp-item" style="width:100%;text-align:left;background:none;border:none;font-family:inherit;font-size:13px;padding:8px 12px;border-radius:8px;cursor:pointer;color:#1e293b;" onclick="emMoreAction('copy')">📋 Copy thread link</button>
+                    <button class="em-sp-item" style="width:100%;text-align:left;background:none;border:none;font-family:inherit;font-size:13px;padding:8px 12px;border-radius:8px;cursor:pointer;color:#1e293b;" onclick="emMoreAction('toggle_read')">📬 Toggle read/unread</button>
+                    <button class="em-sp-item" style="width:100%;text-align:left;background:none;border:none;font-family:inherit;font-size:13px;padding:8px 12px;border-radius:8px;cursor:pointer;color:#1e293b;" onclick="emMoreAction('print')">🖨️ Print thread</button>
+                    <div style="height:1px;background:var(--vf-line);margin:4px 0;"></div>
+                    <button class="em-sp-item" style="width:100%;text-align:left;background:none;border:none;font-family:inherit;font-size:13px;padding:8px 12px;border-radius:8px;cursor:pointer;color:#dc2626;" onclick="emMoreAction('archive')">🗄️ Archive thread</button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -5723,10 +5738,29 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
           <div class="em-composer">
             <div class="em-composer-toolbar">
               <span id="replyToLabel">Reply</span>
-              <button class="em-rt-btn" onclick="void(0)" title="Add CC/BCC recipients" style="padding:3px 9px;border-radius:6px;border:1px solid var(--vf-line);background:var(--vf-surface-2,#f8fafc);font-size:11px;font-weight:500;color:var(--vf-muted);cursor:pointer;">CC / BCC</button>
-              <button class="em-rt-btn" onclick="void(0)" title="Add internal note" style="padding:3px 9px;border-radius:6px;border:1px solid var(--vf-line);background:var(--vf-surface-2,#f8fafc);font-size:11px;font-weight:500;color:var(--vf-muted);cursor:pointer;">Note</button>
+              <button id="replyCcBccToggle" class="em-rt-btn" onclick="toggleReplyCcBcc()" title="Add CC/BCC recipients" style="padding:3px 9px;border-radius:6px;border:1px solid var(--vf-line);background:var(--vf-surface-2,#f8fafc);font-size:11px;font-weight:500;color:var(--vf-muted);cursor:pointer;">CC / BCC</button>
+              <button id="replyNoteToggle" class="em-rt-btn" onclick="toggleReplyNote()" title="Add internal note (only visible to your team)" style="padding:3px 9px;border-radius:6px;border:1px solid var(--vf-line);background:var(--vf-surface-2,#f8fafc);font-size:11px;font-weight:500;color:var(--vf-muted);cursor:pointer;">Note</button>
               <button id="replyExpandBtn" onclick="toggleReplyBoxSize()" style="margin-left:auto;">↗ Expand</button>
             </div>
+
+            <!-- CC/BCC inline rows (toggled by the CC / BCC button — not controlled by the "Show CC/BCC" setting which only applies to the modal Compose) -->
+            <div id="replyCcBccBox" style="display:none;background:#f8fafc;border:1px solid var(--vf-line);border-radius:10px;padding:8px 10px;margin-bottom:8px;">
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">
+                <label style="font-size:11px;font-weight:700;color:#64748b;width:32px;flex-shrink:0;">Cc:</label>
+                <input id="replyCc" placeholder="cc1@email.com, cc2@email.com" style="flex:1;padding:5px 8px;border:1px solid var(--vf-line);border-radius:6px;font-size:12px;outline:none;">
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <label style="font-size:11px;font-weight:700;color:#64748b;width:32px;flex-shrink:0;">Bcc:</label>
+                <input id="replyBcc" placeholder="bcc1@email.com" style="flex:1;padding:5px 8px;border:1px solid var(--vf-line);border-radius:6px;font-size:12px;outline:none;">
+              </div>
+            </div>
+
+            <!-- Internal note (toggled by Note button) -->
+            <div id="replyNoteBox" style="display:none;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:8px 10px;margin-bottom:8px;">
+              <div style="font-size:10px;font-weight:700;color:#a16207;letter-spacing:.04em;text-transform:uppercase;margin-bottom:4px;">📝 Internal Note (your team only — not sent to customer)</div>
+              <textarea id="replyNote" placeholder="Add context for your team about this thread..." rows="2" style="width:100%;padding:6px 8px;border:1px solid #fde68a;border-radius:6px;font-size:12px;font-family:inherit;background:#fffef7;outline:none;resize:vertical;box-sizing:border-box;"></textarea>
+            </div>
+
             <div class="em-composer-box">
               <!-- AI Suggestion Card -->
               <div id="aiSuggestionPanel" style="display:none;">
@@ -6700,7 +6734,11 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
         </div>
       </div>
 
-      <!-- Hidden elements kept for JS compatibility -->
+      <!-- Hidden compat sinks (DO NOT REMOVE).
+           34+ legacy JS paths still write into these IDs (e.g. `connectedInboxEmail` is
+           populated by `_applyConnectedInbox`, `folderInbox/Drafted/Replied/Closed` track
+           unread counts that the email-list renderer reads). Removing them silently
+           breaks counts on first load. Replace gradually, not en-masse. -->
       <input type="file" id="attachmentInput" multiple style="display:none" onchange="handleAttachmentChange()">
       <div id="threadAssignStrip" style="display:none;">
         <select id="asEmployeeSelect"><option value="">Select employee…</option></select>
@@ -6897,13 +6935,13 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
             <div class="tc-thread-replies" id="chatThreadReplies"></div>
           </div>
           <div class="tc-thread-composer">
-            <div class="tc-composer">
+            <div class="tc-composer" style="position:relative;">
               <div id="chatThreadInput" contenteditable="true" data-placeholder="Reply in thread…"
                 onkeydown="chatThreadKeyDown(event)"
                 class="tc-ce-input"></div>
               <div class="tc-c-bottom">
                 <div class="tc-c-left">
-                  <button title="Emoji"><i class="fa-regular fa-face-smile"></i></button>
+                  <button title="Emoji" onclick="toggleThreadEmojiPicker(event)"><i class="fa-regular fa-face-smile"></i></button>
                 </div>
                 <div class="tc-c-right">
                   <button class="tc-send-btn" onclick="sendThreadReply()">
@@ -6911,6 +6949,10 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
                     <span class="tc-send-arrow"><i class="fa-solid fa-paper-plane"></i></span>
                   </button>
                 </div>
+              </div>
+              <!-- Thread emoji mini-picker -->
+              <div id="threadEmojiPicker" style="display:none;position:absolute;bottom:54px;left:8px;background:#fff;border:1px solid var(--vf-line);border-radius:12px;padding:6px;box-shadow:0 12px 30px rgba(15,23,42,.12);z-index:50;display:none;flex-wrap:wrap;gap:2px;max-width:240px;">
+                <!-- emojis injected by toggleThreadEmojiPicker -->
               </div>
             </div>
           </div>
@@ -6936,6 +6978,10 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
           <button class="sk-btn sk-btn-success" onclick="openSkAddModal()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Add Stock
+          </button>
+          <button class="sk-btn sk-btn-outline" onclick="skSyncFromOrders(event)" title="Pull product list from existing orders into stock catalogue">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+            Sync from Orders
           </button>
           <div style="position:relative;display:inline-block;" id="skImportFileWrap">
             <button class="sk-btn sk-btn-outline sk-btn-drop" onclick="skToggleImportFileMenu()">
@@ -7089,7 +7135,7 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
           <div class="sk-toolbar">
             <div class="sk-search-wrap">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-              <input class="sk-search" type="text" placeholder="Search product, actor, action…" oninput="">
+              <input class="sk-search" id="skAuditSearch" type="text" placeholder="Search product, actor, action…" oninput="skFilterAudit()">
             </div>
           </div>
           <div class="sk-table-wrap">
@@ -7399,8 +7445,8 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
       <!-- Tabs -->
       <div class="ait-tabs">
         <button class="ait-tab active" data-aittab="profile" onclick="aitSwitchTab('profile')">🧠 Business Profile</button>
-        <button class="ait-tab" data-aittab="kb" onclick="aitSwitchTab('kb')">📚 Knowledge Base <span class="count" id="aitKbBadge">12</span></button>
-        <button class="ait-tab" data-aittab="ex" onclick="aitSwitchTab('ex')">⚡ Training Examples <span class="count" id="aitExBadge">28</span></button>
+        <button class="ait-tab" data-aittab="kb" onclick="aitSwitchTab('kb')">📚 Knowledge Base <span class="count" id="aitKbBadge">0</span></button>
+        <button class="ait-tab" data-aittab="ex" onclick="aitSwitchTab('ex')">⚡ Training Examples <span class="count" id="aitExBadge">0</span></button>
         <button class="ait-tab" data-aittab="play" onclick="aitSwitchTab('play')">🧪 Test Playground</button>
       </div>
 
@@ -7613,9 +7659,11 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
                   🔍 Auto-detect order
                 </label>
               </div>
-              <textarea id="aitPlayInput">Subject: Refund needed
+              <textarea id="aitPlayInput" placeholder="Paste a real customer email here to test how the trained AI would reply…">Subject: Refund needed
 
-Hi, I ordered the Korean glow serum 4 days ago, order #4521. Just received it but the box is damaged and seal is broken. I want a refund or replacement urgently.</textarea>
+Hi, I ordered the Korean glow serum 4 days ago, order #4521. Just received it but the box is damaged and seal is broken. I want a refund or replacement urgently.
+
+[Sample text — replace with a real customer email to test your AI's reply.]</textarea>
               <div id="aitDetectedRefs" class="ait-play-meta" style="display:none;flex-direction:column;align-items:flex-start;gap:8px;padding:10px 12px;background:linear-gradient(135deg,rgba(22,163,74,.08),rgba(6,182,212,.05));border:1px dashed rgba(22,163,74,.35);border-radius:11px;margin-top:10px;"></div>
               <button class="ait-btn primary" style="margin-top:14px;width:100%;justify-content:center" onclick="aitRunPlayground()">
                 ✨ Generate AI Reply
@@ -7647,7 +7695,7 @@ Hi, I ordered the Korean glow serum 4 days ago, order #4521. Just received it bu
           Auto-saved · Changes apply to all connected inboxes
         </div>
         <div style="display:flex;gap:10px">
-          <button class="ait-btn">Discard</button>
+          <button class="ait-btn" onclick="aitDiscardChanges()" title="Reload values from server (any unsaved edits will be lost)">Discard</button>
           <button class="ait-btn primary" onclick="aitSaveAll()">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>
             Save &amp; Re-train AI
@@ -9150,6 +9198,15 @@ Hi, I ordered the Korean glow serum 4 days ago, order #4521. Just received it bu
     <label>To</label>
     <input id="composeTo" placeholder="customer@email.com">
 
+    <div class="em-compose-cc-row" style="display:none;">
+      <label>Cc <span style="font-size:11px;color:#94a3b8;font-weight:500;">(comma-separated)</span></label>
+      <input id="composeCc" placeholder="cc1@email.com, cc2@email.com">
+    </div>
+    <div class="em-compose-cc-row" style="display:none;">
+      <label>Bcc <span style="font-size:11px;color:#94a3b8;font-weight:500;">(comma-separated)</span></label>
+      <input id="composeBcc" placeholder="bcc1@email.com, bcc2@email.com">
+    </div>
+
     <label>Subject</label>
     <input id="composeSubject" placeholder="Email subject...">
 
@@ -9376,7 +9433,15 @@ function _startOrdersPolling(){
       }
       _ordersLastCount = newCount;
       _ordersLatestId = newLatestId;
-    } catch(e){}
+    } catch(e){
+      console.warn("Orders poll failed:", e?.message || e);
+      // Throttle visible warnings (one per 5 min) to avoid spam
+      const now = Date.now();
+      if(!window._ordersPollLastWarn || now - window._ordersPollLastWarn > 300000){
+        window._ordersPollLastWarn = now;
+        if(typeof _emailToast === "function") _emailToast(`⚠️ Orders auto-refresh paused — ${(e?.message||"network error").slice(0,60)}`, 4500);
+      }
+    }
   }, 10000);
 }
 
@@ -9405,7 +9470,14 @@ function _startTqPolling(){
         }
       }
       _tqLastPendingCount = count;
-    } catch(e){}
+    } catch(e){
+      console.warn("Tracking queue poll failed:", e?.message || e);
+      const now = Date.now();
+      if(!window._tqPollLastWarn || now - window._tqPollLastWarn > 300000){
+        window._tqPollLastWarn = now;
+        if(typeof _emailToast === "function") _emailToast(`⚠️ Tracking queue auto-refresh paused — ${(e?.message||"network error").slice(0,60)}`, 4500);
+      }
+    }
   }, 30000);
 }
 
@@ -9670,9 +9742,10 @@ async function aitPersistToServer(){
 /* Load profile + snippets from server */
 async function aitLoadFromServer(){
   try {
-    const [profileResp, snippetsResp] = await Promise.all([
+    const [profileResp, snippetsResp, examplesResp] = await Promise.all([
       fetch('/emails/api/ai-training/profile/').then(r => r.json()).catch(() => null),
-      fetch('/emails/api/ai-training/snippets/').then(r => r.json()).catch(() => null)
+      fetch('/emails/api/ai-training/snippets/').then(r => r.json()).catch(() => null),
+      fetch('/emails/api/ai-training/example/' + (selectedStoreId ? `?store_id=${selectedStoreId}` : '')).then(r => r.json()).catch(() => null),
     ]);
     if(profileResp?.success && profileResp.profile){
       const p = profileResp.profile;
@@ -9688,6 +9761,32 @@ async function aitLoadFromServer(){
     }
     if(snippetsResp?.success && Array.isArray(snippetsResp.snippets)){
       window._aitServerSnippets = snippetsResp.snippets;
+    }
+    // Pull real Training Examples count from server
+    if(examplesResp?.success && Array.isArray(examplesResp.examples)){
+      const badge = document.getElementById('aitExBadge');
+      if(badge) badge.textContent = String(examplesResp.examples.length);
+      // Render simple cards if container is empty (preserves design)
+      const list = document.getElementById('aitExamplesList');
+      if(list && examplesResp.examples.length){
+        const empty = document.getElementById('aitExamplesEmpty');
+        if(empty) empty.style.display = 'none';
+        // Idempotent: replace examples-only nodes (preserve aitExamplesEmpty)
+        list.querySelectorAll('.ait-example').forEach(n => n.remove());
+        examplesResp.examples.forEach(ex => {
+          const card = document.createElement('div');
+          card.className = 'ait-example';
+          card.innerHTML = `
+            <div class="block user"><h6>Customer asked</h6><div class="txt">${escapeHtml((ex.customer_message||'').slice(0,400))}</div></div>
+            <div class="block ai"><h6>You taught</h6><div class="txt">${escapeHtml((ex.final_text||'').slice(0,400))}</div></div>`;
+          list.appendChild(card);
+        });
+      } else {
+        // No examples — make sure badge is 0 and empty state shows
+        if(badge) badge.textContent = '0';
+        const empty = document.getElementById('aitExamplesEmpty');
+        if(empty) empty.style.display = 'block';
+      }
     }
   } catch(e){ console.warn('aitLoadFromServer failed', e); }
 }
@@ -9842,7 +9941,7 @@ async function aitSaveNewSnippet(){
   const title = (document.getElementById('newSnipTitle')?.value || '').trim();
   const text  = (document.getElementById('newSnipText')?.value || '').trim();
   if(!title || !text){
-    alert('Please fill in both Title and Text.');
+    _alert('Please fill in both Title and Text.', "Required", "⚠️");
     return;
   }
   const [pill, pillClass] = cat.split('|');
@@ -9905,7 +10004,7 @@ async function aitEditSnippet(btn){
 }
 
 async function aitDeleteSnippet(btn){
-  if(!confirm('Delete this snippet?')) return;
+  if(!await _confirm('Delete this snippet?', {title:"Delete snippet", icon:"🗑️", danger:true, confirmText:"Delete"})) return;
   const snippet = btn.closest('.ait-snippet');
   if(!snippet) return;
   const sid = snippet.dataset.snipId;
@@ -9934,9 +10033,72 @@ function aitUpdateKbCount(){
   if(kbBadge) kbBadge.textContent = count;
 }
 
-/* ----- Add Example (placeholder until backend) ----- */
-function aitAddExample(){
-  aitToast('Manual example add coming in next backend phase.');
+function aitUpdateExCount(){
+  const list = document.getElementById('aitExamplesList');
+  const badge = document.getElementById('aitExBadge');
+  if(!list || !badge) return;
+  // Count real example cards (excludes the empty-state div)
+  const count = list.querySelectorAll('.ait-example').length;
+  badge.textContent = count;
+  // Hide the empty-state if examples exist; show it otherwise
+  const empty = document.getElementById('aitExamplesEmpty');
+  if(empty) empty.style.display = count > 0 ? "none" : "block";
+}
+
+/* ----- Add Example (now wired to backend AiReplyFeedback) ----- */
+async function aitAddExample(){
+  const customerMsg = await _promptText("Customer message", "Paste the customer's email body here…", {multiline:true, rows:4});
+  if(customerMsg === null || !customerMsg.trim()){ return; }
+  const aiDraft = await _promptText("AI's first attempt", "Paste the AI's draft reply (leave blank if you wrote from scratch)…", {multiline:true, rows:4});
+  if(aiDraft === null){ return; }
+  const finalText = await _promptText("Your corrected version", "Type the reply you actually wanted the AI to send…", {multiline:true, rows:5});
+  if(finalText === null || !finalText.trim()){ return; }
+  aitToast('Saving training example…', 1800);
+  try{
+    const r = await fetch("/emails/api/ai-training/example/", {
+      method:"POST",
+      headers:{"Content-Type":"application/json","X-CSRFToken":getCSRFToken()},
+      body: JSON.stringify({
+        customer_message: customerMsg.trim(),
+        ai_draft: aiDraft.trim(),
+        final_text: finalText.trim(),
+        store_id: selectedStoreId || null,
+      })
+    });
+    const d = await r.json();
+    if(!d.success){ aitToast(`❌ ${d.message || 'Could not save'}`, 3500); return; }
+    aitToast('✓ Training example saved.', 2400);
+    // Refresh the examples list if the user has a loader for it
+    if(typeof aitLoadExamples === "function") aitLoadExamples();
+    aitUpdateExCount();
+  }catch(e){
+    aitToast(`❌ ${e.message}`, 3500);
+  }
+}
+
+/* Lightweight multi-step prompt used by aitAddExample (no external libs) */
+async function _promptText(title, placeholder, opts={}){
+  return new Promise((resolve) => {
+    const ov = document.createElement("div");
+    ov.style.cssText = "position:fixed;inset:0;background:rgba(10,14,31,.6);backdrop-filter:blur(6px);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;";
+    ov.innerHTML = `<div style="background:#fff;border-radius:18px;width:100%;max-width:520px;padding:24px;box-shadow:0 30px 80px rgba(15,23,42,.25);">
+      <div style="font-size:16px;font-weight:800;color:#0f172a;margin-bottom:14px;">${escapeHtml(title)}</div>
+      ${opts.multiline
+        ? `<textarea id="_ptInput" rows="${opts.rows||3}" placeholder="${escapeHtml(placeholder)}" style="width:100%;padding:11px 13px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;resize:vertical;"></textarea>`
+        : `<input id="_ptInput" type="text" placeholder="${escapeHtml(placeholder)}" style="width:100%;padding:11px 13px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;">`}
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px;">
+        <button id="_ptCancel" style="background:#f1f5f9;color:#334155;border:1px solid #e2e8f0;border-radius:9px;padding:8px 16px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;">Cancel</button>
+        <button id="_ptOK" style="background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;border:none;border-radius:9px;padding:8px 18px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;">Save</button>
+      </div>
+    </div>`;
+    document.body.appendChild(ov);
+    setTimeout(()=>ov.querySelector("#_ptInput")?.focus(), 50);
+    const done = (v) => { ov.remove(); resolve(v); };
+    ov.querySelector("#_ptOK").onclick = () => done(ov.querySelector("#_ptInput").value);
+    ov.querySelector("#_ptCancel").onclick = () => done(null);
+    ov.addEventListener("click", e => { if(e.target === ov) done(null); });
+    ov.addEventListener("keydown", e => { if(e.key === "Escape") done(null); });
+  });
 }
 
 /* ----- Save & Re-train (functional) ----- */
@@ -9946,6 +10108,21 @@ function aitSaveAll(){
   const tones = (st.tones || []).join(', ');
   const snipCount = (st.snippets || []).length;
   aitToast(`✓ Saved — ${snipCount} snippets · tones: ${tones || 'none'}`, 3000);
+}
+
+/* ----- Discard local edits and reload from server ----- */
+async function aitDiscardChanges(){
+  const ok = typeof _confirm === "function"
+    ? await _confirm("Discard unsaved AI Training changes?", {title:"Discard changes", icon:"↩️", confirmText:"Discard", details:"This reloads the saved profile from the server. Any pending edits will be lost."})
+    : confirm("Discard unsaved AI Training changes?");
+  if(!ok) return;
+  // Clear local cache + reload from server
+  try{ localStorage.removeItem("aitState"); }catch(_){}
+  try{
+    if(typeof aitLoadFromServer === "function") await aitLoadFromServer();
+    else if(typeof aitInit === "function") aitInit();
+  }catch(_){}
+  aitToast("Changes discarded — reloaded from server.", 2400);
 }
 
 /* ----- Toast ----- */
@@ -10707,9 +10884,17 @@ function aisDone(){
    completed it (wizard finished OR they've filled in the Training Studio
    profile directly). Checks the local flag first (instant), then the server
    profile (truth) so the CTA stays hidden after reload / on another device. */
+// User can dismiss the AI setup CTA manually (persisted)
+function aisDismissCta(){
+  const cta = document.getElementById('aisCta');
+  if(cta) cta.style.display = 'none';
+  try { localStorage.setItem('dropsigma_ais_dismissed', '1'); } catch(_){}
+}
+
 async function aisHideCtaIfComplete(){
   const cta = document.getElementById('aisCta');
   if(!cta) return;
+  try { if(localStorage.getItem('dropsigma_ais_dismissed') === '1'){ cta.style.display = 'none'; return; } } catch(e) {}
   try { if(localStorage.getItem('dropsigma_ais_completed') === '1'){ cta.style.display = 'none'; return; } } catch(e) {}
   try {
     const r = await fetch('/emails/api/ai-training/profile/');
@@ -11527,7 +11712,14 @@ function toggleOrderActionMenu(event,orderId){
 }
 function closeOrderActionMenu(){const m=document.getElementById("orderActionMenu");if(m)m.classList.remove("show");}
 function openSelectedOrderFromMenu(){if(openOrderActionMenuId)openOrderDetail(openOrderActionMenuId);closeOrderActionMenu();}
-function assignSelectedOrderFromMenu(){if(!openOrderActionMenuId)return;const el=document.getElementById(`vendorSelect_${openOrderActionMenuId}`);if(el){el.focus();el.scrollIntoView({behavior:"smooth",block:"center"});}closeOrderActionMenu();}
+function assignSelectedOrderFromMenu(){
+  // Open the order detail (which contains the full vendor + team assignment UI).
+  // The old code tried to focus a non-existent inline `vendorSelect_<id>` element.
+  if(!openOrderActionMenuId) return;
+  const orderId = openOrderActionMenuId;
+  closeOrderActionMenu();
+  if(typeof openOrderDetail === "function") openOrderDetail(orderId);
+}
 function deleteSelectedOrderFromMenu(){if(openOrderActionMenuId)deleteOrder(openOrderActionMenuId);closeOrderActionMenu();}
 async function deleteOrder(orderId){const order=currentOrders.find(o=>String(o.id)===String(orderId));const orderNo=order?(order.external_order_id||order.id):orderId;if(!await _confirm(`Delete order #${orderNo}?`, {title:"Delete Order", icon:"🗑️", danger:true, confirmText:"Delete", details:"This action cannot be undone."}))return;setOrderVendorMessage("Deleting order...");try{const response=await fetch(`/orders/api/delete/${orderId}/`,{method:"DELETE",headers:{"X-CSRFToken":getCSRFToken()}});let data={};try{data=await response.json();}catch(e){}if(!response.ok||data.success===false){setOrderVendorMessage(data.message||"Order delete failed",true);await _alert(data.message||"Order delete failed.", "Error", "❌");return;}setOrderVendorMessage("Order deleted successfully.");await loadOrders();}catch(error){setOrderVendorMessage(error.message,true);await _alert("Order delete failed: "+error.message, "Error", "❌");}}
 
@@ -12208,7 +12400,7 @@ async function deleteStore(storeId, storeName){
     const csrfToken = getCSRFToken();
 
     const response = await fetch(`/stores/api/delete/${storeId}/`, {
-      method: "POST",
+      method: "DELETE",
       credentials: "same-origin",
       headers: {
         "Content-Type": "application/json",
@@ -13331,16 +13523,35 @@ async function loadTeamMembers(){
   }
 }
 
+// Navigate to Orders + filter to unassigned (so admin can pick one to assign)
 function openAssignOrderToMember(memberId, memberName){
   showSection("orders");
   setTimeout(()=>{
-    const sel = document.getElementById("assignMemberSelect");
-    if(sel){ sel.value = memberId; }
-  }, 600);
+    // Filter orders to "Unassigned" so admin sees what needs assignment
+    const statusFilter = document.getElementById("orderStatusFilter");
+    if(statusFilter){ statusFilter.value = "all"; }
+    // Remember the intended assignee so the order-detail modal can pre-select it
+    try{ window._pendingAssignMemberId = memberId; }catch(_){}
+    const msg = document.getElementById("orderVendorMessage");
+    if(msg){
+      msg.style.color = "#2563eb";
+      msg.innerText = `Pick an order below to assign to ${memberName}.`;
+    }
+    if(typeof _emailToast === "function") _emailToast(`Pick an order → opening detail will pre-select ${memberName}`);
+  }, 400);
 }
 
+// Navigate to Tasks + filter to this member's tasks
 function viewMemberTasks(memberId, memberName){
-  showSection("orders");
+  showSection("tasks");
+  setTimeout(()=>{
+    const memberFilter = document.getElementById("tkMemberFilter");
+    if(memberFilter){
+      memberFilter.value = String(memberId);
+      memberFilter.dispatchEvent(new Event("change"));
+    }
+    if(typeof tkRender === "function") tkRender();
+  }, 400);
 }
 
 function toggleMemberMenu(event, memberId){
@@ -13859,6 +14070,36 @@ async function handleBrowserNotifyToggle(checked){
   emSettingChange("notify_browser", checked);
 }
 
+// Toggle CC/BCC rows in inline reply composer
+function toggleReplyCcBcc(){
+  const box = document.getElementById("replyCcBccBox");
+  const btn = document.getElementById("replyCcBccToggle");
+  if(!box) return;
+  const open = box.style.display !== "none";
+  box.style.display = open ? "none" : "block";
+  if(btn){
+    btn.style.background = open ? "var(--vf-surface-2,#f8fafc)" : "#eef2ff";
+    btn.style.color      = open ? "var(--vf-muted)" : "#4f46e5";
+    btn.style.borderColor = open ? "var(--vf-line)" : "#c7d2fe";
+  }
+  if(!open) setTimeout(()=>document.getElementById("replyCc")?.focus(), 50);
+}
+
+// Toggle internal-note row in inline reply composer
+function toggleReplyNote(){
+  const box = document.getElementById("replyNoteBox");
+  const btn = document.getElementById("replyNoteToggle");
+  if(!box) return;
+  const open = box.style.display !== "none";
+  box.style.display = open ? "none" : "block";
+  if(btn){
+    btn.style.background = open ? "var(--vf-surface-2,#f8fafc)" : "#fef3c7";
+    btn.style.color      = open ? "var(--vf-muted)" : "#a16207";
+    btn.style.borderColor = open ? "var(--vf-line)" : "#fde68a";
+  }
+  if(!open) setTimeout(()=>document.getElementById("replyNote")?.focus(), 50);
+}
+
 function applyShowCcBcc(show){
   document.querySelectorAll(".em-compose-cc-row").forEach(el=>{
     el.style.display = show ? "" : "none";
@@ -13880,7 +14121,65 @@ function _applyEmailSettings(s){
   window._notifyUnreadOnly = s.notify_unread_only !== false;
   window._notifyAssignedOnly = !!s.notify_assigned_only;
   window._notifyBrowser = s.notify_browser !== false;
+  window._markReadInGmail = !!s.mark_read_in_gmail;
   applyShowCcBcc(!!s.show_cc_bcc);
+
+  // Ask for browser-notification permission upfront if enabled (one-shot)
+  if(window._notifyBrowser && "Notification" in window && Notification.permission === "default" && !window._emailNotifPermAsked){
+    window._emailNotifPermAsked = true;
+    try{ Notification.requestPermission(); }catch(_){}
+  }
+}
+
+// Lazy-built notification sound — small 0.3s beep, no external file needed.
+function _playEmailNotifSound(){
+  try{
+    if(!window._notifyAudioCtx){
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if(!Ctx) return;
+      window._notifyAudioCtx = new Ctx();
+    }
+    const ctx = window._notifyAudioCtx;
+    if(ctx.state === "suspended") ctx.resume();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.setValueAtTime(660, ctx.currentTime + 0.12);
+    gain.gain.setValueAtTime(0.0, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.18, ctx.currentTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.28);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.32);
+  }catch(_){}
+}
+
+// Driven by inbox fast-poll: respects sound / unread-only / assigned-only / browser-notif toggles.
+function _maybeNotifyNewEmail(newCount, preview){
+  if(!newCount) return;
+  // "Notify only when assigned to me" — needs server preview hints; we approximate
+  // by skipping when the latest event's assignee differs from the current user.
+  if(window._notifyAssignedOnly && preview && preview.assigned_to && preview.current_user
+     && String(preview.assigned_to) !== String(preview.current_user)){
+    return;
+  }
+  // "Notify only for unread" — skip if the latest event isn't unread
+  if(window._notifyUnreadOnly && preview && preview.is_read === true){
+    return;
+  }
+  if(window._notifySound){
+    _playEmailNotifSound();
+  }
+  if(window._notifyBrowser && "Notification" in window && Notification.permission === "granted" && document.hidden){
+    try{
+      const title = newCount === 1 ? "New email" : `${newCount} new emails`;
+      const body = (preview && preview.snippet) ? preview.snippet : "Open Drop Sigma to view.";
+      const n = new Notification(`Drop Sigma · ${title}`, {body, icon:"/static/favicon.ico", tag:"new-email", renotify:true});
+      n.onclick = () => { window.focus(); showSection("emails"); n.close(); };
+      setTimeout(()=>n.close(), 6000);
+    }catch(_){}
+  }
 }
 
 function _timeAgoStr(isoStr){
@@ -14688,7 +14987,10 @@ async function saveTemplate(){
 async function tmDelete(id){
   if(!await _confirm("Delete this template?", {title:"Delete Template", icon:"🗑️", danger:true, confirmText:"Delete", details:"This action cannot be undone."})) return;
   try{
-    await fetch(`/emails/api/templates/${id}/`,{method:"DELETE",headers:{"X-Requested-With":"XMLHttpRequest"}});
+    await fetch(`/emails/api/templates/${id}/`,{
+      method:"DELETE",
+      headers:{"X-Requested-With":"XMLHttpRequest","X-CSRFToken":getCSRFToken()},
+    });
     loadTemplates();
     loadAutoEmailState();
   }catch(e){ await _alert("Delete failed.", "Error", "❌"); }
@@ -14697,7 +14999,10 @@ async function tmDelete(id){
 async function tmDeleteCurrent(){
   if(!_tmEditingId){ closeTemplateEditor(); return; }
   if(!await _confirm("Delete this template?", {title:"Delete Template", icon:"🗑️", danger:true, confirmText:"Delete"})) return;
-  fetch(`/emails/api/templates/${_tmEditingId}/`,{method:"DELETE",headers:{"X-Requested-With":"XMLHttpRequest"}})
+  fetch(`/emails/api/templates/${_tmEditingId}/`,{
+    method:"DELETE",
+    headers:{"X-Requested-With":"XMLHttpRequest","X-CSRFToken":getCSRFToken()},
+  })
     .then(()=>closeTemplateEditor()).catch(async ()=>await _alert("Delete failed.", "Error", "❌"));
 }
 
@@ -14966,6 +15271,8 @@ async function openVisualEditor(){
     const iDoc = frame.contentDocument;
     if(!iDoc) return;
     frame.style.height = (iDoc.documentElement.scrollHeight || 600) + 'px';
+    // Snapshot initial HTML so closeVisualEditor can detect unsaved edits
+    try{ window._veInitialHtml = iDoc.body ? iDoc.body.innerHTML : ""; }catch(_){}
     // Mark leaf editable elements — never tag var-marker spans, never let
     // a var marker block its parent from being marked editable.
     const editableTags = ["p","h1","h2","h3","h4","td","span","a","li","div"];
@@ -15185,16 +15492,37 @@ function saveVisualEditor(){
   const bodyEl = document.getElementById("tmBodyEditor");
   bodyEl.innerHTML = decoded;
 
-  closeVisualEditor();
+  closeVisualEditor({skipWarn:true});
   tmSwitchBodyTab('preview');
   showSettingsSaved("Visual edits saved!");
 }
 
-function closeVisualEditor(){
+async function closeVisualEditor(opts){
+  // Warn before discarding if the iframe doc has been edited
+  // (skip the warning when called from the save flow — pass {skipWarn:true}).
+  if(!opts || !opts.skipWarn){
+    try{
+      const iframe = document.getElementById("tmVeFrame");
+      if(iframe && iframe.contentDocument && iframe.contentDocument.body){
+        const current = iframe.contentDocument.body.innerHTML;
+        if(window._veInitialHtml && current && current !== window._veInitialHtml){
+          const ok = await _confirm("Discard unsaved visual edits?", {
+            title: "Discard changes",
+            icon: "↩️",
+            danger: true,
+            confirmText: "Discard",
+            details: "Any pending edits in the visual editor will be lost.",
+          });
+          if(!ok) return;
+        }
+      }
+    }catch(_){}
+  }
   const overlay = document.getElementById("tmVisualEditorOverlay");
   overlay.style.opacity = "0";
   setTimeout(()=>{ overlay.style.display = "none"; overlay.style.transition = ""; }, 180);
   _veActiveEl = null;
+  window._veInitialHtml = null;
   document.removeEventListener('keydown', _tmVeKeyHandler);
 }
 
@@ -15393,7 +15721,10 @@ async function fastInboxTick(){
       return;
     }
     if(maxId > _fastInboxLastMaxId){
+      const newCount = maxId - _fastInboxLastMaxId;
       _fastInboxLastMaxId = maxId;
+      // Fire email-settings-driven notifications: sound + browser notif
+      try{ _maybeNotifyNewEmail(newCount, d.preview); }catch(_){}
       // Reload the thread list. If a thread is open, reload its messages too
       // (with keepUnread so we don't clear unread flags on the user's behalf).
       try { await loadEmails(); } catch(e){}
@@ -17007,6 +17338,14 @@ async function sendEmailReply(){
   try{
     const formData = new FormData();
     formData.append("reply_text", replyText);
+    // CC / BCC (only if the toggle is showing them)
+    const ccVal  = (document.getElementById("replyCc")?.value  || "").trim();
+    const bccVal = (document.getElementById("replyBcc")?.value || "").trim();
+    if(ccVal)  formData.append("cc",  ccVal);
+    if(bccVal) formData.append("bcc", bccVal);
+    // Internal note — saved on the thread for team only, NOT sent to customer
+    const noteVal = (document.getElementById("replyNote")?.value || "").trim();
+    if(noteVal) formData.append("internal_note", noteVal);
     const attachInput = document.getElementById("attachmentInput");
     if(attachInput && attachInput.files){
       Array.from(attachInput.files).forEach(f => formData.append("attachments", f));
@@ -17030,6 +17369,12 @@ async function sendEmailReply(){
     msg.innerText = "Reply sent successfully.";
     msg.style.color = "green";
     document.getElementById("emailReplyText").value = "";
+    // Clear CC/BCC + internal-note + collapse the rows
+    const ccEl = document.getElementById("replyCc"); if(ccEl) ccEl.value = "";
+    const bccEl = document.getElementById("replyBcc"); if(bccEl) bccEl.value = "";
+    const noteEl = document.getElementById("replyNote"); if(noteEl) noteEl.value = "";
+    const ccBox = document.getElementById("replyCcBccBox"); if(ccBox) ccBox.style.display = "none";
+    const noteBox = document.getElementById("replyNoteBox"); if(noteBox) noteBox.style.display = "none";
     if(attachInput){ attachInput.value = ""; handleAttachmentChange(); }
     await loadEmails({silent:true, preserveSelection:true});
 
@@ -17051,6 +17396,79 @@ async function openLinkedOrderFromEmail(){
   }
 
   await _alert("No linked order found for this thread.", "Notice", "ℹ️");
+}
+
+// ── Email "···" More menu ────────────────────────────────────────────────
+function toggleEmailMoreMenu(ev){
+  ev?.stopPropagation();
+  const menu = document.getElementById("emMoreMenu");
+  if(!menu) return;
+  const open = menu.style.display !== "none";
+  // Close any other open dropdown first
+  document.querySelectorAll(".em-status-pop").forEach(p => p.classList.remove("open"));
+  menu.style.display = open ? "none" : "block";
+  if(!open){
+    // Close on outside click (once)
+    setTimeout(() => {
+      const closer = (e) => {
+        if(!menu.contains(e.target) && !document.getElementById("emMoreBtn")?.contains(e.target)){
+          menu.style.display = "none";
+          document.removeEventListener("click", closer);
+        }
+      };
+      document.addEventListener("click", closer);
+    }, 10);
+  }
+}
+function closeThreadMenus(){
+  document.getElementById("emMoreMenu")?.style && (document.getElementById("emMoreMenu").style.display = "none");
+}
+async function emMoreAction(action){
+  closeThreadMenus();
+  if(!currentEmailId){ await _alert("Open a thread first.", "Notice", "ℹ️"); return; }
+  if(action === "refresh"){
+    await loadEmails({silent:false, preserveSelection:true});
+    return;
+  }
+  if(action === "copy"){
+    const url = `${location.origin}/dashboard/#email-${currentEmailId}`;
+    try{
+      await navigator.clipboard.writeText(url);
+      _emailToast && _emailToast("📋 Thread link copied.");
+      const msg = document.getElementById("emailActionMessage");
+      if(msg){ msg.innerText = "Thread link copied to clipboard."; msg.style.color = "#16a34a"; setTimeout(()=>{ msg.innerText=""; }, 2400); }
+    }catch(_){
+      await _alert("Could not copy link. Copy manually: " + url, "Copy link", "📋");
+    }
+    return;
+  }
+  if(action === "toggle_read"){
+    try{
+      await fetch(`/emails/api/${currentEmailId}/toggle-read/`, {method:"POST", headers:{"X-CSRFToken": getCSRFToken()}});
+      await loadEmails({silent:true, preserveSelection:true});
+    }catch(e){
+      await _alert("Toggle read failed: " + e.message, "Error", "❌");
+    }
+    return;
+  }
+  if(action === "print"){
+    window.print();
+    return;
+  }
+  if(action === "archive"){
+    const ok = await _confirm("Archive this thread?", {title:"Archive thread", icon:"🗄️", confirmText:"Archive"});
+    if(!ok) return;
+    try{
+      const r = await fetch(`/emails/api/${currentEmailId}/archive/`, {method:"POST", headers:{"X-CSRFToken": getCSRFToken()}});
+      if(r.ok){
+        await loadEmails({silent:false, preserveSelection:false});
+      } else {
+        await _alert("Archive failed — endpoint not available yet.", "Notice", "ℹ️");
+      }
+    }catch(e){
+      await _alert("Archive failed: " + e.message, "Error", "❌");
+    }
+  }
 }
 
 function getEmailStatusClass(status){
@@ -17160,12 +17578,17 @@ async function sendEmail(){
   const msg = document.getElementById("composeMessage");
   const btn = document.getElementById("composeSendBtn");
 
+  const ccVal  = (document.getElementById("composeCc")?.value || "").trim();
+  const bccVal = (document.getElementById("composeBcc")?.value || "").trim();
+
   const payload = {
     store_id: selectedStoreId,
     recipient: document.getElementById("composeTo").value.trim(),
     subject: document.getElementById("composeSubject").value.trim(),
     body: document.getElementById("composeBody").value.trim()
   };
+  if(ccVal)  payload.cc  = ccVal;
+  if(bccVal) payload.bcc = bccVal;
 
   if(!payload.recipient || !payload.subject || !payload.body){
     msg.innerText = "To, subject, and message are required.";
@@ -17345,21 +17768,58 @@ function asStopPolling(){
 }
 async function createStore(){
   const message = document.getElementById("formMessage");
+  message.innerText = "";
+  message.style.color = "";
+
+  // Helper — inline highlight + return false if invalid
+  const _flag = (id, label) => {
+    const el = document.getElementById(id);
+    if(!el) return null;
+    const val = el.value.trim();
+    if(!val){
+      el.style.borderColor = "#dc2626";
+      el.focus();
+      message.innerText = `${label} is required.`;
+      message.style.color = "#dc2626";
+      // Clear the highlight on next input
+      el.addEventListener("input", () => { el.style.borderColor = ""; }, {once: true});
+      return null;
+    }
+    el.style.borderColor = "";
+    return val;
+  };
+
+  const name      = _flag("storeName", "Store name");
+  if(name === null) return;
+  const platformVal = document.getElementById("platform")?.value;
+  if(!platformVal){
+    document.getElementById("platform").style.borderColor = "#dc2626";
+    message.innerText = "Please pick a platform.";
+    message.style.color = "#dc2626";
+    return;
+  }
+  const storeUrl  = _flag("storeUrl", "Store URL");
+  if(storeUrl === null) return;
+  // Quick URL sanity
+  if(!/^https?:\/\//i.test(storeUrl)){
+    message.innerText = "Store URL must start with http:// or https://";
+    message.style.color = "#dc2626";
+    const el = document.getElementById("storeUrl");
+    if(el){ el.style.borderColor = "#dc2626"; el.addEventListener("input", () => { el.style.borderColor = ""; }, {once: true}); el.focus(); }
+    return;
+  }
+
   message.innerText = "Saving store...";
+  message.style.color = "#475569";
 
   const payload = {
-    name: document.getElementById("storeName").value.trim(),
-    platform: document.getElementById("platform").value,
-    store_url: document.getElementById("storeUrl").value.trim(),
+    name,
+    platform: platformVal,
+    store_url: storeUrl,
     api_key: document.getElementById("apiKey").value.trim(),
     api_secret: document.getElementById("apiSecret").value.trim(),
     access_token: document.getElementById("accessToken").value.trim(),
   };
-
-  if(!payload.name || !payload.platform || !payload.store_url){
-    message.innerText = "Store name, platform, and store URL are required.";
-    return;
-  }
 
   try{
     const csrfToken = getCSRFToken();
@@ -17935,10 +18395,9 @@ function toggleSidebar(){
 // ===== VENDOR SYSTEM =====
 let allVendorsData = [];
 
-function getCSRFToken(){
-  const input = document.querySelector('[name=csrfmiddlewaretoken]');
-  return input ? input.value : '';
-}
+// getCSRFToken canonical version is defined earlier (line ~12047). This file
+// previously had multiple slightly-different copies; they're now removed and
+// callers use the cookie-preferring canonical one.
 function openVendorModal(){fireLoader();clearVendorMessage();loadStoresForVendor();document.getElementById("vendorModal").style.display="flex";}
 function closeVendorModal(){fireLoader();document.getElementById("vendorModal").style.display="none";}
 function vmCardToggle(cbId, cardId){
@@ -18368,7 +18827,7 @@ function openVendorDetailPage(vendorId, tab, storeId, storeName) {
   document.getElementById("vendorsPanelStock").style.display = "none";
   document.getElementById("vendorsPanelHistory").style.display = "none";
   document.querySelector("#vendorsSection > .topbar").style.display = "none";
-  document.getElementById("vendorsSubTabs").style.display = "none";
+  document.getElementById("vendorsSubTabs")?.style && (document.getElementById("vendorsSubTabs").style.display = "none");
   document.getElementById("vendorDetailPage").style.display = "block";
 
   renderVendorProfile(vendorData);
@@ -18597,7 +19056,7 @@ function openManageProductsPage(vendorId, storeId, storeName, vendorName) {
   document.getElementById("vendorsPanelStock").style.display="none";
   document.getElementById("vendorsPanelHistory").style.display="none";
   document.querySelector("#vendorsSection > .topbar").style.display="none";
-  document.getElementById("vendorsSubTabs").style.display="none";
+  document.getElementById("vendorsSubTabs")?.style && (document.getElementById("vendorsSubTabs").style.display = "none");
   document.getElementById("mpPage").className="mp-page show";
 
   document.getElementById("mpVendorNameCrumb").textContent=vendorName;
@@ -18610,7 +19069,7 @@ function openManageProductsPage(vendorId, storeId, storeName, vendorName) {
 function closeManageProductsPage() {
   document.getElementById("mpPage").className="mp-page";
   document.querySelector("#vendorsSection > .topbar").style.display="";
-  document.getElementById("vendorsSubTabs").style.display="";
+  document.getElementById("vendorsSubTabs")?.style && (document.getElementById("vendorsSubTabs").style.display = "");
   document.getElementById("vendorsPanelVendors").style.display="block";
 }
 
@@ -18791,7 +19250,7 @@ function closeVendorDetailPage() {
   vdpCurrentVendorId = null;
   document.getElementById("vendorDetailPage").style.display = "none";
   document.querySelector("#vendorsSection > .topbar").style.display = "";
-  document.getElementById("vendorsSubTabs").style.display = "";
+  document.getElementById("vendorsSubTabs")?.style && (document.getElementById("vendorsSubTabs").style.display = "");
   document.getElementById("vendorsPanelVendors").style.display = "block";
   document.getElementById("vendorsPanelQueue").style.display = "none";
   document.getElementById("vendorsPanelStock").style.display = "none";
@@ -19138,7 +19597,7 @@ function vsCloseHistoryModal(){
 
 function vsShowHistory(assignmentId){
   const a = vsAssignments.find(x=>x.id===assignmentId);
-  if(!a){ alert("Assignment data not found. Please refresh."); return; }
+  if(!a){ _alert("Assignment data not found. Please refresh.", "Not found", "🔍"); return; }
 
   document.getElementById("vsHistModalTitle").textContent = a.product_name || "Assignment";
   document.getElementById("vsHistModalSub").textContent = "Vendor: " + (a.vendor_name||"—") + (a.product_id ? " · " + a.product_id : "");
@@ -19853,7 +20312,17 @@ async function autoSyncInbox(){
     }
 
   }catch(error){
-    console.log("Auto sync error:", error.message);
+    console.error("Auto sync error:", error.message);
+    // Surface persistent failures so the user knows sync is broken.
+    // We only nag once every 5 minutes per session to avoid spam.
+    const now = Date.now();
+    if(!window._autoSyncLastWarnedAt || now - window._autoSyncLastWarnedAt > 300000){
+      window._autoSyncLastWarnedAt = now;
+      // Soft toast — non-blocking
+      if(typeof _emailToast === "function"){
+        _emailToast(`⚠️ Auto-sync error: ${(error.message||"unknown").slice(0,80)}`, 5000);
+      }
+    }
   }
 
   emailAutoSyncRunning = false;
@@ -20192,7 +20661,8 @@ function selectChannel(id, name, desc){
   _chatCurrentChannelId=id; _chatCurrentChannelName=name;
   _tcCurrentChannelIsDm = desc === "Direct Message";
   _tcKnownUnread[id] = 0;
-  fetch("/teamapp/chat/read/",{method:"POST",headers:{"Content-Type":"application/json","X-CSRFToken":getCsrfToken()},body:JSON.stringify({channel_id:id})}).catch(()=>{});
+  fetch("/teamapp/chat/read/",{method:"POST",headers:{"Content-Type":"application/json","X-CSRFToken":getCsrfToken()},body:JSON.stringify({channel_id:id})})
+    .catch(err => { console.warn("Mark-read failed:", err?.message || err); });
   _tcTypingUsers = {};
   _tcRenderTyping();
   document.querySelectorAll(".tc-ch").forEach(el=>el.classList.remove("active","unread"));
@@ -20284,7 +20754,7 @@ async function tcAddChannelMember(){
   if(!uid || !_chatCurrentChannelId) return;
   const r = await fetch(`/teamapp/chat/channels/${_chatCurrentChannelId}/members/add/`,{method:"POST",headers:{"Content-Type":"application/json","X-CSRFToken":getCsrfToken()},body:JSON.stringify({user_id:uid})});
   const d = await r.json();
-  if(!d.success){ alert(d.message||"Failed to add member."); return; }
+  if(!d.success){ _alert(d.message||"Failed to add member.", "Error", "❌"); return; }
   tcOpenMembersModal();
   tcRefreshMembersCount();
 }
@@ -20293,7 +20763,7 @@ async function tcRemoveChannelMember(userId){
   if(!_chatCurrentChannelId) return;
   const r = await fetch(`/teamapp/chat/channels/${_chatCurrentChannelId}/members/${userId}/remove/`,{method:"DELETE",headers:{"X-CSRFToken":getCsrfToken()}});
   const d = await r.json();
-  if(!d.success){ alert(d.message||"Failed to remove."); return; }
+  if(!d.success){ _alert(d.message||"Failed to remove.", "Error", "❌"); return; }
   tcOpenMembersModal();
   tcRefreshMembersCount();
 }
@@ -20474,6 +20944,44 @@ async function sendThreadReply(){
 }
 
 function chatThreadKeyDown(e){ if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendThreadReply();} }
+
+// Thread emoji picker
+const _THREAD_EMOJI_SET = ["👍","❤️","😂","🎉","🚀","😮","🔥","✅","😊","😍","🤔","😅","🙏","💪","👀","🤝","📦","📧","💰","⚠️","📊","🔔","💡","🎯"];
+function toggleThreadEmojiPicker(ev){
+  ev?.stopPropagation();
+  const picker = document.getElementById("threadEmojiPicker");
+  if(!picker) return;
+  const open = picker.style.display === "flex";
+  if(open){ picker.style.display = "none"; return; }
+  // Render buttons (idempotent)
+  if(!picker.dataset.rendered){
+    picker.innerHTML = _THREAD_EMOJI_SET.map(e => `<button type="button" style="background:none;border:none;font-size:18px;width:28px;height:28px;cursor:pointer;border-radius:6px;" onmouseenter="this.style.background='#f1f5f9'" onmouseleave="this.style.background='none'" onclick="insertThreadEmoji('${e}')">${e}</button>`).join("");
+    picker.dataset.rendered = "1";
+  }
+  picker.style.display = "flex";
+  // Close on outside click
+  setTimeout(() => {
+    const closer = (e) => {
+      if(!picker.contains(e.target)){
+        picker.style.display = "none";
+        document.removeEventListener("click", closer);
+      }
+    };
+    document.addEventListener("click", closer);
+  }, 10);
+}
+function insertThreadEmoji(emoji){
+  const input = document.getElementById("chatThreadInput");
+  if(!input) return;
+  input.focus();
+  // Insert at caret using execCommand (deprecated but widely supported; falls back to appending)
+  if(document.queryCommandSupported && document.queryCommandSupported("insertText")){
+    document.execCommand("insertText", false, emoji);
+  } else {
+    input.textContent = (input.textContent || "") + emoji;
+  }
+  document.getElementById("threadEmojiPicker").style.display = "none";
+}
 
 function closeThread(){
   _chatThreadParentId=null;
@@ -20729,7 +21237,7 @@ function tcCopyMsg(content){
 }
 
 async function tcDeleteMsg(msgId){
-  if(!confirm("Delete this message?")) return;
+  if(!await _confirm("Delete this message?", {title:"Delete message", icon:"🗑️", danger:true, confirmText:"Delete"})) return;
   const r=await fetch(`/teamapp/chat/messages/${msgId}/delete/`,{method:"DELETE",headers:{"X-CSRFToken":getCsrfToken()}});
   const d=await r.json();
   if(d.success){
@@ -20737,7 +21245,7 @@ async function tcDeleteMsg(msgId){
     loadChatMessages();
     if(_chatThreadParentId) loadThreadMessages(_chatThreadParentId);
   } else {
-    alert(d.error||"Could not delete message.");
+    _alert(d.error||"Could not delete message.", "Delete failed", "❌");
   }
 }
 
@@ -20787,7 +21295,7 @@ async function tcEditSave(msgId){
     _tcEditCleanup(msgEl, textEl);
     textEl.innerHTML = _renderMarkdown(d.content);
   } else {
-    alert(d.message||"Could not save edit.");
+    _alert(d.message||"Could not save edit.", "Edit failed", "❌");
     tcEditCancel(msgId);
   }
 }
@@ -20807,20 +21315,24 @@ function _tcEditCleanup(msgEl, textEl){
   msgEl.querySelector(".tc-edit-bar")?.remove();
 }
 
-// ── Pin message (localStorage-based) ─────────────────────────────────────────
+// ── Pin / Bookmark (per-device localStorage — clear toast wording) ──────────
+// Backend persistence is not yet built; messages are saved to this browser only.
 function tcPinMsg(msgId){
   const msg = _tcMsgMap[msgId];
   const pins = JSON.parse(localStorage.getItem("tc_pins")||"[]");
-  if(!pins.includes(msgId)){
-    pins.push(msgId);
+  const entry = {id: msgId, content: (msg||{}).content || "", channel: _chatCurrentChannelName, at: new Date().toISOString()};
+  const idx = pins.findIndex(p => (typeof p === "object" ? p.id : p) === msgId);
+  if(idx === -1){
+    pins.push(entry);
     localStorage.setItem("tc_pins", JSON.stringify(pins));
-    _tcToast(`📌 Message pinned to #${_chatCurrentChannelName}`);
+    _tcToast(`📌 Pinned (this browser only)`);
   } else {
-    _tcToast("Already pinned!");
+    pins.splice(idx, 1);
+    localStorage.setItem("tc_pins", JSON.stringify(pins));
+    _tcToast("📌 Unpinned");
   }
 }
 
-// ── Bookmark / Save ───────────────────────────────────────────────────────────
 function tcBookmarkMsg(msgId){
   const msg = _tcMsgMap[msgId];
   const saves = JSON.parse(localStorage.getItem("tc_saved")||"[]");
@@ -20828,16 +21340,21 @@ function tcBookmarkMsg(msgId){
   if(idx===-1){
     saves.push({id:msgId, content:(msg||{}).content||"", channel:_chatCurrentChannelName, at:new Date().toISOString()});
     localStorage.setItem("tc_saved", JSON.stringify(saves));
-    _tcToast("🔖 Message saved to bookmarks");
+    _tcToast("🔖 Saved (this browser only)");
   } else {
-    _tcToast("Already saved!");
+    saves.splice(idx, 1);
+    localStorage.setItem("tc_saved", JSON.stringify(saves));
+    _tcToast("🔖 Removed from saved");
   }
 }
 
-// ── Copy link ─────────────────────────────────────────────────────────────────
+// ── Copy link — now a real anchor URL ────────────────────────────────────────
 function tcCopyLink(msgId){
-  const text = `#${_chatCurrentChannelName} — message #${msgId}`;
-  navigator.clipboard.writeText(text).then(()=>_tcToast("🔗 Link copied!"));
+  // Deep-link uses hash so it survives without server-side routing.
+  const url = `${location.origin}/dashboard/#chat-${_chatCurrentChannelName||'channel'}/msg-${msgId}`;
+  navigator.clipboard.writeText(url).then(()=>_tcToast("🔗 Link copied!")).catch(()=>{
+    _tcToast(`🔗 ${url}`);
+  });
 }
 
 // ── Toast helper ──────────────────────────────────────────────────────────────
@@ -20991,9 +21508,23 @@ function _tcWsBroadcastNew(content){
 // ── Connection badge ──────────────────────────────────────────────────────────
 function _tcUpdateConnBadge(connected){
   const el = document.getElementById("tcConnBadge");
-  if(!el) return;
-  el.title = connected ? "Live — connected" : "Reconnecting…";
-  el.style.color = connected ? "#22c55e" : "#f59e0b";
+  if(el){
+    el.title = connected ? "Live — connected" : "Reconnecting…";
+    el.style.color = connected ? "#22c55e" : "#f59e0b";
+  }
+  // Track sustained disconnects + show a single toast after 15s of being down.
+  if(connected){
+    if(window._tcDisconnectAt){ delete window._tcDisconnectAt; }
+    return;
+  }
+  if(!window._tcDisconnectAt){
+    window._tcDisconnectAt = Date.now();
+    setTimeout(() => {
+      if(window._tcDisconnectAt && (Date.now() - window._tcDisconnectAt > 15000)){
+        if(typeof _tcToast === "function") _tcToast("🔌 Chat disconnected — reconnecting…");
+      }
+    }, 16000);
+  }
 }
 
 // ── @Mention autocomplete ─────────────────────────────────────────────────────
@@ -21118,7 +21649,9 @@ function _tcInsertMention(name, inputId){
   input.dispatchEvent(new Event("input"));
 }
 
-function getCsrfToken(){ const m=document.cookie.match(/csrftoken=([^;]+)/); return m?m[1]:""; }
+// Backwards-compat alias for callers that used the lowercase spelling.
+// Delegates to the canonical implementation (defined ~line 12047).
+function getCsrfToken(){ return getCSRFToken(); }
 
 // Close emoji picker on outside click
 document.addEventListener("click",e=>{
@@ -21318,14 +21851,14 @@ async function confirmSoAssign(){
       // check if already assigned
       const existing = _soOrderAssignments[String(order.id)];
       const existingItem = existing ? existing.items.find(i=>i.product_id===productId) : null;
-      if(!existingItem){ alert(`Please select a stock variant for: ${item.name||'Product'}`); return; }
+      if(!existingItem){ _alert(`Please select a stock variant for: ${item.name||'Product'}`, "Variant required", "⚠️"); return; }
       continue; // keep existing assignment unchanged
     }
     assignments.push({ product_id: productId, variant_id: variantId, quantity: item.quantity||1 });
   }
 
   if(!assignments.length && !Object.keys(_soSelections).length){
-    alert('Please select at least one stock variant.');
+    _alert('Please select at least one stock variant.', "Variant required", "⚠️");
     return;
   }
 
@@ -21339,18 +21872,18 @@ async function confirmSoAssign(){
       body: JSON.stringify({ order_id: order.id, assignments, permanent, store_id: selectedStoreId })
     });
     const data = await res.json();
-    if(!data.success){ alert(data.error||'Assignment failed'); btn.disabled=false; btn.textContent='✔ Confirm Stock Assignment'; return; }
+    if(!data.success){ _alert(data.error||'Assignment failed', "Assignment failed", "❌"); btn.disabled=false; btn.textContent='✔ Confirm Stock Assignment'; return; }
 
     closeSoModal();
     await loadStockAssignments(selectedStoreId);
   }catch(e){
-    alert('Error: '+e.message);
+    _alert('Error: '+e.message, "Error", "❌");
     btn.disabled=false; btn.textContent='✔ Confirm Stock Assignment';
   }
 }
 
 async function deleteSoAutoRule(ruleId, productId){
-  if(!confirm('Remove permanent auto-assign rule for this product?')) return;
+  if(!await _confirm('Remove permanent auto-assign rule for this product?', {title:"Remove rule", icon:"⚠️", danger:true, confirmText:"Remove", details:"Future orders for this product won't auto-route anymore."})) return;
   try{
     await fetch(`/stock/order-assignments/?rule_id=${ruleId}`, { method:'DELETE', headers:{'X-CSRFToken':getCSRFToken()} });
     delete _soAutoRules[productId];
@@ -21546,7 +22079,7 @@ async function confirmSoTracking(){
       })
     });
     const d = await res.json();
-    if(!d.success){ alert(d.error||'Failed'); btn.disabled=false; btn.textContent='✔ Save Tracking'; return; }
+    if(!d.success){ _alert(d.error||'Failed', "Save failed", "❌"); btn.disabled=false; btn.textContent='✔ Save Tracking'; return; }
     closeSoTrackModal();
     await soLoadOrders();
     // Auto-switch to Completed tab so user sees the order moved there
@@ -21562,7 +22095,7 @@ async function confirmSoTracking(){
       }
     }
     renderPremiumOrders();
-  }catch(e){ alert(e.message); btn.disabled=false; btn.textContent='✔ Save Tracking'; }
+  }catch(e){ _alert(e.message, "Save failed", "❌"); btn.disabled=false; btn.textContent='✔ Save Tracking'; }
 }
 
 async function soRemoveAssignment(orderId){
@@ -21580,7 +22113,7 @@ async function soRemoveAssignment(orderId){
     }
     await soLoadOrders();
     loadStockAssignments(selectedStoreId);
-  }catch(e){ alert(e.message); }
+  }catch(e){ _alert(e.message, "Error", "❌"); }
 }
 
 async function loadStock(){
@@ -21601,13 +22134,9 @@ async function loadStock(){
   }catch(e){ console.error("loadStock error", e); }
 }
 
-async function _skGetStores(){
-  try{
-    const r = await fetch("/stores/");
-    const d = await r.json();
-    return d.stores || [];
-  }catch(e){ return []; }
-}
+// Removed _skGetStores: never called, and would have thrown
+// because /stores/ returns HTML not JSON. The Stock section uses
+// `selectedStoreId` from the sidebar instead.
 
 function skRenderProducts(){
   const search = (document.getElementById("skSearch")?.value || "").toLowerCase();
@@ -21707,6 +22236,64 @@ function skSwitchTab(tab){
 }
 
 const _AUDIT_ICONS = {add:"➕",deduct:"➖",reserve:"🔒",restore:"♻️",adjust:"✏️",sync:"🔄"};
+let _skAuditLogs = [];
+
+function _skRenderAudit(logs){
+  const body = document.getElementById("skAuditBody");
+  if(!body) return;
+  if(!logs.length){
+    body.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--vf-muted);">No matching audit logs.</td></tr>`;
+    return;
+  }
+  body.innerHTML = logs.map(log => {
+    const dt = new Date(log.created_at);
+    const dateStr = dt.toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"2-digit"});
+    const timeStr = dt.toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"});
+    const chip = `<span class="sk-action-chip ${log.action}">${_AUDIT_ICONS[log.action]||''} ${escapeHtml(log.action_label)}</span>`;
+    const varLabel = [log.color, log.size].filter(Boolean).join(" / ");
+    const diff = log.qty_after - log.qty_before;
+    const diffColor = diff > 0 ? '#16a34a' : diff < 0 ? '#dc2626' : '#6b7280';
+    const diffStr = diff > 0 ? `+${diff}` : String(diff);
+    const qtyHtml = `<div style="display:flex;align-items:center;gap:6px;">
+      <span style="font-family:monospace;color:var(--vf-muted);font-size:12px;">${log.qty_before}</span>
+      <span style="color:var(--vf-muted);">→</span>
+      <span style="font-family:monospace;font-weight:800;font-size:12px;">${log.qty_after}</span>
+      <span style="font-size:10px;font-weight:800;color:${diffColor};background:${diffColor}18;padding:1px 6px;border-radius:999px;">${diffStr}</span>
+    </div>`;
+    return `<tr>
+      <td>
+        <div style="font-size:12px;font-weight:700;color:var(--vf-text);">${dateStr}</div>
+        <div style="font-size:11px;color:var(--vf-muted);">${timeStr}</div>
+      </td>
+      <td>
+        <div style="font-weight:700;font-size:13px;color:var(--vf-text);">${escapeHtml(log.product_name)}</div>
+        ${varLabel ? `<div style="font-size:11px;color:var(--vf-muted);margin-top:2px;">${escapeHtml(varLabel)}</div>` : ''}
+      </td>
+      <td>${chip}</td>
+      <td>${qtyHtml}</td>
+      <td>
+        <div style="font-size:12px;font-weight:600;color:var(--vf-text);">${escapeHtml(log.actor||'—')}</div>
+      </td>
+      <td style="font-size:11px;color:var(--vf-muted);max-width:200px;">${escapeHtml(log.note||'—')}</td>
+    </tr>`;
+  }).join("");
+}
+
+function skFilterAudit(){
+  const q = (document.getElementById("skAuditSearch")?.value || "").trim().toLowerCase();
+  if(!q){ _skRenderAudit(_skAuditLogs); return; }
+  const filtered = _skAuditLogs.filter(l =>
+    (l.product_name||"").toLowerCase().includes(q) ||
+    (l.actor||"").toLowerCase().includes(q) ||
+    (l.action||"").toLowerCase().includes(q) ||
+    (l.action_label||"").toLowerCase().includes(q) ||
+    (l.color||"").toLowerCase().includes(q) ||
+    (l.size||"").toLowerCase().includes(q) ||
+    (l.note||"").toLowerCase().includes(q)
+  );
+  _skRenderAudit(filtered);
+}
+
 async function skLoadAudit(){
   const storeId = selectedStoreId || "";
   const body = document.getElementById("skAuditBody");
@@ -21715,58 +22302,43 @@ async function skLoadAudit(){
     const r = await fetch(`/stock/audit/?store_id=${storeId}&limit=200`);
     const d = await r.json();
     if(!d.success || !d.logs.length){
+      _skAuditLogs = [];
       body.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--vf-muted);">No audit logs yet.</td></tr>`;
       return;
     }
-    body.innerHTML = d.logs.map(log => {
-      const dt = new Date(log.created_at);
-      const dateStr = dt.toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"2-digit"});
-      const timeStr = dt.toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"});
-      const chip = `<span class="sk-action-chip ${log.action}">${_AUDIT_ICONS[log.action]||''} ${escapeHtml(log.action_label)}</span>`;
-      const varLabel = [log.color, log.size].filter(Boolean).join(" / ");
-      const diff = log.qty_after - log.qty_before;
-      const diffColor = diff > 0 ? '#16a34a' : diff < 0 ? '#dc2626' : '#6b7280';
-      const diffStr = diff > 0 ? `+${diff}` : String(diff);
-      const qtyHtml = `<div style="display:flex;align-items:center;gap:6px;">
-        <span style="font-family:monospace;color:var(--vf-muted);font-size:12px;">${log.qty_before}</span>
-        <span style="color:var(--vf-muted);">→</span>
-        <span style="font-family:monospace;font-weight:800;font-size:12px;">${log.qty_after}</span>
-        <span style="font-size:10px;font-weight:800;color:${diffColor};background:${diffColor}18;padding:1px 6px;border-radius:999px;">${diffStr}</span>
-      </div>`;
-      return `<tr>
-        <td>
-          <div style="font-size:12px;font-weight:700;color:var(--vf-text);">${dateStr}</div>
-          <div style="font-size:11px;color:var(--vf-muted);">${timeStr}</div>
-        </td>
-        <td>
-          <div style="font-weight:700;font-size:13px;color:var(--vf-text);">${escapeHtml(log.product_name)}</div>
-          ${varLabel ? `<div style="font-size:11px;color:var(--vf-muted);margin-top:2px;">${escapeHtml(varLabel)}</div>` : ''}
-        </td>
-        <td>${chip}</td>
-        <td>${qtyHtml}</td>
-        <td>
-          <div style="font-size:12px;font-weight:600;color:var(--vf-text);">${escapeHtml(log.actor||'—')}</div>
-        </td>
-        <td style="font-size:11px;color:var(--vf-muted);max-width:200px;">${escapeHtml(log.note||'—')}</td>
-      </tr>`;
-    }).join("");
+    _skAuditLogs = d.logs;
+    // Honor any text already in the search box (e.g., on tab switch)
+    skFilterAudit();
   }catch(e){ body.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:40px;color:#ef4444;">Error loading audit log.</td></tr>`; }
 }
 
-async function skSyncFromOrders(){
+async function skSyncFromOrders(ev){
   const storeId = selectedStoreId;
   if(!storeId){
-    alert("Please select a store from the sidebar first.");
+    await _alert("Please select a store from the sidebar first.", "Pick a store", "🏪");
     return;
   }
-  const btn = event.target;
-  btn.disabled = true; btn.textContent = "Syncing…";
+  const btn = ev?.target?.closest?.("button") || ev?.target;
+  const originalLabel = btn ? btn.innerHTML : null;
+  if(btn){ btn.disabled = true; btn.innerHTML = "Syncing…"; }
   try{
-    const r = await fetch("/stock/sync/",{method:"POST",headers:{"Content-Type":"application/json","X-CSRFToken":getCsrfToken()},body:JSON.stringify({store_id:storeId})});
+    const r = await fetch("/stock/sync/",{
+      method:"POST",
+      headers:{"Content-Type":"application/json","X-CSRFToken":getCSRFToken()},
+      body:JSON.stringify({store_id:storeId}),
+    });
     const d = await r.json();
-    if(d.success) { loadStock(); }
-    else alert("Sync failed: " + d.message);
-  }finally{ btn.disabled=false; btn.textContent="⟳ Sync from Orders"; }
+    if(d.success){
+      await loadStock();
+      _emailToast && _emailToast(`✓ Synced ${d.added||0} new products from orders.`);
+    } else {
+      await _alert("Sync failed: " + (d.message || "Unknown error"), "Sync error", "❌");
+    }
+  }catch(e){
+    await _alert("Sync failed: " + e.message, "Network error", "❌");
+  }finally{
+    if(btn){ btn.disabled = false; btn.innerHTML = originalLabel; }
+  }
 }
 
 // ── Add Stock Modal ──
@@ -21874,8 +22446,8 @@ async function submitSkEdit(){
     const r = await fetch("/stock/entry/",{method:"POST",headers:{"Content-Type":"application/json","X-CSRFToken":getCsrfToken()},body:JSON.stringify({variant_id,quantity,note,action:"adjust"})});
     const d = await r.json();
     if(d.success){ closeSkEditModal(); loadStock(); }
-    else alert("Error: " + (d.message||"Update failed."));
-  }catch(e){ alert("Network error."); }
+    else _alert("Error: " + (d.message||"Update failed."), "Error", "❌");
+  }catch(e){ _alert("Network error.", "Network", "📡"); }
 }
 
 // ── Export ──
@@ -21935,7 +22507,7 @@ function _skGetSelectedVariantIds(){
 // ── Bulk Update Modal ──
 function openSkBulkUpdateModal(){
   const checked = document.querySelectorAll(".skRowCheck:checked");
-  if(!checked.length){ alert("Select at least one product first."); return; }
+  if(!checked.length){ _alert("Select at least one product first.", "Pick a product", "⚠️"); return; }
   const count = checked.length;
   document.getElementById("skBulkUpdateModal").style.display = "flex";
   document.getElementById("skBulkUpdateLabel").textContent = `This will set the same quantity for all variants of the ${count} selected product${count!==1?"s":""}.`;
@@ -21961,7 +22533,7 @@ async function submitSkBulkUpdate(){
   }
 
   const variantIds = _skGetSelectedVariantIds();
-  if(!variantIds.length){ alert("No variants found for selected products."); return; }
+  if(!variantIds.length){ _alert("No variants found for selected products.", "No variants", "⚠️"); return; }
 
   const updates = variantIds.map(id => ({ variant_id: id, quantity: parseInt(qty), note }));
 
@@ -22024,7 +22596,7 @@ function _skStopImportLoader(){
 
 async function openSkImportModal(){
   const storeId = selectedStoreId;
-  if(!storeId){ alert("Please select a store from the sidebar first."); return; }
+  if(!storeId){ _alert("Please select a store from the sidebar first.", "Pick a store", "🏪"); return; }
 
   document.getElementById("skImportModal").style.display = "flex";
   document.getElementById("skImportLoading").style.display = "block";
@@ -22095,7 +22667,7 @@ function skImportToggleAll(checked){
 async function submitSkImport(){
   const storeId = selectedStoreId;
   const checks = document.querySelectorAll(".skImportCheck:checked");
-  if(!checks.length){ alert("Please select at least one product."); return; }
+  if(!checks.length){ _alert("Please select at least one product.", "Pick a product", "⚠️"); return; }
 
   const selected = Array.from(checks).map(cb => {
     const idx = parseInt(cb.dataset.idx);
@@ -22222,10 +22794,9 @@ async function saveProfile(){
   btn.textContent = 'Save Changes'; btn.style.opacity = '1';
 }
 
-function getCsrfToken(){
-  const c = document.cookie.split(';').find(x=>x.trim().startsWith('csrftoken='));
-  return c ? c.trim().split('=')[1] : '';
-}
+// Duplicate definition removed; alias now defined once near canonical impl.
+// Keeping a comment marker so future searches find the de-dup point.
+// (See getCsrfToken alias around the chat WS section.)
 
 // Close profile modal on backdrop click
 document.getElementById('profileModal').addEventListener('click', function(e){
@@ -22405,6 +22976,10 @@ async function tkDrop(e, targetStatus){
   const task = _tkTasks.find(t=>t.id===id);
   if(!task || task.status === targetStatus) { tkRender(); return; }
 
+  // Stash old state for rollback on failure
+  const oldStatus = task.status;
+  const oldProgress = task.progress;
+
   // Optimistic update
   task.status = targetStatus;
   if(targetStatus === 'done') task.progress = 100;
@@ -22412,14 +22987,25 @@ async function tkDrop(e, targetStatus){
   tkUpdateStats();
 
   try {
-    await fetch(`/teamapp/tasks/${id}/`, {
+    const r = await fetch(`/teamapp/tasks/${id}/`, {
       method:'PATCH',
-      headers:{'Content-Type':'application/json','X-CSRFToken':getCsrfToken()},
+      headers:{'Content-Type':'application/json','X-CSRFToken':getCSRFToken()},
       body: JSON.stringify({status: targetStatus})
     });
+    if(!r.ok){
+      throw new Error(`Server responded ${r.status}`);
+    }
     const lbl = targetStatus==='todo'?'To Do':targetStatus==='in_progress'?'In Progress':'Done';
     _showToast(`Moved to "${lbl}"`, 'info');
-  } catch(err){ console.error(err); }
+  } catch(err){
+    // Roll back the optimistic update
+    task.status = oldStatus;
+    task.progress = oldProgress;
+    tkRender();
+    tkUpdateStats();
+    console.error("Task move failed:", err);
+    _showToast(`Move failed: ${err.message||"network error"}. Reverted.`, 'error');
+  }
 }
 document.addEventListener('dragend', ()=>{ document.querySelectorAll('.tk-card').forEach(c=>c.classList.remove('dragging')); });
 
@@ -22526,7 +23112,8 @@ async function tkPostComment(){
 /* ── Delete ── */
 async function tkDeleteTask(){
   if(!_tkActiveId) return;
-  if(!confirm('Delete this task?')) return;
+  const ok = await _confirm('Delete this task?', {title:"Delete task", icon:"🗑️", danger:true, confirmText:"Delete", details:"This action cannot be undone."});
+  if(!ok) return;
   try {
     await fetch(`/teamapp/tasks/${_tkActiveId}/`, {
       method:'DELETE',

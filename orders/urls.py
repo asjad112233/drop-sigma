@@ -12,6 +12,7 @@ urlpatterns = [
     path("api/", views.orders_list_api, name="orders_list_api"),
     path("api/poll/", views.orders_poll_api, name="orders_poll_api"),
     path("api/<int:order_id>/", views.order_detail_api, name="order_detail_api"),
+    path("api/delete/<int:order_id>/", views.delete_order_api, name="delete_order_api"),
     path("api/<int:order_id>/activity/", views.order_activity_api, name="order_activity_api"),
     path("api/<int:order_id>/assign/", views.assign_order_api, name="assign_order_api"),
     path("api/<int:order_id>/tracking/", views.save_order_tracking_api, name="save_order_tracking"),

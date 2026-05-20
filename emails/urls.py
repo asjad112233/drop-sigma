@@ -15,6 +15,7 @@ from .views import (
     ai_training_profile_api,
     ai_training_snippets_api,
     ai_training_snippet_detail_api,
+    ai_training_example_api,
     auto_suggest_reply_api,
     connect_email_account_api,
     connect_custom_email_api,
@@ -37,6 +38,8 @@ from .views import (
     gmail_push_webhook,
     gmail_watch_debug_api,
     latest_email_event_api,
+    toggle_email_read_api,
+    archive_email_thread_api,
 )
 
 urlpatterns = [
@@ -55,6 +58,10 @@ urlpatterns = [
 
     # Send Reply
     path("api/<int:email_id>/send-reply/", send_email_reply_api, name="send_email_reply_api"),
+
+    # Toggle read/unread + archive thread
+    path("api/<int:email_id>/toggle-read/", toggle_email_read_api, name="toggle_email_read_api"),
+    path("api/<int:email_id>/archive/", archive_email_thread_api, name="archive_email_thread_api"),
 
     # Send New Email
     path("api/send/", send_email_api, name="send_email_api"),
@@ -81,6 +88,7 @@ urlpatterns = [
     path("api/ai-training/profile/", ai_training_profile_api, name="ai_training_profile_api"),
     path("api/ai-training/snippets/", ai_training_snippets_api, name="ai_training_snippets_api"),
     path("api/ai-training/snippets/<int:snippet_id>/", ai_training_snippet_detail_api, name="ai_training_snippet_detail_api"),
+    path("api/ai-training/example/", ai_training_example_api, name="ai_training_example_api"),
     path("api/suggest-reply/", auto_suggest_reply_api, name="auto_suggest_reply_api"),
 
     # =========================

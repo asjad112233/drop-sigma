@@ -128,13 +128,19 @@ def extract_clean_email(value):
 
 
 def _smtp_send_direct(account, recipient, subject, html_body, files=None,
-                      in_reply_to=None, references=None, thread_id=None):
+                      in_reply_to=None, references=None, thread_id=None,
+                      cc=None, bcc=None):
     """Send via stored SMTP credentials (custom hosting / non-Gmail accounts).
-    in_reply_to / references RFC-822 Message-IDs keep replies threaded."""
+    in_reply_to / references RFC-822 Message-IDs keep replies threaded.
+    cc/bcc = comma-separated email strings."""
     msg = MIMEMultipart("alternative")
     msg["From"] = account.email
     msg["To"] = recipient
     msg["Subject"] = subject
+    if cc:
+        msg["Cc"] = cc
+    # Bcc is intentionally NOT added as a header (that defeats the purpose);
+    # it's added to the envelope recipients list below.
     if in_reply_to:
         msg["In-Reply-To"] = in_reply_to
     if references:
@@ -152,26 +158,35 @@ def _smtp_send_direct(account, recipient, subject, html_body, files=None,
     host = account.smtp_host
     password = account.app_password
 
+    # Build envelope recipients list (To + Cc + Bcc)
+    envelope_to = [recipient]
+    if cc:
+        envelope_to.extend([e.strip() for e in cc.split(",") if e.strip()])
+    if bcc:
+        envelope_to.extend([e.strip() for e in bcc.split(",") if e.strip()])
+
     if port == 465:
         ctx = ssl.create_default_context()
         with smtplib.SMTP_SSL(host, port, context=ctx, timeout=20) as server:
             server.login(account.email, password)
-            server.sendmail(account.email, recipient, msg.as_string())
+            server.sendmail(account.email, envelope_to, msg.as_string())
     else:
         with smtplib.SMTP(host, port, timeout=20) as server:
             server.ehlo()
             server.starttls(context=ssl.create_default_context())
             server.login(account.email, password)
-            server.sendmail(account.email, recipient, msg.as_string())
+            server.sendmail(account.email, envelope_to, msg.as_string())
 
 
 def send_email_with_store_account(store, recipient, subject, body, files=None,
-                                  in_reply_to=None, references=None, thread_id=None):
+                                  in_reply_to=None, references=None, thread_id=None,
+                                  cc=None, bcc=None):
     """
     Send an email from the store's connected inbox.
     in_reply_to + references = RFC Message-IDs (e.g. '<ABC@mail.gmail.com>') so
     the reply threads under the original conversation in the recipient's inbox.
     thread_id = Gmail's internal thread id (only meaningful for OAuth/Gmail API path).
+    cc / bcc = comma-separated email strings (optional).
     """
     account = EmailAccount.objects.filter(store=store, is_active=True).first()
 
@@ -179,15 +194,37 @@ def send_email_with_store_account(store, recipient, subject, body, files=None,
         raise Exception("No connected email account found for this store.")
 
     if account.auth_type == "oauth" and account.oauth_refresh_token:
-        _gmail_api_send(account, recipient, subject, body, files=files,
-                        in_reply_to=in_reply_to, references=references, thread_id=thread_id)
+        # Gmail API: pass cc/bcc to the helper (which adds the headers + recipients)
+        try:
+            _gmail_api_send(account, recipient, subject, body, files=files,
+                            in_reply_to=in_reply_to, references=references, thread_id=thread_id,
+                            cc=cc, bcc=bcc)
+        except TypeError:
+            # Backward-compat if _gmail_api_send hasn't been extended yet — send
+            # cc/bcc as additional separate envelopes so messages still go through.
+            _gmail_api_send(account, recipient, subject, body, files=files,
+                            in_reply_to=in_reply_to, references=references, thread_id=thread_id)
+            for extra in _expand_recipients(cc) + _expand_recipients(bcc):
+                if extra and extra != recipient:
+                    try:
+                        _gmail_api_send(account, extra, subject, body, files=files)
+                    except Exception:
+                        pass
     elif account.auth_type == "password" and account.app_password:
         _smtp_send_direct(account, recipient, subject, body, files=files,
-                          in_reply_to=in_reply_to, references=references, thread_id=thread_id)
+                          in_reply_to=in_reply_to, references=references, thread_id=thread_id,
+                          cc=cc, bcc=bcc)
     else:
         _brevo_send(account.email, recipient, subject, body, attachments=files)
 
     return account.email
+
+
+def _expand_recipients(value):
+    """Split a comma-separated email string into a clean list."""
+    if not value:
+        return []
+    return [e.strip() for e in str(value).split(",") if e.strip()]
 
 
 def get_thread_contact(email_obj):
@@ -678,6 +715,52 @@ def email_detail_api(request, email_id):
     })
 
 
+@csrf_exempt
+@api_view(["POST"])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def toggle_email_read_api(request, email_id):
+    """Flip the is_read flag on a single email — used by the More-menu.
+    If the EmailAccount has mark_read_in_gmail=True, also flips the Gmail label."""
+    email = get_object_or_404(EmailMessage, id=email_id)
+    new_state = not email.is_read
+    email.is_read = new_state
+    email.save(update_fields=["is_read"])
+
+    # Mirror to Gmail when the setting is on + we have a Gmail UID
+    if new_state and email.gmail_uid:
+        try:
+            account = EmailAccount.objects.filter(store=email.store, is_active=True).first()
+            if account and getattr(account, "mark_read_in_gmail", False):
+                from .services import mark_email_read_in_gmail
+                mark_email_read_in_gmail(account, email.gmail_uid)
+        except Exception:
+            pass
+
+    return Response({"success": True, "is_read": email.is_read})
+
+
+@csrf_exempt
+@api_view(["POST"])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def archive_email_thread_api(request, email_id):
+    """Mark a thread as archived. Sets status='archived' on the latest message,
+    and records the archive timestamp on the EmailThreadAssignment if one exists."""
+    email = get_object_or_404(EmailMessage, id=email_id)
+    email.status = "archived"
+    email.save(update_fields=["status"])
+    # Also flag the thread assignment if present, so it disappears from active queues.
+    try:
+        contact = get_thread_contact(email)
+        EmailThreadAssignment.objects.filter(
+            store=email.store, contact__iexact=contact
+        ).update(is_resolved=True)
+    except Exception:
+        pass
+    return Response({"success": True, "message": "Thread archived."})
+
+
 @api_view(["GET"])
 def email_threads_api(request):
     store_id = request.GET.get("store_id")
@@ -1033,6 +1116,75 @@ def ai_training_snippets_api(request):
 
 
 @csrf_exempt
+@api_view(["POST", "GET"])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def ai_training_example_api(request):
+    """Manually-curated training example (admin teaches AI the right reply).
+
+    POST body:
+      - customer_message: required, the customer's email body
+      - ai_draft:         required, the AI's first attempt
+      - final_text:       required, the corrected version admin wants
+      - store_id:         optional store scope
+
+    GET: returns last 50 manual examples for the current store.
+    """
+    from .models import AiReplyFeedback
+    from stores.models import Store
+
+    if request.method == "GET":
+        store_id = request.GET.get("store_id")
+        qs = AiReplyFeedback.objects.filter(feedback_type='edit').order_by('-id')[:50]
+        if store_id:
+            qs = qs.filter(store_id=store_id)
+        return Response({
+            "success": True,
+            "examples": [{
+                "id": fb.id,
+                "customer_message": fb.customer_message[:600],
+                "ai_draft":         fb.ai_draft[:600],
+                "final_text":       fb.final_text[:600],
+                "created_at":       fb.created_at.isoformat() if fb.created_at else None,
+            } for fb in qs]
+        })
+
+    customer_message = (request.data.get("customer_message") or "").strip()
+    ai_draft         = (request.data.get("ai_draft") or "").strip()
+    final_text       = (request.data.get("final_text") or "").strip()
+    store_id         = request.data.get("store_id")
+
+    if not customer_message or not final_text:
+        return Response({"success": False, "message": "customer_message and final_text are required."}, status=400)
+
+    # Resolve the store — fall back to the first store the user owns
+    store = None
+    if store_id:
+        store = Store.objects.filter(id=store_id).first()
+    if store is None and request.user.is_authenticated and not request.user.is_superuser:
+        store = Store.objects.filter(user=request.user).first()
+    if store is None:
+        store = Store.objects.first()
+
+    if store is None:
+        return Response({"success": False, "message": "No store available — connect a store first."}, status=400)
+
+    fb = AiReplyFeedback.objects.create(
+        store=store,
+        feedback_type='edit',
+        ai_draft=ai_draft,
+        final_text=final_text,
+        customer_message=customer_message,
+        actor=(request.user if request.user.is_authenticated else None),
+    )
+    return Response({
+        "success": True,
+        "message": "Training example saved — future AI replies in this store will learn from it.",
+        "id": fb.id,
+    })
+
+
+@csrf_exempt
 @api_view(["PUT", "DELETE"])
 @authentication_classes([])
 @permission_classes([AllowAny])
@@ -1207,6 +1359,9 @@ def send_email_reply_api(request, email_id):
     email = get_object_or_404(EmailMessage, id=email_id)
 
     reply_text = request.data.get("reply_text") or email.ai_draft
+    cc           = (request.data.get("cc") or "").strip() or None
+    bcc          = (request.data.get("bcc") or "").strip() or None
+    internal_note = (request.data.get("internal_note") or "").strip()
 
     if not reply_text:
         return Response({
@@ -1229,6 +1384,8 @@ def send_email_reply_api(request, email_id):
             subject=f"Re: {email.subject}",
             body=reply_text,
             files=files,
+            cc=cc,
+            bcc=bcc,
         )
     except Exception as e:
         return Response({
@@ -1248,9 +1405,28 @@ def send_email_reply_api(request, email_id):
             "type": "outgoing",
             "source": "reply",
             "reply_to_email_id": email.id,
-            "sent_from": from_email
+            "sent_from": from_email,
+            "cc": cc or "",
+            "bcc": bcc or "",
         }
     )
+
+    # Internal note — saved on the original thread message for team only.
+    # Append to existing internal_notes list in raw_data (no DB migration needed).
+    if internal_note:
+        try:
+            raw = email.raw_data if isinstance(email.raw_data, dict) else {}
+            notes = list(raw.get("internal_notes", []))
+            notes.append({
+                "text": internal_note[:2000],
+                "by": (request.user.username if request.user.is_authenticated else "system"),
+                "at": timezone.now().isoformat(),
+            })
+            raw["internal_notes"] = notes
+            email.raw_data = raw
+            email.save(update_fields=["raw_data"])
+        except Exception:
+            pass
 
     # ── Feedback loop (Item 11) ──
     # If admin edited the AI draft (or wrote a totally new reply when one was suggested),

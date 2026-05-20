@@ -170,6 +170,23 @@ def order_detail_api(request, order_id):
     })
 
 
+@api_view(["DELETE"])
+def delete_order_api(request, order_id):
+    """Delete an order. Scoped to the current admin user via the store owner."""
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Not authenticated"}, status=401)
+
+    # Per-user scope: admin can only delete orders from stores they own.
+    if request.user.is_superuser:
+        order = get_object_or_404(Order, id=order_id)
+    else:
+        order = get_object_or_404(Order, id=order_id, store__user=request.user)
+
+    order_num = order.external_order_id or str(order.id)
+    order.delete()
+    return Response({"success": True, "message": f"Order #{order_num} deleted."})
+
+
 @api_view(["GET"])
 def overview_api(request):
     from datetime import timedelta
