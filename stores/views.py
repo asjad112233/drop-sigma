@@ -69,10 +69,13 @@ def stores_page(request):
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def stores_list_api(request):
-    if request.user.is_authenticated and not request.user.is_superuser:
+    # Every account — including superusers — only sees its own stores in the
+    # tenant dashboard. Cross-tenant management belongs in /superadmin/, not
+    # the normal /dashboard/, so a misclick can't cascade-delete a tenant's data.
+    if request.user.is_authenticated:
         stores = Store.objects.filter(user=request.user).order_by("-id")
     else:
-        stores = Store.objects.all().order_by("-id")
+        stores = Store.objects.none()
     serializer = StoreSerializer(stores, many=True)
     data = serializer.data
 
@@ -110,7 +113,11 @@ def create_store_api(request):
             "message": "Name, platform and store URL are required."
         }, status=400)
 
-    user = request.user if request.user.is_authenticated else User.objects.filter(is_superuser=True).first()
+    # Require auth — never silently attach to the first superuser, which would
+    # leak the store into the wrong tenant's dashboard.
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Login required."}, status=401)
+    user = request.user
 
     store = Store.objects.create(
         user=user,
@@ -218,12 +225,19 @@ def wc_callback_api(request):
             "message": "WooCommerce callback missing required data."
         }, status=400)
 
-    # Associate store with the correct user (falls back to first superuser)
+    # Associate store with the correct user. user_pk comes from our own OAuth
+    # state, so trust it — no is_staff filter (regular tenants aren't staff and
+    # would otherwise fall through to the superuser fallback, leaking the store
+    # into the wrong account).
     user = None
     if user_pk:
-        user = User.objects.filter(pk=user_pk, is_staff=True).first()
+        user = User.objects.filter(pk=user_pk).first()
     if not user:
-        user = User.objects.filter(is_superuser=True).first()
+        logger.error(f"WC callback: no user matched user_pk={user_pk!r}, store will not be saved")
+        return Response({
+            "success": False,
+            "message": "Could not match the OAuth flow to a user. Please reconnect from the dashboard."
+        }, status=400)
 
     try:
         store, created = Store.objects.update_or_create(
@@ -274,7 +288,18 @@ def connect_success_page(request):
         store_url = user_data.get("store_url", "")
 
         if store_url:
-            user = request.user if request.user.is_authenticated else User.objects.filter(is_superuser=True).first()
+            # Resolve owner: prefer the logged-in browser session, fall back to
+            # the user_pk we stamped into the OAuth state. Never silently
+            # attach to the first superuser — that's how stores leak into the
+            # wrong tenant's dashboard.
+            user_pk = user_data.get("user_pk")
+            user = request.user if request.user.is_authenticated else None
+            if not user and user_pk:
+                user = User.objects.filter(pk=user_pk).first()
+            if not user:
+                return render(request, "dashboard.html", {
+                    "connect_error": "Could not match this connection to your account. Please reconnect from the dashboard while logged in."
+                })
             store, _ = Store.objects.update_or_create(
                 store_url=store_url,
                 defaults={
