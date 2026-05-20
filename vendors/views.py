@@ -6,7 +6,7 @@ from django.utils import timezone
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from .models import Vendor, ProductVendorAssignment, VendorTrackingSubmission, StoreVendorAssignment, TrackingQueueSetting, ProductTrackingAutoApprove, VendorInvitation
+from .models import Vendor, ProductVendorAssignment, VendorTrackingSubmission, StoreVendorAssignment, TrackingQueueSetting, ProductTrackingAutoApprove, VendorInvitation, VendorPasswordResetRequest
 from .serializers import VendorSerializer
 from orders.models import Order
 from orders.services import log_activity, COURIER_URL_TEMPLATES
@@ -1082,6 +1082,151 @@ def vendor_stock_mark_arrived_api(request, assignment_id):
     assignment.save(update_fields=["stock_arrived", "arrived_at"])
 
     return Response({"success": True, "message": "Stock marked as arrived. Admin has been notified."})
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# VENDOR PORTAL — Self-service: Permissions, Permanent Products, Change Password
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Canonical list of permission keys + their human labels, mirrored on the
+# vendor side as read-only display. Keep in sync with admin permissions UI.
+VENDOR_PERMISSION_LABELS = {
+    "show_order_amount":     "View Order Amount",
+    "show_order_email":      "View Customer Email",
+    "show_assigned_member":  "View Assigned Team Member",
+    "show_store_url":        "View Store URL",
+    "show_customer_phone":   "View Customer Phone",
+    "show_customer_address": "View Customer Address",
+    "submit_tracking":       "Submit Tracking Numbers",
+    "view_order_history":    "View Order History",
+    "view_tracking_history": "View Tracking History",
+}
+
+
+@api_view(["GET"])
+def vendor_my_permissions_api(request):
+    """Return the current vendor's own permissions as a read-only list."""
+    vendor, err = _require_vendor(request)
+    if err:
+        return err
+    perms = vendor.permissions or {}
+    items = []
+    for key, label in VENDOR_PERMISSION_LABELS.items():
+        items.append({
+            "key": key,
+            "label": label,
+            "enabled": bool(perms.get(key, False)),
+        })
+    return Response({"success": True, "permissions": items})
+
+
+@api_view(["GET"])
+def vendor_my_permanent_products_api(request):
+    """Return products that are permanently assigned to the current vendor."""
+    vendor, err = _require_vendor(request)
+    if err:
+        return err
+
+    perm_qs = (ProductVendorAssignment.objects
+               .filter(vendor=vendor, is_active=True)
+               .select_related("store")
+               .order_by("-created_at"))
+
+    items = []
+    for a in perm_qs:
+        product_orders = Order.objects.filter(assigned_vendor=vendor, product_id=a.product_id)
+        total_orders = product_orders.count()
+        shipped = product_orders.filter(fulfillment_status__in=["shipped", "completed"]).count()
+        pending = product_orders.exclude(fulfillment_status__in=["shipped", "completed", "cancelled"]).count()
+        items.append({
+            "id": a.id,
+            "product_id": a.product_id,
+            "product_name": a.product_name or a.product_id,
+            "store_name": a.store.name if a.store else "",
+            "image": _get_product_image(vendor, a.product_id),
+            "assigned_at": a.created_at.isoformat() if a.created_at else None,
+            "total_orders": total_orders,
+            "shipped_orders": shipped,
+            "pending_orders": pending,
+        })
+
+    return Response({"success": True, "products": items, "count": len(items)})
+
+
+@api_view(["POST"])
+def vendor_change_password_api(request):
+    """Allow vendor to change their own password from the portal."""
+    vendor, err = _require_vendor(request)
+    if err:
+        return err
+
+    if not vendor.user:
+        return Response({"success": False, "message": "No login account is linked to this vendor."}, status=400)
+
+    current = (request.data.get("current_password") or "").strip()
+    new_pw  = (request.data.get("new_password") or "").strip()
+    confirm = (request.data.get("confirm_password") or "").strip()
+
+    if not current or not new_pw or not confirm:
+        return Response({"success": False, "message": "All three fields are required."}, status=400)
+
+    if new_pw != confirm:
+        return Response({"success": False, "message": "New password and confirmation do not match."}, status=400)
+
+    if len(new_pw) < 8:
+        return Response({"success": False, "message": "New password must be at least 8 characters long."}, status=400)
+
+    if new_pw == current:
+        return Response({"success": False, "message": "New password must be different from your current password."}, status=400)
+
+    if not vendor.user.check_password(current):
+        return Response({"success": False, "message": "Current password is incorrect."}, status=400)
+
+    vendor.user.set_password(new_pw)
+    vendor.user.save()
+    vendor.password_plain = new_pw  # Keep in sync so admin "view credentials" still works
+    vendor.save(update_fields=["password_plain"])
+
+    # Keep the user logged in after password change
+    from django.contrib.auth import update_session_auth_hash
+    update_session_auth_hash(request, vendor.user)
+
+    return Response({"success": True, "message": "Password updated successfully."})
+
+
+@api_view(["POST"])
+def vendor_forgot_password_api(request):
+    """
+    Vendor-initiated password reset request.
+
+    Since vendors don't own the email infrastructure (per project rule: emails
+    only via tenant's own connected Gmail), this endpoint records the reset
+    request and notifies the store owner. The admin then uses the existing
+    vendor_reset_password_api flow to set a new password and email it back
+    to the vendor via the store's connected Gmail account.
+    """
+    email = (request.data.get("email") or "").strip().lower()
+    if not email:
+        return Response({"success": False, "message": "Please enter your vendor email."}, status=400)
+
+    # Don't leak whether the email exists — always respond with a generic success.
+    vendor = Vendor.objects.filter(email__iexact=email).first()
+    if vendor:
+        # Record the request — admin sees this in their portal and can act on it.
+        try:
+            VendorPasswordResetRequest.objects.create(
+                vendor=vendor,
+                requested_email=email,
+                requested_ip=request.META.get("REMOTE_ADDR", "")[:45],
+                user_agent=(request.META.get("HTTP_USER_AGENT", "") or "")[:300],
+            )
+        except Exception:
+            pass
+
+    return Response({
+        "success": True,
+        "message": "If an account exists for that email, your admin has been notified and will reset your password shortly. You'll receive the new credentials via email.",
+    })
 
 
 # ─── Vendor Invitations ───────────────────────────────────────────────────────

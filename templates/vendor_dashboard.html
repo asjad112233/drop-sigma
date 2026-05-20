@@ -61,6 +61,9 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
 .oh-pill.fulfilled{background:#dcfce7;color:#166534;}
 .oh-pill.pending{background:#fef3c7;color:#92400e;}
 .oh-pill.paid{background:#dcfce7;color:#166534;}
+.oh-pill.assigned{background:#fef3c7;color:#92400e;}
+.oh-pill.in_progress{background:#dbeafe;color:#1d4ed8;}
+.oh-pill.unassigned{background:#f1f5f9;color:#475569;}
 .oh-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
 .oh-stat{background:#fff;border:1px solid var(--vf-line);border-radius:14px;padding:16px;text-align:center;}
 .oh-stat .num{font-size:24px;font-weight:800;color:var(--vf-text);}
@@ -125,7 +128,7 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
 .vp-topbar p{font-size:14px;color:var(--vf-muted);margin-top:4px;}
 
 /* ── Stats ── */
-.vp-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px;}
+.vp-stats{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:20px;}
 .vp-stat{background:#fff;border:1px solid var(--vf-line);border-radius:18px;padding:18px 16px;text-align:center;box-shadow:var(--vf-shadow);transition:.15s;}
 .vp-stat:hover{transform:translateY(-2px);box-shadow:0 18px 40px rgba(15,23,42,.1);}
 .vp-stat .num{font-size:26px;font-weight:800;color:var(--vf-text);line-height:1;}
@@ -134,6 +137,7 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
 .vp-stat.green .num{color:#16a34a;}
 .vp-stat.red .num{color:#dc2626;}
 .vp-stat.purple .num{color:#7c3aed;}
+.vp-stat.blue .num{color:#2563eb;}
 
 /* ── Filter bar ── */
 .vp-filter-bar{display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
@@ -202,6 +206,9 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
 .vp-tab{display:none;}
 .vp-tab.active{display:block;}
 
+/* Global loader bar */
+.g-loader{position:fixed;top:0;left:0;right:0;height:3px;width:0%;background:linear-gradient(90deg,#2563eb,#7c3aed,#ec4899);z-index:99999;pointer-events:none;box-shadow:0 0 10px rgba(124,58,237,.45);}
+
 /* ── Tracking history ── */
 .vp-history-item{display:flex;align-items:flex-start;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--vf-line);}
 .vp-history-item:last-child{border-bottom:none;}
@@ -211,8 +218,34 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
 .vp-history-right .pill{margin-bottom:4px;}
 
 /* ── Profile ── */
-.vp-profile-card{background:#fff;border:1px solid var(--vf-line);border-radius:18px;padding:28px;max-width:520px;box-shadow:var(--vf-shadow);}
+.vp-profile-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start;}
+@media (max-width:900px){.vp-profile-grid{grid-template-columns:1fr;}}
+.vp-profile-card{background:#fff;border:1px solid var(--vf-line);border-radius:18px;padding:28px;max-width:none;box-shadow:var(--vf-shadow);}
 .vp-profile-card h3{font-size:17px;font-weight:800;color:var(--vf-text);margin-bottom:20px;}
+
+/* Permissions list */
+.vp-perm-row{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-radius:10px;background:#f8fafc;border:1px solid var(--vf-line);margin-bottom:6px;font-size:13px;}
+.vp-perm-row.on{background:#f0fdf4;border-color:#bbf7d0;}
+.vp-perm-row.off{background:#f8fafc;border-color:#e2e8f0;color:#94a3b8;}
+.vp-perm-row .lbl{font-weight:600;color:#0f172a;}
+.vp-perm-row.off .lbl{color:#64748b;}
+.vp-perm-row .stat{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;padding:3px 9px;border-radius:99px;}
+.vp-perm-row.on .stat{background:#16a34a;color:#fff;}
+.vp-perm-row.off .stat{background:#e2e8f0;color:#64748b;}
+
+/* Permanent product card */
+.vp-perm-prod-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;}
+.vp-perm-prod{background:#fff;border:1px solid var(--vf-line);border-radius:14px;padding:14px;display:flex;gap:12px;align-items:flex-start;transition:.15s;}
+.vp-perm-prod:hover{box-shadow:0 14px 30px rgba(15,23,42,.08);border-color:#cbd5e1;}
+.vp-perm-prod img{width:48px;height:48px;object-fit:cover;border-radius:10px;border:1px solid var(--vf-line);flex-shrink:0;}
+.vp-perm-prod .ph{width:48px;height:48px;background:#f1f5f9;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;}
+.vp-perm-prod .meta{flex:1;min-width:0;}
+.vp-perm-prod .meta b{font-size:13px;font-weight:700;color:var(--vf-text);display:block;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.vp-perm-prod .meta .sub{font-size:11px;color:var(--vf-muted);margin-bottom:8px;}
+.vp-perm-prod .meta .stats{display:flex;gap:8px;flex-wrap:wrap;}
+.vp-perm-prod .meta .stats span{font-size:10px;font-weight:700;padding:3px 8px;border-radius:99px;background:#f1f5f9;color:#475569;}
+.vp-perm-prod .meta .stats span.green{background:#dcfce7;color:#166534;}
+.vp-perm-prod .meta .stats span.yellow{background:#fef3c7;color:#92400e;}
 .vp-info-row{display:flex;flex-direction:column;gap:3px;margin-bottom:16px;}
 .vp-info-row label{font-size:10px;font-weight:700;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.05em;}
 .vp-info-row span{font-size:14px;font-weight:600;color:var(--vf-text);}
@@ -486,6 +519,11 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
 </head>
 <body>
 
+<!-- Global loader -->
+<div id="gLoader" class="g-loader"></div>
+<!-- CSRF fallback form (for JS POSTs when cookie unavailable) -->
+<form id="csrfForm" style="display:none;">{% csrf_token %}</form>
+
 <!-- Sidebar -->
 <div class="vp-sidebar" id="vpSidebar">
   <button class="vp-sb-toggle" id="vpSbToggleBtn" onclick="vpToggleSidebar()" title="Collapse sidebar">
@@ -538,6 +576,7 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
     <div class="vp-stats">
       <div class="vp-stat"><div class="num" id="vsStat_total">0</div><div class="lbl">Total</div></div>
       <div class="vp-stat yellow"><div class="num" id="vsStat_assigned">0</div><div class="lbl">Assigned</div></div>
+      <div class="vp-stat blue"><div class="num" id="vsStat_in_progress">0</div><div class="lbl">In Progress</div></div>
       <div class="vp-stat purple"><div class="num" id="vsStat_tracking_submitted">0</div><div class="lbl">Pending Review</div></div>
       <div class="vp-stat red"><div class="num" id="vsStat_rejected">0</div><div class="lbl">Rejected</div></div>
       <div class="vp-stat green"><div class="num" id="vsStat_approved">0</div><div class="lbl">Approved</div></div>
@@ -546,6 +585,7 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
     <div class="vp-filter-bar">
       <button class="vp-filter-btn active" data-f="all" onclick="setVendorFilter('all', this)">All</button>
       <button class="vp-filter-btn" data-f="assigned" onclick="setVendorFilter('assigned', this)">Assigned</button>
+      <button class="vp-filter-btn" data-f="in_progress" onclick="setVendorFilter('in_progress', this)">In Progress</button>
       <button class="vp-filter-btn" data-f="tracking_submitted" onclick="setVendorFilter('tracking_submitted', this)">Pending Review</button>
       <button class="vp-filter-btn" data-f="rejected" onclick="setVendorFilter('rejected', this)">Rejected</button>
       <button class="vp-filter-btn" data-f="approved" onclick="setVendorFilter('approved', this)">Approved</button>
@@ -702,25 +742,83 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
   <!-- Profile Tab -->
   <div id="tabProfile" class="vp-tab">
     <div class="vp-topbar">
-      <div><h1>My Profile</h1><p>Your vendor account details.</p></div>
+      <div><h1>My Profile</h1><p>Your vendor account, permissions, and assigned products.</p></div>
     </div>
-    <div class="vp-profile-card">
-      <h3>Account Information</h3>
-      <div class="vp-info-row"><label>Full Name</label><span>{{ vendor.name }}</span></div>
-      <div class="vp-info-row"><label>Email</label><span>{{ vendor.email }}</span></div>
-      {% if vendor.phone %}<div class="vp-info-row"><label>Phone</label><span>{{ vendor.phone }}</span></div>{% endif %}
-      {% if vendor.company_name %}<div class="vp-info-row"><label>Company</label><span>{{ vendor.company_name }}</span></div>{% endif %}
-      {% if vendor.country %}<div class="vp-info-row"><label>Country</label><span>{{ vendor.country }}</span></div>{% endif %}
-      <div class="vp-info-row"><label>Status</label><span class="pill {% if vendor.status == 'active' %}green{% else %}gray{% endif %}">{{ vendor.status }}</span></div>
-      <div class="vp-info-row"><label>Assigned Store</label><span>{{ vendor.assigned_store.name }}</span></div>
 
-      <div class="vp-login-box">
-        <h4>Login Credentials</h4>
-        <div class="row"><label>Login URL</label><span>/vendor/login/</span></div>
-        <div class="row"><label>Email</label><span>{{ vendor.email }}</span></div>
-        {% if vendor.password_plain %}
-        <div class="row"><label>Password</label><span>{{ vendor.password_plain }}</span></div>
-        {% endif %}
+    <div class="vp-profile-grid">
+      <!-- Account Info Card -->
+      <div class="vp-profile-card">
+        <h3>Account Information</h3>
+        <div class="vp-info-row"><label>Full Name</label><span>{{ vendor.name }}</span></div>
+        <div class="vp-info-row"><label>Email</label><span>{{ vendor.email }}</span></div>
+        {% if vendor.phone %}<div class="vp-info-row"><label>Phone</label><span>{{ vendor.phone }}</span></div>{% endif %}
+        {% if vendor.company_name %}<div class="vp-info-row"><label>Company</label><span>{{ vendor.company_name }}</span></div>{% endif %}
+        {% if vendor.country %}<div class="vp-info-row"><label>Country</label><span>{{ vendor.country }}</span></div>{% endif %}
+        <div class="vp-info-row"><label>Status</label><span class="pill {% if vendor.status == 'active' %}green{% else %}gray{% endif %}">{{ vendor.status }}</span></div>
+        {% if vendor.assigned_store %}<div class="vp-info-row"><label>Assigned Store</label><span>{{ vendor.assigned_store.name }}</span></div>{% endif %}
+
+        <div class="vp-login-box">
+          <h4>Login Credentials</h4>
+          <div class="row"><label>Login URL</label><span>/vendor/login/</span></div>
+          <div class="row"><label>Email</label><span>{{ vendor.email }}</span></div>
+          <div class="row"><label>Password</label><span style="display:flex;align-items:center;gap:6px;">••••••••<button type="button" onclick="vpOpenChangePw()" style="background:#ede9fe;border:1px solid #c4b5fd;color:#6d28d9;font-size:11px;font-weight:700;padding:3px 10px;border-radius:8px;cursor:pointer;font-family:inherit;">Change</button></span></div>
+        </div>
+      </div>
+
+      <!-- Permissions Card -->
+      <div class="vp-profile-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+          <h3 style="margin:0;">My Permissions</h3>
+          <button class="vp-btn gray sm" onclick="loadMyPermissions()" style="padding:5px 10px;font-size:11px;">Refresh</button>
+        </div>
+        <p style="font-size:12px;color:var(--vf-muted);margin-bottom:14px;">Read-only — your admin controls these toggles.</p>
+        <div id="myPermsList">
+          <div class="vp-empty" style="padding:24px;"><div class="icon">🔒</div><p>Loading...</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Permanent Products Card (full width) -->
+    <div class="vp-profile-card" style="max-width:none;margin-top:18px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <div>
+          <h3 style="margin:0;">My Permanent Products</h3>
+          <p style="font-size:12px;color:var(--vf-muted);margin-top:4px;">Products permanently assigned to you — every future order auto-routes here.</p>
+        </div>
+        <button class="vp-btn gray sm" onclick="loadMyPermanentProducts()" style="padding:5px 10px;font-size:11px;">Refresh</button>
+      </div>
+      <div id="myPermProductsList">
+        <div class="vp-empty" style="padding:32px;"><div class="icon">🔒</div><p>Loading...</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Change Password Modal -->
+  <div id="vpChangePwModal" style="display:none;position:fixed;inset:0;background:rgba(10,14,31,.6);backdrop-filter:blur(8px);z-index:9999;align-items:center;justify-content:center;padding:20px;">
+    <div style="background:#fff;border-radius:22px;width:100%;max-width:440px;padding:28px;box-shadow:0 40px 100px rgba(15,23,42,.25);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+        <h3 style="font-size:18px;font-weight:900;color:#101828;letter-spacing:-.4px;">Change Password</h3>
+        <button onclick="vpCloseChangePw()" style="width:32px;height:32px;border:1px solid #dfe6f0;border-radius:10px;background:#f8fafc;cursor:pointer;font-size:16px;color:#667085;">×</button>
+      </div>
+      <p style="font-size:12px;color:#667085;margin-bottom:18px;">Set a new password. You'll stay signed in.</p>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div>
+          <label style="font-size:11px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;display:block;">Current Password</label>
+          <input type="password" id="vpPwCurrent" autocomplete="current-password" placeholder="••••••••" style="width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;display:block;">New Password <span style="font-weight:500;color:#94a3b8;text-transform:none;">(min 8 chars)</span></label>
+          <input type="password" id="vpPwNew" autocomplete="new-password" placeholder="••••••••" style="width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;display:block;">Confirm New Password</label>
+          <input type="password" id="vpPwConfirm" autocomplete="new-password" placeholder="••••••••" style="width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;">
+        </div>
+      </div>
+      <p id="vpPwMsg" style="font-size:12px;font-weight:700;margin:14px 0 0;min-height:18px;"></p>
+      <div style="display:flex;gap:10px;margin-top:14px;">
+        <button class="vp-btn blue" id="vpPwSubmitBtn" onclick="submitChangePw()" style="flex:1;justify-content:center;">Update Password</button>
+        <button class="vp-btn gray" onclick="vpCloseChangePw()">Cancel</button>
       </div>
     </div>
   </div>
@@ -1067,9 +1165,11 @@ function switchTab(tab, btn){
   const main = document.querySelector(".vp-main");
   if(tab==="chat"){ main.classList.add("chat-mode"); vcChatInit(); vcLoadMembers(); }
   else { main.classList.remove("chat-mode"); }
-  if(tab==="tracking") loadTrackingHistory();
+  if(tab==="tracking"){ loadTrackingHistory(); startTrackingAutoRefresh(); }
+  else { stopTrackingAutoRefresh(); }
   if(tab==="history") loadOrderHistory();
   if(tab==="stock") loadVpStock();
+  if(tab==="profile"){ loadMyPermissions(); loadMyPermanentProducts(); }
 }
 
 function setVendorFilter(f, btn){
@@ -1255,16 +1355,33 @@ async function submitTracking(){
   }catch(e){msg.className="vp-form-msg err";msg.innerText=e.message;}
 }
 
-async function loadTrackingHistory(){
+// Tracking History auto-refresh state
+let _trackingPollTimer = null;
+let _trackingLastSig = "";
+
+function _trackingSignature(subs){
+  // Build a compact signature so we know if anything changed (status/reason)
+  return subs.map(s=>`${s.id}:${s.status}:${s.reviewed_at||""}`).join("|");
+}
+
+async function loadTrackingHistory(silent){
   const panel=document.getElementById("trackingHistoryPanel");
-  panel.innerHTML=`<div class="vp-empty"><div class="icon">⏳</div><p>Loading...</p></div>`;
+  if(!silent){
+    panel.innerHTML=`<div class="vp-empty"><div class="icon">⏳</div><p>Loading...</p></div>`;
+  }
   try{
     const r=await fetch("/vendor/api/tracking-history/");
     const d=await r.json();
     if(!d.success||!d.submissions.length){
       panel.innerHTML=`<div class="vp-empty"><div class="icon">🚚</div><p>No tracking submissions yet.</p></div>`;
+      _trackingLastSig="";
       return;
     }
+    const sig = _trackingSignature(d.submissions);
+    // Skip re-render in silent mode if nothing changed (avoids visual flicker)
+    if(silent && sig===_trackingLastSig) return;
+    _trackingLastSig = sig;
+
     const pillColor={pending:"purple",approved:"green",rejected:"red"};
     panel.innerHTML=d.submissions.map(s=>{
       const date=s.submitted_at?new Date(s.submitted_at).toLocaleString([],{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"}):"-";
@@ -1281,8 +1398,26 @@ async function loadTrackingHistory(){
       </div>`;
     }).join("");
   }catch(e){
-    panel.innerHTML=`<div class="vp-empty"><p style="color:red;">${esc(e.message)}</p></div>`;
+    if(!silent) panel.innerHTML=`<div class="vp-empty"><p style="color:red;">${esc(e.message)}</p></div>`;
   }
+}
+
+function _trackingTabIsActive(){
+  const tab=document.getElementById("tabTracking");
+  return tab && tab.classList.contains("active");
+}
+
+function startTrackingAutoRefresh(){
+  stopTrackingAutoRefresh();
+  // Poll every 25s while the tab is open + visible
+  _trackingPollTimer = setInterval(()=>{
+    if(!_trackingTabIsActive()) return;
+    if(document.hidden) return;
+    loadTrackingHistory(true);
+  }, 25000);
+}
+function stopTrackingAutoRefresh(){
+  if(_trackingPollTimer){ clearInterval(_trackingPollTimer); _trackingPollTimer=null; }
 }
 
 // ── Order Detail Page ─────────────────────────────────────────────────────
@@ -1527,8 +1662,123 @@ async function submitTrackingFromDetail(orderId){
 }
 
 function getCsrf(){
+  // 1) Cookie (preferred)
   const c=document.cookie.split(";").find(c=>c.trim().startsWith("csrftoken="));
-  return c?c.split("=")[1].trim():"";
+  if(c) return c.split("=")[1].trim();
+  // 2) Fallback: read from hidden {% csrf_token %} form
+  const inp=document.querySelector('#csrfForm input[name="csrfmiddlewaretoken"]');
+  return inp ? inp.value : "";
+}
+
+// ── Profile: My Permissions ───────────────────────────────────────────────
+async function loadMyPermissions(){
+  const list = document.getElementById("myPermsList");
+  if(!list) return;
+  list.innerHTML = '<div class="vp-empty" style="padding:24px;"><div class="icon">⏳</div><p>Loading…</p></div>';
+  try{
+    const r = await fetch("/vendor/api/my-permissions/");
+    const d = await r.json();
+    if(!d.success){ list.innerHTML = `<div class="vp-empty" style="padding:24px;color:#dc2626;">${esc(d.message||"Could not load permissions.")}</div>`; return; }
+    if(!d.permissions.length){ list.innerHTML = '<div class="vp-empty" style="padding:24px;"><div class="icon">🔒</div><p>No permissions configured. Contact your admin.</p></div>'; return; }
+    list.innerHTML = d.permissions.map(p=>`
+      <div class="vp-perm-row ${p.enabled?"on":"off"}">
+        <span class="lbl">${esc(p.label)}</span>
+        <span class="stat">${p.enabled?"✓ Enabled":"Disabled"}</span>
+      </div>`).join("");
+  }catch(e){
+    list.innerHTML = `<div class="vp-empty" style="padding:24px;color:#dc2626;">${esc(e.message)}</div>`;
+  }
+}
+
+// ── Profile: My Permanent Products ────────────────────────────────────────
+async function loadMyPermanentProducts(){
+  const list = document.getElementById("myPermProductsList");
+  if(!list) return;
+  list.innerHTML = '<div class="vp-empty" style="padding:32px;"><div class="icon">⏳</div><p>Loading…</p></div>';
+  try{
+    const r = await fetch("/vendor/api/my-permanent-products/");
+    const d = await r.json();
+    if(!d.success){ list.innerHTML = `<div class="vp-empty" style="padding:32px;color:#dc2626;">${esc(d.message||"Could not load.")}</div>`; return; }
+    if(!d.products.length){
+      list.innerHTML = '<div class="vp-empty" style="padding:32px;"><div class="icon">🔒</div><p>No products permanently assigned to you yet.</p><p style="font-size:12px;color:#94a3b8;margin-top:6px;">Your admin can lock SKUs to you so every future order auto-routes here.</p></div>';
+      return;
+    }
+    list.innerHTML = `<div class="vp-perm-prod-grid">` + d.products.map(p=>{
+      const img = p.image
+        ? `<img src="${esc(p.image)}" alt="${esc(p.product_name)}" onerror="this.style.display='none';this.nextElementSibling&&(this.nextElementSibling.style.display='flex')">`
+        : `<div class="ph">📦</div>`;
+      const date = p.assigned_at ? new Date(p.assigned_at).toLocaleDateString([], {day:"2-digit",month:"short",year:"numeric"}) : "—";
+      return `<div class="vp-perm-prod">
+        ${img}
+        <div class="meta">
+          <b title="${esc(p.product_name)}">${esc(p.product_name)}</b>
+          <div class="sub">${esc(p.store_name||"")} · since ${esc(date)}</div>
+          <div class="stats">
+            <span>Total: <b>${p.total_orders}</b></span>
+            <span class="green">Shipped: <b>${p.shipped_orders}</b></span>
+            ${p.pending_orders>0?`<span class="yellow">Pending: <b>${p.pending_orders}</b></span>`:""}
+          </div>
+        </div>
+      </div>`;
+    }).join("") + `</div>`;
+  }catch(e){
+    list.innerHTML = `<div class="vp-empty" style="padding:32px;color:#dc2626;">${esc(e.message)}</div>`;
+  }
+}
+
+// ── Profile: Change Password ──────────────────────────────────────────────
+function vpOpenChangePw(){
+  document.getElementById("vpPwCurrent").value = "";
+  document.getElementById("vpPwNew").value = "";
+  document.getElementById("vpPwConfirm").value = "";
+  document.getElementById("vpPwMsg").textContent = "";
+  document.getElementById("vpPwMsg").style.color = "";
+  const btn = document.getElementById("vpPwSubmitBtn");
+  btn.disabled = false; btn.textContent = "Update Password";
+  document.getElementById("vpChangePwModal").style.display = "flex";
+  setTimeout(()=>document.getElementById("vpPwCurrent").focus(), 50);
+}
+function vpCloseChangePw(){
+  document.getElementById("vpChangePwModal").style.display = "none";
+}
+async function submitChangePw(){
+  const cur = document.getElementById("vpPwCurrent").value;
+  const nw  = document.getElementById("vpPwNew").value;
+  const cf  = document.getElementById("vpPwConfirm").value;
+  const msg = document.getElementById("vpPwMsg");
+  const btn = document.getElementById("vpPwSubmitBtn");
+
+  msg.style.color = "#dc2626";
+  if(!cur || !nw || !cf){ msg.textContent = "All fields are required."; return; }
+  if(nw !== cf){ msg.textContent = "New password and confirmation do not match."; return; }
+  if(nw.length < 8){ msg.textContent = "New password must be at least 8 characters."; return; }
+  if(nw === cur){ msg.textContent = "New password must differ from current."; return; }
+
+  btn.disabled = true; btn.textContent = "Updating…";
+  msg.style.color = "#64748b"; msg.textContent = "Updating password…";
+
+  try{
+    const r = await fetch("/vendor/api/change-password/", {
+      method:"POST",
+      headers:{"Content-Type":"application/json","X-CSRFToken":getCsrf()},
+      body: JSON.stringify({current_password:cur, new_password:nw, confirm_password:cf}),
+    });
+    const d = await r.json();
+    if(!d.success){
+      msg.style.color = "#dc2626";
+      msg.textContent = d.message || "Could not change password.";
+      btn.disabled = false; btn.textContent = "Update Password";
+      return;
+    }
+    msg.style.color = "#16a34a";
+    msg.textContent = "✓ Password updated. You'll stay signed in.";
+    btn.textContent = "Done";
+    setTimeout(()=>{ vpCloseChangePw(); }, 1200);
+  }catch(e){
+    msg.style.color = "#dc2626";
+    msg.textContent = e.message || "Network error.";
+    btn.disabled = false; btn.textContent = "Update Password";
+  }
 }
 
 // ── Vendor Chat (Premium) ─────────────────────────────────────────────────────
@@ -1783,16 +2033,33 @@ async function vcOpenMembersModal(){
   if(!d.members.length){
     list.innerHTML = `<div style="color:#9ca3af;font-size:13px;text-align:center;padding:20px 0;">No members yet.</div>`;
   } else {
-    list.innerHTML = d.members.map(m=>`
-      <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f3f0ff;">
+    // Read current vendor user id from msg_map fallback so we can hide "DM yourself"
+    const myUid = _vcCurrentUserId;
+    list.innerHTML = d.members.map(m=>{
+      const isMe = myUid && Number(m.user)===Number(myUid);
+      const safeName = (m.name||"").replace(/"/g,'&quot;').replace(/'/g,"\\'");
+      const clickAttr = isMe ? "" : `onclick="_vcMembersDmClick(${m.user},'${safeName}')"`;
+      const cursor = isMe ? "default" : "pointer";
+      const hint = isMe ? `<span style="font-size:10px;color:#9ca3af;margin-left:auto;">You</span>` : `<i class="fa-regular fa-message" style="color:#7c3aed;margin-left:auto;font-size:13px;opacity:.6;"></i>`;
+      return `
+      <div ${clickAttr} style="display:flex;align-items:center;gap:10px;padding:9px 6px;border-bottom:1px solid #f3f0ff;border-radius:8px;cursor:${cursor};transition:background .12s;" onmouseenter="${isMe?"":"this.style.background='#faf8ff'"}" onmouseleave="${isMe?"":"this.style.background=''"}">
         <div style="width:34px;height:34px;border-radius:50%;background:#ede9fe;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:#7c3aed;flex-shrink:0;">${m.initials}</div>
         <div style="flex:1;min-width:0;">
-          <div style="font-weight:600;font-size:13px;color:#1e1b4b;">${m.name}</div>
-          <div style="font-size:11px;color:#9ca3af;">${m.role}</div>
+          <div style="font-weight:600;font-size:13px;color:#1e1b4b;">${esc(m.name)}</div>
+          <div style="font-size:11px;color:#9ca3af;">${esc(m.role||"")}</div>
         </div>
-      </div>`).join("");
+        ${hint}
+      </div>`;
+    }).join("");
   }
   document.getElementById("vcMembersModal").style.display = "flex";
+}
+
+function _vcMembersDmClick(userId, name){
+  // Close the members modal then open the DM channel
+  const modal = document.getElementById("vcMembersModal");
+  if(modal) modal.style.display = "none";
+  vcOpenDm(userId, name);
 }
 
 async function vcLoadMessages(){
@@ -2028,16 +2295,8 @@ function vcShowMsgMenu(msgId, btn){
 function _vcMenuDo(fn){ document.querySelectorAll(".tc-msg-menu").forEach(el=>el.remove()); fn(); }
 function vcCopyMsg(content){ navigator.clipboard.writeText(content).then(()=>_vcToast("📋 Message copied!")); }
 
-async function vcDeleteMsg(msgId){
-  if(!confirm("Delete this message?")) return;
-  const r=await fetch(`/teamapp/chat/messages/${msgId}/delete/`,{method:"DELETE",headers:{"X-CSRFToken":getCsrf()}});
-  const d=await r.json();
-  if(d.success){
-    if(_vcThreadParentId===msgId) vcCloseThread();
-    vcLoadMessages();
-    if(_vcThreadParentId) vcLoadThreadMessages(_vcThreadParentId);
-  } else { alert(d.error||"Could not delete message."); }
-}
+// Note: vcDeleteMsg was removed — backend chat_delete_message_api only allows
+// admins (teamapp/views.py:828). Vendors cannot delete messages, so no UI is wired.
 
 function vcEditMsg(msgId){
   const msgEl = document.querySelector(`.tc-msg[data-mid="${msgId}"]`);
@@ -2523,7 +2782,7 @@ function _renderOhTable(orders, stats){
     var fulClass=fulLow.includes("fulfill")||fulLow.includes("deliver")||fulLow.includes("complet")||fulLow.includes("shipped")?"fulfilled":"pending";
     var payClass=payStatus.includes("paid")?"paid":"pending";
 
-    rows+='<tr>';
+    rows+='<tr onclick="openOrderDetail('+o.id+')" style="cursor:pointer;" onmouseenter="this.style.background=\'#f8fafc\'" onmouseleave="this.style.background=\'\'">';
     rows+='<td><div style="display:flex;align-items:center;gap:10px;">'+imgHtml+'<div><div style="font-weight:600;font-size:13px;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+esc(productName)+'</div>'+(firstItem&&firstItem.quantity?'<div class="oh-timeline">Qty: '+firstItem.quantity+'</div>':'')+'</div></div></td>';
     rows+='<td><span style="font-weight:700;">#'+esc(o.order_number||String(o.id))+'</span></td>';
     rows+='<td><div style="font-weight:600;">'+esc(dateStr)+'</div><div class="oh-timeline">'+esc(timeStr)+'</div></td>';
@@ -2714,8 +2973,16 @@ function _renderQuotationCard(a){
         <div style="font-size:20px;font-weight:900;color:#059669;" id="vpTotalAmt_${a.id}">$0.00 <span style="font-size:12px;color:#64748b;font-weight:600;">(${totalQty} units × $0.00)</span></div>
       </div>
 
+      <!-- Vendor note (optional) -->
+      <div style="margin-bottom:14px;">
+        <label style="font-size:12px;font-weight:700;color:#374151;margin-bottom:6px;display:block;">Note to Admin <span style="color:#94a3b8;font-weight:500;">(optional)</span></label>
+        <textarea id="vpVendorNote_${a.id}" rows="2" placeholder="Add a note about pricing, lead time, special conditions..."
+          style="width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:13px;font-family:inherit;color:#0f172a;outline:none;box-sizing:border-box;resize:vertical;transition:.15s;"
+          onfocus="this.style.borderColor='#2563eb'" onblur="this.style.borderColor='#e2e8f0'">${esc(a.vendor_note||"")}</textarea>
+      </div>
+
       <div style="display:flex;gap:10px;align-items:center;">
-        <button class="vs-submit-btn" id="vpSubmitBtn_${a.id}" onclick="submitVpQuotation(${a.id},${totalQty})">${isResubmit?"↩ Resubmit Quotation":"📤 Submit Quotation"}</button>
+        <button class="vs-submit-btn" id="vpSubmitBtn_${a.id}" onclick="submitVpQuotation(${a.id},${totalQty},${isResubmit?"true":"false"})">${isResubmit?"↩ Resubmit Quotation":"📤 Submit Quotation"}</button>
         <p id="vpPricingMsg_${a.id}" style="font-size:12px;font-weight:700;margin:0;"></p>
       </div>
       ${_renderAttemptHistory(a.attempts||[])}
@@ -2728,11 +2995,21 @@ function _renderAttemptHistory(attempts){
   const rows = attempts.slice().reverse().map(at=>{
     const stMap={approved:"background:#dcfce7;color:#166534;",rejected:"background:#fee2e2;color:#991b1b;",permanently_rejected:"background:#fee2e2;color:#7f1d1d;",pending:"background:#fff7ed;color:#92400e;"};
     const stLabel={approved:"Approved",rejected:"Rejected",permanently_rejected:"Perm. Rejected",pending:"Under Review"};
-    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:12px;">
-      <span style="background:#f1f5f9;color:#64748b;border-radius:99px;padding:2px 8px;font-size:10px;font-weight:800;flex-shrink:0;">Attempt #${at.attempt_number}</span>
-      <span style="flex:1;color:#374151;">$${parseFloat(at.per_unit_price).toFixed(2)}/unit · ${at.total_quantity} units · ${at.estimated_days}d · <b>$${parseFloat(at.total_price).toFixed(2)}</b></span>
-      <span style="${stMap[at.status]||"background:#f1f5f9;color:#64748b;"}border-radius:99px;padding:2px 9px;font-size:10px;font-weight:800;">${stLabel[at.status]||at.status}</span>
-      ${at.admin_note?`<span style="font-size:10px;color:#64748b;font-style:italic;">${esc(at.admin_note)}</span>`:""}
+    const adminNoteHtml = at.admin_note
+      ? `<div style="font-size:11px;color:#64748b;font-style:italic;margin-top:4px;padding-left:14px;border-left:2px solid #cbd5e1;"><b style="color:#475569;font-style:normal;">Admin:</b> ${esc(at.admin_note)}</div>`
+      : "";
+    const vendorNoteHtml = at.vendor_note
+      ? `<div style="font-size:11px;color:#64748b;font-style:italic;margin-top:3px;padding-left:14px;border-left:2px solid #e0e7ff;"><b style="color:#475569;font-style:normal;">You:</b> ${esc(at.vendor_note)}</div>`
+      : "";
+    return `<div style="padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:12px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="background:#f1f5f9;color:#64748b;border-radius:99px;padding:2px 8px;font-size:10px;font-weight:800;flex-shrink:0;">Attempt #${at.attempt_number}</span>
+        <span style="flex:1;color:#374151;">$${parseFloat(at.per_unit_price).toFixed(2)}/unit · ${at.total_quantity} units · ${at.estimated_days}d · <b>$${parseFloat(at.total_price).toFixed(2)}</b></span>
+        <span style="font-size:10px;color:#94a3b8;font-weight:600;white-space:nowrap;">${esc(at.submitted_at||"")}</span>
+        <span style="${stMap[at.status]||"background:#f1f5f9;color:#64748b;"}border-radius:99px;padding:2px 9px;font-size:10px;font-weight:800;">${stLabel[at.status]||at.status}</span>
+      </div>
+      ${vendorNoteHtml}
+      ${adminNoteHtml}
     </div>`;
   }).join("");
   return `<div style="margin-top:16px;"><div style="font-size:10px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Submission History</div><div style="background:#f8fafc;border-radius:10px;padding:4px 12px;">${rows}</div></div>`;
@@ -2747,15 +3024,17 @@ function vpUpdateTotal(assignmentId, totalQty){
   amtEl.innerHTML = `$${total} <span style="font-size:12px;color:#64748b;font-weight:600;">(${totalQty} units × $${p.toFixed(2)})</span>`;
 }
 
-async function submitVpQuotation(assignmentId, totalQty){
+async function submitVpQuotation(assignmentId, totalQty, isResubmit){
   const priceInput = document.getElementById("vpUnitPrice_"+assignmentId);
   const daysInput  = document.getElementById("vpEstDays_"+assignmentId);
+  const noteInput  = document.getElementById("vpVendorNote_"+assignmentId);
   const btn        = document.getElementById("vpSubmitBtn_"+assignmentId);
   const msgEl      = document.getElementById("vpPricingMsg_"+assignmentId);
   if(!priceInput||!daysInput) return;
 
   const price = parseFloat(priceInput.value);
   const days  = parseInt(daysInput.value);
+  const vendorNote = noteInput ? noteInput.value.trim() : "";
 
   // Client-side validation
   if(!price||price<=0){
@@ -2776,14 +3055,14 @@ async function submitVpQuotation(assignmentId, totalQty){
     const r = await fetch(`/vendor/api/stock/${assignmentId}/pricing/`,{
       method:"POST",
       headers:{"Content-Type":"application/json","X-CSRFToken":getCsrf()},
-      body:JSON.stringify({per_unit_price:price, estimated_days:days})
+      body:JSON.stringify({per_unit_price:price, estimated_days:days, vendor_note:vendorNote})
     });
     const d = await r.json();
     if(!d.success) throw new Error(d.message||"Submission failed");
     if(msgEl){msgEl.textContent="✓ Quotation submitted! Awaiting admin review.";msgEl.style.color="#16a34a";}
     setTimeout(()=>loadVpStock(), 1000);
   }catch(e){
-    if(btn){btn.disabled=false;btn.textContent="Submit Quotation";}
+    if(btn){btn.disabled=false;btn.textContent=isResubmit?"↩ Resubmit Quotation":"📤 Submit Quotation";}
     if(msgEl){msgEl.textContent=e.message;msgEl.style.color="#dc2626";}
   }
 }

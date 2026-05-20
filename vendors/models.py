@@ -165,6 +165,30 @@ class VendorPermissionLog(models.Model):
         return f"{self.vendor.name} — changed by {self.changed_by}"
 
 
+class VendorPasswordResetRequest(models.Model):
+    """A vendor-initiated request to reset their password — admin acts on it."""
+    STATUS_CHOICES = (
+        ("pending", "Pending"),
+        ("resolved", "Resolved"),
+        ("dismissed", "Dismissed"),
+    )
+
+    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name="password_reset_requests")
+    requested_email = models.EmailField()
+    requested_ip = models.CharField(max_length=45, blank=True)
+    user_agent = models.CharField(max_length=300, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
+    resolved_by = models.CharField(max_length=255, blank=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Reset request: {self.vendor.name} ({self.status})"
+
+
 class VendorInvitation(models.Model):
     STATUS_CHOICES = (
         ("pending",  "Pending"),
