@@ -1469,13 +1469,17 @@ def _template_to_dict(t, full=False):
 
 
 def _apply_template_fields(t, data):
+    # NOTE: 'is_global' deliberately omitted. The "All Projects" checkbox in
+    # the editor sends it (defaulting to true), but a tenant turning their
+    # own template global would make it visible to every other tenant via
+    # the Q(is_global=True) filter in the list query. Only the seed loader
+    # and superadmin-only flows may set is_global.
     fields = [
         'name', 'category', 'status', 'description', 'tags',
         'from_email', 'sender_name', 'reply_to', 'cc_emails', 'bcc_emails',
         'use_default_signature', 'custom_signature',
         'subject', 'preheader', 'body_html', 'footer',
         'trigger_type', 'trigger_delay_minutes', 'working_hours_only', 'throttle_per_day',
-        'is_global',
     ]
     for f in fields:
         if f in data:
@@ -1485,9 +1489,28 @@ def _apply_template_fields(t, data):
             setattr(t, f, val)
 
 
+def _user_can_manage_template(user, template):
+    """True if `user` can edit/delete this template. Superusers always can;
+    everyone else needs to own the template's store."""
+    if not user or not user.is_authenticated:
+        return False
+    if user.is_superuser:
+        return True
+    if template.store_id is None:
+        # Global/system template — only superusers may mutate.
+        return False
+    return template.store.user_id == user.id
+
+
+def _forbidden_response():
+    return Response(
+        {'success': False, 'message': 'Not authorized to modify this template.'},
+        status=403,
+    )
+
+
 @csrf_exempt
 @api_view(["GET", "POST"])
-@authentication_classes([])
 @permission_classes([AllowAny])
 def email_templates_api(request):
     if request.method == "GET":
@@ -1501,12 +1524,18 @@ def email_templates_api(request):
             qs = qs.filter(status=request.GET["status"])
         return Response({'success': True, 'templates': [_template_to_dict(t) for t in qs], 'count': qs.count()})
 
-    is_global = request.data.get("is_global", False)
+    # POST: create. Require auth and verify the caller owns the target store.
+    if not request.user.is_authenticated:
+        return Response({'success': False, 'message': 'Login required.'}, status=401)
     store_id = request.data.get("store_id")
     store = Store.objects.filter(id=store_id).first() if store_id else None
-    if not store and not is_global:
+    if not store:
         return Response({'success': False, 'message': 'Store not found.'}, status=404)
-    t = EmailTemplate(store=store, is_global=bool(is_global))
+    if not (request.user.is_superuser or store.user_id == request.user.id):
+        return _forbidden_response()
+    # is_global ignored on create — only superadmin tooling may produce
+    # cross-tenant templates, and there's no UI for that yet.
+    t = EmailTemplate(store=store, is_global=False)
     _apply_template_fields(t, request.data)
     t.save()
     return Response({'success': True, 'id': t.id, 'message': 'Template created.'})
@@ -1514,12 +1543,14 @@ def email_templates_api(request):
 
 @csrf_exempt
 @api_view(["GET", "PUT", "DELETE"])
-@authentication_classes([])
 @permission_classes([AllowAny])
 def email_template_detail_api(request, template_id):
     t = get_object_or_404(EmailTemplate, id=template_id)
     if request.method == "GET":
         return Response({'success': True, 'template': _template_to_dict(t, full=True)})
+    # PUT / DELETE — must own the template.
+    if not _user_can_manage_template(request.user, t):
+        return _forbidden_response()
     if request.method == "PUT":
         _apply_template_fields(t, request.data)
         t.save()
@@ -1530,10 +1561,11 @@ def email_template_detail_api(request, template_id):
 
 @csrf_exempt
 @api_view(["POST"])
-@authentication_classes([])
 @permission_classes([AllowAny])
 def set_category_default_api(request, template_id):
     t = get_object_or_404(EmailTemplate, id=template_id)
+    if not _user_can_manage_template(request.user, t):
+        return _forbidden_response()
     action = request.data.get("action", "set")  # "set" or "unset"
     force = request.data.get("force", False)
 
@@ -1566,10 +1598,13 @@ def set_category_default_api(request, template_id):
 
 @csrf_exempt
 @api_view(["POST"])
-@authentication_classes([])
 @permission_classes([AllowAny])
 def duplicate_template_api(request, template_id):
     t = get_object_or_404(EmailTemplate, id=template_id)
+    if not _user_can_manage_template(request.user, t):
+        return _forbidden_response()
+    # Copies inherit is_global from the source template but never start
+    # global on their own; only a superadmin tool can promote later.
     new_t = EmailTemplate.objects.create(
         store=t.store, is_global=t.is_global, name=f'{t.name} (Copy)', category=t.category,
         status='draft', description=t.description, tags=t.tags,
