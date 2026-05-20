@@ -938,3 +938,247 @@ def api_locations(request):
         "total_online": total_online,
         "countries":    countries,
     })
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Site-wide Visitor Analytics (Super Admin > Visitors)
+# Captures every page visit to dropsigma.com via VisitTrackingMiddleware.
+# ═════════════════════════════════════════════════════════════════════════════
+
+def _visit_qs(request, *, include_bots=False):
+    """Base queryset honoring the include_bots query param (default: hide bots).
+    Pass ?bots=1 to include bot traffic."""
+    from .models import VisitLog
+    qs = VisitLog.objects.all()
+    if not include_bots:
+        qs = qs.filter(is_bot=False)
+    return qs
+
+
+def _parse_range(request):
+    """Read ?range=24h|7d|30d|all and return (since_datetime, label)."""
+    rng = (request.GET.get("range") or "24h").lower()
+    now = timezone.now()
+    if rng == "1h":   return now - datetime.timedelta(hours=1),  "Last hour"
+    if rng == "24h":  return now - datetime.timedelta(hours=24), "Last 24 hours"
+    if rng == "7d":   return now - datetime.timedelta(days=7),    "Last 7 days"
+    if rng == "30d":  return now - datetime.timedelta(days=30),   "Last 30 days"
+    if rng == "all":  return None, "All time"
+    return now - datetime.timedelta(hours=24), "Last 24 hours"
+
+
+@superadmin_required
+@require_GET
+def api_visitors_overview(request):
+    """KPI cards: total visits, unique IPs, registered users, right now."""
+    include_bots = request.GET.get("bots") == "1"
+    since, label = _parse_range(request)
+
+    base = _visit_qs(request, include_bots=include_bots)
+    if since:
+        scoped = base.filter(created_at__gte=since)
+    else:
+        scoped = base
+
+    now = timezone.now()
+    realtime_cutoff = now - datetime.timedelta(minutes=5)
+
+    return JsonResponse({
+        "range_label":     label,
+        "include_bots":    include_bots,
+        "total_visits":    scoped.count(),
+        "unique_ips":      scoped.values("ip_address").distinct().count(),
+        "logged_in_visits": scoped.filter(user__isnull=False).count(),
+        "right_now":       base.filter(created_at__gte=realtime_cutoff).values("ip_address").distinct().count(),
+        # All-time counts for context
+        "all_time_visits": _visit_qs(request, include_bots=include_bots).count(),
+        "all_time_ips":    _visit_qs(request, include_bots=include_bots).values("ip_address").distinct().count(),
+        # Daily series for the sparkline (last 14 days)
+        "daily_series":    _daily_series(include_bots=include_bots, days=14),
+    })
+
+
+def _daily_series(include_bots=False, days=14):
+    """Return list of {date, visits, unique_ips} for the last N days."""
+    from .models import VisitLog
+    from django.db.models.functions import TruncDate
+    today = timezone.now().date()
+    since = timezone.now() - datetime.timedelta(days=days)
+    qs = VisitLog.objects.filter(created_at__gte=since)
+    if not include_bots:
+        qs = qs.filter(is_bot=False)
+    rows = (qs.annotate(d=TruncDate("created_at"))
+              .values("d")
+              .annotate(visits=Count("id"), uniq=Count("ip_address", distinct=True))
+              .order_by("d"))
+    by_date = {r["d"].isoformat(): {"visits": r["visits"], "unique_ips": r["uniq"]} for r in rows}
+    out = []
+    for i in range(days - 1, -1, -1):
+        d = (today - datetime.timedelta(days=i)).isoformat()
+        cell = by_date.get(d, {"visits": 0, "unique_ips": 0})
+        out.append({"date": d, **cell})
+    return out
+
+
+@superadmin_required
+@require_GET
+def api_visitors_list(request):
+    """Paginated list of recent visits with filters."""
+    include_bots = request.GET.get("bots") == "1"
+    since, _ = _parse_range(request)
+    country_code = (request.GET.get("country") or "").upper().strip()
+    path_filter = (request.GET.get("path") or "").strip()
+    device = (request.GET.get("device") or "").strip().lower()
+    search = (request.GET.get("q") or "").strip()
+
+    try:
+        page = max(1, int(request.GET.get("page", "1")))
+        per  = min(100, max(10, int(request.GET.get("per_page", "30"))))
+    except ValueError:
+        page, per = 1, 30
+
+    qs = _visit_qs(request, include_bots=include_bots)
+    if since:
+        qs = qs.filter(created_at__gte=since)
+    if country_code and country_code != "ALL":
+        qs = qs.filter(country_code=country_code)
+    if path_filter:
+        qs = qs.filter(path__icontains=path_filter)
+    if device and device != "all":
+        qs = qs.filter(device_type=device)
+    if search:
+        qs = qs.filter(
+            Q(ip_address__icontains=search) |
+            Q(city__icontains=search) |
+            Q(country__icontains=search) |
+            Q(path__icontains=search) |
+            Q(referrer__icontains=search)
+        )
+
+    total = qs.count()
+    rows = list(qs.select_related("user")[(page - 1) * per:page * per])
+
+    def serialize(v):
+        return {
+            "id":         v.id,
+            "ip":         v.ip_address,
+            "country":    v.country,
+            "country_code": v.country_code,
+            "city":       v.city,
+            "region":     v.region,
+            "isp":        v.isp,
+            "lat":        v.lat, "lng": v.lng,
+            "path":       v.path,
+            "referrer":   v.referrer,
+            "status":     v.status_code,
+            "browser":    v.browser,
+            "os":         v.os_name,
+            "device":     v.device_type,
+            "is_bot":     v.is_bot,
+            "user":       (v.user.get_full_name() or v.user.username) if v.user else None,
+            "user_email": v.user.email if v.user else None,
+            "at":         v.created_at.isoformat(),
+        }
+
+    return JsonResponse({
+        "page":     page,
+        "per_page": per,
+        "total":    total,
+        "total_pages": (total + per - 1) // per,
+        "visits":   [serialize(v) for v in rows],
+    })
+
+
+@superadmin_required
+@require_GET
+def api_visitors_countries(request):
+    """Country breakdown with flags + counts. Used by sidebar list + pie chart."""
+    include_bots = request.GET.get("bots") == "1"
+    since, _ = _parse_range(request)
+    qs = _visit_qs(request, include_bots=include_bots)
+    if since:
+        qs = qs.filter(created_at__gte=since)
+    rows = (qs.exclude(country_code="")
+              .values("country", "country_code")
+              .annotate(visits=Count("id"), unique_ips=Count("ip_address", distinct=True))
+              .order_by("-visits"))
+    return JsonResponse({"countries": list(rows)})
+
+
+@superadmin_required
+@require_GET
+def api_visitors_realtime(request):
+    """Visitors active in the last 5 minutes (for the live counter + map dots)."""
+    include_bots = request.GET.get("bots") == "1"
+    since = timezone.now() - datetime.timedelta(minutes=5)
+    qs = _visit_qs(request, include_bots=include_bots).filter(created_at__gte=since)
+    # Group by IP — one row per visitor
+    seen = {}
+    for v in qs.select_related("user").order_by("-created_at"):
+        if v.ip_address not in seen:
+            seen[v.ip_address] = {
+                "ip":        v.ip_address,
+                "country":   v.country,
+                "country_code": v.country_code,
+                "city":      v.city,
+                "lat":       v.lat,
+                "lng":       v.lng,
+                "path":      v.path,
+                "device":    v.device_type,
+                "user":      (v.user.get_full_name() or v.user.username) if v.user else None,
+                "last_at":   v.created_at.isoformat(),
+            }
+    return JsonResponse({
+        "active_count": len(seen),
+        "visitors":     list(seen.values()),
+    })
+
+
+@superadmin_required
+@require_GET
+def api_visitors_map(request):
+    """Map points with lat/lng — clustered for the world map.
+    Returns deduped points per (country, city) with visit counts."""
+    include_bots = request.GET.get("bots") == "1"
+    since, _ = _parse_range(request)
+    qs = _visit_qs(request, include_bots=include_bots).exclude(lat__isnull=True).exclude(lng__isnull=True)
+    if since:
+        qs = qs.filter(created_at__gte=since)
+    rows = (qs.values("country", "country_code", "city", "lat", "lng")
+              .annotate(visits=Count("id"), unique_ips=Count("ip_address", distinct=True))
+              .order_by("-visits"))[:1000]
+    return JsonResponse({"points": list(rows)})
+
+
+@superadmin_required
+@require_GET
+def api_visitors_top_pages(request):
+    """Top requested paths in the range."""
+    include_bots = request.GET.get("bots") == "1"
+    since, _ = _parse_range(request)
+    qs = _visit_qs(request, include_bots=include_bots)
+    if since:
+        qs = qs.filter(created_at__gte=since)
+    rows = (qs.values("path")
+              .annotate(visits=Count("id"), unique_ips=Count("ip_address", distinct=True))
+              .order_by("-visits"))[:25]
+    return JsonResponse({"pages": list(rows)})
+
+
+@superadmin_required
+@require_GET
+def api_visitors_devices(request):
+    """Browser + OS + device-type breakdown."""
+    include_bots = request.GET.get("bots") == "1"
+    since, _ = _parse_range(request)
+    qs = _visit_qs(request, include_bots=include_bots)
+    if since:
+        qs = qs.filter(created_at__gte=since)
+    browsers = list(qs.exclude(browser="").values("browser").annotate(visits=Count("id")).order_by("-visits")[:10])
+    os_list  = list(qs.exclude(os_name="").values("os_name").annotate(visits=Count("id")).order_by("-visits")[:10])
+    devices  = list(qs.values("device_type").annotate(visits=Count("id")).order_by("-visits"))
+    return JsonResponse({
+        "browsers": browsers,
+        "os":       os_list,
+        "devices":  devices,
+    })

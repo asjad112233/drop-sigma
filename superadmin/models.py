@@ -166,3 +166,91 @@ class EmailVerificationToken(models.Model):
 
     def __str__(self):
         return f"Token for {self.user.email}"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Site-wide Visitor Analytics (Google-Analytics-style)
+# ─────────────────────────────────────────────────────────────────────────────
+class VisitLog(models.Model):
+    """One row per page visit to dropsigma.com.
+
+    Captures: IP + geolocation (country/city/lat/lng), parsed UA (browser/OS/device),
+    request path, referrer, session id, optional logged-in user, and timestamps.
+    Used by the Super Admin Visitors dashboard for traffic + map + country breakdown.
+    """
+    DEVICE_CHOICES = [
+        ("desktop", "Desktop"),
+        ("mobile",  "Mobile"),
+        ("tablet",  "Tablet"),
+        ("bot",     "Bot"),
+        ("unknown", "Unknown"),
+    ]
+
+    # Who
+    ip_address   = models.GenericIPAddressField(db_index=True)
+    user         = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="visit_logs")
+    session_key  = models.CharField(max_length=64, blank=True, db_index=True)
+
+    # Where (geolocation)
+    country      = models.CharField(max_length=100, blank=True, db_index=True)
+    country_code = models.CharField(max_length=10,  blank=True, db_index=True)
+    region       = models.CharField(max_length=100, blank=True)
+    city         = models.CharField(max_length=100, blank=True)
+    isp          = models.CharField(max_length=200, blank=True)
+    lat          = models.FloatField(null=True, blank=True)
+    lng          = models.FloatField(null=True, blank=True)
+    timezone_str = models.CharField(max_length=64, blank=True)
+
+    # What (request)
+    path         = models.CharField(max_length=500, db_index=True)
+    referrer     = models.CharField(max_length=500, blank=True)
+    method       = models.CharField(max_length=10,  blank=True, default="GET")
+    status_code  = models.PositiveIntegerField(null=True, blank=True)
+
+    # How (client)
+    user_agent   = models.CharField(max_length=500, blank=True)
+    browser      = models.CharField(max_length=100, blank=True)
+    os_name      = models.CharField(max_length=100, blank=True)
+    device_type  = models.CharField(max_length=20,  choices=DEVICE_CHOICES, default="unknown", db_index=True)
+    is_bot       = models.BooleanField(default=False, db_index=True)
+
+    # When
+    created_at   = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["created_at", "country_code"]),
+            models.Index(fields=["created_at", "is_bot"]),
+            models.Index(fields=["ip_address", "created_at"]),
+        ]
+
+    def __str__(self):
+        loc = f"{self.city or self.country or '?'}"
+        return f"{self.ip_address} → {self.path} ({loc})"
+
+
+class IPGeoCache(models.Model):
+    """Cache geolocation lookups so we don't hammer ip-api.com on every visit.
+
+    ip-api.com free tier: 45 req/min/IP. With this cache, repeat visits from the
+    same IP hit the DB once a day, not the API.
+    """
+    ip_address   = models.GenericIPAddressField(primary_key=True)
+    country      = models.CharField(max_length=100, blank=True)
+    country_code = models.CharField(max_length=10,  blank=True)
+    region       = models.CharField(max_length=100, blank=True)
+    city         = models.CharField(max_length=100, blank=True)
+    isp          = models.CharField(max_length=200, blank=True)
+    lat          = models.FloatField(null=True, blank=True)
+    lng          = models.FloatField(null=True, blank=True)
+    timezone_str = models.CharField(max_length=64, blank=True)
+    is_bot       = models.BooleanField(default=False)
+    updated_at   = models.DateTimeField(auto_now=True)
+    created_at   = models.DateTimeField(auto_now_add=True)
+
+    def is_stale(self, max_age_days=7):
+        return timezone.now() > self.updated_at + datetime.timedelta(days=max_age_days)
+
+    def __str__(self):
+        return f"{self.ip_address} → {self.country_code or '?'}"

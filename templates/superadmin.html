@@ -296,6 +296,7 @@ a{color:inherit;text-decoration:none;}
     <button class="nav-item" data-page="tenants"><span class="ico">◉</span> Tenants <span class="badge-n" id="sideCount">—</span></button>
     <button class="nav-item" data-page="billing"><span class="ico">$</span> Billing &amp; MRR</button>
     <button class="nav-item" data-page="analytics"><span class="ico">↗</span> Analytics</button>
+    <button class="nav-item" data-page="traffic"><span class="ico">🌍</span> Visitors <span class="badge-n" id="sideRealtime">—</span></button>
     <button class="nav-item" data-page="activity"><span class="ico">⚑</span> Activity Log</button>
 
     <div class="nav-section">Manage</div>
@@ -549,6 +550,7 @@ function setTitle(page){
     tenant:    ['Tenant Detail', 'Super Admin · Tenants'],
     billing:   ['Billing & MRR','Super Admin · Revenue'],
     analytics: ['Analytics',     'Super Admin · Usage'],
+    traffic:   ['Visitors',      'Super Admin · Live Traffic Analytics'],
     activity:  ['Activity Log',  'Super Admin · Audit'],
     plans:     ['Plans',         'Super Admin · Manage'],
     locations: ['Locations',     'Super Admin · IP & Location Intelligence'],
@@ -593,6 +595,7 @@ async function renderPage(){
     case 'tenant':    renderTenantDetail(c); break;
     case 'billing':   c.innerHTML = renderBilling(); break;
     case 'analytics': c.innerHTML = renderAnalytics(); break;
+    case 'traffic':   await renderTraffic(c); break;
     case 'activity':  c.innerHTML = renderActivityPage(); break;
     case 'plans':     c.innerHTML = renderPlans(); break;
     case 'coupons':   await renderCoupons(c); break;
@@ -1706,6 +1709,582 @@ async function renderLocations(c){
 
   // Init map after DOM is ready
   requestAnimationFrame(()=> locInitMap(data));
+}
+
+/* ═══════════════════════════════════════════════════════
+   VISITORS — Site-wide traffic analytics (Google-Analytics-style)
+═══════════════════════════════════════════════════════ */
+let _trafState = {
+  range: "24h",
+  includeBots: false,
+  countryFilter: "",
+  deviceFilter: "all",
+  search: "",
+  page: 1,
+  perPage: 30,
+  map: null,
+  markersLayer: null,
+  refreshTimer: null,
+  realtimeTimer: null,
+};
+
+function _flagEmoji(code){
+  // Convert ISO 2-letter country code to flag emoji.
+  if(!code || code.length !== 2) return "🏳️";
+  const A = 0x1F1E6;
+  const c = code.toUpperCase();
+  return String.fromCodePoint(A + (c.charCodeAt(0) - 65)) + String.fromCodePoint(A + (c.charCodeAt(1) - 65));
+}
+
+function _trafEsc(s){ const d=document.createElement("div"); d.textContent=String(s==null?"":s); return d.innerHTML; }
+
+function _trafTime(iso){
+  if(!iso) return "—";
+  const d = new Date(iso);
+  const now = new Date();
+  const diff = Math.floor((now - d) / 1000);
+  if(diff < 60)  return "Just now";
+  if(diff < 3600) return Math.floor(diff/60) + "m ago";
+  if(diff < 86400) return Math.floor(diff/3600) + "h ago";
+  if(d.toDateString() === now.toDateString()){
+    return d.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
+  }
+  return d.toLocaleDateString([], {day:"2-digit", month:"short"}) + " " + d.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
+}
+
+async function renderTraffic(c){
+  // Shell HTML — gets data-bound below.
+  c.innerHTML = `
+    <style>
+      .tf-kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px;}
+      .tf-stat{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px 18px;position:relative;overflow:hidden;}
+      .tf-stat::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--tg,var(--grad));}
+      .tf-stat .lbl{font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}
+      .tf-stat .val{font-size:28px;font-weight:900;letter-spacing:-.5px;margin-top:6px;line-height:1;}
+      .tf-stat .sub{font-size:11px;color:var(--muted);margin-top:4px;}
+      .tf-stat.live::after{background:linear-gradient(135deg,#10b981,#22d3ee);}
+      .tf-stat.live .val{display:flex;align-items:center;gap:8px;}
+      .tf-stat.live .pulse{width:9px;height:9px;border-radius:50%;background:#10b981;animation:tfPulse 1.6s infinite;flex-shrink:0;}
+      @keyframes tfPulse{0%,100%{box-shadow:0 0 0 0 rgba(16,185,129,.6);}50%{box-shadow:0 0 0 7px rgba(16,185,129,0);}}
+
+      /* Filters bar */
+      .tf-filters{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#fff;border:1px solid var(--line);border-radius:14px;padding:10px 14px;margin-bottom:16px;box-shadow:var(--shadow);}
+      .tf-range{display:inline-flex;background:var(--surface-2);border:1px solid var(--line);border-radius:8px;overflow:hidden;}
+      .tf-range button{background:transparent;border:none;padding:7px 13px;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;border-right:1px solid var(--line);transition:.12s;}
+      .tf-range button:last-child{border-right:none;}
+      .tf-range button.on{background:var(--side);color:#fff;}
+      .tf-toggle{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;user-select:none;}
+      .tf-toggle input{accent-color:#f59e0b;}
+      .tf-search{flex:1;min-width:160px;padding:7px 12px;border:1px solid var(--line);border-radius:8px;font-size:12.5px;outline:none;}
+      .tf-refresh{padding:7px 14px;background:linear-gradient(135deg,#10b981,#22d3ee);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:6px;}
+      .tf-refresh:disabled{opacity:.5;cursor:not-allowed;}
+
+      /* Main grid: map + sidebar */
+      .tf-main{display:grid;grid-template-columns:1fr 320px;gap:14px;margin-bottom:16px;}
+      @media (max-width:1100px){.tf-main{grid-template-columns:1fr;}}
+
+      .tf-card{background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:var(--shadow);}
+      .tf-card-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line);font-size:13px;font-weight:900;color:var(--text);}
+      .tf-card-sub{font-size:11px;font-weight:600;color:var(--muted);}
+      .tf-card-body{padding:12px 16px;}
+
+      #tf-map{height:420px;width:100%;}
+      .tf-map-legend{position:absolute;bottom:14px;left:14px;background:rgba(255,255,255,.94);border:1px solid var(--line);border-radius:9px;padding:7px 11px;font-size:11px;color:var(--muted);box-shadow:0 4px 12px rgba(0,0,0,.08);z-index:400;}
+
+      /* Country list */
+      .tf-country{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;transition:background .1s;cursor:pointer;}
+      .tf-country:hover{background:var(--surface-2);}
+      .tf-country.on{background:rgba(245,158,11,.10);}
+      .tf-country .flag{font-size:18px;line-height:1;flex-shrink:0;}
+      .tf-country .name{flex:1;min-width:0;font-size:12.5px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+      .tf-country .cc{font-size:9px;font-weight:800;color:var(--muted);background:var(--surface-2);padding:2px 5px;border-radius:4px;}
+      .tf-country .visits{font-size:12px;font-weight:900;color:var(--text);font-variant-numeric:tabular-nums;}
+
+      /* Two-column row (pages + devices) */
+      .tf-row2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;}
+      @media (max-width:900px){.tf-row2{grid-template-columns:1fr;}}
+
+      .tf-listrow{display:flex;align-items:center;gap:10px;padding:7px 12px;border-bottom:1px solid var(--line);font-size:12.5px;}
+      .tf-listrow:last-child{border-bottom:none;}
+      .tf-listrow .lbl{flex:1;min-width:0;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+      .tf-listrow .val{font-weight:800;color:var(--text);font-variant-numeric:tabular-nums;}
+      .tf-bar-bg{flex:0 0 80px;height:6px;background:var(--surface-2);border-radius:4px;overflow:hidden;}
+      .tf-bar-fill{height:100%;background:linear-gradient(135deg,#f59e0b,#ef4444);border-radius:4px;}
+
+      /* Visits table */
+      .tf-table{width:100%;border-collapse:collapse;font-size:12.5px;}
+      .tf-table thead th{position:sticky;top:0;background:var(--surface-2);text-align:left;padding:10px 12px;font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--line);}
+      .tf-table tbody td{padding:10px 12px;border-bottom:1px solid var(--line);}
+      .tf-table tbody tr:hover td{background:var(--surface-2);}
+      .tf-ip{font-family:ui-monospace,SFMono-Regular,monospace;font-size:11.5px;color:var(--text);font-weight:700;}
+      .tf-path{font-family:ui-monospace,SFMono-Regular,monospace;font-size:11.5px;color:var(--blue);max-width:240px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+      .tf-loc{display:flex;align-items:center;gap:6px;font-size:12px;}
+      .tf-loc .flag{font-size:15px;line-height:1;}
+      .tf-pill{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:800;background:var(--surface-2);color:var(--text);}
+      .tf-pill.bot{background:#fef3c7;color:#a16207;}
+      .tf-pill.user{background:#dbeafe;color:#1d4ed8;}
+      .tf-pill.mobile{background:#fce7f3;color:#be185d;}
+      .tf-pill.tablet{background:#ede9fe;color:#6d28d9;}
+      .tf-pill.desktop{background:#dbeafe;color:#1d4ed8;}
+
+      .tf-pager{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);}
+      .tf-pager button{padding:6px 12px;border:1px solid var(--line);background:#fff;border-radius:7px;font-weight:700;cursor:pointer;color:var(--text);}
+      .tf-pager button:disabled{opacity:.4;cursor:not-allowed;}
+
+      .tf-empty{padding:48px 24px;text-align:center;color:var(--muted);}
+      .tf-empty .ic{font-size:42px;margin-bottom:10px;opacity:.5;}
+
+      /* Sparkline */
+      .tf-spark{display:flex;align-items:flex-end;gap:2px;height:32px;margin-top:8px;}
+      .tf-spark-bar{flex:1;background:linear-gradient(to top,#f59e0b,#fbbf24);border-radius:1px;min-height:2px;opacity:.85;transition:opacity .12s;}
+      .tf-spark-bar:hover{opacity:1;}
+    </style>
+
+    <!-- KPI row -->
+    <div class="tf-kpi">
+      <div class="tf-stat live" style="--tg:linear-gradient(135deg,#10b981,#22d3ee)">
+        <div class="lbl">Right Now</div>
+        <div class="val"><span class="pulse"></span><span id="tfKpiNow">—</span></div>
+        <div class="sub">Active in last 5 minutes</div>
+      </div>
+      <div class="tf-stat" style="--tg:linear-gradient(135deg,#f59e0b,#ef4444)">
+        <div class="lbl">Total Visits</div>
+        <div class="val" id="tfKpiTotal">—</div>
+        <div class="sub" id="tfKpiTotalSub">—</div>
+      </div>
+      <div class="tf-stat" style="--tg:linear-gradient(135deg,#8b5cf6,#6366f1)">
+        <div class="lbl">Unique Visitors</div>
+        <div class="val" id="tfKpiUnique">—</div>
+        <div class="sub" id="tfKpiUniqueSub">Distinct IP addresses</div>
+      </div>
+      <div class="tf-stat" style="--tg:linear-gradient(135deg,#2563eb,#06b6d4)">
+        <div class="lbl">Logged-in Visits</div>
+        <div class="val" id="tfKpiUsers">—</div>
+        <div class="sub" id="tfKpiUsersSub">Authenticated sessions</div>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="tf-filters">
+      <div class="tf-range" id="tfRange">
+        <button data-r="1h">1h</button>
+        <button data-r="24h" class="on">24h</button>
+        <button data-r="7d">7d</button>
+        <button data-r="30d">30d</button>
+        <button data-r="all">All</button>
+      </div>
+      <label class="tf-toggle"><input type="checkbox" id="tfIncludeBots"> Include bots</label>
+      <input type="text" id="tfSearch" class="tf-search" placeholder="Search IP, country, city, page, referrer…">
+      <select id="tfDeviceFilter" class="tf-search" style="flex:0 0 130px;">
+        <option value="all">All devices</option>
+        <option value="desktop">Desktop</option>
+        <option value="mobile">Mobile</option>
+        <option value="tablet">Tablet</option>
+        <option value="bot">Bots only</option>
+      </select>
+      <button class="tf-refresh" id="tfRefresh">↻ Refresh</button>
+    </div>
+
+    <!-- Trend sparkline -->
+    <div class="tf-card" style="margin-bottom:16px;">
+      <div class="tf-card-head">
+        <div>Daily Visits Trend <span class="tf-card-sub">— Last 14 days</span></div>
+        <div class="tf-card-sub" id="tfTrendRange">—</div>
+      </div>
+      <div class="tf-card-body">
+        <div class="tf-spark" id="tfSpark"></div>
+      </div>
+    </div>
+
+    <!-- Map + Country sidebar -->
+    <div class="tf-main">
+      <div class="tf-card" style="position:relative;">
+        <div class="tf-card-head">
+          <div>🌍 Visitors World Map <span class="tf-card-sub" id="tfMapSub">—</span></div>
+          <button class="tf-card-sub" style="border:none;background:none;cursor:pointer;color:var(--blue);" onclick="tfMapResetView()">Reset view</button>
+        </div>
+        <div id="tf-map"></div>
+        <div class="tf-map-legend">
+          <span style="color:#f59e0b;">●</span> Visitor location · circle size = visit count
+        </div>
+      </div>
+      <div class="tf-card">
+        <div class="tf-card-head">
+          <div>🏳️ Countries</div>
+          <div class="tf-card-sub" id="tfCountryCount">—</div>
+        </div>
+        <div class="tf-card-body" id="tfCountryList" style="max-height:420px;overflow-y:auto;padding:8px;">
+          <div class="tf-empty"><div class="ic">⏳</div><p>Loading…</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top pages + Devices -->
+    <div class="tf-row2">
+      <div class="tf-card">
+        <div class="tf-card-head">
+          <div>📄 Top Pages</div>
+          <div class="tf-card-sub">By visit count</div>
+        </div>
+        <div id="tfTopPages">
+          <div class="tf-empty"><div class="ic">⏳</div><p>Loading…</p></div>
+        </div>
+      </div>
+      <div class="tf-card">
+        <div class="tf-card-head">
+          <div>💻 Devices & Browsers</div>
+          <div class="tf-card-sub">In selected range</div>
+        </div>
+        <div id="tfDevices">
+          <div class="tf-empty"><div class="ic">⏳</div><p>Loading…</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent visits table -->
+    <div class="tf-card">
+      <div class="tf-card-head">
+        <div>📋 Recent Visits</div>
+        <div class="tf-card-sub" id="tfTableMeta">—</div>
+      </div>
+      <div style="max-height:560px;overflow-y:auto;">
+        <table class="tf-table">
+          <thead>
+            <tr>
+              <th>When</th>
+              <th>Location</th>
+              <th>IP</th>
+              <th>Page</th>
+              <th>Browser / OS</th>
+              <th>Device</th>
+              <th>User</th>
+            </tr>
+          </thead>
+          <tbody id="tfTableBody">
+            <tr><td colspan="7" class="tf-empty"><div class="ic">⏳</div><p>Loading…</p></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="tf-pager">
+        <span id="tfPagerInfo">—</span>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button id="tfPagerPrev" onclick="tfChangePage(-1)">← Prev</button>
+          <span id="tfPagerCurr" style="font-weight:700;color:var(--text);">Page 1</span>
+          <button id="tfPagerNext" onclick="tfChangePage(1)">Next →</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Wire filters
+  document.querySelectorAll("#tfRange button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      _trafState.range = btn.dataset.r;
+      _trafState.page = 1;
+      document.querySelectorAll("#tfRange button").forEach(b => b.classList.remove("on"));
+      btn.classList.add("on");
+      tfReload();
+    });
+  });
+  document.getElementById("tfIncludeBots").addEventListener("change", e => {
+    _trafState.includeBots = e.target.checked;
+    _trafState.page = 1; tfReload();
+  });
+  let searchTimer;
+  document.getElementById("tfSearch").addEventListener("input", e => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+      _trafState.search = e.target.value.trim();
+      _trafState.page = 1;
+      tfLoadList();
+    }, 300);
+  });
+  document.getElementById("tfDeviceFilter").addEventListener("change", e => {
+    _trafState.deviceFilter = e.target.value;
+    _trafState.page = 1; tfLoadList();
+  });
+  document.getElementById("tfRefresh").addEventListener("click", () => tfReload(true));
+
+  // Init map after the DOM mounts
+  requestAnimationFrame(() => tfInitMap());
+
+  // Stop any old timers when leaving this page
+  if(_trafState.refreshTimer){ clearInterval(_trafState.refreshTimer); _trafState.refreshTimer = null; }
+  if(_trafState.realtimeTimer){ clearInterval(_trafState.realtimeTimer); _trafState.realtimeTimer = null; }
+
+  // First load
+  tfReload();
+
+  // Auto-refresh: full reload every 30s, realtime KPI every 8s
+  _trafState.refreshTimer  = setInterval(() => { if(_page === "traffic") tfReload(); }, 30000);
+  _trafState.realtimeTimer = setInterval(() => { if(_page === "traffic") tfLoadRealtime(); }, 8000);
+}
+
+function _trafQuery(extra={}){
+  const p = new URLSearchParams();
+  p.set("range", _trafState.range);
+  if(_trafState.includeBots) p.set("bots", "1");
+  if(_trafState.countryFilter) p.set("country", _trafState.countryFilter);
+  if(_trafState.deviceFilter && _trafState.deviceFilter !== "all") p.set("device", _trafState.deviceFilter);
+  if(_trafState.search) p.set("q", _trafState.search);
+  Object.entries(extra).forEach(([k,v]) => p.set(k, v));
+  return p.toString();
+}
+
+async function tfReload(force=false){
+  // Parallel-load all panels
+  await Promise.allSettled([
+    tfLoadOverview(),
+    tfLoadCountries(),
+    tfLoadMap(),
+    tfLoadList(),
+    tfLoadTopPages(),
+    tfLoadDevices(),
+    tfLoadRealtime(),
+  ]);
+}
+
+async function tfLoadOverview(){
+  const {ok, data} = await api("/superadmin/api/visitors/overview/?" + _trafQuery());
+  if(!ok) return;
+  const fmt = n => (n||0).toLocaleString();
+  document.getElementById("tfKpiTotal").textContent  = fmt(data.total_visits);
+  document.getElementById("tfKpiUnique").textContent = fmt(data.unique_ips);
+  document.getElementById("tfKpiUsers").textContent  = fmt(data.logged_in_visits);
+  document.getElementById("tfKpiNow").textContent    = fmt(data.right_now);
+  document.getElementById("tfKpiTotalSub").textContent = data.range_label || "";
+  const sb = document.getElementById("sideRealtime");
+  if(sb) sb.textContent = data.right_now > 0 ? data.right_now : "";
+
+  // Sparkline
+  const spark = document.getElementById("tfSpark");
+  if(spark && data.daily_series){
+    const max = Math.max(1, ...data.daily_series.map(d => d.visits));
+    spark.innerHTML = data.daily_series.map(d => {
+      const h = Math.max(3, Math.round((d.visits / max) * 100));
+      return `<div class="tf-spark-bar" style="height:${h}%;" title="${d.date}: ${d.visits} visits (${d.unique_ips} unique)"></div>`;
+    }).join("");
+  }
+  const tr = document.getElementById("tfTrendRange");
+  if(tr && data.daily_series && data.daily_series.length){
+    const total14 = data.daily_series.reduce((s,d) => s + d.visits, 0);
+    tr.textContent = `${total14.toLocaleString()} visits in last 14 days`;
+  }
+}
+
+async function tfLoadRealtime(){
+  const {ok, data} = await api("/superadmin/api/visitors/realtime/?" + (_trafState.includeBots ? "bots=1" : ""));
+  if(!ok) return;
+  document.getElementById("tfKpiNow").textContent = (data.active_count || 0).toLocaleString();
+  const sb = document.getElementById("sideRealtime");
+  if(sb) sb.textContent = data.active_count > 0 ? data.active_count : "";
+
+  // Drop "live" pulse markers on map for active visitors
+  if(_trafState.map && data.visitors){
+    if(!_trafState._realtimeLayer){
+      _trafState._realtimeLayer = L.layerGroup().addTo(_trafState.map);
+    }
+    _trafState._realtimeLayer.clearLayers();
+    data.visitors.forEach(v => {
+      if(v.lat == null || v.lng == null) return;
+      const marker = L.circleMarker([v.lat, v.lng], {
+        radius: 7, weight: 2,
+        color: "#10b981", fillColor: "#10b981", fillOpacity: .85,
+        className: "tf-pulse-marker",
+      }).bindPopup(`
+        <div style="padding:10px 12px;min-width:200px;">
+          <div style="font-weight:900;color:#0f172a;font-size:13px;">${_flagEmoji(v.country_code)} ${_trafEsc(v.city || v.country || "Unknown")}</div>
+          <div style="font-size:11px;color:#64748b;margin-top:2px;">${_trafEsc(v.country || "")}</div>
+          <div style="font-family:monospace;font-size:11px;color:#0f172a;margin-top:6px;">${_trafEsc(v.ip)}</div>
+          <div style="font-size:11px;color:#0f172a;margin-top:3px;">${_trafEsc(v.path || "/")}</div>
+          ${v.user ? `<div style="font-size:11px;color:#10b981;margin-top:3px;font-weight:700;">👤 ${_trafEsc(v.user)}</div>` : ""}
+          <div style="font-size:10px;color:#10b981;margin-top:4px;font-weight:700;">● LIVE — ${_trafTime(v.last_at)}</div>
+        </div>
+      `);
+      marker.addTo(_trafState._realtimeLayer);
+    });
+  }
+}
+
+async function tfLoadCountries(){
+  const {ok, data} = await api("/superadmin/api/visitors/countries/?" + _trafQuery());
+  if(!ok) return;
+  const list = document.getElementById("tfCountryList");
+  const meta = document.getElementById("tfCountryCount");
+  if(!data.countries.length){
+    list.innerHTML = `<div class="tf-empty"><div class="ic">🌐</div><p>No data yet.</p></div>`;
+    if(meta) meta.textContent = "0 countries";
+    return;
+  }
+  if(meta) meta.textContent = `${data.countries.length} countries`;
+  list.innerHTML = data.countries.map(c => {
+    const sel = _trafState.countryFilter === c.country_code ? "on" : "";
+    return `<div class="tf-country ${sel}" onclick="tfPickCountry('${_trafEsc(c.country_code)}')">
+      <span class="flag">${_flagEmoji(c.country_code)}</span>
+      <span class="name">${_trafEsc(c.country || c.country_code)}</span>
+      <span class="cc">${_trafEsc(c.country_code)}</span>
+      <span class="visits">${(c.visits||0).toLocaleString()}</span>
+    </div>`;
+  }).join("");
+}
+
+function tfPickCountry(code){
+  // Toggle filter
+  if(_trafState.countryFilter === code){
+    _trafState.countryFilter = "";
+  } else {
+    _trafState.countryFilter = code;
+  }
+  _trafState.page = 1;
+  tfLoadCountries(); tfLoadList(); tfLoadMap();
+}
+
+async function tfLoadMap(){
+  if(!_trafState.map) return;
+  const {ok, data} = await api("/superadmin/api/visitors/map/?" + _trafQuery());
+  if(!ok) return;
+  if(_trafState.markersLayer){ _trafState.markersLayer.clearLayers(); }
+  else { _trafState.markersLayer = L.layerGroup().addTo(_trafState.map); }
+
+  const max = Math.max(1, ...data.points.map(p => p.visits));
+  data.points.forEach(p => {
+    if(p.lat == null || p.lng == null) return;
+    // Size between 5 and 22 based on visits
+    const radius = 5 + Math.round(Math.log10(1 + p.visits) * 6);
+    const marker = L.circleMarker([p.lat, p.lng], {
+      radius, weight: 1.5,
+      color: "#f59e0b", fillColor: "#f59e0b", fillOpacity: .55,
+    }).bindPopup(`
+      <div style="padding:10px 12px;min-width:220px;">
+        <div style="font-weight:900;color:#0f172a;font-size:13px;">${_flagEmoji(p.country_code)} ${_trafEsc(p.city || p.country || "Unknown")}</div>
+        <div style="font-size:11px;color:#64748b;margin-top:2px;">${_trafEsc(p.country || "")}</div>
+        <div style="margin-top:8px;display:flex;gap:10px;font-size:11px;">
+          <div><div style="font-weight:900;color:#0f172a;font-size:18px;">${(p.visits||0).toLocaleString()}</div><div style="color:#64748b;">visits</div></div>
+          <div><div style="font-weight:900;color:#0f172a;font-size:18px;">${(p.unique_ips||0).toLocaleString()}</div><div style="color:#64748b;">unique</div></div>
+        </div>
+      </div>
+    `);
+    marker.addTo(_trafState.markersLayer);
+  });
+
+  const sub = document.getElementById("tfMapSub");
+  if(sub) sub.textContent = `${data.points.length} location${data.points.length===1?"":"s"}`;
+}
+
+function tfInitMap(){
+  const el = document.getElementById("tf-map");
+  if(!el || _trafState.map) return;
+  _trafState.map = L.map(el, {
+    center: [20, 0], zoom: 2,
+    minZoom: 2, maxZoom: 12,
+    worldCopyJump: true,
+    zoomControl: true,
+  });
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: '© OpenStreetMap',
+    maxZoom: 18,
+  }).addTo(_trafState.map);
+  // Trigger a re-paint when DOM finishes layout
+  setTimeout(() => { _trafState.map.invalidateSize(); tfLoadMap(); }, 200);
+}
+
+function tfMapResetView(){
+  if(_trafState.map) _trafState.map.setView([20, 0], 2);
+}
+
+async function tfLoadList(){
+  const tbody = document.getElementById("tfTableBody");
+  if(!tbody) return;
+  const q = _trafQuery({page: _trafState.page, per_page: _trafState.perPage});
+  const {ok, data} = await api("/superadmin/api/visitors/list/?" + q);
+  if(!ok){ tbody.innerHTML = `<tr><td colspan="7" class="tf-empty"><div class="ic">⚠️</div><p>Failed to load visits.</p></td></tr>`; return; }
+  if(!data.visits.length){
+    tbody.innerHTML = `<tr><td colspan="7" class="tf-empty"><div class="ic">📭</div><p>No visits yet for this filter.</p></td></tr>`;
+  } else {
+    tbody.innerHTML = data.visits.map(v => `<tr>
+      <td><span title="${_trafEsc(v.at)}">${_trafTime(v.at)}</span></td>
+      <td><div class="tf-loc">
+        <span class="flag">${_flagEmoji(v.country_code)}</span>
+        <div>
+          <div style="font-weight:700;">${_trafEsc(v.city || v.country || "Unknown")}</div>
+          <div style="font-size:10px;color:var(--muted);">${_trafEsc(v.region || v.country || "")}</div>
+        </div>
+      </div></td>
+      <td><span class="tf-ip">${_trafEsc(v.ip)}</span><div style="font-size:10px;color:var(--muted);max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${_trafEsc(v.isp)}">${_trafEsc(v.isp||"")}</div></td>
+      <td><div class="tf-path" title="${_trafEsc(v.path)}">${_trafEsc(v.path)}</div>${v.referrer ? `<div style="font-size:10px;color:var(--muted);max-width:240px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${_trafEsc(v.referrer)}">← ${_trafEsc(v.referrer)}</div>` : ""}</td>
+      <td><div style="font-size:12px;font-weight:600;">${_trafEsc(v.browser || "?")}</div><div style="font-size:10px;color:var(--muted);">${_trafEsc(v.os || "")}</div></td>
+      <td><span class="tf-pill ${v.is_bot ? 'bot' : v.device}">${v.is_bot ? "🤖 Bot" : _trafEsc(v.device)}</span></td>
+      <td>${v.user ? `<span class="tf-pill user" title="${_trafEsc(v.user_email||'')}">👤 ${_trafEsc(v.user)}</span>` : `<span style="color:var(--muted);font-size:11px;">Anonymous</span>`}</td>
+    </tr>`).join("");
+  }
+  // Pager
+  document.getElementById("tfTableMeta").textContent = `${data.total.toLocaleString()} visits`;
+  document.getElementById("tfPagerInfo").textContent = data.total === 0
+    ? "No results"
+    : `Showing ${(data.page-1)*data.per_page + 1}–${Math.min(data.page*data.per_page, data.total)} of ${data.total.toLocaleString()}`;
+  document.getElementById("tfPagerCurr").textContent = `Page ${data.page} / ${data.total_pages || 1}`;
+  document.getElementById("tfPagerPrev").disabled = data.page <= 1;
+  document.getElementById("tfPagerNext").disabled = data.page >= data.total_pages;
+}
+
+function tfChangePage(delta){
+  _trafState.page = Math.max(1, _trafState.page + delta);
+  tfLoadList();
+}
+
+async function tfLoadTopPages(){
+  const {ok, data} = await api("/superadmin/api/visitors/top-pages/?" + _trafQuery());
+  const el = document.getElementById("tfTopPages");
+  if(!ok || !data.pages.length){
+    el.innerHTML = `<div class="tf-empty"><div class="ic">📄</div><p>No page data.</p></div>`;
+    return;
+  }
+  const max = Math.max(1, ...data.pages.map(p => p.visits));
+  el.innerHTML = data.pages.map(p => `
+    <div class="tf-listrow">
+      <div class="lbl" title="${_trafEsc(p.path)}">${_trafEsc(p.path || "/")}</div>
+      <div class="tf-bar-bg"><div class="tf-bar-fill" style="width:${Math.round((p.visits/max)*100)}%"></div></div>
+      <div class="val">${(p.visits||0).toLocaleString()}</div>
+    </div>
+  `).join("");
+}
+
+async function tfLoadDevices(){
+  const {ok, data} = await api("/superadmin/api/visitors/devices/?" + _trafQuery());
+  const el = document.getElementById("tfDevices");
+  if(!ok){ el.innerHTML = `<div class="tf-empty"><div class="ic">⚠️</div><p>Failed to load.</p></div>`; return; }
+  const browserMax = Math.max(1, ...(data.browsers||[]).map(b => b.visits));
+  const osMax      = Math.max(1, ...(data.os||[]).map(o => o.visits));
+  const devTotal   = (data.devices||[]).reduce((s,d) => s + (d.visits||0), 0) || 1;
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;">
+      <div style="padding:10px 14px;border-right:1px solid var(--line);">
+        <div style="font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Browsers</div>
+        ${(data.browsers||[]).slice(0,6).map(b => `<div class="tf-listrow" style="padding:6px 0;border:none;">
+          <div class="lbl">${_trafEsc(b.browser)}</div>
+          <div class="tf-bar-bg" style="flex:0 0 60px;"><div class="tf-bar-fill" style="width:${Math.round((b.visits/browserMax)*100)}%"></div></div>
+          <div class="val">${(b.visits||0).toLocaleString()}</div>
+        </div>`).join("") || `<div style="color:var(--muted);font-size:12px;padding:6px 0;">No data</div>`}
+      </div>
+      <div style="padding:10px 14px;">
+        <div style="font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Operating System</div>
+        ${(data.os||[]).slice(0,6).map(o => `<div class="tf-listrow" style="padding:6px 0;border:none;">
+          <div class="lbl">${_trafEsc(o.os_name)}</div>
+          <div class="tf-bar-bg" style="flex:0 0 60px;"><div class="tf-bar-fill" style="width:${Math.round((o.visits/osMax)*100)}%"></div></div>
+          <div class="val">${(o.visits||0).toLocaleString()}</div>
+        </div>`).join("") || `<div style="color:var(--muted);font-size:12px;padding:6px 0;">No data</div>`}
+      </div>
+    </div>
+    <div style="border-top:1px solid var(--line);padding:10px 14px;">
+      <div style="font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Device Type</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        ${(data.devices||[]).map(d => {
+          const pct = Math.round((d.visits/devTotal)*100);
+          return `<div class="tf-pill ${d.device_type}" style="font-size:12px;padding:5px 11px;">${_trafEsc(d.device_type)} · ${pct}%</div>`;
+        }).join("") || "—"}
+      </div>
+    </div>
+  `;
 }
 
 /* ═══════════════════════════════════════════════════════

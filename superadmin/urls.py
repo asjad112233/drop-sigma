@@ -14,4 +14,13 @@ urlpatterns = [
     path("api/validate-coupon/",     views.api_validate_coupon, name="sa_validate_coupon"),
     path("api/locations/",           views.api_locations,       name="sa_locations"),
     path("api/diagnostics/",         views.api_diagnostics,     name="sa_diagnostics"),
+
+    # ─── Site-wide Visitor Analytics ────────────────────────────────────
+    path("api/visitors/overview/",   views.api_visitors_overview,   name="sa_visitors_overview"),
+    path("api/visitors/list/",       views.api_visitors_list,       name="sa_visitors_list"),
+    path("api/visitors/countries/",  views.api_visitors_countries,  name="sa_visitors_countries"),
+    path("api/visitors/realtime/",   views.api_visitors_realtime,   name="sa_visitors_realtime"),
+    path("api/visitors/map/",        views.api_visitors_map,        name="sa_visitors_map"),
+    path("api/visitors/top-pages/",  views.api_visitors_top_pages,  name="sa_visitors_top_pages"),
+    path("api/visitors/devices/",    views.api_visitors_devices,    name="sa_visitors_devices"),
 ]
