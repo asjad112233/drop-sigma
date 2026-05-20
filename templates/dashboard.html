@@ -9332,7 +9332,13 @@ function showSection(section){
   if(section === "emails"){
     document.getElementById("emailsSection").classList.add("active");
     document.getElementById("navEmails").classList.add("active");
-    loadEmails();
+    if (Array.isArray(allThreads) && allThreads.length > 0) {
+      renderEmails();
+      updateEmailStats();
+      loadEmails({silent: true, preserveSelection: true});
+    } else {
+      loadEmails();
+    }
     loadConnectedEmailAccount();
     startLiveEmailSync();
   }
