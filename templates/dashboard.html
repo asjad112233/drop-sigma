@@ -14832,20 +14832,66 @@ function _tmVeEscHtml(s){
 // Variables become atomic, styled, non-editable marker spans so the visual
 // editor cannot accidentally overwrite them with rendered sample values.
 // Conditional if-blocks survive as HTML comments for round-trip safety.
+//
+// CRITICAL: placeholder wrapping happens via a TEXT-NODE walker only.
+// Replacing mustache tokens at the string level would corrupt attribute
+// values like href="mailto:STORE_EMAIL_TOKEN" — the span tag's quote
+// would close the href attribute prematurely and the entire anchor
+// renders broken. Walking text nodes leaves attributes untouched and
+// they round-trip as raw mustache, which is exactly what the render
+// pass expects.
 function tmVeEncodeTemplate(html){
   if(!html) return '';
-  // Mustache conditional open/close → DOM-survivable HTML comments
+  // Step 1 (string-level): conditional mustache → DOM-survivable comments
+  // before parsing. Comments survive HTML parse between elements; that's
+  // where these blocks live in the default templates.
   html = html.replace(/\{\{#if\s+([\w.]+)\}\}/g, '<!--TM_IF:$1-->');
   html = html.replace(/\{\{\/if\}\}/g,           '<!--TM_ENDIF-->');
-  // Simple placeholders (with optional fallback) → atomic marker spans
-  html = html.replace(/\{\{\s*([a-zA-Z_][\w.]*)\s*(?:\|([^}]*))?\}\}/g, (m, name, fb)=>{
-    const open   = '\x7b\x7b';
-    const close  = '\x7d\x7d';
-    const fbAttr = (fb !== undefined && fb !== '') ? ` data-tm-fb="${_tmVeEscAttr(fb)}"` : '';
-    const label  = fb !== undefined && fb !== '' ? (open + name + '|' + fb + close) : (open + name + close);
-    return `<span class="tm-var" data-tm-var="${_tmVeEscAttr(name)}"${fbAttr} contenteditable="false">${_tmVeEscHtml(label)}</span>`;
+
+  // Step 2 (DOM-level): parse into a detached div, walk TEXT NODES only,
+  // wrap any mustache token in a marker span. Attribute values are never
+  // visited, so href/src/style with mustache stay intact.
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = html;
+  const doc = wrapper.ownerDocument;
+  const OPEN  = '\x7b\x7b';
+  const skipParents = { 'SCRIPT': 1, 'STYLE': 1 }; // don't wrap inside CSS/JS
+  const walker = doc.createTreeWalker(wrapper, NodeFilter.SHOW_TEXT, null);
+  const targets = [];
+  while (walker.nextNode()) {
+    const node = walker.currentNode;
+    if (node.nodeValue.indexOf(OPEN) === -1) continue;
+    let p = node.parentNode, skip = false;
+    while (p && p !== wrapper) {
+      if (skipParents[p.nodeName]) { skip = true; break; }
+      p = p.parentNode;
+    }
+    if (!skip) targets.push(node);
+  }
+  const varRe = /\{\{\s*([a-zA-Z_][\w.]*)\s*(?:\|([^}]*))?\}\}/g;
+  targets.forEach(node => {
+    const text = node.nodeValue;
+    varRe.lastIndex = 0;
+    const frag = doc.createDocumentFragment();
+    let lastIdx = 0, m, matched = false;
+    while ((m = varRe.exec(text)) !== null) {
+      matched = true;
+      if (m.index > lastIdx) frag.appendChild(doc.createTextNode(text.slice(lastIdx, m.index)));
+      const span = doc.createElement('span');
+      span.className = 'tm-var';
+      span.setAttribute('data-tm-var', m[1]);
+      if (m[2] !== undefined && m[2] !== '') span.setAttribute('data-tm-fb', m[2]);
+      span.setAttribute('contenteditable', 'false');
+      span.textContent = m[0]; // literal mustache token, e.g. {{store_email}}
+      frag.appendChild(span);
+      lastIdx = m.index + m[0].length;
+    }
+    if (matched) {
+      if (lastIdx < text.length) frag.appendChild(doc.createTextNode(text.slice(lastIdx)));
+      node.parentNode.replaceChild(frag, node);
+    }
   });
-  return html;
+  return wrapper.innerHTML;
 }
 
 // Reverse of tmVeEncodeTemplate. Strips VE-only artifacts, unwraps var
