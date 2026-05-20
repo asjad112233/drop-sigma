@@ -13,4 +13,5 @@ urlpatterns = [
     path("api/coupons/<int:pk>/",    views.api_coupon_detail,   name="sa_coupon_detail"),
     path("api/validate-coupon/",     views.api_validate_coupon, name="sa_validate_coupon"),
     path("api/locations/",           views.api_locations,       name="sa_locations"),
+    path("api/diagnostics/",         views.api_diagnostics,     name="sa_diagnostics"),
 ]

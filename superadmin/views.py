@@ -855,6 +855,17 @@ def _build_user_entry(u, role, now):
     }
 
 
+@superadmin_required
+@require_GET
+def api_diagnostics(request):
+    """Run the full system health diagnostic sweep.
+    Query param `category=<key>` runs just one category. Default = all."""
+    from . import diagnostics
+    cat = request.GET.get("category")
+    result = diagnostics.run_diagnostics(category_key=cat)
+    return JsonResponse(result)
+
+
 @require_GET
 def api_locations(request):
     if not request.user.is_superuser:
