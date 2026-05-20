@@ -452,22 +452,13 @@ def vendor_orders_api(request):
             line_items = order.raw_data.get("line_items", [])
 
         billing = (order.raw_data or {}).get("billing", {})
-        full_address = ", ".join(filter(None, [
-            billing.get("address_1", ""),
-            billing.get("address_2", ""),
-            order.city or billing.get("city", ""),
-            billing.get("postcode", ""),
-            order.country or billing.get("country", ""),
-        ]))
 
         row = {
             "id": order.id,
             "order_number": order.external_order_id,
             "customer_name": order.customer_name or "-",
-            "customer_phone": order.customer_phone or "-",
             "customer_city": order.city or "-",
             "customer_country": order.country or "-",
-            "customer_address": full_address or "-",
             "created_at": order.created_at.isoformat() if order.created_at else None,
             "product_name": order.product_name or "",
             "payment_status": order.payment_status or "-",
@@ -512,6 +503,17 @@ def vendor_orders_api(request):
             row["assigned_to_name"] = order.assigned_to.name if order.assigned_to else None
         if perm("show_store_url"):
             row["store_url"] = order.store.store_url if order.store else None
+        if perm("show_customer_phone"):
+            row["customer_phone"] = order.customer_phone or "-"
+        if perm("show_customer_address"):
+            full_address = ", ".join(filter(None, [
+                billing.get("address_1", ""),
+                billing.get("address_2", ""),
+                order.city or billing.get("city", ""),
+                billing.get("postcode", ""),
+                order.country or billing.get("country", ""),
+            ]))
+            row["customer_address"] = full_address or "-"
 
         data.append(row)
 

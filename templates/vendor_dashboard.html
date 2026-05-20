@@ -599,13 +599,12 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
             <th>Order</th>
             <th>Customer</th>
             <th>Products</th>
-            <th>Amount</th>
             <th>Status</th>
             <th>Action</th>
           </tr>
         </thead>
         <tbody id="vendorOrdersTable">
-          <tr><td colspan="6" style="text-align:center;padding:40px;color:#94a3b8;">Loading orders...</td></tr>
+          <tr><td colspan="5" style="text-align:center;padding:40px;color:#94a3b8;">Loading orders...</td></tr>
         </tbody>
       </table>
     </div>
@@ -794,11 +793,11 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
   </div>
 
   <!-- Change Password Modal -->
-  <div id="vpChangePwModal" style="display:none;position:fixed;inset:0;background:rgba(10,14,31,.6);backdrop-filter:blur(8px);z-index:9999;align-items:center;justify-content:center;padding:20px;">
+  <div id="vpChangePwModal" role="dialog" aria-modal="true" aria-labelledby="vpChangePwTitle" style="display:none;position:fixed;inset:0;background:rgba(10,14,31,.6);backdrop-filter:blur(8px);z-index:9999;align-items:center;justify-content:center;padding:20px;">
     <div style="background:#fff;border-radius:22px;width:100%;max-width:440px;padding:28px;box-shadow:0 40px 100px rgba(15,23,42,.25);">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
-        <h3 style="font-size:18px;font-weight:900;color:#101828;letter-spacing:-.4px;">Change Password</h3>
-        <button onclick="vpCloseChangePw()" style="width:32px;height:32px;border:1px solid #dfe6f0;border-radius:10px;background:#f8fafc;cursor:pointer;font-size:16px;color:#667085;">×</button>
+        <h3 id="vpChangePwTitle" style="font-size:18px;font-weight:900;color:#101828;letter-spacing:-.4px;">Change Password</h3>
+        <button onclick="vpCloseChangePw()" aria-label="Close modal" style="width:32px;height:32px;border:1px solid #dfe6f0;border-radius:10px;background:#f8fafc;cursor:pointer;font-size:16px;color:#667085;">×</button>
       </div>
       <p style="font-size:12px;color:#667085;margin-bottom:18px;">Set a new password. You'll stay signed in.</p>
       <div style="display:flex;flex-direction:column;gap:12px;">
@@ -865,14 +864,14 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
         </div>
 
         <!-- Members Modal -->
-        <div id="vcMembersModal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.45);align-items:center;justify-content:center;">
+        <div id="vcMembersModal" role="dialog" aria-modal="true" aria-labelledby="vcMembersModalChName" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.45);align-items:center;justify-content:center;">
           <div style="background:#fff;border-radius:14px;width:400px;max-width:94vw;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(109,40,217,.18);">
             <div style="padding:18px 20px 14px;border-bottom:1px solid #ede9fe;display:flex;align-items:center;justify-content:space-between;">
               <div>
                 <div style="font-weight:700;font-size:15px;color:#3b0764;">Members of <span id="vcMembersModalChName">#general</span></div>
                 <div style="font-size:12px;color:#7c3aed;margin-top:2px;"><span id="vcMembersModalCount">0</span> members</div>
               </div>
-              <button onclick="document.getElementById('vcMembersModal').style.display='none';" style="background:none;border:none;cursor:pointer;color:#7c3aed;font-size:18px;padding:4px;"><i class="fa-solid fa-xmark"></i></button>
+              <button onclick="vcCloseMembersModal()" aria-label="Close members list" style="background:none;border:none;cursor:pointer;color:#7c3aed;font-size:18px;padding:4px;"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div id="vcMembersList" style="overflow-y:auto;flex:1;padding:12px 20px;"></div>
           </div>
@@ -1000,11 +999,11 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
 </div>
 
 <!-- Tracking submit modal -->
-<div id="trackModal" style="display:none;position:fixed;inset:0;background:rgba(10,14,31,.6);backdrop-filter:blur(8px);z-index:999;align-items:center;justify-content:center;padding:20px;">
+<div id="trackModal" role="dialog" aria-modal="true" aria-labelledby="trackModalTitle" style="display:none;position:fixed;inset:0;background:rgba(10,14,31,.6);backdrop-filter:blur(8px);z-index:999;align-items:center;justify-content:center;padding:20px;">
   <div style="background:#fff;border-radius:28px;width:100%;max-width:520px;padding:30px;box-shadow:0 40px 100px rgba(15,23,42,.25);">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
-      <h3 style="font-size:19px;font-weight:900;color:#101828;letter-spacing:-.4px;">Submit Tracking</h3>
-      <button onclick="closeTrackModal()" style="width:34px;height:34px;border:1px solid #dfe6f0;border-radius:12px;background:#f8fafc;cursor:pointer;font-size:17px;color:#667085;">×</button>
+      <h3 id="trackModalTitle" style="font-size:19px;font-weight:900;color:#101828;letter-spacing:-.4px;">Submit Tracking</h3>
+      <button onclick="closeTrackModal()" aria-label="Close modal" style="width:34px;height:34px;border:1px solid #dfe6f0;border-radius:12px;background:#f8fafc;cursor:pointer;font-size:17px;color:#667085;">×</button>
     </div>
     <p style="font-size:12px;color:#667085;margin-bottom:20px;">Order: <b id="trackModalOrderNum" style="color:#101828;"></b></p>
 
@@ -1042,7 +1041,13 @@ let vendorFilter = "all";
 let currentTrackOrderId = null;
 let vendorPerms = {};  // loaded from API
 
-function esc(s){ const d=document.createElement("div");d.textContent=String(s||"");return d.innerHTML; }
+function esc(s){
+  // textContent → innerHTML escapes &, <, >, " — but NOT '. We must also escape '
+  // because we embed values in single-quoted onclick handlers like onclick="fn('${esc(x)}')".
+  const d=document.createElement("div");
+  d.textContent=String(s||"");
+  return d.innerHTML.replace(/'/g,"&#39;");
+}
 
 const COURIER_PRESETS = {
   "Yuntrack":        "https://www.yuntrack.com",
@@ -1199,6 +1204,12 @@ function vpdStatusBadge(s){
   return "vpd-b-gray";
 }
 
+function vpColSpan(){
+  // Base columns: Order, Customer, Products, Status, Action = 5
+  // Optional: Amount (+1 if show_order_amount), Assigned To (+1 if show_assigned_member)
+  return 5 + (vendorPerms.show_order_amount?1:0) + (vendorPerms.show_assigned_member?1:0);
+}
+
 function buildTableHeader(){
   const showAmt  = vendorPerms.show_order_amount;
   const showMem  = vendorPerms.show_assigned_member;
@@ -1217,11 +1228,12 @@ function buildTableHeader(){
 async function loadVendorOrders(){
   fireLoader();
   const tbody = document.getElementById("vendorOrdersTable");
-  tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:40px;color:#94a3b8;">Loading...</td></tr>`;
+  // Loading state — use current colSpan (pre-fetch perms may be empty → 5)
+  tbody.innerHTML = `<tr><td colspan="${vpColSpan()}" style="text-align:center;padding:40px;color:#94a3b8;">Loading...</td></tr>`;
   try{
-    const r = await fetch("/vendor/api/orders/");
+    const r = await vpFetch("/vendor/api/orders/");
     const d = await r.json();
-    if(!d.success){ tbody.innerHTML=`<tr><td colspan="6" style="color:red;padding:20px;">${esc(d.message)}</td></tr>`; return; }
+    if(!d.success){ tbody.innerHTML=`<tr><td colspan="${vpColSpan()}" style="color:red;padding:20px;">${esc(d.message)}</td></tr>`; return; }
     vendorOrders = d.orders || [];
     vendorPerms  = d.permissions || {};
     const st = d.stats || {};
@@ -1232,7 +1244,7 @@ async function loadVendorOrders(){
     buildTableHeader();
     renderVendorOrders();
   }catch(e){
-    tbody.innerHTML=`<tr><td colspan="6" style="color:red;padding:20px;">${esc(e.message)}</td></tr>`;
+    tbody.innerHTML=`<tr><td colspan="${vpColSpan()}" style="color:red;padding:20px;">${esc(e.message)}</td></tr>`;
   }
 }
 
@@ -1248,7 +1260,7 @@ function renderVendorOrders(){
   );
 
   if(!orders.length){
-    tbody.innerHTML=`<tr><td colspan="6"><div class="vp-empty"><div class="icon">📭</div><p>No orders found.</p></div></td></tr>`;
+    tbody.innerHTML=`<tr><td colspan="${vpColSpan()}"><div class="vp-empty"><div class="icon">📭</div><p>No orders found.</p></div></td></tr>`;
     return;
   }
 
@@ -1311,21 +1323,33 @@ function renderVendorOrders(){
 
 function openTrackModal(orderId, orderNum){
   fireLoader();
+  _vpStashFocus("trackModal");
   currentTrackOrderId = orderId;
   document.getElementById("trackModalOrderNum").innerText = "#"+orderNum;
+  // Reset all fields between opens — including courier input (P2-2)
   document.getElementById("tfTrackingNumber").value="";
   document.getElementById("tfTrackingUrl").value="";
   document.getElementById("tfVendorNote").value="";
   document.getElementById("tfMsg").innerText="";
+  document.getElementById("tfMsg").className="vp-form-msg";
+  const courierInput = document.getElementById("tfCourierInput");
+  if(courierInput) courierInput.value = "";
+  const courierUrl = document.getElementById("tfCourierUrl");
+  if(courierUrl) courierUrl.value = "";
+  const customRow = document.getElementById("tfCustomUrlRow");
+  if(customRow) customRow.style.display = "none";
   initCourierCombo("tfCourierInput","tfCourierUrl","tfCustomUrlRow","","");
   const m=document.getElementById("trackModal");
   m.style.display="flex";
+  // Restore focus to the tracking number input
+  setTimeout(()=>document.getElementById("tfTrackingNumber")?.focus(), 60);
 }
 
 function closeTrackModal(){
   fireLoader();
   document.getElementById("trackModal").style.display="none";
   currentTrackOrderId=null;
+  _vpRestoreFocus("trackModal");
 }
 
 async function submitTracking(){
@@ -1370,7 +1394,7 @@ async function loadTrackingHistory(silent){
     panel.innerHTML=`<div class="vp-empty"><div class="icon">⏳</div><p>Loading...</p></div>`;
   }
   try{
-    const r=await fetch("/vendor/api/tracking-history/");
+    const r=await vpFetch("/vendor/api/tracking-history/");
     const d=await r.json();
     if(!d.success||!d.submissions.length){
       panel.innerHTML=`<div class="vp-empty"><div class="icon">🚚</div><p>No tracking submissions yet.</p></div>`;
@@ -1449,6 +1473,8 @@ function openOrderDetail(orderId){
   const showEmail = vendorPerms.show_order_email;
   const showMem   = vendorPerms.show_assigned_member;
   const showUrl   = vendorPerms.show_store_url;
+  const showPhone = vendorPerms.show_customer_phone;
+  const showAddr  = vendorPerms.show_customer_address;
 
   // Product rows
   const lineItems = order.line_items || [];
@@ -1482,17 +1508,20 @@ function openOrderDetail(orderId){
     : `<p style="font-size:12px;color:#64748b;margin-bottom:12px;">No tracking yet. Submit below:</p>`;
 
   const latestSub = order.latest_submission;
-  const rejectNotice = (latestSub && latestSub.status==="rejected" && latestSub.reject_reason)
-    ? `<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:#dc2626;font-weight:600;">❌ Rejected: ${esc(latestSub.reject_reason)}</div>`
+  const wasRejected = latestSub && latestSub.status === "rejected";
+  const rejectNotice = (wasRejected && latestSub.reject_reason)
+    ? `<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:#dc2626;font-weight:600;">❌ Rejected: ${esc(latestSub.reject_reason)} <span style="display:block;margin-top:4px;font-weight:500;color:#991b1b;">Please enter a NEW tracking number — the previous one was not accepted.</span></div>`
     : "";
 
   const canSubmit = ["assigned","in_progress","rejected"].includes(order.vendor_status);
+  // Pre-fill only when tracking is approved/active — never re-fill a rejected number (P2-3)
+  const prefillNum = (hasTracking && !wasRejected) ? esc(order.tracking_number) : "";
   const trackForm = canSubmit ? `
     ${rejectNotice}
     <div class="vpd-form-row">
       <div class="vpd-form-group">
         <label class="vpd-form-label">Tracking Number *</label>
-        <input id="vpdTrackNum" class="vpd-form-input" placeholder="e.g. PK123456789" value="${hasTracking?esc(order.tracking_number):""}">
+        <input id="vpdTrackNum" class="vpd-form-input" placeholder="e.g. PK123456789" value="${prefillNum}">
       </div>
       <div class="vpd-form-group">
         <label class="vpd-form-label">Courier</label>
@@ -1547,12 +1576,15 @@ function openOrderDetail(orderId){
         <div class="vpd-card-body">
           <div class="vpd-info-grid">
             <div><div class="vpd-info-label">Full Name</div><div class="vpd-info-value">${esc(order.customer_name||"-")}</div></div>
-            <div><div class="vpd-info-label">Mobile</div><div class="vpd-info-value">${esc(order.customer_phone||"-")}</div></div>
+            ${showPhone ? `<div><div class="vpd-info-label">Mobile</div><div class="vpd-info-value">${esc(order.customer_phone||"-")}</div></div>` : ""}
             ${showEmail ? `<div style="grid-column:1/-1;"><div class="vpd-info-label">Email</div><div class="vpd-info-value"><a href="mailto:${esc(order.customer_email||"")}" style="color:#2563eb;">${esc(order.customer_email||"-")}</a></div></div>` : ""}
           </div>
           <div class="vpd-divider"></div>
           <div class="vpd-info-label" style="margin-bottom:8px;">Delivery Address</div>
-          <div class="vpd-address">${esc(order.customer_address||[order.customer_city,order.customer_country].filter(Boolean).join(", ")||"-")}</div>
+          ${showAddr
+            ? `<div class="vpd-address">${esc(order.customer_address||[order.customer_city,order.customer_country].filter(Boolean).join(", ")||"-")}</div>`
+            : `<div class="vpd-address">${esc([order.customer_city,order.customer_country].filter(Boolean).join(", ")||"City / Country only — full address hidden by admin.")}</div>`
+          }
         </div>
       </div>
 
@@ -1670,13 +1702,85 @@ function getCsrf(){
   return inp ? inp.value : "";
 }
 
+// ── Shared confirm modal ──────────────────────────────────────────────────
+function _vpShowConfirm(opts){
+  const {title="Confirm?", body="", confirmText="Confirm", cancelText="Cancel", danger=false, onConfirm} = opts || {};
+  const lastFocused = document.activeElement;
+  const ov = document.createElement("div");
+  ov.setAttribute("role","dialog");
+  ov.setAttribute("aria-modal","true");
+  ov.setAttribute("aria-label", title);
+  ov.style.cssText = "position:fixed;inset:0;background:rgba(10,14,31,.55);backdrop-filter:blur(6px);z-index:99998;display:flex;align-items:center;justify-content:center;padding:20px;animation:vcNotifSlide .18s ease;";
+  ov.innerHTML = `
+    <div style="background:#fff;border-radius:20px;width:100%;max-width:420px;padding:24px;box-shadow:0 40px 100px rgba(15,23,42,.25);">
+      <div style="font-size:17px;font-weight:800;color:#0f172a;letter-spacing:-.3px;margin-bottom:8px;">${title}</div>
+      <div style="font-size:13px;color:#475569;line-height:1.6;margin-bottom:18px;">${body}</div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button class="vp-cf-cancel" style="background:#f1f5f9;color:#334155;border:1px solid #e2e8f0;border-radius:10px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">${esc(cancelText)}</button>
+        <button class="vp-cf-confirm" style="background:${danger?"#dc2626":"#2563eb"};color:#fff;border:none;border-radius:10px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">${esc(confirmText)}</button>
+      </div>
+    </div>`;
+  document.body.appendChild(ov);
+  _vcEnsureNotifStyle && _vcEnsureNotifStyle();
+  const cleanup = ()=>{ ov.remove(); if(lastFocused && lastFocused.focus) lastFocused.focus(); document.removeEventListener("keydown", onKey); };
+  const onKey = (e)=>{ if(e.key === "Escape") cleanup(); if(e.key === "Enter") doConfirm(); };
+  const doConfirm = ()=>{ cleanup(); try{ onConfirm && onConfirm(); }catch(_){} };
+  ov.querySelector(".vp-cf-cancel").addEventListener("click", cleanup);
+  ov.querySelector(".vp-cf-confirm").addEventListener("click", doConfirm);
+  ov.addEventListener("click", e=>{ if(e.target === ov) cleanup(); });
+  document.addEventListener("keydown", onKey);
+  setTimeout(()=>ov.querySelector(".vp-cf-confirm")?.focus(), 50);
+}
+
+// ── Focus restoration on modal close (P2-9) ──────────────────────────────
+// Track the element that opened a modal so we can return focus when it closes.
+const _vpFocusStack = {};
+function _vpStashFocus(modalId){
+  _vpFocusStack[modalId] = document.activeElement;
+}
+function _vpRestoreFocus(modalId){
+  const el = _vpFocusStack[modalId];
+  if(el && typeof el.focus === "function"){
+    try{ el.focus(); }catch(_){}
+  }
+  delete _vpFocusStack[modalId];
+}
+
+// Esc-to-close for built-in vendor portal modals
+document.addEventListener("keydown", function(e){
+  if(e.key !== "Escape") return;
+  const trackM = document.getElementById("trackModal");
+  if(trackM && trackM.style.display === "flex"){ closeTrackModal(); return; }
+  const pwM = document.getElementById("vpChangePwModal");
+  if(pwM && pwM.style.display === "flex"){ vpCloseChangePw(); return; }
+  const memM = document.getElementById("vcMembersModal");
+  if(memM && memM.style.display === "flex"){ vcCloseMembersModal(); return; }
+});
+
+// ── Fetch with timeout (P2-7) ─────────────────────────────────────────────
+async function vpFetch(url, opts={}, timeoutMs=30000){
+  const ctrl = new AbortController();
+  const t = setTimeout(()=>ctrl.abort(), timeoutMs);
+  try{
+    const r = await fetch(url, {...opts, signal: ctrl.signal});
+    return r;
+  }catch(e){
+    if(e.name === "AbortError"){
+      throw new Error("Request timed out. Please check your connection and try again.");
+    }
+    throw e;
+  }finally{
+    clearTimeout(t);
+  }
+}
+
 // ── Profile: My Permissions ───────────────────────────────────────────────
 async function loadMyPermissions(){
   const list = document.getElementById("myPermsList");
   if(!list) return;
   list.innerHTML = '<div class="vp-empty" style="padding:24px;"><div class="icon">⏳</div><p>Loading…</p></div>';
   try{
-    const r = await fetch("/vendor/api/my-permissions/");
+    const r = await vpFetch("/vendor/api/my-permissions/");
     const d = await r.json();
     if(!d.success){ list.innerHTML = `<div class="vp-empty" style="padding:24px;color:#dc2626;">${esc(d.message||"Could not load permissions.")}</div>`; return; }
     if(!d.permissions.length){ list.innerHTML = '<div class="vp-empty" style="padding:24px;"><div class="icon">🔒</div><p>No permissions configured. Contact your admin.</p></div>'; return; }
@@ -1696,7 +1800,7 @@ async function loadMyPermanentProducts(){
   if(!list) return;
   list.innerHTML = '<div class="vp-empty" style="padding:32px;"><div class="icon">⏳</div><p>Loading…</p></div>';
   try{
-    const r = await fetch("/vendor/api/my-permanent-products/");
+    const r = await vpFetch("/vendor/api/my-permanent-products/");
     const d = await r.json();
     if(!d.success){ list.innerHTML = `<div class="vp-empty" style="padding:32px;color:#dc2626;">${esc(d.message||"Could not load.")}</div>`; return; }
     if(!d.products.length){
@@ -1728,6 +1832,7 @@ async function loadMyPermanentProducts(){
 
 // ── Profile: Change Password ──────────────────────────────────────────────
 function vpOpenChangePw(){
+  _vpStashFocus("vpChangePwModal");
   document.getElementById("vpPwCurrent").value = "";
   document.getElementById("vpPwNew").value = "";
   document.getElementById("vpPwConfirm").value = "";
@@ -1740,6 +1845,7 @@ function vpOpenChangePw(){
 }
 function vpCloseChangePw(){
   document.getElementById("vpChangePwModal").style.display = "none";
+  _vpRestoreFocus("vpChangePwModal");
 }
 async function submitChangePw(){
   const cur = document.getElementById("vpPwCurrent").value;
@@ -1758,7 +1864,7 @@ async function submitChangePw(){
   msg.style.color = "#64748b"; msg.textContent = "Updating password…";
 
   try{
-    const r = await fetch("/vendor/api/change-password/", {
+    const r = await vpFetch("/vendor/api/change-password/", {
       method:"POST",
       headers:{"Content-Type":"application/json","X-CSRFToken":getCsrf()},
       body: JSON.stringify({current_password:cur, new_password:nw, confirm_password:cf}),
@@ -2023,6 +2129,7 @@ async function vcRefreshMembersCount(){
 
 async function vcOpenMembersModal(){
   if(!_vcChannelId) return;
+  _vpStashFocus("vcMembersModal");
   const r = await fetch(`/teamapp/chat/channels/${_vcChannelId}/members/`);
   const d = await r.json();
   if(!d.success) return;
@@ -2037,13 +2144,13 @@ async function vcOpenMembersModal(){
     const myUid = _vcCurrentUserId;
     list.innerHTML = d.members.map(m=>{
       const isMe = myUid && Number(m.user)===Number(myUid);
-      const safeName = (m.name||"").replace(/"/g,'&quot;').replace(/'/g,"\\'");
-      const clickAttr = isMe ? "" : `onclick="_vcMembersDmClick(${m.user},'${safeName}')"`;
+      // esc() now escapes single quotes too, so embedding in single-quoted attr is safe
+      const clickAttr = isMe ? "" : `onclick="_vcMembersDmClick(${m.user},'${esc(m.name||"")}')"`;
       const cursor = isMe ? "default" : "pointer";
       const hint = isMe ? `<span style="font-size:10px;color:#9ca3af;margin-left:auto;">You</span>` : `<i class="fa-regular fa-message" style="color:#7c3aed;margin-left:auto;font-size:13px;opacity:.6;"></i>`;
       return `
       <div ${clickAttr} style="display:flex;align-items:center;gap:10px;padding:9px 6px;border-bottom:1px solid #f3f0ff;border-radius:8px;cursor:${cursor};transition:background .12s;" onmouseenter="${isMe?"":"this.style.background='#faf8ff'"}" onmouseleave="${isMe?"":"this.style.background=''"}">
-        <div style="width:34px;height:34px;border-radius:50%;background:#ede9fe;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:#7c3aed;flex-shrink:0;">${m.initials}</div>
+        <div style="width:34px;height:34px;border-radius:50%;background:#ede9fe;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:#7c3aed;flex-shrink:0;">${esc(m.initials||"")}</div>
         <div style="flex:1;min-width:0;">
           <div style="font-weight:600;font-size:13px;color:#1e1b4b;">${esc(m.name)}</div>
           <div style="font-size:11px;color:#9ca3af;">${esc(m.role||"")}</div>
@@ -2055,10 +2162,14 @@ async function vcOpenMembersModal(){
   document.getElementById("vcMembersModal").style.display = "flex";
 }
 
-function _vcMembersDmClick(userId, name){
-  // Close the members modal then open the DM channel
+function vcCloseMembersModal(){
   const modal = document.getElementById("vcMembersModal");
   if(modal) modal.style.display = "none";
+  _vpRestoreFocus("vcMembersModal");
+}
+function _vcMembersDmClick(userId, name){
+  // Close the members modal then open the DM channel
+  vcCloseMembersModal();
   vcOpenDm(userId, name);
 }
 
@@ -2478,20 +2589,28 @@ function _vcUpdateConnBadge(connected){
 }
 
 // ── In-app notification banner ────────────────────────────────────────────────
+// P2-4: inject keyframe <style> exactly once instead of every notification call.
+let _vcNotifStyleInjected = false;
+function _vcEnsureNotifStyle(){
+  if(_vcNotifStyleInjected) return;
+  const style=document.createElement("style");
+  style.id="vcNotifKeyframes";
+  style.textContent="@keyframes vcNotifSlide{from{transform:translateX(120%);opacity:0}to{transform:translateX(0);opacity:1}}";
+  document.head.appendChild(style);
+  _vcNotifStyleInjected = true;
+}
 function _vcShowInAppNotif(sender, channel, preview, onClick){
+  _vcEnsureNotifStyle();
   document.querySelectorAll(".vc-inapp-notif").forEach(n=>n.remove());
   const n=document.createElement("div");
   n.className="vc-inapp-notif";
   n.style.cssText="position:fixed;bottom:24px;right:24px;background:#1e1b4b;color:#fff;border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.35);padding:14px 18px;max-width:320px;z-index:99999;cursor:pointer;display:flex;gap:12px;align-items:flex-start;animation:vcNotifSlide .3s ease;";
   n.innerHTML=`<div style="width:36px;height:36px;border-radius:50%;background:#6366f1;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">💬</div>
     <div style="min-width:0;">
-      <div style="font-weight:700;font-size:13px;margin-bottom:2px;">${sender} <span style="color:#a5b4fc;font-weight:400;">in #${channel}</span></div>
-      <div style="font-size:12px;color:#c7d2fe;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;">${preview}</div>
+      <div style="font-weight:700;font-size:13px;margin-bottom:2px;">${esc(sender)} <span style="color:#a5b4fc;font-weight:400;">in #${esc(channel)}</span></div>
+      <div style="font-size:12px;color:#c7d2fe;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;">${esc(preview)}</div>
     </div>
     <div onclick="event.stopPropagation();this.closest('.vc-inapp-notif').remove();" style="margin-left:auto;color:#818cf8;font-size:16px;line-height:1;padding:2px 0 0 4px;">✕</div>`;
-  const style=document.createElement("style");
-  style.textContent="@keyframes vcNotifSlide{from{transform:translateX(120%);opacity:0}to{transform:translateX(0);opacity:1}}";
-  document.head.appendChild(style);
   n.addEventListener("click",()=>{ onClick&&onClick(); n.remove(); });
   document.body.appendChild(n);
   setTimeout(()=>{ n.style.transition="opacity .4s,transform .4s"; n.style.opacity="0"; n.style.transform="translateX(120%)"; setTimeout(()=>n.remove(),400); },5000);
@@ -2723,7 +2842,7 @@ async function loadOrderHistory(){
   if(tbody) tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:32px;color:#94a3b8;">Loading...</td></tr>';
 
   try{
-    const res=await fetch("/vendor/api/orders/");
+    const res=await vpFetch("/vendor/api/orders/");
     const data=await res.json();
     if(!data.success) throw new Error(data.message||"Error");
     const orders=data.orders||[];
@@ -2814,7 +2933,7 @@ async function loadVpStock(){
   document.getElementById("vpPricingCards").innerHTML='<div class="vp-empty"><div class="icon">⏳</div><p>Loading...</p></div>';
   document.getElementById("vpTrackerCards").innerHTML='<div class="vp-empty"><div class="icon">⏳</div><p>Loading...</p></div>';
   try{
-    const r = await fetch("/vendor/api/stock/");
+    const r = await vpFetch("/vendor/api/stock/");
     const d = await r.json();
     if(!d.success){ throw new Error(d.error||"Failed"); }
     _vpStockData = d.assignments || [];
@@ -3109,7 +3228,7 @@ function renderVpTracker(){
       ? `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:12px;font-weight:700;color:#166534;display:flex;align-items:center;gap:8px;">📦 Stock arrived on ${a.arrived_at ? new Date(a.arrived_at).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"}) : "—"}</div>`
       : `<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
            <div><div style="font-size:12px;font-weight:800;color:#1d4ed8;">📦 Stock Not Yet Arrived</div><div style="font-size:11px;color:#3b82f6;margin-top:2px;">Once your physical stock arrives, mark it here to activate selling.</div></div>
-           <button onclick="vpMarkStockArrived(${a.id},this)" style="padding:8px 16px;border-radius:8px;border:none;background:#2563eb;color:#fff;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;font-family:inherit;">Mark Arrived</button>
+           <button onclick="vpConfirmMarkArrived(${a.id},this)" style="padding:8px 16px;border-radius:8px;border:none;background:#2563eb;color:#fff;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;font-family:inherit;">Mark Arrived</button>
          </div>`;
     return `<div class="vs-card" style="border-left:4px solid ${a.stock_arrived?"#059669":"#2563eb"};">
       <div class="vs-card-hd">
@@ -3143,21 +3262,49 @@ function renderVpTracker(){
   }).join("");
 }
 
+// P2-6: confirmation gate before the irreversible mark-arrived action
+function vpConfirmMarkArrived(assignmentId, btn){
+  if(_vpShowConfirm){
+    _vpShowConfirm({
+      title: "Mark stock as arrived?",
+      body: "This confirms the goods have physically arrived and the admin will be notified. <b>This cannot be undone.</b>",
+      confirmText: "Yes, mark arrived",
+      onConfirm: ()=>vpMarkStockArrived(assignmentId, btn),
+    });
+  } else {
+    // Fallback (should never hit — modal is always present)
+    if(confirm("Mark stock as arrived? This cannot be undone.")) vpMarkStockArrived(assignmentId, btn);
+  }
+}
+
 async function vpMarkStockArrived(assignmentId, btn){
   btn.disabled = true;
   btn.textContent = "Marking…";
+  // Find or create an inline message slot near the button (P2-5)
+  let msgEl = btn.parentElement.querySelector(".vp-mark-msg");
+  if(!msgEl){
+    msgEl = document.createElement("span");
+    msgEl.className = "vp-mark-msg";
+    msgEl.style.cssText = "font-size:11.5px;font-weight:700;margin-left:10px;";
+    btn.parentElement.appendChild(msgEl);
+  }
+  msgEl.textContent = "";
   try{
     const r = await fetch(`/vendor/api/stock/${assignmentId}/arrived/`, {method:"POST", headers:{"X-CSRFToken":getCsrf(),"Content-Type":"application/json"}});
     const d = await r.json();
     if(d.success){
-      await loadVpStock();
+      msgEl.style.color = "#16a34a";
+      msgEl.textContent = "✓ Marked arrived. Admin notified.";
+      setTimeout(()=>loadVpStock(), 800);
     } else {
-      alert(d.message||"Could not mark arrived.");
+      msgEl.style.color = "#dc2626";
+      msgEl.textContent = d.message || "Could not mark arrived.";
       btn.disabled = false;
       btn.textContent = "Mark Arrived";
     }
   }catch(e){
-    alert("Network error. Please try again.");
+    const _msg = btn.parentElement.querySelector(".vp-mark-msg");
+    if(_msg){ _msg.style.color="#dc2626"; _msg.textContent = "Network error. Try again."; }
     btn.disabled = false;
     btn.textContent = "Mark Arrived";
   }

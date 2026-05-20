@@ -8760,6 +8760,14 @@ Hi, I ordered the Korean glow serum 4 days ago, order #4521. Just received it bu
           <input type="checkbox" id="vpm_store_url" style="width:16px;height:16px;flex-shrink:0;accent-color:#6366f1;" onchange="vpmToggleStyle('show_store_url',this.checked)">
           <div style="text-align:left;"><div style="font-size:13px;font-weight:700;color:#0f172a;">Store URL</div><div style="font-size:11px;color:#64748b;margin-top:2px;">Source store reference</div></div>
         </label>
+        <label style="display:flex;align-items:center;gap:12px;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px 14px;cursor:pointer;text-align:left;" id="vpmLbl_show_customer_phone">
+          <input type="checkbox" id="vpm_customer_phone" style="width:16px;height:16px;flex-shrink:0;accent-color:#6366f1;" onchange="vpmToggleStyle('show_customer_phone',this.checked)">
+          <div style="text-align:left;"><div style="font-size:13px;font-weight:700;color:#0f172a;">Customer Phone</div><div style="font-size:11px;color:#64748b;margin-top:2px;">Mobile number on order</div></div>
+        </label>
+        <label style="display:flex;align-items:center;gap:12px;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px 14px;cursor:pointer;text-align:left;" id="vpmLbl_show_customer_address">
+          <input type="checkbox" id="vpm_customer_address" style="width:16px;height:16px;flex-shrink:0;accent-color:#6366f1;" onchange="vpmToggleStyle('show_customer_address',this.checked)">
+          <div style="text-align:left;"><div style="font-size:13px;font-weight:700;color:#0f172a;">Customer Address</div><div style="font-size:11px;color:#64748b;margin-top:2px;">Full delivery address</div></div>
+        </label>
       </div>
     </div>
 
@@ -18191,6 +18199,8 @@ async function createVendor(){
     show_order_email:  document.getElementById("perm_order_email")?.checked||false,
     show_assigned_member: document.getElementById("perm_assigned_member")?.checked||false,
     show_store_url:    document.getElementById("perm_store_url")?.checked||false,
+    show_customer_phone:   document.getElementById("perm_customer_phone")?.checked||false,
+    show_customer_address: document.getElementById("perm_customer_address")?.checked||false,
   };
   if(!name||!email||!assignedStore){setVendorMessage("Name, email and store are required.",true);return;}
   setVendorMessage("Saving vendor...");
@@ -18222,10 +18232,12 @@ async function deleteVendor(id,name){
 // ─── Vendor Permissions Modal ────────────────────────────────────────────────
 let vpmCurrentVendorId = null;
 const VPM_MAP = {
-  show_order_amount:    "vpm_order_amount",
-  show_order_email:     "vpm_order_email",
-  show_assigned_member: "vpm_assigned_member",
-  show_store_url:       "vpm_store_url",
+  show_order_amount:      "vpm_order_amount",
+  show_order_email:       "vpm_order_email",
+  show_assigned_member:   "vpm_assigned_member",
+  show_store_url:         "vpm_store_url",
+  show_customer_phone:    "vpm_customer_phone",
+  show_customer_address:  "vpm_customer_address",
 };
 
 function vpmToggleStyle(key, checked){
@@ -18303,7 +18315,8 @@ async function loadPermissionLogs(vendorId){
     }
     const FIELD_LABELS = {
       show_order_amount:"Order Amount", show_order_email:"Order Email",
-      show_assigned_member:"Assigned Member", show_store_url:"Store URL"
+      show_assigned_member:"Assigned Member", show_store_url:"Store URL",
+      show_customer_phone:"Customer Phone", show_customer_address:"Customer Address"
     };
     logDiv.innerHTML = d.logs.map(l=>{
       const dt = new Date(l.changed_at).toLocaleString([],{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"});
