@@ -2553,6 +2553,38 @@ body.vf-dark-mode .tm-badge-status-draft{background:rgba(100,116,139,.15);color:
 .tm-tool-sep{width:1px;height:18px;background:var(--vf-line);margin:0 2px;flex-shrink:0;}
 .tm-body-editor{min-height:380px;padding:18px;font-size:13.5px;color:var(--vf-text);background:var(--vf-surface-2);outline:none;line-height:1.7;word-break:break-word;border-radius:0 0 10px 10px;}
 .tm-body-editor:empty:before{content:attr(placeholder);color:var(--vf-muted);pointer-events:none;}
+
+/* ── Protected Placeholder Chips ─────────────────────────────────── */
+.tm-chip{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:1px 7px 1px 6px;margin:0 1px;
+  background:linear-gradient(135deg,#eef2ff,#ede9fe);
+  border:1px solid #c7d2fe;border-radius:6px;
+  font-size:11.5px;font-weight:700;color:#4338ca;
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  cursor:default;user-select:all;
+  vertical-align:baseline;line-height:1.4;white-space:nowrap;
+  transition:.12s;
+}
+.tm-chip:hover{background:linear-gradient(135deg,#e0e7ff,#ddd6fe);border-color:#a5b4fc;}
+.tm-chip .tm-chip-ico{font-size:10px;line-height:1;}
+.tm-chip .tm-chip-x{
+  width:13px;height:13px;border-radius:50%;
+  background:rgba(99,102,241,.15);color:#6366f1;
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:9px;margin-left:2px;cursor:pointer;font-weight:800;
+  transition:.12s;
+}
+.tm-chip .tm-chip-x:hover{background:#ef4444;color:#fff;}
+.tm-chip[data-cat="customer"]{background:linear-gradient(135deg,#dbeafe,#bfdbfe);border-color:#93c5fd;color:#1d4ed8;}
+.tm-chip[data-cat="customer"] .tm-chip-x{background:rgba(59,130,246,.15);color:#3b82f6;}
+.tm-chip[data-cat="order"]{background:linear-gradient(135deg,#fef3c7,#fde68a);border-color:#fbbf24;color:#92400e;}
+.tm-chip[data-cat="order"] .tm-chip-x{background:rgba(245,158,11,.15);color:#d97706;}
+.tm-chip[data-cat="shipping"]{background:linear-gradient(135deg,#dcfce7,#bbf7d0);border-color:#86efac;color:#15803d;}
+.tm-chip[data-cat="shipping"] .tm-chip-x{background:rgba(16,185,129,.15);color:#10b981;}
+.tm-chip[data-cat="store"]{background:linear-gradient(135deg,#fce7f3,#fbcfe8);border-color:#f9a8d4;color:#9d174d;}
+.tm-chip[data-cat="store"] .tm-chip-x{background:rgba(236,72,153,.15);color:#ec4899;}
+body.vf-dark-mode .tm-chip{background:rgba(99,102,241,.18);border-color:rgba(165,180,252,.4);color:#a5b4fc;}
 .tm-body-preview{width:100%;min-height:400px;border:none;display:block;}
 /* Variables panel */
 .tm-vars-head{font-size:11.5px;font-weight:800;color:var(--vf-text);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;}
@@ -3783,6 +3815,125 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
 .em-hdr-collapse-btn::before{content:""!important;display:none!important;}
 .em-hdr-collapse-btn:hover{filter:brightness(1.08)!important;transform:translateY(-1px)!important;animation:none!important;box-shadow:0 6px 18px rgba(99,102,241,.45)!important;}
 .em-hdr-collapse-btn:active{transform:translateY(0)!important;}
+/* ═══════════════════════════════════════════════════════════════════════
+   INBOX REDESIGN — clean, dense, professional. Wins via specificity +
+   !important so it overrides every legacy rule above. Affects ONLY the
+   email section visuals; JS / data flow / IDs unchanged.
+   ═══════════════════════════════════════════════════════════════════════ */
+#emailsSection.active{background:#f6f7fb!important;}
+#emailsSection .em-hdr-top{height:52px!important;min-height:52px!important;background:#fff!important;border-bottom:1px solid #e9ebf2!important;padding:0 16px!important;}
+#emailsSection .em-hdr-h1{font-size:14px!important;font-weight:800!important;color:#0b0f1a!important;letter-spacing:-.2px!important;}
+#emailsSection .em-live-chip{font-size:11px!important;font-weight:700!important;color:#059669!important;background:rgba(16,185,129,.10)!important;padding:2px 8px!important;border-radius:999px!important;border:none!important;}
+#emailsSection .em-live-dot{width:6px!important;height:6px!important;background:#10b981!important;box-shadow:0 0 0 2px rgba(16,185,129,.18)!important;}
+#emailsSection .em-scope{height:30px!important;background:#f4f6fc!important;border:1px solid transparent!important;border-radius:8px!important;box-shadow:none!important;transition:border-color .12s!important;}
+#emailsSection .em-scope:hover{border-color:#d9dce8!important;}
+#emailsSection .em-scope-seg{padding:0 10px!important;border-right:1px solid #e9ebf2!important;}
+#emailsSection .em-scope-seg:last-of-type{border-right:none!important;}
+#emailsSection .em-scope-lbl{font-size:10px!important;color:#8087a2!important;font-weight:700!important;letter-spacing:.05em!important;}
+#emailsSection .em-scope-val{font-size:12.5px!important;color:#0b0f1a!important;font-weight:700!important;}
+#emailsSection .em-sync-btn{width:30px!important;height:30px!important;border-radius:8px!important;border:1px solid #e9ebf2!important;background:#fff!important;color:#3b4358!important;}
+#emailsSection .em-sync-btn:hover{background:#f4f6fc!important;color:#0b0f1a!important;}
+#emailsSection .em-new-btn{height:30px!important;padding:0 14px!important;font-size:12.5px!important;font-weight:700!important;border-radius:8px!important;background:linear-gradient(135deg,#6366f1,#8b5cf6)!important;box-shadow:0 2px 6px rgba(99,102,241,.30)!important;}
+
+/* KPI strip — slim row of tiny stat pills, replaces the 6 chunky cards. */
+#emailsSection #emTabInbox .em-stats{padding:8px 14px!important;gap:6px!important;background:#fff!important;border-bottom:1px solid #e9ebf2!important;}
+#emailsSection .em-stat{flex:0 0 auto!important;padding:5px 11px!important;border-radius:999px!important;background:#f4f6fc!important;border:none!important;display:inline-flex!important;align-items:center!important;gap:6px!important;cursor:default!important;box-shadow:none!important;flex-direction:row!important;}
+#emailsSection .em-stat::before{display:none!important;}
+#emailsSection .em-stat-lbl{font-size:11px!important;color:#8087a2!important;font-weight:600!important;order:2!important;margin:0!important;}
+#emailsSection .em-stat-val{font-size:13px!important;font-weight:800!important;color:#0b0f1a!important;order:1!important;letter-spacing:-.2px!important;}
+#emailsSection .em-stat.accent .em-stat-val{color:#3b82f6!important;}
+#emailsSection .em-stat.blue   .em-stat-val{color:#6366f1!important;}
+#emailsSection .em-stat.green  .em-stat-val{color:#10b981!important;}
+#emailsSection #emTabInbox .em-stats .em-stat:nth-child(5) .em-stat-val{color:#f59e0b!important;}
+#emailsSection #emTabInbox .em-stats .em-stat:nth-child(6) .em-stat-val{color:#8087a2!important;}
+
+/* Thread list — compact dense rows */
+#emailsSection .em-workspace,#emailsSection #emTabInbox .em-workspace{grid-template-columns:320px 1fr!important;background:#f6f7fb!important;gap:0!important;}
+#emailsSection .em-panel{background:#fff!important;border-right:1px solid #e9ebf2!important;}
+#emailsSection .em-inbox-hdr{padding:11px 14px!important;border-bottom:1px solid #e9ebf2!important;}
+#emailsSection .em-inbox-av{width:30px!important;height:30px!important;border-radius:50%!important;font-size:11px!important;}
+#emailsSection .em-search-wrap{padding:9px 12px!important;border-bottom:1px solid #e9ebf2!important;background:#fff!important;}
+#emailsSection .em-search-wrap input{height:32px!important;background:#f4f6fc!important;border:1px solid #e9ebf2!important;border-radius:8px!important;font-size:12.5px!important;}
+#emailsSection .em-search-wrap input:focus{background:#fff!important;border-color:#6366f1!important;}
+#emailsSection .em-tabs{padding:7px 8px!important;border-bottom:1px solid #e9ebf2!important;}
+#emailsSection .em-tab{padding:5px 10px!important;border-radius:6px!important;font-size:11.5px!important;font-weight:600!important;color:#8087a2!important;background:transparent!important;}
+#emailsSection .em-tab.active{background:#f4f6fc!important;color:#0b0f1a!important;font-weight:700!important;}
+#emailsSection .em-tab:hover:not(.active){background:#f4f6fc!important;color:#0b0f1a!important;}
+#emailsSection #emailsList{padding:4px 6px!important;background:#fff!important;}
+#emailsSection .em-tc{padding:9px 10px!important;border-radius:8px!important;border:none!important;border-left:3px solid transparent!important;margin-bottom:2px!important;background:transparent!important;box-shadow:none!important;transition:background .1s!important;}
+#emailsSection .em-tc:hover{background:#f4f6fc!important;box-shadow:none!important;}
+#emailsSection .em-tc.thread-unread{border-left-color:#6366f1!important;background:transparent!important;}
+#emailsSection .em-tc.thread-unread .em-tc-name,#emailsSection .em-tc.thread-unread .em-tc-subject{color:#0b0f1a!important;font-weight:700!important;}
+#emailsSection .em-tc.thread-read{border-left-color:transparent!important;background:transparent!important;opacity:1!important;}
+#emailsSection .em-tc.thread-read .em-tc-name{color:#3b4358!important;font-weight:600!important;}
+#emailsSection .em-tc.thread-read .em-tc-subject{color:#3b4358!important;font-weight:500!important;}
+#emailsSection .em-tc.active,
+#emailsSection .em-tc.active.thread-read,
+#emailsSection .em-tc.active.thread-unread{
+  background:linear-gradient(135deg,rgba(99,102,241,.10),rgba(139,92,246,.06))!important;
+  border-left:3px solid #6366f1!important;
+  border-color:transparent!important;
+  box-shadow:none!important;
+}
+#emailsSection .em-tc.active .em-tc-name{color:#0b0f1a!important;font-weight:800!important;}
+#emailsSection .em-tc.active .em-tc-subject{color:#0b0f1a!important;font-weight:700!important;}
+#emailsSection .em-tc-av{width:32px!important;height:32px!important;border-radius:9px!important;font-size:11px!important;font-weight:800!important;letter-spacing:.3px!important;}
+#emailsSection .em-tc-name{font-size:12.5px!important;}
+#emailsSection .em-tc-time{font-size:10.5px!important;color:#8087a2!important;font-weight:600!important;}
+#emailsSection .em-tc-subject{font-size:12px!important;}
+#emailsSection .em-tc-preview{font-size:11.5px!important;color:#8087a2!important;}
+#emailsSection .em-tc-chips{gap:4px!important;}
+#emailsSection .em-tc-chip{padding:1px 6px!important;border-radius:4px!important;font-size:10px!important;}
+#emailsSection .em-tc-chip.ai{background:rgba(139,92,246,.12)!important;color:#8b5cf6!important;}
+#emailsSection .em-tc-chip.unread{background:#ef4444!important;color:#fff!important;width:18px!important;height:18px!important;border-radius:50%!important;padding:0!important;justify-content:center!important;}
+
+/* Chat panel + bubbles */
+#emailsSection .em-chat-body,#emailsSection #emailDetailBody{background:#f6f7fb!important;padding:20px 22px!important;}
+#emailsSection .em-conv-hdr{padding:10px 18px!important;background:#fff!important;border-bottom:1px solid #e9ebf2!important;}
+#emailsSection .em-conv-title{font-size:14px!important;font-weight:800!important;color:#0b0f1a!important;letter-spacing:-.2px!important;}
+#emailsSection .em-conv-sub{font-size:11.5px!important;color:#8087a2!important;}
+#emailsSection .chat-bubble{max-width:580px!important;padding:9px 13px!important;border-radius:13px!important;font-size:13px!important;line-height:1.55!important;box-shadow:0 1px 2px rgba(13,18,30,.04)!important;border:1px solid transparent!important;}
+#emailsSection .chat-bubble.customer{background:#fff!important;color:#0b0f1a!important;border-color:#e9ebf2!important;border-bottom-left-radius:4px!important;border-top-left-radius:13px!important;}
+#emailsSection .chat-bubble.support{background:linear-gradient(135deg,rgba(99,102,241,.08),rgba(139,92,246,.06))!important;color:#0b0f1a!important;border-color:rgba(99,102,241,.20)!important;border-bottom-right-radius:4px!important;border-top-right-radius:13px!important;}
+
+/* The actual plain-text bubble used in production is .em-msg / .em-msg-bubble — not .chat-bubble.
+   Override those to match the sample: constrain width, drop the extra padding, give a tail
+   radius, and use a smaller avatar pinned to the bubble's bottom corner. */
+#emailsSection .em-msg{max-width:620px!important;gap:8px!important;align-items:flex-end!important;}
+#emailsSection .em-msg.em-msg-out{max-width:620px!important;}
+#emailsSection .em-msg-av{width:26px!important;height:26px!important;border-radius:8px!important;font-size:10px!important;font-weight:800!important;letter-spacing:.3px!important;margin-top:0!important;margin-bottom:2px!important;}
+#emailsSection .em-msg-content{min-width:0!important;flex:1!important;}
+#emailsSection .em-msg-bubble{
+  background:#fff!important;
+  color:#0b0f1a!important;
+  border:1px solid #e9ebf2!important;
+  border-radius:13px!important;
+  border-bottom-left-radius:4px!important;
+  padding:9px 13px!important;
+  font-size:13px!important;
+  line-height:1.55!important;
+  box-shadow:0 1px 2px rgba(13,18,30,.04)!important;
+  min-height:auto!important;
+  white-space:pre-wrap!important;
+  word-break:break-word!important;
+}
+#emailsSection .em-msg-bubble.em-msg-support{
+  background:linear-gradient(135deg,rgba(99,102,241,.08),rgba(139,92,246,.06))!important;
+  color:#0b0f1a!important;
+  border-color:rgba(99,102,241,.20)!important;
+  border-bottom-left-radius:13px!important;
+  border-bottom-right-radius:4px!important;
+}
+#emailsSection .em-msg-bubble.html-email{padding:0!important;}
+#emailsSection .em-msg-text{margin:0!important;padding:0!important;font-size:13px!important;line-height:1.55!important;}
+#emailsSection .em-msg-meta{font-size:10.5px!important;color:#8087a2!important;margin-top:4px!important;font-weight:600!important;padding-left:2px!important;}
+#emailsSection .em-msg.em-msg-out .em-msg-meta{padding-left:0!important;padding-right:2px!important;}
+#emailsSection .em-day-sep span{font-size:11px!important;color:#aab0c4!important;font-weight:700!important;letter-spacing:.1em!important;text-transform:uppercase!important;background:#f6f7fb!important;}
+
+/* Composer */
+#emailsSection .chat-reply-area,#emailsSection .em-reply-wrap{background:#fff!important;border-top:1px solid #e9ebf2!important;padding:12px 18px 14px!important;}
+#emailsSection #emailReplyText{border:1px solid #e9ebf2!important;border-radius:12px!important;background:#fff!important;padding:11px 14px!important;font-size:13.5px!important;color:#0b0f1a!important;transition:border-color .15s,box-shadow .15s!important;}
+#emailsSection #emailReplyText:focus{border-color:#6366f1!important;box-shadow:0 0 0 4px rgba(99,102,241,.10)!important;outline:none!important;}
 @keyframes emHdrCollapsePulse{
   0%,100%{box-shadow:0 4px 14px rgba(99,102,241,.35), 0 0 0 0 rgba(99,102,241,.55);}
   50%    {box-shadow:0 4px 14px rgba(99,102,241,.35), 0 0 0 10px rgba(99,102,241,0);}
@@ -14113,7 +14264,7 @@ function tmPopulateEditor(t){
   _tmSetField("tmSubject","value",t.subject||"");
   _tmSetField("tmPreheader","value",t.preheader||"");
   const bodyEl = document.getElementById("tmBodyEditor");
-  if(bodyEl) bodyEl.innerHTML = t.body_html||"";
+  if(bodyEl) bodyEl.innerHTML = _tmTokensToChips(t.body_html||"");
   _tmSetField("tmFooter","value",t.footer||"");
   // Auto-show preview so user sees the rendered email immediately
   if(t.body_html) setTimeout(()=>tmSwitchBodyTab('preview'), 60);
@@ -14351,9 +14502,12 @@ function tmSwitchBodyTab(tab){
 function tmAutoPreview(){ tmUpdatePreview(); }
 
 function tmUpdatePreview(){
-  const html = document.getElementById("tmBodyEditor")?.innerHTML||"";
+  const rawHtml = document.getElementById("tmBodyEditor")?.innerHTML||"";
   const preview = document.getElementById("tmBodyPreview");
   if(!preview) return;
+  // Convert chips back to {{tokens}} before sample-data substitution — two passes for safety
+  let html = _tmChipsToTokens(rawHtml);
+  html = html.replace(/<span[^>]*class="[^"]*tm-chip[^"]*"[^>]*data-var="([^"]+)"[^>]*>[\s\S]*?<\/span>/g, '\x7b\x7b$1\x7d\x7d');
   const rendered = _tmRender(html, _tmSamples);
   const fullHtml = '<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{box-sizing:border-box;}body{margin:0;padding:0;}</style></head><body style="margin:0;padding:0;">' + rendered + '</body></html>';
   preview.srcdoc = fullHtml;
@@ -14372,28 +14526,83 @@ function tmSaveBodySelection(){
   }
 }
 
+/* Placeholder chip system — variables become protected styled chips.
+   On save, chips serialize back to mustache tokens so backend keeps
+   working. Walks TEXT nodes only, so tokens in attributes stay intact. */
+
+const _TM_VAR_META = {
+  customer_name:{cat:'customer',ico:'👤'}, customer_email:{cat:'customer',ico:'✉️'},
+  customer_phone:{cat:'customer',ico:'📞'},
+  order_id:{cat:'order',ico:'🧾'}, order_date:{cat:'order',ico:'📅'},
+  order_items:{cat:'order',ico:'📦'}, order_total:{cat:'order',ico:'💰'},
+  subtotal:{cat:'order',ico:'💵'}, discount_code:{cat:'order',ico:'🏷️'},
+  discount_amount:{cat:'order',ico:'➖'}, shipping_amount:{cat:'order',ico:'🚚'},
+  tax_amount:{cat:'order',ico:'📊'}, payment_method:{cat:'order',ico:'💳'},
+  payment_status:{cat:'order',ico:'✓'}, product_image:{cat:'order',ico:'🖼️'},
+  shipping_address:{cat:'shipping',ico:'📍'}, shipping_city:{cat:'shipping',ico:'🏙️'},
+  shipping_state:{cat:'shipping',ico:'🗺️'}, shipping_postcode:{cat:'shipping',ico:'📮'},
+  shipping_country:{cat:'shipping',ico:'🌍'}, shipping_full_address:{cat:'shipping',ico:'📍'},
+  tracking_number:{cat:'shipping',ico:'🚚'}, tracking_company:{cat:'shipping',ico:'🏢'},
+  tracking_link:{cat:'shipping',ico:'🔗'}, tracking_id_only:{cat:'shipping',ico:'#️⃣'},
+  store_name:{cat:'store',ico:'🏪'}, store_url:{cat:'store',ico:'🔗'},
+  store_logo:{cat:'store',ico:'🖼️'},
+};
+
+function _tmMakeChip(varName){
+  // REVERTED: return a plain text node with {{varName}} instead of a chip span.
+  return document.createTextNode('\x7b\x7b' + varName + '\x7d\x7d');
+}
+
+function _tmRemoveChip(x){
+  const chip = x.closest('.tm-chip');
+  if(chip){
+    chip.remove();
+    tmUpdatePreview();
+  }
+}
+
+/* Walk text nodes only — never touches attribute values like href="{{x}}". */
+function _tmTokensToChips(html){
+  // REVERTED: chip system disabled. Editor shows plain {{tokens}} as before.
+  return html || "";
+}
+
+function _tmChipsToTokens(html){
+  if(!html || !html.includes('tm-chip')) return html;
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  tmp.querySelectorAll('.tm-chip').forEach(c => {
+    const v = c.getAttribute('data-var');
+    if(v) c.replaceWith(document.createTextNode('{{' + v + '}}'));
+  });
+  return tmp.innerHTML;
+}
+
 function tmInsertVar(varName){
   const editor = document.getElementById("tmBodyEditor");
   if(!editor) return;
   editor.focus();
-  const text = "{{" + varName + "}}";
   const sel = window.getSelection();
   if(_tmBodySel){
     sel.removeAllRanges();
     sel.addRange(_tmBodySel);
   }
+  const chip = _tmMakeChip(varName);
   if(sel&&sel.rangeCount>0){
     const range=sel.getRangeAt(0);
     range.deleteContents();
-    const node=document.createTextNode(text);
-    range.insertNode(node);
-    range.setStartAfter(node);
-    range.collapse(true);
+    range.insertNode(chip);
+    // Add a space after so the cursor can land after the chip
+    const space = document.createTextNode(' ');
+    chip.after(space);
+    range.setStartAfter(space);
+    range.setEndAfter(space);
     sel.removeAllRanges();
     sel.addRange(range);
     _tmBodySel=range.cloneRange();
   } else {
-    document.execCommand("insertText",false,text);
+    editor.appendChild(chip);
+    editor.appendChild(document.createTextNode(' '));
   }
   tmUpdatePreview();
 }
@@ -14428,7 +14637,12 @@ async function saveTemplate(){
     custom_signature: document.getElementById("tmCustomSig")?.value||"",
     subject: document.getElementById("tmSubject")?.value||"",
     preheader: document.getElementById("tmPreheader")?.value||"",
-    body_html: document.getElementById("tmBodyEditor")?.innerHTML||"",
+    body_html: (function(){
+      let h = _tmChipsToTokens(document.getElementById("tmBodyEditor")?.innerHTML||"");
+      // Belt-and-suspenders: strip any chip HTML that survived DOM conversion
+      h = h.replace(/<span[^>]*class="[^"]*tm-chip[^"]*"[^>]*data-var="([^"]+)"[^>]*>[\s\S]*?<\/span>/g, '\x7b\x7b$1\x7d\x7d');
+      return h;
+    })(),
     footer: document.getElementById("tmFooter")?.value||"",
     trigger_type: document.getElementById("tmTrigger")?.value||"manual",
     trigger_delay_minutes: parseInt(document.getElementById("tmDelayMin")?.value)||0,
@@ -14605,15 +14819,89 @@ function _tmVeKeyHandler(e){
 // Prevent focus loss when clicking toolbar buttons
 function tmVeNoBlur(e){ e.preventDefault(); }
 
+// Escape an attribute value safely
+function _tmVeEscAttr(s){
+  return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+// Escape text content (for textarea → innerHTML round-trip)
+function _tmVeEscHtml(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// Encode a template body for the iframe edit surface.
+// Variables become atomic, styled, non-editable marker spans so the visual
+// editor cannot accidentally overwrite them with rendered sample values.
+// Conditional if-blocks survive as HTML comments for round-trip safety.
+function tmVeEncodeTemplate(html){
+  if(!html) return '';
+  // Mustache conditional open/close → DOM-survivable HTML comments
+  html = html.replace(/\{\{#if\s+([\w.]+)\}\}/g, '<!--TM_IF:$1-->');
+  html = html.replace(/\{\{\/if\}\}/g,           '<!--TM_ENDIF-->');
+  // Simple placeholders (with optional fallback) → atomic marker spans
+  html = html.replace(/\{\{\s*([a-zA-Z_][\w.]*)\s*(?:\|([^}]*))?\}\}/g, (m, name, fb)=>{
+    const open   = '\x7b\x7b';
+    const close  = '\x7d\x7d';
+    const fbAttr = (fb !== undefined && fb !== '') ? ` data-tm-fb="${_tmVeEscAttr(fb)}"` : '';
+    const label  = fb !== undefined && fb !== '' ? (open + name + '|' + fb + close) : (open + name + close);
+    return `<span class="tm-var" data-tm-var="${_tmVeEscAttr(name)}"${fbAttr} contenteditable="false">${_tmVeEscHtml(label)}</span>`;
+  });
+  return html;
+}
+
+// Reverse of tmVeEncodeTemplate. Strips VE-only artifacts, unwraps var
+// markers back to mustache tokens, restores conditional comments. The
+// iframe DOM is the canonical source of truth — no index pairing.
+function tmVeDecodeTemplate(iframeDoc){
+  const OPEN  = '\x7b\x7b';
+  const CLOSE = '\x7d\x7d';
+  const root = iframeDoc.body.cloneNode(true);
+  root.querySelectorAll('[data-ve-editable]').forEach(el=>{
+    el.removeAttribute('data-ve-editable');
+    el.removeAttribute('data-ve-idx');
+    if(el.getAttribute('contenteditable') === 'true') el.removeAttribute('contenteditable');
+    el.classList.remove('tm-ve-active');
+    if(el.classList.length === 0) el.removeAttribute('class');
+  });
+  root.querySelectorAll('span.tm-var[data-tm-var]').forEach(span=>{
+    const name = span.getAttribute('data-tm-var');
+    const fb   = span.getAttribute('data-tm-fb');
+    const text = (fb !== null && fb !== '') ? (OPEN + name + '|' + fb + CLOSE) : (OPEN + name + CLOSE);
+    span.replaceWith(iframeDoc.createTextNode(text));
+  });
+  let out = root.innerHTML;
+  out = out.replace(/<!--\s*TM_IF:([\w.]+)\s*-->/g, OPEN + '#if $1' + CLOSE);
+  out = out.replace(/<!--\s*TM_ENDIF\s*-->/g,       OPEN + '/if'     + CLOSE);
+  return out;
+}
+
 async function openVisualEditor(){
-  const html = document.getElementById("tmBodyEditor")?.innerHTML || "";
-  if(!html.trim()){ await _alert("Body is empty — write some content first.", "Required", "⚠️"); return; }
+  const rawHtml = document.getElementById("tmBodyEditor")?.innerHTML || "";
+  if(!rawHtml.trim()){ await _alert("Body is empty — write some content first.", "Required", "⚠️"); return; }
 
-  const rendered = _tmRender(html, _tmSamples);
+  // First normalize: convert any legacy basic-editor chips back to {{tokens}}
+  let html = _tmChipsToTokens(rawHtml);
+  const chipRe = /<span\b[^>]*?\bclass="[^"]*\btm-chip\b[^"]*"[^>]*>[\s\S]*?<\/span>/gi;
+  html = html.replace(chipRe, function(match){
+    const dv = match.match(/data-var="([^"]+)"/);
+    return dv ? '\x7b\x7b' + dv[1] + '\x7d\x7d' : '';
+  });
 
-  // Inject editable highlight styles into the iframe
-  const veStyles = '[data-ve-editable]{cursor:pointer!important;transition:outline .1s;}[data-ve-editable]:hover{outline:2.5px dashed rgba(99,102,241,.6)!important;border-radius:3px;}[data-ve-editable].tm-ve-active{outline:2.5px solid #6366f1!important;border-radius:3px;}';
-  const fullHtml = '<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>' + veStyles + '</style></head><body style="margin:0;padding:0;">' + rendered + '</body></html>';
+  // Encode template (preserve {{vars}} as atomic markers). DO NOT call
+  // _tmRender here — replacing placeholders with sample values would
+  // freeze rendered text into the saved body and destroy the template.
+  const encoded = tmVeEncodeTemplate(html);
+
+  // Inject editable highlight + var-pill styles into the iframe.
+  const veStyles = [
+    '[data-ve-editable]{cursor:pointer!important;transition:outline .1s;}',
+    '[data-ve-editable]:hover{outline:2.5px dashed rgba(99,102,241,.6)!important;border-radius:3px;}',
+    '[data-ve-editable].tm-ve-active{outline:2.5px solid #6366f1!important;border-radius:3px;}',
+    '.tm-var{background:#eef2ff;color:#4f46e5;padding:1px 6px;border-radius:5px;border:1px solid #c7d2fe;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.9em;font-weight:600;white-space:nowrap;user-select:none;}',
+    '.tm-var:hover{background:#e0e7ff;}',
+    '.tm-chip{display:inline-flex;align-items:center;gap:4px;padding:1px 7px;background:linear-gradient(135deg,#eef2ff,#ede9fe);border:1px solid #c7d2fe;border-radius:6px;font-size:12px;font-weight:700;color:#4338ca;}',
+    '.tm-chip-x{display:none;}'
+  ].join('');
+  const fullHtml = '<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>' + veStyles + '</style></head><body style="margin:0;padding:0;">' + encoded + '</body></html>';
 
   // Place an iframe inside the canvas so the full email renders with proper background/colors
   const canvas = document.getElementById("tmVeCanvas");
@@ -14623,14 +14911,18 @@ async function openVisualEditor(){
   frame.addEventListener('load', function(){
     const iDoc = frame.contentDocument;
     if(!iDoc) return;
-    // Auto-height
     frame.style.height = (iDoc.documentElement.scrollHeight || 600) + 'px';
-    // Mark leaf editable elements
+    // Mark leaf editable elements — never tag var-marker spans, never let
+    // a var marker block its parent from being marked editable.
     const editableTags = ["p","h1","h2","h3","h4","td","span","a","li","div"];
     iDoc.querySelectorAll(editableTags.join(",")).forEach((el,i)=>{
+      if(el.classList.contains('tm-var')) return;
       const text = el.innerText?.trim();
       if(!text || text.length < 2) return;
-      const childEls = [...el.children].filter(c=>editableTags.includes(c.tagName.toLowerCase()));
+      const childEls = [...el.children].filter(c=>{
+        if(c.classList.contains('tm-var')) return false;
+        return editableTags.includes(c.tagName.toLowerCase());
+      });
       if(childEls.length > 0) return;
       el.setAttribute("data-ve-editable","1");
       el.setAttribute("data-ve-idx", i);
@@ -14778,10 +15070,14 @@ function tmVeHexSync(type, hexInput){
   else tmVeSetBgColor(val);
 }
 
-// Content textarea → live update innerText
+// Content textarea → live update innerHTML.
+// Treats textarea content as template source: HTML-escape user input,
+// then re-wrap {{vars}} as atomic marker spans so the placeholder structure
+// is never lost. Setting innerHTML (not innerText) lets var pills survive.
 function tmVeLiveUpdate(textarea){
   if(!_veActiveEl) return;
-  _veActiveEl.innerText = textarea.value;
+  const escaped = _tmVeEscHtml(textarea.value);
+  _veActiveEl.innerHTML = tmVeEncodeTemplate(escaped);
 }
 
 function tmVeResetStyles(){
@@ -14820,46 +15116,21 @@ function saveVisualEditor(){
   const iDoc = frame?.contentDocument;
   if(!iDoc){ closeVisualEditor(); return; }
 
+  // Commit any in-flight edit on the currently-focused element before snapshot
+  if(_veActiveEl){
+    _veActiveEl.contentEditable = "false";
+    _veActiveEl.classList.remove("tm-ve-active");
+  }
+
+  // Iframe DOM is the single source of truth. Decode unwraps var markers
+  // back to {{var}}, restores conditional comments, and strips VE artifacts.
+  // No parallel-DOM index pairing — that approach corrupted templates when
+  // sample-data rendering produced a different element count vs original.
+  const decoded = tmVeDecodeTemplate(iDoc);
+
   const bodyEl = document.getElementById("tmBodyEditor");
-  const origHtml = bodyEl.innerHTML;
+  bodyEl.innerHTML = decoded;
 
-  const origDiv = document.createElement("div");
-  origDiv.innerHTML = origHtml;
-
-  const editableTags = ["p","h1","h2","h3","h4","td","span","a","li","div"];
-  const origEls = [...origDiv.querySelectorAll(editableTags.join(","))].filter(el=>{
-    const text = el.innerText?.trim();
-    if(!text || text.length < 2) return false;
-    const childEls = [...el.children].filter(c=>editableTags.includes(c.tagName.toLowerCase()));
-    return childEls.length === 0;
-  });
-
-  const canvasEls = [...iDoc.querySelectorAll("[data-ve-editable]")];
-
-  canvasEls.forEach((canvasEl, i)=>{
-    if(!origEls[i]) return;
-
-    // Copy text if changed
-    const newText = canvasEl.innerText;
-    const origText = origEls[i].innerText;
-    if(newText !== origText){
-      if(origEls[i].children.length === 0) origEls[i].textContent = newText;
-      else origEls[i].innerText = newText;
-    }
-
-    // Copy inline styles (strip VE UI-only props)
-    const rawStyle = canvasEl.getAttribute('style') || '';
-    if(rawStyle){
-      const tmp = document.createElement('span');
-      tmp.setAttribute('style', rawStyle);
-      tmp.style.outline = '';
-      tmp.style.cursor = '';
-      const cleanStyle = tmp.getAttribute('style');
-      if(cleanStyle) origEls[i].setAttribute('style', cleanStyle);
-    }
-  });
-
-  bodyEl.innerHTML = origDiv.innerHTML;
   closeVisualEditor();
   tmSwitchBodyTab('preview');
   showSettingsSaved("Visual edits saved!");
