@@ -5683,6 +5683,7 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
               </label>
               <button class="tm-btn tm-btn-ghost" id="tmTestBtn" onclick="showSendTestPopover()">📧 Send Test</button>
               <button class="tm-btn tm-btn-ghost" id="tmDupBtn" onclick="tmDuplicateCurrent()">⧉ Duplicate</button>
+              <button class="tm-btn tm-btn-ghost" id="tmResetBtn" onclick="tmResetToDefault()" title="Replace this template's design with the original default. Trigger rules are kept.">↺ Reset</button>
               <button class="tm-btn tm-btn-danger" id="tmDelBtn" onclick="tmDeleteCurrent()">🗑</button>
               <button class="tm-btn tm-btn-primary" onclick="saveTemplate()">Save</button>
             </div>
@@ -14489,6 +14490,31 @@ async function tmDuplicate(id){
 function tmDuplicateCurrent(){
   if(!_tmEditingId) return;
   tmDuplicate(_tmEditingId).then(()=>closeTemplateEditor());
+}
+
+async function tmResetToDefault(){
+  if(!_tmEditingId) return;
+  if(!await _confirm(
+    "Reset this template back to its original default design? Your subject, preheader, body and footer will be replaced. Trigger rules and sender settings are kept.",
+    {title:"Reset to Default", icon:"↺", confirmText:"Reset", danger:true}
+  )) return;
+  const id = _tmEditingId;
+  try{
+    const r = await fetch(`/emails/api/templates/${id}/reset/`,{
+      method:"POST",
+      headers:{"Content-Type":"application/json","X-Requested-With":"XMLHttpRequest"},
+      body:"{}"
+    });
+    const d = await r.json();
+    if(d.success){
+      showSettingsSaved("Reset to default!");
+      // Reload the editor with the fresh content so the preview reflects it
+      closeTemplateEditor();
+      setTimeout(()=>{ openTemplateEditor(id); loadTemplates(); }, 200);
+    } else {
+      await _alert(d.message||"Reset failed.", "Error", "❌");
+    }
+  }catch(e){ await _alert("Network error: "+e.message, "Error", "❌"); }
 }
 
 async function tmPreviewCard(id){

@@ -1619,6 +1619,38 @@ def duplicate_template_api(request, template_id):
 
 
 @csrf_exempt
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def reset_template_to_default_api(request, template_id):
+    """Replace this template's content with the matching seed default.
+    Matches by exact name first (e.g. 'Order Confirmation — Shopify'),
+    then by category if no name match. Preserves the row's id, store,
+    and trigger-rule state so existing Auto-Email wiring keeps working."""
+    t = get_object_or_404(EmailTemplate, id=template_id)
+    if not _user_can_manage_template(request.user, t):
+        return _forbidden_response()
+
+    from emails.default_templates import PORTAL_DEFAULT_TEMPLATES
+    seed = next((d for d in PORTAL_DEFAULT_TEMPLATES if d.get('name') == t.name), None)
+    if not seed:
+        seed = next((d for d in PORTAL_DEFAULT_TEMPLATES if d.get('category') == t.category), None)
+    if not seed:
+        return Response({
+            'success': False,
+            'message': 'No matching default found for this template. Try Duplicate from a built-in design instead.'
+        }, status=404)
+
+    # Restore design + content; leave trigger / scheduling / sender alone
+    # so auto-email rules aren't quietly re-armed.
+    t.subject = seed.get('subject', t.subject) or ''
+    t.preheader = seed.get('preheader', t.preheader) or ''
+    t.body_html = seed.get('body_html', t.body_html) or ''
+    t.footer = seed.get('footer', '') or ''
+    t.save(update_fields=['subject', 'preheader', 'body_html', 'footer', 'updated_at'])
+    return Response({'success': True, 'message': 'Template reset to default design.', 'matched_by': 'name' if seed.get('name') == t.name else 'category'})
+
+
+@csrf_exempt
 @api_view(["GET"])
 @authentication_classes([])
 @permission_classes([AllowAny])
