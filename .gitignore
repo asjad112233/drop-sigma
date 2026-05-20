@@ -10,3 +10,7 @@ media/
 *.tar.gz
 *.zip
 /tmp/
+
+# Sample/mockup HTML files (preview-only, not deployed)
+*_sample.html
+*_mockup.html
