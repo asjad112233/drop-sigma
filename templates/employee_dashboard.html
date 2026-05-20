@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Employee Portal — VendorFlow AI</title>
+<title>Employee Portal — Drop Sigma</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
 <style>
 :root{
@@ -34,8 +34,8 @@ body{font-family:'Inter','Segoe UI',sans-serif;background:var(--bg);color:var(--
 .sidebar{
   background:var(--surface);border-right:1px solid var(--border);
   padding:24px 14px;display:flex;flex-direction:column;
+  /* sticky so it follows scroll inside the grid container */
   position:sticky;top:0;height:100vh;overflow-y:auto;
-  position:relative;
 }
 .brand{display:flex;align-items:center;gap:11px;padding:6px 10px 22px;border-bottom:1px solid var(--border);margin-bottom:16px;}
 .brand-logo{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:grid;place-items:center;color:#fff;font-weight:800;font-size:13px;box-shadow:0 4px 12px rgba(99,102,241,.3);}
@@ -261,10 +261,36 @@ body{font-family:'Inter','Segoe UI',sans-serif;background:var(--bg);color:var(--
 
 @media(max-width:900px){
   .layout{grid-template-columns:1fr;}
-  .sidebar{display:none;}
-  .main{padding:20px;}
+  /* Sidebar slides in from the left (instead of being permanently hidden) */
+  .sidebar{
+    position:fixed;top:0;left:0;bottom:0;width:280px;z-index:200;
+    transform:translateX(-100%);transition:transform .25s ease-in-out;
+    box-shadow:0 8px 32px rgba(15,23,42,.18);
+    display:flex !important;
+  }
+  .layout.ec-sb-mobile-open .sidebar{transform:translateX(0);}
+  /* Backdrop behind the sidebar — closes on tap */
+  .ec-mobile-backdrop{
+    position:fixed;inset:0;background:rgba(15,23,42,.45);
+    backdrop-filter:blur(2px);
+    z-index:150;display:none;
+  }
+  .layout.ec-sb-mobile-open .ec-mobile-backdrop{display:block;}
+  /* Hamburger button (only shown on mobile) */
+  .ec-mobile-toggle{
+    position:fixed;top:14px;left:14px;z-index:120;
+    width:42px;height:42px;border-radius:11px;background:#fff;border:1px solid #e2e8f0;
+    box-shadow:0 6px 16px rgba(15,23,42,.08);
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;color:#0f172a;font-family:inherit;
+  }
+  .main{padding:74px 20px 20px;}
   .kpi-grid{grid-template-columns:repeat(2,1fr);}
   .profile-grid{grid-template-columns:1fr;}
+}
+/* Hamburger only visible on mobile */
+@media(min-width:901px){
+  .ec-mobile-toggle,.ec-mobile-backdrop{display:none !important;}
 }
 
 /* ── My Tasks Section ── */
@@ -281,7 +307,10 @@ body{font-family:'Inter','Segoe UI',sans-serif;background:var(--bg);color:var(--
 .etk-cdot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
 .etk-cdot.todo{background:#94a3b8;}.etk-cdot.prog{background:var(--accent);}.etk-cdot.done{background:var(--green);}
 .etk-col-cnt{background:#f1f5f9;color:var(--muted);font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;}
-.etk-col-body{padding:10px;display:flex;flex-direction:column;gap:8px;flex:1;}
+.etk-col-body{padding:10px;display:flex;flex-direction:column;gap:8px;flex:1;transition:background .15s,box-shadow .15s;}
+.etk-col-body.etk-drop-target{background:rgba(99,102,241,.06);box-shadow:inset 0 0 0 2px rgba(99,102,241,.45);border-radius:12px;}
+.etk-card[draggable="true"]{cursor:grab;}
+.etk-card.etk-dragging{opacity:.45;transform:scale(.98);cursor:grabbing;}
 .etk-card{background:#fafbfd;border:1px solid var(--border);border-radius:13px;padding:13px 14px;cursor:pointer;transition:.15s;}
 .etk-card:hover{box-shadow:0 4px 16px rgba(15,23,42,.09);border-color:#c7d2fe;transform:translateY(-1px);}
 .etk-card.done-card{opacity:.6;}
@@ -467,7 +496,14 @@ body{font-family:'Inter','Segoe UI',sans-serif;background:var(--bg);color:var(--
 
 <div id="gLoader"></div>
 
-<div class="layout">
+<!-- Mobile hamburger (only visible <901px via CSS) -->
+<button class="ec-mobile-toggle" type="button" id="ecMobileToggle" onclick="ecToggleMobileNav()" aria-label="Open navigation">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+</button>
+
+<div class="layout" id="ecLayoutRoot">
+  <!-- Mobile backdrop (tap to close sidebar) -->
+  <div class="ec-mobile-backdrop" onclick="ecCloseMobileNav()"></div>
 
   <!-- ── Sidebar ── -->
   <aside class="sidebar" id="sidebar"></aside>
@@ -640,6 +676,8 @@ body{font-family:'Inter','Segoe UI',sans-serif;background:var(--bg);color:var(--
                 <div class="tc-c-left">
                   <button title="Emoji" onclick="ecToggleEmoji()"><i class="fa-regular fa-face-smile"></i></button>
                   <button title="Mention" onclick="ecInsertMention()"><i class="fa-solid fa-at"></i></button>
+                  <button title="Attach image" onclick="document.getElementById('ecImageInput').click()"><i class="fa-solid fa-paperclip"></i></button>
+                  <input type="file" id="ecImageInput" accept="image/*" style="display:none;" onchange="ecUploadImage(this)">
                 </div>
                 <div class="tc-c-right">
                   <button class="tc-send-btn" onclick="ecSend()">
@@ -719,28 +757,28 @@ body{font-family:'Inter','Segoe UI',sans-serif;background:var(--bg);color:var(--
         <div class="etk-stat"><div class="etk-stat-ic green">🏆</div><div><div class="etk-stat-val" id="etkStatDone">—</div><div class="etk-stat-lbl">Done</div></div></div>
       </div>
 
-      <!-- Board -->
+      <!-- Board (drag-and-drop wired via dataTransfer + status PATCH) -->
       <div class="etk-board" id="etkBoard">
         <div class="etk-col">
           <div class="etk-col-head">
             <div class="etk-col-title"><span class="etk-cdot todo"></span> To Do</div>
             <span class="etk-col-cnt" id="etkCnt-todo">0</span>
           </div>
-          <div class="etk-col-body" id="etkBody-todo"></div>
+          <div class="etk-col-body" id="etkBody-todo" ondragover="etkDragOver(event,'todo')" ondragleave="etkDragLeave(event,'todo')" ondrop="etkDrop(event,'todo')"></div>
         </div>
         <div class="etk-col">
           <div class="etk-col-head">
             <div class="etk-col-title"><span class="etk-cdot prog"></span> In Progress</div>
             <span class="etk-col-cnt" id="etkCnt-in_progress">0</span>
           </div>
-          <div class="etk-col-body" id="etkBody-in_progress"></div>
+          <div class="etk-col-body" id="etkBody-in_progress" ondragover="etkDragOver(event,'in_progress')" ondragleave="etkDragLeave(event,'in_progress')" ondrop="etkDrop(event,'in_progress')"></div>
         </div>
         <div class="etk-col">
           <div class="etk-col-head">
             <div class="etk-col-title"><span class="etk-cdot done"></span> Done</div>
             <span class="etk-col-cnt" id="etkCnt-done">0</span>
           </div>
-          <div class="etk-col-body" id="etkBody-done"></div>
+          <div class="etk-col-body" id="etkBody-done" ondragover="etkDragOver(event,'done')" ondragleave="etkDragLeave(event,'done')" ondrop="etkDrop(event,'done')"></div>
         </div>
       </div>
     </section>
@@ -784,10 +822,28 @@ body{font-family:'Inter','Segoe UI',sans-serif;background:var(--bg);color:var(--
           oninput="document.getElementById('etkModalProgPct').textContent=this.value"
           onchange="etkSaveProgress()"/>
       </div>
+
+      <!-- Watchers (collaborators following this task) -->
+      <div class="etk-dl">
+        <label>Watchers <span id="etkWatchersCount" style="color:var(--muted);font-weight:500;">— 0</span></label>
+        <div id="etkWatchersList" style="display:flex;flex-wrap:wrap;gap:6px;font-size:12px;color:var(--muted);">No watchers yet.</div>
+      </div>
+
+      <!-- Comments thread -->
+      <div class="etk-dl">
+        <label>Comments <span id="etkCommentsCount" style="color:var(--muted);font-weight:500;">— 0</span></label>
+        <div id="etkCommentsList" style="max-height:240px;overflow-y:auto;background:#fafbfd;border:1px solid var(--border);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:8px;margin-bottom:8px;">
+          <div style="color:var(--muted);font-size:12.5px;text-align:center;padding:18px 0;">Loading comments…</div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <input id="etkCommentInput" type="text" placeholder="Write a comment…" style="flex:1;padding:8px 12px;font-size:13px;border:1px solid var(--border);border-radius:9px;font-family:inherit;outline:none;" onkeydown="if(event.key==='Enter'){event.preventDefault();etkAddComment();}">
+          <button class="etk-btn primary" type="button" onclick="etkAddComment()">Post</button>
+        </div>
+      </div>
     </div>
     <div class="etk-modal-foot">
       <button class="etk-btn ghost" onclick="etkCloseModal()">Close</button>
-      <button class="etk-btn primary" onclick="etkSaveStatus();etkSaveProgress();etkCloseModal()">Save & Close</button>
+      <button class="etk-btn primary" onclick="etkSaveAndClose()">Save & Close</button>
     </div>
   </div>
 </div>
@@ -911,16 +967,33 @@ function fmtDate(iso){
   return d.toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"});
 }
 function payBadge(status){
+  // Strip WooCommerce "wc-" prefix that arrives raw from the WC REST API
+  // (e.g. "wc-processing" → "processing"). Also normalize case.
+  const norm = (status||"").toString().toLowerCase().replace(/^wc-/, "");
   const map={
     pending:"badge-pending",processing:"badge-processing",
-    completed:"badge-completed",cancelled:"badge-cancelled",
-    "on-hold":"badge-default",refunded:"badge-default"
+    completed:"badge-completed",cancelled:"badge-cancelled","canceled":"badge-cancelled",
+    "on-hold":"badge-default",refunded:"badge-default",
+    failed:"badge-cancelled",paid:"badge-completed",
+    // Shopify financial_status values
+    authorized:"badge-processing",partially_paid:"badge-pending",
+    partially_refunded:"badge-default",voided:"badge-cancelled"
   };
-  return `<span class="badge ${map[status]||"badge-default"}">${esc(status)}</span>`;
+  return `<span class="badge ${map[norm]||"badge-default"}">${esc(status||"-")}</span>`;
 }
 function fulfillBadge(status){
-  const map={fulfilled:"badge-fulfilled",unfulfilled:"badge-notrack","not_fulfilled":"badge-notrack"};
-  return `<span class="badge ${map[status]||"badge-default"}">${esc(status||"-")}</span>`;
+  // Normalize: Shopify sends "unfulfilled" (one word), WooCommerce sends raw
+  // values that often have a "wc-" prefix or null for "no fulfillment yet".
+  const norm = (status||"").toString().toLowerCase().replace(/^wc-/, "");
+  const map={
+    fulfilled:"badge-fulfilled",
+    unfulfilled:"badge-notrack","not_fulfilled":"badge-notrack",
+    partial:"badge-pending","partially_fulfilled":"badge-pending",
+    shipped:"badge-processing",delivered:"badge-fulfilled",
+    completed:"badge-fulfilled",
+    restocked:"badge-default",
+  };
+  return `<span class="badge ${map[norm]||"badge-default"}">${esc(status||"-")}</span>`;
 }
 
 // ── Permission labels ──
@@ -975,10 +1048,8 @@ let _ecKnownUnread = {};
 let _ecPollTimer = null;
 
 async function _ecWsBackground(){
-  // Request notification permission early
-  if("Notification" in window && Notification.permission !== "denied"){
-    Notification.requestPermission().then(p=>{ _ecNotifPerm = p === "granted"; });
-  }
+  // Notification permission is requested once at WS open via _ecRequestNotifPerm
+  // (defined later). Don't request here too — that produced duplicate prompts.
   try{
     const r = await fetch("/teamapp/chat/channels/");
     const d = await r.json();
@@ -1008,8 +1079,26 @@ async function _ecPollTick(){
     const d = await r.json();
     if(!d.success) return;
     const chatActive = document.getElementById("secChat")?.classList.contains("active");
+
+    // Detect brand-new channels (admin invited employee into a new channel)
+    // and rebuild the sidebar so they appear without a page reload.
+    const knownChannelIds = new Set(Object.keys(_ecKnownUnread).map(Number));
+    let hasNewChannel = false;
     d.channels.forEach(ch=>{
-      const prev = _ecKnownUnread[ch.id] ?? ch.unread_count;
+      if(!knownChannelIds.has(ch.id)){
+        hasNewChannel = true;
+      }
+    });
+    if(hasNewChannel){
+      // Re-render the channel list (idempotent — ecChatInit refreshes it).
+      try{ ecChatInit(); }catch(_){}
+    }
+
+    d.channels.forEach(ch=>{
+      // Seed first-tick at zero so we never miss a real first message in a
+      // brand-new channel (was previously seeded at curr, meaning curr > prev
+      // could never fire on the channel's very first message).
+      const prev = _ecKnownUnread[ch.id] ?? 0;
       const curr = ch.unread_count || 0;
       if(curr > prev){
         const isCurrentCh = ch.id === _ecChannelId;
@@ -1033,7 +1122,37 @@ async function _ecPollTick(){
       }
       _ecKnownUnread[ch.id] = curr;
     });
-  }catch(e){}
+
+    // Also refresh DM unread counts (was previously never displayed)
+    _ecRefreshDmUnreads();
+  }catch(e){ console.warn("ec poll tick:", e?.message || e); }
+}
+
+async function _ecRefreshDmUnreads(){
+  try{
+    const r = await fetch("/teamapp/chat/dm/unreads/");
+    const d = await r.json();
+    if(!d.success) return;
+    const unreads = d.unreads || {};
+    // Each entry: { "<other_user_id>": count }
+    document.querySelectorAll(".tc-dm[id^='ecDm_']").forEach(el => {
+      const uid = el.id.replace("ecDm_", "");
+      const count = unreads[uid] || 0;
+      let badge = el.querySelector(".ec-unread-badge");
+      if(count > 0){
+        el.classList.add("unread");
+        if(!badge){
+          badge = document.createElement("span");
+          badge.className = "ec-unread-badge";
+          el.appendChild(badge);
+        }
+        badge.textContent = count > 99 ? "99+" : count;
+      } else {
+        el.classList.remove("unread");
+        if(badge) badge.remove();
+      }
+    });
+  }catch(e){ /* silent — non-critical UI update */ }
 }
 
 // ── Sidebar ──
@@ -1066,9 +1185,9 @@ function buildSidebar(){
       </svg>
     </button>
     <div class="brand">
-      <div class="brand-logo">VF</div>
+      <div class="brand-logo">DS</div>
       <div>
-        <div class="brand-name">VendorFlow AI</div>
+        <div class="brand-name">Drop Sigma</div>
         <div class="brand-tag">Employee Portal</div>
       </div>
     </div>
@@ -1076,7 +1195,7 @@ function buildSidebar(){
     <div class="sidebar-profile">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
         <div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#6366f1,#06b6d4);display:grid;place-items:center;font-weight:800;font-size:13px;color:#fff;">${esc(initials)}</div>
-        <div>
+        <div style="flex:1;min-width:0;">
           <div class="sp-name">${esc(m.name)}</div>
           <div class="sp-role" style="display:flex;align-items:center;gap:5px;">
             <span style="width:6px;height:6px;border-radius:50%;background:${statusColors[m.status]||"#94a3b8"};display:inline-block;"></span>
@@ -1084,9 +1203,66 @@ function buildSidebar(){
           </div>
         </div>
       </div>
-      <a href="/employee/logout/" class="sp-logout">Sign Out</a>
+      <!-- Status selector (Available / Busy / Limited / Offline) -->
+      <label style="display:block;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">My Status</label>
+      <select id="empStatusSelect" onchange="employeeUpdateStatus(this.value)" style="width:100%;padding:7px 9px;font-size:12.5px;font-weight:600;color:#0f172a;background:#fff;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;font-family:inherit;outline:none;margin-bottom:8px;">
+        <option value="available" ${m.status==="available"?"selected":""}>● Available</option>
+        <option value="busy"      ${m.status==="busy"?"selected":""}>● Busy</option>
+        <option value="limited"   ${m.status==="limited"?"selected":""}>● Limited</option>
+        <option value="offline"   ${m.status==="offline"?"selected":""}>● Offline</option>
+      </select>
+      <!-- Logout uses POST form (CSRF-protected) -->
+      <form action="/employee/logout/" method="post" style="margin:0;">
+        <input type="hidden" name="csrfmiddlewaretoken" value="${getCsrfToken()}">
+        <button type="submit" class="sp-logout" style="border:none;width:100%;cursor:pointer;font-family:inherit;">Sign Out</button>
+      </form>
     </div>`;
 }
+
+// Status toggle handler — calls /employee/api/me/status/
+async function employeeUpdateStatus(newStatus){
+  const select = document.getElementById("empStatusSelect");
+  const prev = select ? select.dataset.prevStatus : null;
+  if(select) select.dataset.prevStatus = newStatus;
+  try{
+    const r = await fetch("/employee/api/me/status/", {
+      method: "POST",
+      headers: {"Content-Type":"application/json","X-CSRFToken": getCsrfToken()},
+      body: JSON.stringify({status: newStatus}),
+    });
+    const d = await r.json();
+    if(!d.success){
+      _ecToast && _ecToast("❌ " + (d.message || "Could not update status."));
+      if(select && prev) select.value = prev;
+      return;
+    }
+    // Reflect new color in the role-line dot
+    if(empMember) empMember.status = d.status;
+    const dot = document.querySelector(".sidebar-profile .sp-role span");
+    const statusColors = {available:"#10b981",busy:"#ef4444",limited:"#f59e0b",offline:"#94a3b8"};
+    if(dot) dot.style.background = statusColors[d.status] || "#94a3b8";
+    _ecToast && _ecToast("✓ Status: " + d.status);
+  }catch(e){
+    _ecToast && _ecToast("⚠️ Network error — status not updated.");
+    if(select && prev) select.value = prev;
+  }
+}
+
+// ── Mobile Nav Toggle ──
+function ecToggleMobileNav(){
+  const layout = document.getElementById("ecLayoutRoot");
+  if(!layout) return;
+  layout.classList.toggle("ec-sb-mobile-open");
+}
+function ecCloseMobileNav(){
+  const layout = document.getElementById("ecLayoutRoot");
+  if(layout) layout.classList.remove("ec-sb-mobile-open");
+}
+// Auto-close sidebar after a nav click on mobile so users see the section
+document.addEventListener("click", (e) => {
+  const navBtn = e.target.closest(".nav button, .nav a");
+  if(navBtn && window.innerWidth <= 900) ecCloseMobileNav();
+});
 
 // ── Sidebar Toggle ──
 function ecToggleSidebar(){
@@ -1121,13 +1297,17 @@ function renderOverview(){
   document.getElementById("overviewTitle").innerText = "Welcome, " + m.name.split(" ")[0] + " 👋";
 
   // Profile card
+  // Only show "My Orders" stat if the user actually has view_orders permission
+  // (otherwise pcOrderCount stays at the placeholder "–" forever which looks broken).
+  const perms = (m.permissions || empPerms || {});
+  const canViewOrders = !!perms.view_orders;
   document.getElementById("profileCard").innerHTML = `
     <div class="pc-avatar">${esc(initials)}</div>
     <div class="pc-name">${esc(m.name)}</div>
     <div class="pc-role">${esc(roleLabel)} &nbsp;·&nbsp; <span style="color:${statusColors[m.status]||"#fff"}">${statusLabels[m.status]||m.status}</span></div>
     <div class="pc-stat-row">
       <div class="pc-stat"><div class="pc-stat-val">${m.workload||0}%</div><div class="pc-stat-lbl">Workload</div></div>
-      <div class="pc-stat"><div class="pc-stat-val" id="pcOrderCount">–</div><div class="pc-stat-lbl">My Orders</div></div>
+      ${canViewOrders ? `<div class="pc-stat"><div class="pc-stat-val" id="pcOrderCount">–</div><div class="pc-stat-lbl">My Orders</div></div>` : ""}
     </div>`;
 
   // Permissions grid
@@ -1248,14 +1428,54 @@ function openOrderDetail(orderId){
     <div class="od-row"><span class="od-key">Address</span><span class="od-val">${esc(o.customer_address)}</span></div>
 
     <div class="od-section-lbl">Tracking</div>
-    <div class="od-row"><span class="od-key">Tracking Number</span><span class="od-val">${o.tracking_number||"Not submitted yet"}</span></div>
+    <div class="od-row"><span class="od-key">Tracking Number</span><span class="od-val">${o.tracking_number ? esc(o.tracking_number) : "Not submitted yet"}</span></div>
     <div class="od-row"><span class="od-key">Vendor Status</span><span class="od-val">${esc(o.vendor_status)}</span></div>
 
     <div class="od-section-lbl">Products</div>
-    <div class="od-items-list">${itemsHTML}</div>`;
+    <div class="od-items-list">${itemsHTML}</div>
+
+    <div class="od-section-lbl">Activity Timeline</div>
+    <div id="odActivity" style="font-size:12.5px;color:#64748b;padding:4px 0;">Loading…</div>`;
 
   document.getElementById("odOverlay").style.display = "flex";
   document.body.style.overflow = "hidden";
+
+  // Lazy-load activity timeline (backend exposes it but it was never wired here)
+  loadOrderActivity(orderId);
+}
+
+async function loadOrderActivity(orderId){
+  const el = document.getElementById("odActivity");
+  if(!el) return;
+  try{
+    const r = await fetch(`/orders/api/${orderId}/activity/`);
+    const d = await r.json();
+    const events = (d && d.activities) || [];
+    if(!events.length){
+      el.innerHTML = `<div style="color:#94a3b8;">No activity recorded yet.</div>`;
+      return;
+    }
+    el.innerHTML = events.map(ev => {
+      const date = ev.created_at ? new Date(ev.created_at).toLocaleString([], {dateStyle:"short", timeStyle:"short"}) : "";
+      const actor = ev.actor || "System";
+      const msg = ev.message || ev.action || "";
+      const iconMap = {
+        received:"📥", assigned:"👤", vendor_assigned:"🤝",
+        tracking_submitted:"📦", tracking_approved:"✅", tracking_rejected:"❌",
+        shipped:"🚚", delivered:"📬", refund:"💸",
+      };
+      const ic = iconMap[ev.action] || "•";
+      return `<div style="display:flex;gap:10px;padding:6px 0;border-bottom:1px solid #f1f5f9;">
+        <span style="flex-shrink:0;">${ic}</span>
+        <div style="flex:1;min-width:0;">
+          <div style="color:#0f172a;font-weight:600;">${esc(msg)}</div>
+          <div style="font-size:11px;color:#94a3b8;margin-top:2px;">${esc(actor)} · ${esc(date)}</div>
+        </div>
+      </div>`;
+    }).join("");
+  }catch(e){
+    el.innerHTML = `<div style="color:#ef4444;">Could not load activity: ${esc(e.message||"")}</div>`;
+  }
 }
 
 function closeOrderDetail(){
@@ -1532,15 +1752,23 @@ function etHandleReplyPaste(evt){
 // AI draft
 async function etGenerateDraft(){
   if(!currentThread||!currentThread.emails.length){return;}
+  const replyBox = document.getElementById("etReplyBox");
   const statusEl=document.getElementById("etStatusMsg");
+  // Block writing into a disabled (resolved-thread) textarea — user would think
+  // the draft inserted but couldn't actually edit/send it.
+  if(replyBox && replyBox.disabled){
+    statusEl.textContent="Re-open the thread first to draft a reply.";
+    statusEl.style.color="#a16207";
+    return;
+  }
   statusEl.textContent="Generating AI draft…";
   statusEl.style.color="#64748b";
   const latest=currentThread.emails[currentThread.emails.length-1];
   try{
-    const r=await fetch(`/emails/api/${latest.id}/generate-ai/`,{method:"POST"});
+    const r=await fetch(`/emails/api/${latest.id}/generate-ai/`,{method:"POST",headers:{"X-CSRFToken":getCsrfToken()}});
     const d=await r.json();
     if(d.success){
-      document.getElementById("etReplyBox").value=d.ai_draft||"";
+      replyBox.value=d.ai_draft||"";
       statusEl.textContent="AI draft ready.";
       statusEl.style.color="#059669";
     }else{
@@ -1557,7 +1785,7 @@ async function etImproveReply(){
   if(!text){statusEl.textContent="Write your reply first.";statusEl.style.color="#ef4444";return;}
   statusEl.textContent="Improving…";statusEl.style.color="#64748b";
   try{
-    const r=await fetch("/emails/api/improve-reply/",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text})});
+    const r=await fetch("/emails/api/improve-reply/",{method:"POST",headers:{"Content-Type":"application/json","X-CSRFToken":getCsrfToken()},body:JSON.stringify({text})});
     const d=await r.json();
     if(d.success&&d.suggestion){
       etAiSuggestion=d.suggestion;
@@ -1568,7 +1796,17 @@ async function etImproveReply(){
   }catch(e){statusEl.textContent="Error: "+e.message;statusEl.style.color="#ef4444";}
 }
 function etCloseAi(){etAiSuggestion="";const b=document.getElementById("etAiBox");if(b)b.classList.remove("show");document.getElementById("etAiText").textContent="";}
-function etInsertAi(){if(!etAiSuggestion)return;document.getElementById("etReplyBox").value=etAiSuggestion;etCloseAi();}
+function etInsertAi(){
+  if(!etAiSuggestion) return;
+  const replyBox = document.getElementById("etReplyBox");
+  if(replyBox && replyBox.disabled){
+    const s = document.getElementById("etStatusMsg");
+    if(s){ s.textContent="Re-open the thread first to use AI suggestions."; s.style.color="#a16207"; }
+    return;
+  }
+  replyBox.value = etAiSuggestion;
+  etCloseAi();
+}
 async function etCopyAi(){try{await navigator.clipboard.writeText(etAiSuggestion);}catch(e){etInsertAi();}}
 
 // send
@@ -1586,7 +1824,7 @@ async function etSendReply(){
     fd.append("reply_text",text);
     const input=document.getElementById("etFileInput");
     if(input&&input.files) Array.from(input.files).forEach(f=>fd.append("attachments",f));
-    const r=await fetch(`/emails/api/${latest.id}/send-reply/`,{method:"POST",body:fd});
+    const r=await fetch(`/emails/api/${latest.id}/send-reply/`,{method:"POST",body:fd,headers:{"X-CSRFToken":getCsrfToken()}});
     const d=await r.json();
     if(d.success){
       document.getElementById("etReplyBox").value="";
@@ -1687,8 +1925,14 @@ function _ecRenderMsgList(msgs, containerId){
     html += _ecRenderMsg(msg, showDate, cont);
     lastDate=dl; lastSender=msg.sender_name;
   }
+  // Preserve scroll position: only auto-scroll to bottom if the user was
+  // already at (or near) the bottom. This stops the jump-to-bottom flash
+  // that breaks reading older messages while new ones arrive.
+  const wasNearBottom = (el.scrollHeight - el.scrollTop - el.clientHeight) < 80;
   el.innerHTML = html;
-  el.scrollTop = el.scrollHeight;
+  if(wasNearBottom){
+    el.scrollTop = el.scrollHeight;
+  }
 }
 
 async function ecChatInit(){
@@ -1724,7 +1968,8 @@ async function ecChatInit(){
       const allM = [...adminContacts, ...dm.members];
       _ecMentionMembers = allM.map(m=>m.name);
       allM.forEach(m=>{ _ecMentionMap[m.name.toLowerCase()] = m.user; _ecMentionMap[m.name.split(" ")[0].toLowerCase()] = m.user; });
-      document.getElementById("ecMemberList").innerHTML = allM.slice(0,10).map((m,i)=>{
+      // Render ALL members (was previously sliced to 10, dropping 11th+ silently)
+      document.getElementById("ecMemberList").innerHTML = allM.map((m,i)=>{
         const ini=m.name.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
         const col=m.is_admin?"linear-gradient(135deg,#1d4ed8,#3b82f6)":_EC_DM_COLORS[i%_EC_DM_COLORS.length];
         const tick=m.is_admin?`<span class="tc-verified">${_VERIFIED_SVG}</span>`:"";
@@ -1733,6 +1978,8 @@ async function ecChatInit(){
           <span class="tc-ch-name-txt">${esc(m.name)}${tick}</span>
         </div>`;
       }).join("");
+      // Initial DM unread refresh — keeps badges current without waiting 8s for poll
+      _ecRefreshDmUnreads();
     }
   } catch(e){ console.error("ec chat init:",e); }
 }
@@ -1882,13 +2129,61 @@ async function ecSend(){
   const input=document.getElementById("ecChatInput");
   const content=_ecCeToMarkdown(input);
   if(!content) return;
+  // Stash the HTML so we can restore it if the send fails — typed text is precious.
+  const stashedHtml = input.innerHTML;
+  // Optimistic: clear input + close emoji picker + signal not-typing
   input.innerHTML="";
   ecCloseEmojiPicker();
   _ecSendTyping(false);
   clearTimeout(_ecTypingTimer);
-  const r=await fetch("/teamapp/chat/send/",{method:"POST",headers:{"Content-Type":"application/json","X-CSRFToken":_ecCsrf()},body:JSON.stringify({channel_id:_ecChannelId,content})});
-  const d=await r.json();
-  if(d.success){ ecLoadMessages(); _ecWsBroadcastNew(content); }
+  try{
+    const r=await fetch("/teamapp/chat/send/",{method:"POST",headers:{"Content-Type":"application/json","X-CSRFToken":_ecCsrf()},body:JSON.stringify({channel_id:_ecChannelId,content})});
+    const d=await r.json();
+    if(d.success){
+      ecLoadMessages();
+      _ecWsBroadcastNew(content);
+    } else {
+      // Restore typed content + surface the error
+      input.innerHTML = stashedHtml;
+      _ecToast && _ecToast("❌ Send failed: " + (d.message || "unknown"));
+    }
+  }catch(e){
+    input.innerHTML = stashedHtml;
+    _ecToast && _ecToast("⚠ Network error — message not sent.");
+  }
+}
+
+// Upload an image to the current channel via /teamapp/chat/upload-image/
+async function ecUploadImage(input){
+  if(!_ecChannelId){ _ecToast("Pick a channel first."); input.value=""; return; }
+  const file = input.files && input.files[0];
+  if(!file) return;
+  if(!file.type.startsWith("image/")){ _ecToast("Only image files supported."); input.value=""; return; }
+  // 10 MB client cap (server has its own limit)
+  if(file.size > 10 * 1024 * 1024){ _ecToast("Image too large (max 10 MB)."); input.value=""; return; }
+  _ecToast("📤 Uploading…");
+  const fd = new FormData();
+  fd.append("channel_id", _ecChannelId);
+  fd.append("image", file);
+  try{
+    const r = await fetch("/teamapp/chat/upload-image/", {
+      method: "POST",
+      headers: {"X-CSRFToken": _ecCsrf()},
+      body: fd,
+    });
+    const d = await r.json();
+    if(d.success){
+      ecLoadMessages();
+      _ecWsBroadcastNew("[image]");
+      _ecToast("✓ Image sent");
+    } else {
+      _ecToast("❌ Upload failed: " + (d.message || "unknown"));
+    }
+  }catch(e){
+    _ecToast("⚠ Network error — image not sent.");
+  }finally{
+    input.value = "";
+  }
 }
 
 function ecKeyDown(e){
@@ -2033,7 +2328,12 @@ function _ecRenderMarkdown(text){
   s = s.replace(/^[*\-] (.+)$/gm, '<li>$1</li>').replace(/(<li>.*<\/li>)/gs, '<ul style="margin:4px 0 4px 18px;padding:0;">$1</ul>');
   s = s.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
   // @mentions → styled chip (amber if it's you, purple+clickable otherwise)
-  s = s.replace(/@([A-Za-z][A-Za-z]*(?:\s[A-Za-z][A-Za-z]*)?)/g, (_, name) => {
+  // Regex accepts:
+  //   • 3+ word names ("Mary Jane Smith")
+  //   • Hyphens ("Anne-Marie"), apostrophes ("O'Brien"), periods ("M.J.")
+  //   • Accented Unicode letters ("José", "Müller")
+  //   • Digits inside (e.g. team aliases like "Sarah2")
+  s = s.replace(/@([\p{L}][\p{L}\d.'\-]*(?:\s[\p{L}][\p{L}\d.'\-]*)*)/gu, (_, name) => {
     const key = name.toLowerCase();
     const isMe = _ecMyName && (key === _ecMyName.toLowerCase() || key === _ecMyName.split(" ")[0].toLowerCase());
     if(isMe) return `<span style="background:#fde68a;color:#92400e;font-weight:700;border-radius:5px;padding:1px 6px;white-space:nowrap;">@${name}</span>`;
@@ -2103,16 +2403,9 @@ function ecShowMsgMenu(msgId, btn){
 function _ecMenuDo(fn){ document.querySelectorAll(".tc-msg-menu").forEach(el=>el.remove()); fn(); }
 function ecCopyMsg(content){ navigator.clipboard.writeText(content).then(()=>_ecToast("📋 Message copied!")); }
 
-async function ecDeleteMsg(msgId){
-  if(!confirm("Delete this message?")) return;
-  const r=await fetch(`/teamapp/chat/messages/${msgId}/delete/`,{method:"DELETE",headers:{"X-CSRFToken":_ecCsrf()}});
-  const d=await r.json();
-  if(d.success){
-    if(_ecThreadParentId===msgId) ecCloseThread();
-    ecLoadMessages();
-    if(_ecThreadParentId) ecLoadThreadMessages(_ecThreadParentId);
-  } else { alert(d.error||"Could not delete message."); }
-}
+// Note: ecDeleteMsg removed — backend chat_delete_message_api allows admins
+// only (teamapp/views.py:828). Calling it from the employee portal would
+// always 403, so it's never wired into the More menu.
 
 function ecEditMsg(msgId){
   const msgEl = document.querySelector(`.tc-msg[data-mid="${msgId}"]`);
@@ -2169,12 +2462,21 @@ function _ecEditCleanup(msgEl, textEl){
   msgEl.querySelector(".tc-edit-bar")?.remove();
 }
 
+// Pin/Bookmark: per-device localStorage (no backend persistence yet)
+// — honest toast wording so users know it's local to this browser.
 function ecPinMsg(msgId){
+  const msg = _ecMsgMap[msgId];
   const pins = JSON.parse(localStorage.getItem("tc_pins")||"[]");
-  if(!pins.includes(msgId)){
-    pins.push(msgId); localStorage.setItem("tc_pins", JSON.stringify(pins));
-    _ecToast(`📌 Message pinned to #${_ecChannelName}`);
-  } else { _ecToast("Already pinned!"); }
+  const idx = pins.findIndex(p => (typeof p === "object" ? p.id : p) === msgId);
+  if(idx === -1){
+    pins.push({id: msgId, content: (msg||{}).content||"", channel: _ecChannelName, at: new Date().toISOString()});
+    localStorage.setItem("tc_pins", JSON.stringify(pins));
+    _ecToast("📌 Pinned (this browser only)");
+  } else {
+    pins.splice(idx, 1);
+    localStorage.setItem("tc_pins", JSON.stringify(pins));
+    _ecToast("📌 Unpinned");
+  }
 }
 
 function ecBookmarkMsg(msgId){
@@ -2184,12 +2486,21 @@ function ecBookmarkMsg(msgId){
   if(idx===-1){
     saves.push({id:msgId, content:(msg||{}).content||"", channel:_ecChannelName, at:new Date().toISOString()});
     localStorage.setItem("tc_saved", JSON.stringify(saves));
-    _ecToast("🔖 Message saved to bookmarks");
-  } else { _ecToast("Already saved!"); }
+    _ecToast("🔖 Saved (this browser only)");
+  } else {
+    saves.splice(idx, 1);
+    localStorage.setItem("tc_saved", JSON.stringify(saves));
+    _ecToast("🔖 Removed from saved");
+  }
 }
 
+// Real deep-link URL (hash-based so it survives without server routing)
 function ecCopyLink(msgId){
-  navigator.clipboard.writeText(`#${_ecChannelName} — message #${msgId}`).then(()=>_ecToast("🔗 Link copied!"));
+  const url = `${location.origin}/employee/dashboard/#chat-${encodeURIComponent(_ecChannelName||"channel")}/msg-${msgId}`;
+  navigator.clipboard.writeText(url).then(
+    () => _ecToast("🔗 Link copied!"),
+    () => _ecToast("🔗 " + url),
+  );
 }
 
 function _ecToast(msg){
@@ -2217,6 +2528,8 @@ function _ecWsConnect(){
     const msg = JSON.parse(e.data);
     if(msg.type==="new_message"){
       ecLoadMessages();
+      // If a thread panel is open, refresh its replies too
+      if(_ecThreadParentId) ecLoadThreadMessages(_ecThreadParentId);
       const chatVisible = document.getElementById("secChat")?.classList.contains("active");
       if(!chatVisible){
         _ecShowInAppNotif(msg.sender_name, _ecChannelName, msg.preview||"New message", ()=>switchSection("secChat"));
@@ -2479,9 +2792,13 @@ function etkCardHTML(t){
   const doneClass = t.status==='done' ? ' done-card' : '';
   const progClass = t.progress>=100 ? 'full' : t.progress>0 ? 'mid' : 'low';
   const priLabel  = t.priority==='high'?'🔴 High':t.priority==='medium'?'🟡 Medium':'🟢 Low';
-  const tagHTML   = `<span class="etk-tag ${t.category}">${t.category.charAt(0).toUpperCase()+t.category.slice(1)}</span>`;
-  const dueHTML   = t.due_date ? `<span class="etk-due${t.is_overdue?' late':''}">${t.is_overdue?'⚠ ':'📅 '}${t.due_date}</span>` : '';
-  return `<div class="etk-card${doneClass}" onclick="etkOpenModal(${t.id})">
+  // Defensive: t.category can be null/undefined from API — fall back to "other"
+  const cat = (t.category || 'other').toString();
+  const catLabel = cat.charAt(0).toUpperCase() + cat.slice(1);
+  const tagHTML  = `<span class="etk-tag ${cat}">${catLabel}</span>`;
+  const dueHTML  = t.due_date ? `<span class="etk-due${t.is_overdue?' late':''}">${t.is_overdue?'⚠ ':'📅 '}${t.due_date}</span>` : '';
+  // draggable=true + dragstart binding for drag-drop
+  return `<div class="etk-card${doneClass}" draggable="true" data-tid="${t.id}" ondragstart="etkDragStart(event,${t.id})" ondragend="etkDragEnd(event)" onclick="etkOpenModal(${t.id})">
     <h4>${_etkEsc(t.title)}</h4>
     <div class="etk-tag-row">${tagHTML}</div>
     ${t.description?`<div class="etk-card-desc">${_etkEsc(t.description.substring(0,80))}${t.description.length>80?'…':''}</div>`:''}
@@ -2494,6 +2811,66 @@ function etkCardHTML(t){
       ${dueHTML}
     </div>
   </div>`;
+}
+
+// ── Drag & drop ─────────────────────────────────────────────────────────────
+let _etkDraggingId = null;
+function etkDragStart(ev, taskId){
+  _etkDraggingId = taskId;
+  ev.stopPropagation();
+  ev.dataTransfer.effectAllowed = "move";
+  // Some browsers require data to be set; the actual id is also stored in _etkDraggingId
+  try{ ev.dataTransfer.setData("text/plain", String(taskId)); }catch(_){}
+  ev.currentTarget.classList.add("etk-dragging");
+}
+function etkDragEnd(ev){
+  document.querySelectorAll(".etk-card").forEach(c => c.classList.remove("etk-dragging"));
+  document.querySelectorAll(".etk-col-body").forEach(c => c.classList.remove("etk-drop-target"));
+  _etkDraggingId = null;
+}
+function etkDragOver(ev, status){
+  // Only allow drop if we have a dragging task
+  if(_etkDraggingId == null) return;
+  ev.preventDefault();
+  ev.dataTransfer.dropEffect = "move";
+  document.getElementById("etkBody-" + status)?.classList.add("etk-drop-target");
+}
+function etkDragLeave(ev, status){
+  document.getElementById("etkBody-" + status)?.classList.remove("etk-drop-target");
+}
+async function etkDrop(ev, targetStatus){
+  ev.preventDefault();
+  document.querySelectorAll(".etk-col-body").forEach(c => c.classList.remove("etk-drop-target"));
+  const taskId = _etkDraggingId;
+  _etkDraggingId = null;
+  if(taskId == null) return;
+  const t = _etkTasks.find(x => x.id === taskId);
+  if(!t || t.status === targetStatus) return;
+
+  // Optimistic update
+  const oldStatus = t.status;
+  const oldProgress = t.progress;
+  t.status = targetStatus;
+  if(targetStatus === "done") t.progress = 100;
+  etkRender();
+  etkUpdateStats();
+
+  try{
+    const r = await fetch(`/employee/api/tasks/${taskId}/`, {
+      method: "PATCH",
+      headers: {"Content-Type":"application/json","X-CSRFToken": getCsrfToken()},
+      body: JSON.stringify({status: targetStatus, progress: t.progress}),
+    });
+    if(!r.ok) throw new Error(`Server responded ${r.status}`);
+    _ecToast && _ecToast(`✓ Moved to "${targetStatus.replace("_"," ")}"`);
+  }catch(e){
+    // Rollback on failure
+    t.status = oldStatus;
+    t.progress = oldProgress;
+    etkRender();
+    etkUpdateStats();
+    _ecToast && _ecToast(`⚠ Move failed: ${e.message || "network error"}. Reverted.`);
+  }
 }
 
 function _etkEsc(s){ const d=document.createElement('div');d.textContent=s||'';return d.innerHTML; }
@@ -2513,12 +2890,100 @@ function etkOpenModal(id){
   document.getElementById('etkModalPri').innerHTML = `<span style="background:${bg};color:${clr};padding:4px 10px;border-radius:7px;font-size:12px;font-weight:700;">${priLabel}</span>`;
   document.getElementById('etkModalDue').textContent = t.due_date ? (t.is_overdue?'⚠ '+t.due_date+' — Overdue':t.due_date) : '—';
   document.getElementById('etkModalDue').style.color = t.is_overdue ? '#ef4444' : 'var(--text)';
+
+  // Render implicit watchers: owner + assignee (M2M watchers field isn't in the model yet)
+  const watchersHTML = [];
+  if(t.assignee_name) watchersHTML.push(`<span style="background:#eef2ff;color:#4338ca;padding:3px 9px;border-radius:99px;font-size:11.5px;font-weight:700;">👤 ${_etkEsc(t.assignee_name)} (assignee)</span>`);
+  if(t.owner_name) watchersHTML.push(`<span style="background:#f3f4f6;color:#374151;padding:3px 9px;border-radius:99px;font-size:11.5px;font-weight:700;">👁 ${_etkEsc(t.owner_name)} (owner)</span>`);
+  const wEl = document.getElementById('etkWatchersList');
+  if(wEl) wEl.innerHTML = watchersHTML.length ? watchersHTML.join("") : `<span style="font-size:12.5px;color:var(--muted);">No watchers yet.</span>`;
+  const wcEl = document.getElementById('etkWatchersCount');
+  if(wcEl) wcEl.textContent = "— " + watchersHTML.length;
+
+  // Load comments for this task
+  etkLoadComments(id);
+
   document.getElementById('etkModalBg').classList.add('open');
 }
 
 function etkCloseModal(){
   document.getElementById('etkModalBg').classList.remove('open');
   _etkActiveId = null;
+}
+
+// Load comments for the currently-open task
+async function etkLoadComments(taskId){
+  const list = document.getElementById('etkCommentsList');
+  const countEl = document.getElementById('etkCommentsCount');
+  if(!list) return;
+  list.innerHTML = `<div style="color:var(--muted);font-size:12.5px;text-align:center;padding:18px 0;">Loading comments…</div>`;
+  try{
+    const r = await fetch(`/employee/api/tasks/${taskId}/comments/`);
+    const d = await r.json();
+    if(!d.success){
+      list.innerHTML = `<div style="color:#ef4444;font-size:12.5px;text-align:center;padding:14px 0;">${_etkEsc(d.message||"Could not load comments.")}</div>`;
+      return;
+    }
+    const comments = d.comments || [];
+    if(countEl) countEl.textContent = "— " + comments.length;
+    if(!comments.length){
+      list.innerHTML = `<div style="color:var(--muted);font-size:12.5px;text-align:center;padding:18px 0;">No comments yet — be the first to add one.</div>`;
+      return;
+    }
+    list.innerHTML = comments.map(c => `
+      <div style="display:flex;gap:9px;align-items:flex-start;">
+        <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#06b6d4);display:grid;place-items:center;color:#fff;font-weight:700;font-size:11px;flex-shrink:0;">${_etkEsc(c.initials||c.author?.[0]?.toUpperCase()||"?")}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:2px;">
+            <span style="font-size:12.5px;font-weight:700;color:var(--text);">${_etkEsc(c.author||"")}</span>
+            <span style="font-size:10.5px;color:var(--muted);">${_etkFormatDate(c.created_at)}</span>
+          </div>
+          <div style="font-size:13px;color:var(--text);line-height:1.5;word-wrap:break-word;">${_etkEsc(c.content||"")}</div>
+        </div>
+      </div>`).join("");
+  }catch(e){
+    list.innerHTML = `<div style="color:#ef4444;font-size:12.5px;text-align:center;padding:14px 0;">Could not load comments: ${_etkEsc(e.message||"network error")}</div>`;
+  }
+}
+
+async function etkAddComment(){
+  if(_etkActiveId == null) return;
+  const input = document.getElementById('etkCommentInput');
+  const content = (input?.value || "").trim();
+  if(!content) return;
+  input.disabled = true;
+  try{
+    const r = await fetch(`/employee/api/tasks/${_etkActiveId}/comments/`, {
+      method: "POST",
+      headers: {"Content-Type":"application/json","X-CSRFToken": getCsrfToken()},
+      body: JSON.stringify({content}),
+    });
+    const d = await r.json();
+    if(!d.success){
+      _ecToast && _ecToast("❌ " + (d.message || "Could not post comment."));
+      return;
+    }
+    input.value = "";
+    await etkLoadComments(_etkActiveId);
+  }catch(e){
+    _ecToast && _ecToast("⚠ Network error — comment not posted.");
+  }finally{
+    input.disabled = false;
+    input.focus();
+  }
+}
+
+function _etkFormatDate(iso){
+  if(!iso) return "";
+  try{
+    const d = new Date(iso);
+    const now = new Date();
+    const sameDay = d.toDateString() === now.toDateString();
+    if(sameDay){
+      return d.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
+    }
+    return d.toLocaleDateString([], {day:"2-digit", month:"short"}) + " " + d.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
+  }catch(_){ return iso; }
 }
 
 async function etkSaveStatus(){
@@ -2552,6 +3017,18 @@ async function etkSaveProgress(){
     task.progress = progress;
     etkRender(); etkUpdateStats();
   } catch(e){ console.error(e); }
+}
+
+// Properly awaits both saves before closing the modal (previously raced).
+async function etkSaveAndClose(){
+  try{
+    await etkSaveStatus();
+    await etkSaveProgress();
+  }catch(e){
+    _ecToast && _ecToast("⚠ Save failed: " + (e.message||"network error"));
+    return;
+  }
+  etkCloseModal();
 }
 
 function getEmpCsrf(){

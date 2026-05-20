@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Employee Login — VendorFlow AI</title>
+<title>Employee Login — Drop Sigma</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 body{
@@ -91,9 +91,9 @@ h1{font-size:26px;font-weight:800;color:#fff;letter-spacing:-.03em;margin-bottom
 
 <div class="card">
   <div class="brand">
-    <div class="brand-logo">VF</div>
+    <div class="brand-logo">DS</div>
     <div class="brand-text">
-      <div class="brand-name">VendorFlow AI</div>
+      <div class="brand-name">Drop Sigma</div>
       <div class="brand-tag">Employee Portal</div>
     </div>
   </div>
@@ -105,11 +105,11 @@ h1{font-size:26px;font-weight:800;color:#fff;letter-spacing:-.03em;margin-bottom
   <div class="error">{{ error }}</div>
   {% endif %}
 
-  <form method="POST">
+  <form method="POST" action="/employee/login/">
     {% csrf_token %}
     <div class="field">
       <label>EMAIL ADDRESS</label>
-      <input type="email" name="email" placeholder="your@email.com" required autofocus>
+      <input type="email" name="email" placeholder="your@email.com" value="{{ email|default:'' }}" required autofocus>
     </div>
     <div class="field">
       <label>PASSWORD</label>

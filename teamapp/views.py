@@ -4,6 +4,7 @@ import datetime
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
+from django.db import models
 from django.utils import timezone
 
 from rest_framework.decorators import api_view
@@ -181,8 +182,15 @@ def employee_login_page(request):
     if request.user.is_authenticated and request.user.team_profile.exists():
         return redirect("/employee/dashboard/")
 
+    # GET: render the standalone employee_login template (was previously
+    # redirecting to /login/?tab=team and leaving employee_login.html orphaned).
     if request.method == "GET":
-        return redirect("/login/?tab=team")
+        # Allow ?simple=1 to keep the legacy combined-login experience for users
+        # who linked to it from older docs.
+        if request.GET.get("simple") == "1":
+            return redirect("/login/?tab=team")
+        error = request.GET.get("error")
+        return render(request, "employee_login.html", {"error": error})
 
     # POST — try login
     email    = request.POST.get("email", "").strip()
@@ -195,10 +203,16 @@ def employee_login_page(request):
             return redirect("/employee/dashboard/")
     except TeamMember.DoesNotExist:
         pass
-    return redirect("/login/?tab=team&error=Invalid+email+or+password.")
+    # Render the page again with an error so users don't lose their typed email
+    return render(request, "employee_login.html", {"error": "Invalid email or password.", "email": email})
 
 
 def employee_logout_view(request):
+    # CSRF protection: enforce POST for logout (matches Django best practice).
+    if request.method != "POST":
+        # GET request — show the dashboard with a hint (or just redirect home).
+        # This keeps any stray bookmarked GET-logout from quietly killing the session.
+        return redirect("/employee/dashboard/" if request.user.is_authenticated else "/")
     logout(request)
     return redirect("/")
 
@@ -224,6 +238,28 @@ def employee_me_api(request):
     if not member:
         return Response({"success": False, "message": "Not an employee"}, status=403)
     return Response({"success": True, "member": TeamMemberSerializer(member).data})
+
+
+@api_view(["POST"])
+def employee_set_status_api(request):
+    """Employee sets their own status (available / busy / limited / offline)."""
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Not authenticated"}, status=401)
+    member = request.user.team_profile.first()
+    if not member:
+        return Response({"success": False, "message": "Not an employee"}, status=403)
+
+    new_status = (request.data.get("status") or "").strip()
+    valid = {choice[0] for choice in TeamMember.STATUS_CHOICES}
+    if new_status not in valid:
+        return Response({
+            "success": False,
+            "message": f"Invalid status. Allowed: {', '.join(sorted(valid))}.",
+        }, status=400)
+
+    member.status = new_status
+    member.save(update_fields=["status"])
+    return Response({"success": True, "status": member.status})
 
 
 @api_view(["GET"])
@@ -342,7 +378,9 @@ def employee_emails_api(request):
             "new":      new_count,
             "replied":  replied_count,
             "resolved": resolved_count,
-            "other":    total - new_count - replied_count,
+            # "other" = anything that isn't new / replied / resolved.
+            # Previous formula ignored resolved → resolved threads were double-counted.
+            "other":    max(0, total - new_count - replied_count - resolved_count),
         }
     })
 
@@ -390,6 +428,28 @@ def employee_thread_detail_api(request):
     })
 
 
+def _employee_can_act_on_thread(user, store_id, contact, member):
+    """Return True if `user` may resolve/reopen the (store, contact) thread.
+
+    Ownership rules:
+    - Store owner (admin) can always act.
+    - Employee can act only if they are assigned to the thread
+      (as primary assignee OR co-assignee).
+    """
+    from emails.models import EmailThreadAssignment
+    from stores.models import Store
+
+    if Store.objects.filter(id=store_id, user=user).exists():
+        return True
+    if not member:
+        return False
+    return EmailThreadAssignment.objects.filter(
+        store_id=store_id, contact=contact,
+    ).filter(
+        models.Q(assigned_to=member) | models.Q(co_assignees=member)
+    ).exists()
+
+
 @api_view(["POST"])
 def employee_thread_resolve_api(request):
     if not request.user.is_authenticated:
@@ -413,8 +473,13 @@ def employee_thread_resolve_api(request):
         # Admin/store owner can resolve any thread in their store
         assignment, _ = EmailThreadAssignment.objects.get_or_create(store_id=store_id, contact=contact)
     else:
+        # Employee must be assigned (primary or co-assignee) to the thread
+        if not _employee_can_act_on_thread(request.user, store_id, contact, member):
+            return Response({"success": False, "message": "You are not assigned to this thread."}, status=403)
         assignment = EmailThreadAssignment.objects.filter(store_id=store_id, contact=contact).first()
         if not assignment:
+            # Should be unreachable now — _employee_can_act_on_thread requires an
+            # existing assignment — but keep a defensive get_or_create just in case.
             assignment, _ = EmailThreadAssignment.objects.get_or_create(store_id=store_id, contact=contact)
 
     assignment.is_resolved = True
@@ -425,15 +490,21 @@ def employee_thread_resolve_api(request):
 
 @api_view(["POST"])
 def employee_thread_reopen_api(request):
-    """Admin can reopen a resolved thread."""
+    """Admin or assigned employee can reopen a resolved thread."""
     if not request.user.is_authenticated:
         return Response({"success": False, "message": "Not authenticated"}, status=401)
 
     from emails.models import EmailThreadAssignment
     from emails.views import extract_clean_email
+    from stores.models import Store
 
     store_id = request.data.get("store_id")
     contact  = extract_clean_email(request.data.get("contact", ""))
+
+    # Ownership gate: must be store owner OR an assigned team member
+    member = request.user.team_profile.first()
+    if not _employee_can_act_on_thread(request.user, store_id, contact, member):
+        return Response({"success": False, "message": "You are not authorised to re-open this thread."}, status=403)
 
     assignment = EmailThreadAssignment.objects.filter(
         store_id=store_id, contact=contact
@@ -460,11 +531,14 @@ def employee_tasks_api(request):
     from .models import Task
     from datetime import date
 
-    tasks = Task.objects.filter(assigned_to=member).select_related("assigned_to")
+    tasks = Task.objects.filter(assigned_to=member).select_related("assigned_to", "owner")
     result = []
     for t in tasks:
         due = t.due_date.isoformat() if t.due_date else None
         is_overdue = bool(t.due_date and t.due_date < date.today() and t.status != "done")
+        # Provide implicit "watcher" names (owner + assignee) for the UI to render
+        assignee_name = t.assigned_to.name if t.assigned_to else None
+        owner_name = (t.owner.get_full_name() or t.owner.username) if t.owner else None
         result.append({
             "id":          t.id,
             "title":       t.title,
@@ -475,6 +549,8 @@ def employee_tasks_api(request):
             "progress":    t.progress,
             "due_date":    due,
             "is_overdue":  is_overdue,
+            "assignee_name": assignee_name,
+            "owner_name":    owner_name,
         })
     return Response({"success": True, "tasks": result})
 
@@ -504,6 +580,50 @@ def employee_task_update_api(request, task_id):
     return Response({"success": True})
 
 
+@api_view(["GET", "POST"])
+def employee_task_comments_api(request, task_id):
+    """Employee can list + post comments on their assigned tasks."""
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Not authenticated"}, status=401)
+    member = request.user.team_profile.first()
+    if not member:
+        return Response({"success": False, "message": "Not an employee"}, status=403)
+
+    from .models import Task, TaskComment
+    try:
+        task = Task.objects.get(pk=task_id, assigned_to=member)
+    except Task.DoesNotExist:
+        return Response({"success": False, "message": "Task not found"}, status=404)
+
+    if request.method == "GET":
+        comments = task.comments.select_related("author").order_by("created_at")
+        return Response({
+            "success": True,
+            "comments": [{
+                "id": c.id,
+                "author": c.author.get_full_name() or c.author.username,
+                "initials": (c.author.get_full_name() or c.author.username)[0].upper(),
+                "content": c.content,
+                "created_at": c.created_at.isoformat(),
+            } for c in comments],
+        })
+
+    content = (request.data.get("content") or "").strip()
+    if not content:
+        return Response({"success": False, "message": "Comment cannot be empty."}, status=400)
+    c = TaskComment.objects.create(task=task, author=request.user, content=content)
+    return Response({
+        "success": True,
+        "comment": {
+            "id": c.id,
+            "author": c.author.get_full_name() or c.author.username,
+            "initials": (c.author.get_full_name() or c.author.username)[0].upper(),
+            "content": c.content,
+            "created_at": c.created_at.isoformat(),
+        },
+    })
+
+
 # ─── Team Chat APIs ───────────────────────────────────────────────────────────
 
 from django.conf import settings as django_settings
@@ -512,6 +632,23 @@ _DEFAULT_CHANNELS = getattr(django_settings, "CHAT_DEFAULT_CHANNELS", [
     {"name": "operations", "slug": "operations", "description": "Orders & vendor ops"},
     {"name": "support",    "slug": "support",    "description": "Customer support"},
 ])
+
+
+def _user_can_access_channel(user, channel):
+    """Return True if `user` is permitted to read/write in `channel`.
+
+    Rules:
+    - Superusers can always access.
+    - DM channels: user must be in channel.participants.
+    - Regular channels: user must be an active ChannelMember.
+    """
+    if not user or not user.is_authenticated:
+        return False
+    if user.is_superuser:
+        return True
+    if channel.is_dm:
+        return channel.participants.filter(id=user.id).exists()
+    return ChannelMember.objects.filter(channel=channel, user=user, is_active=True).exists()
 
 
 def _sender_info(user):
@@ -725,7 +862,11 @@ def chat_messages_api(request):
     uid = request.user.id
     membership = None
 
-    if not ch.is_dm:
+    if ch.is_dm:
+        # DM: enforce participant check (was previously open to any authenticated user)
+        if not request.user.is_superuser and not ch.participants.filter(id=request.user.id).exists():
+            return Response({"success": False, "message": "Not a participant of this DM."}, status=403)
+    else:
         if not request.user.is_superuser:
             membership = ChannelMember.objects.filter(channel=ch, user=request.user, is_active=True).first()
             if not membership:
@@ -762,6 +903,10 @@ def chat_send_api(request):
     except ChatChannel.DoesNotExist:
         return Response({"success": False, "message": "Channel not found."}, status=404)
 
+    # Membership / participant check (previously open to any authenticated user)
+    if not _user_can_access_channel(request.user, ch):
+        return Response({"success": False, "message": "You are not a member of this channel."}, status=403)
+
     parent = None
     if parent_id:
         parent = ChatMessage.objects.filter(id=parent_id, channel=ch).first()
@@ -782,6 +927,9 @@ def chat_upload_image_api(request):
         ch = ChatChannel.objects.get(id=channel_id)
     except ChatChannel.DoesNotExist:
         return Response({"success": False, "message": "Channel not found."}, status=404)
+    # Membership check (previously open to any authenticated user)
+    if not _user_can_access_channel(request.user, ch):
+        return Response({"success": False, "message": "You are not a member of this channel."}, status=403)
     msg = ChatMessage.objects.create(channel=ch, sender=request.user, content="", image=image_file)
     return Response({"success": True, "message": _serialize_message(msg, request.user.id)})
 
@@ -800,6 +948,10 @@ def chat_reaction_api(request):
         msg = ChatMessage.objects.get(id=message_id)
     except ChatMessage.DoesNotExist:
         return Response({"success": False, "message": "Message not found."}, status=404)
+
+    # Membership / participant check on the message's channel
+    if not _user_can_access_channel(request.user, msg.channel):
+        return Response({"success": False, "message": "You are not a member of this channel."}, status=403)
 
     obj, created = ChatReaction.objects.get_or_create(message=msg, sender=request.user, emoji=emoji)
     if not created:
@@ -838,6 +990,9 @@ def chat_edit_message_api(request, msg_id):
         msg = ChatMessage.objects.get(id=msg_id)
     except ChatMessage.DoesNotExist:
         return Response({"success": False, "message": "Not found."}, status=404)
+    # Defense-in-depth: also confirm the user still has channel access
+    if not _user_can_access_channel(request.user, msg.channel):
+        return Response({"success": False, "message": "You are not a member of this channel."}, status=403)
     if msg.sender != request.user:
         return Response({"success": False, "message": "Not authorized."}, status=403)
     content = request.data.get("content", "").strip()
