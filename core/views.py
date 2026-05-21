@@ -1036,76 +1036,22 @@ def support_ai_ask(request):
     if len(question) > 2000:
         return JsonResponse({"success": False, "message": "Question too long (max 2000 chars)."}, status=400)
 
-    # Build the AI prompt
-    from core.support_ai_kb import build_system_prompt, DEEP_LINKS
+    # Groq (free tier) — rotates across 3 models, then falls back to the
+    # offline keyword matcher if all are rate-limited or down. Same JSON
+    # response shape as the previous Claude path; no frontend change.
     try:
-        from emails.services import call_claude
+        from core.groq_support import answer as _groq_answer
     except Exception as e:
-        return JsonResponse({"success": False, "message": f"AI client unavailable: {e}"}, status=500)
+        return JsonResponse({"success": False, "message": f"Help service unavailable: {e}"}, status=500)
 
-    system_prompt = build_system_prompt()
-
-    # Include the last few turns of conversation for context (max 6 turns)
-    context_lines = []
-    for turn in (history or [])[-6:]:
-        role = turn.get("role", "user")
-        content = (turn.get("content") or "").strip()[:500]
-        if content:
-            context_lines.append(f"{role.upper()}: {content}")
-    if context_lines:
-        prompt = "Conversation so far:\n" + "\n".join(context_lines) + f"\n\nUSER: {question}\n\nRespond as the assistant in the JSON format described."
-    else:
-        prompt = f"USER: {question}\n\nRespond as the assistant in the JSON format described."
-
-    try:
-        raw = call_claude(prompt, system=system_prompt, max_tokens=900)
-    except Exception as e:
-        return JsonResponse({
-            "success": False,
-            "message": "AI is temporarily unavailable. Please try again in a moment.",
-            "_error": str(e),
-        }, status=503)
-
-    # Parse the JSON the model returned
-    payload = None
-    if raw:
-        # Try to extract the first {...} block if the model wrapped it
-        text = raw.strip()
-        if text.startswith("```"):
-            text = text.split("```", 2)[1].strip()
-            if text.startswith("json"):
-                text = text[4:].strip()
-        try:
-            payload = _json.loads(text)
-        except Exception:
-            # Fallback: try to find the outer JSON braces
-            import re
-            m = re.search(r"\{[\s\S]*\}", text)
-            if m:
-                try:
-                    payload = _json.loads(m.group(0))
-                except Exception:
-                    payload = None
-
-    if not payload or not isinstance(payload, dict):
-        # Last-resort: return the raw text as a plain reply
-        return JsonResponse({
-            "success": True,
-            "reply": (raw or "I couldn't generate a structured answer — could you rephrase?").strip(),
-        })
-
-    reply       = payload.get("reply") or ""
-    steps       = payload.get("steps") or []
-    breadcrumb  = payload.get("breadcrumb") or []
-    deep_link   = payload.get("deep_link") or ""
-    # Resolve deep_link key to a URL hash the frontend can use
-    deep_link_url = DEEP_LINKS.get(deep_link, "") if deep_link else ""
+    payload = _groq_answer(question, history)
 
     return JsonResponse({
         "success":       True,
-        "reply":         reply,
-        "steps":         steps,
-        "breadcrumb":    breadcrumb,
-        "deep_link":     deep_link,
-        "deep_link_url": deep_link_url,
+        "reply":         payload.get("reply") or "",
+        "steps":         payload.get("steps") or [],
+        "breadcrumb":    payload.get("breadcrumb") or [],
+        "deep_link":     payload.get("deep_link") or "",
+        "deep_link_url": payload.get("deep_link_url") or "",
+        "_source":       payload.get("_source") or "",
     })
