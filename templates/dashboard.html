@@ -3909,6 +3909,7 @@ body.vf-dark-mode .em-tc-chip.resolved{background:rgba(21,128,61,.2)!important;c
 #emailsSection .em-tab{padding:5px 10px!important;border-radius:6px!important;font-size:11.5px!important;font-weight:600!important;color:#8087a2!important;background:transparent!important;}
 #emailsSection .em-tab.active{background:#f4f6fc!important;color:#0b0f1a!important;font-weight:700!important;}
 #emailsSection .em-tab:hover:not(.active){background:#f4f6fc!important;color:#0b0f1a!important;}
+#emailsSection .em-tab .em-tab-count{display:inline-flex!important;align-items:center!important;justify-content:center!important;min-width:18px!important;height:16px!important;padding:0 5px!important;margin-left:5px!important;border-radius:999px!important;background:#ef4444!important;color:#fff!important;font-size:10px!important;font-weight:800!important;line-height:1!important;letter-spacing:0!important;box-shadow:0 1px 3px rgba(239,68,68,.35)!important;vertical-align:middle!important;}
 #emailsSection #emailsList{padding:4px 6px!important;background:#fff!important;}
 #emailsSection .em-tc{padding:9px 10px!important;border-radius:8px!important;border:none!important;border-left:3px solid transparent!important;margin-bottom:2px!important;background:transparent!important;box-shadow:none!important;transition:background .1s!important;}
 #emailsSection .em-tc:hover{background:#f4f6fc!important;box-shadow:none!important;}
@@ -4237,14 +4238,16 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
       <svg class="sb-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>
       Orders
     </button>
-    <button id="navEmails" data-tip="Emails" onclick="showSection('emails');setTimeout(()=>switchEmailView('inbox', document.getElementById('navSubEmailInbox')),30);toggleEmailNavGroup()" style="justify-content:space-between!important;">
+    <button id="navEmails" data-tip="Emails" onclick="handleEmailNavClick(event)" style="justify-content:space-between!important;">
       <svg class="sb-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 8l10 7 10-7"/></svg>
       <span style="flex:1;text-align:left;">Emails</span>
-      <svg id="emailNavChevron" width="12" height="12" viewBox="0 0 12 12" fill="none" style="opacity:.4;transition:transform .25s ease;flex-shrink:0;">
-        <path d="M2 4.5l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
+      <span id="emailNavChevronWrap" data-chevron="1" style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;margin:-6px;border-radius:6px;cursor:pointer;flex-shrink:0;transition:background .15s;" onmouseover="this.style.background='rgba(0,0,0,.06)'" onmouseout="this.style.background=''">
+        <svg id="emailNavChevron" width="12" height="12" viewBox="0 0 12 12" fill="none" style="opacity:.55;transition:transform .25s ease;pointer-events:none;">
+          <path d="M2 4.5l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </span>
     </button>
-    <div id="emailNavGroup" class="sb-sub-group" style="display:block;">
+    <div id="emailNavGroup" class="sb-sub-group" style="display:none;">
       <button class="sb-sub-item active" id="navSubEmailInbox"     onclick="showSection('emails');setTimeout(()=>switchEmailView('inbox', this),30)">Inbox</button>
       <button class="sb-sub-item"        id="navSubEmailTemplates" onclick="showSection('emails');setTimeout(()=>switchEmailView('templates', this),30)">Templates</button>
       <button class="sb-sub-item"        id="navSubEmailSettings"  onclick="showSection('emails');setTimeout(()=>switchEmailView('settings', this),30)">Settings</button>
@@ -4255,14 +4258,16 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
     <!-- ── VENDORS ── -->
     <div class="sb-section-label">Vendors</div>
 
-    <button id="navVendors" data-tip="Vendors" onclick="showSection('vendors');toggleVendorNavGroup()" style="justify-content:space-between!important;">
+    <button id="navVendors" data-tip="Vendors" onclick="handleVendorNavClick(event)" style="justify-content:space-between!important;">
       <svg class="sb-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/><line x1="12" y1="12" x2="12" y2="17"/><line x1="9.5" y1="14.5" x2="14.5" y2="14.5"/></svg>
       <span style="flex:1;text-align:left;">Vendors</span>
-      <svg id="vendorNavChevron" width="12" height="12" viewBox="0 0 12 12" fill="none" style="opacity:.4;transition:transform .25s ease;flex-shrink:0;">
-        <path d="M2 4.5l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
+      <span id="vendorNavChevronWrap" data-chevron="1" style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;margin:-6px;border-radius:6px;cursor:pointer;flex-shrink:0;transition:background .15s;" onmouseover="this.style.background='rgba(0,0,0,.06)'" onmouseout="this.style.background=''">
+        <svg id="vendorNavChevron" width="12" height="12" viewBox="0 0 12 12" fill="none" style="opacity:.55;transition:transform .25s ease;pointer-events:none;">
+          <path d="M2 4.5l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </span>
     </button>
-    <div id="vendorNavGroup" class="sb-sub-group" style="display:block;">
+    <div id="vendorNavGroup" class="sb-sub-group" style="display:none;">
       <button class="sb-sub-item active" id="navSubPersonalVendors" onclick="showSection('vendors');setTimeout(()=>switchVendorTab('vendors'),50)">Personal Vendors</button>
       <button class="sb-sub-item" id="navSubVendorStock"           onclick="showSection('vendors');setTimeout(()=>switchVendorTab('stock'),50)">Stock</button>
       <button class="sb-sub-item" id="navSubOrderHistory"          onclick="showSection('vendors');setTimeout(()=>switchVendorTab('history'),50)">Order History</button>
@@ -5712,7 +5717,7 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
           <!-- Filter tabs -->
           <div class="em-tabs" id="emFilterTabs">
             <div class="em-tab active" onclick="setEmailFilter2('', this)">All</div>
-            <div class="em-tab" onclick="setEmailFilter2('unread', this)">Unread</div>
+            <div class="em-tab" onclick="setEmailFilter2('unread', this)">Unread<span class="em-tab-count" id="emTabUnreadCount" style="display:none;">0</span></div>
             <div class="em-tab" onclick="setEmailFilter2('drafted', this)">AI Draft</div>
             <div class="em-tab" onclick="setEmailFilter2('mine', this)">Assigned</div>
             <div class="em-tab" onclick="setEmailFilter2('resolved', this)">Resolved</div>
@@ -5738,27 +5743,27 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
               <div class="em-conv-controls">
 
                 <!-- Assignee chip with dropdown -->
-                <div class="em-assignee-chip unassigned" id="assigneeChip" onclick="this.classList.toggle('open'); event.stopPropagation();">
+                <div class="em-assignee-chip unassigned" id="assigneeChip" onclick="toggleAssigneeChip(event)">
                   <span class="em-chip-av" id="assigneeChipAv">?</span>
                   <span id="assigneeChipName">Unassigned</span>
                   <span class="em-chip-caret">▾</span>
-                  <div class="em-assign-pop" onclick="event.stopPropagation()">
+                  <div class="em-assign-pop">
                     <div class="em-ap-label">Assign to</div>
                     <div id="assigneeList"></div>
                     <div class="em-ap-divider"></div>
-                    <div class="em-ap-item em-ap-remove" onclick="unassignThread()">✕ Remove assignment</div>
+                    <div class="em-ap-item em-ap-remove" onclick="event.stopPropagation();unassignThread();">✕ Remove assignment</div>
                   </div>
                 </div>
 
                 <!-- Status pill with dropdown -->
-                <div class="em-status-pill open" id="statusPill" onclick="this.classList.toggle('popOpen'); event.stopPropagation();">
+                <div class="em-status-pill open" id="statusPill" onclick="toggleStatusPill(event)">
                   <span class="em-status-dot"></span>
                   <span id="statusPillText">Open</span>
                   <span class="em-chip-caret">▾</span>
-                  <div class="em-status-pop" onclick="event.stopPropagation()">
-                    <div class="em-sp-item" onclick="setThreadStatus('open')"><span class="em-sp-dot" style="background:#10b981;"></span> Open</div>
-                    <div class="em-sp-item" onclick="resolveCurrentThread()"><span class="em-sp-dot" style="background:#059669;"></span> ✓ Resolve</div>
-                    <div class="em-sp-item" onclick="reopenThread()"><span class="em-sp-dot" style="background:#94a3b8;"></span> ↺ Re-open</div>
+                  <div class="em-status-pop">
+                    <div class="em-sp-item" onclick="event.stopPropagation();setThreadStatus('open');"><span class="em-sp-dot" style="background:#10b981;"></span> Open</div>
+                    <div class="em-sp-item" onclick="event.stopPropagation();resolveCurrentThread();"><span class="em-sp-dot" style="background:#059669;"></span> ✓ Resolve</div>
+                    <div class="em-sp-item" onclick="event.stopPropagation();reopenThread();"><span class="em-sp-dot" style="background:#94a3b8;"></span> ↺ Re-open</div>
                   </div>
                 </div>
 
@@ -9590,27 +9595,58 @@ function _showNewOrderToast(count){
 function toggleVendorNavGroup(forceOpen){
   const group   = document.getElementById("vendorNavGroup");
   const chevron = document.getElementById("vendorNavChevron");
-  const btn     = document.getElementById("navVendors");
   if(!group) return;
-  const open = forceOpen !== undefined ? !forceOpen : group.style.display === "block";
-  group.style.display = open ? "none" : "block";
-  if(chevron) chevron.style.transform = open ? "" : "rotate(180deg)";
-  if(btn){ btn.style.background = open ? "" : "#1e293b"; btn.style.color = open ? "" : "#fff"; }
+  // forceOpen=true  → always open (navigation)
+  // forceOpen=false → always close
+  // forceOpen=undefined → true toggle (chevron click)
+  const isOpen = group.style.display !== "none";
+  const nextOpen = forceOpen === undefined ? !isOpen : !!forceOpen;
+  group.style.display = nextOpen ? "block" : "none";
+  if(chevron) chevron.style.transform = nextOpen ? "rotate(180deg)" : "";
+}
+
+/* Click dispatcher for the Vendors sidebar button:
+   - Click on the chevron wrap → toggle the sub-group, no navigation.
+   - Click anywhere else on the button → navigate to Vendors + force-open. */
+function handleVendorNavClick(ev){
+  const t = ev?.target;
+  if(t && t.closest && t.closest("#vendorNavChevronWrap")){
+    ev.stopPropagation();
+    ev.preventDefault();
+    toggleVendorNavGroup();
+    return false;
+  }
+  showSection('vendors');
+  toggleVendorNavGroup(true);
 }
 
 function toggleEmailNavGroup(forceOpen){
   const group   = document.getElementById("emailNavGroup");
   const chevron = document.getElementById("emailNavChevron");
   if(!group) return;
-  // Default behavior on click: expand if collapsed, otherwise leave open
-  // (the user is clicking Emails to enter the section, not to hide nav).
-  if(forceOpen === undefined){
-    group.style.display = "block";
-    if(chevron) chevron.style.transform = "rotate(180deg)";
-    return;
+  // forceOpen=true  → always open (used when navigating into Emails)
+  // forceOpen=false → always close
+  // forceOpen=undefined → true toggle (used by the chevron click)
+  const isOpen = group.style.display !== "none";
+  const nextOpen = forceOpen === undefined ? !isOpen : !!forceOpen;
+  group.style.display = nextOpen ? "block" : "none";
+  if(chevron) chevron.style.transform = nextOpen ? "rotate(180deg)" : "";
+}
+
+/* Click dispatcher for the Emails sidebar button:
+   - Click on the chevron wrap → toggle the sub-group open/closed, no navigation.
+   - Click anywhere else on the button → navigate to Emails + force-open the group. */
+function handleEmailNavClick(ev){
+  const t = ev?.target;
+  if(t && t.closest && t.closest("#emailNavChevronWrap")){
+    ev.stopPropagation();
+    ev.preventDefault();
+    toggleEmailNavGroup();
+    return false;
   }
-  group.style.display = forceOpen ? "block" : "none";
-  if(chevron) chevron.style.transform = forceOpen ? "rotate(180deg)" : "";
+  showSection('emails');
+  setTimeout(() => switchEmailView('inbox', document.getElementById('navSubEmailInbox')), 30);
+  toggleEmailNavGroup(true);
 }
 
 function showSection(section){
@@ -9670,6 +9706,10 @@ function showSection(section){
     }
     loadConnectedEmailAccount();
     startLiveEmailSync();
+    // Re-apply header collapse state every time the section becomes active,
+    // so the ▴/▾ button reflects the stored preference even after navigating
+    // back from another section.
+    try { applyEmailHeaderCollapseState(); } catch(_) {}
   }
 
   if(section === "vendors"){
@@ -15998,6 +16038,9 @@ function stopFastInboxPoller(){
     clearInterval(_fastInboxTimer);
     _fastInboxTimer = null;
   }
+  // Reset the baseline so the next start re-records cleanly and doesn't
+  // trigger an immediate noisy refresh against a stale max id.
+  _fastInboxLastMaxId = null;
 }
 
 async function fastInboxTick(){
@@ -16023,9 +16066,10 @@ async function fastInboxTick(){
       _fastInboxLastMaxId = maxId;
       // Fire email-settings-driven notifications: sound + browser notif
       try{ _maybeNotifyNewEmail(newCount, d.preview); }catch(_){}
-      // Reload the thread list. If a thread is open, reload its messages too
-      // (with keepUnread so we don't clear unread flags on the user's behalf).
-      try { await loadEmails(); } catch(e){}
+      // Reload silently — never flash "Loading..." over the cached list on
+      // background polls (the 3-sec poller would otherwise replace innerHTML
+      // every time new mail arrived).
+      try { await loadEmails({silent: true, preserveSelection: true}); } catch(e){}
       if(typeof currentThreadContact !== "undefined" && currentThreadContact){
         try { await openThread(currentThreadContact, {keepUnread: true}); } catch(e){}
       }
@@ -16089,6 +16133,25 @@ function toggleLiveSync(){
 
 // ── Email Assign Chip & Status Pill ──────────────────────────────────────────
 
+function toggleAssigneeChip(ev){
+  try { ev?.stopPropagation?.(); } catch(_) {}
+  const chip = document.getElementById("assigneeChip");
+  const pill = document.getElementById("statusPill");
+  if(!chip) return;
+  // Close any sibling popovers so only one is open at a time.
+  pill?.classList.remove("popOpen");
+  chip.classList.toggle("open");
+}
+
+function toggleStatusPill(ev){
+  try { ev?.stopPropagation?.(); } catch(_) {}
+  const pill = document.getElementById("statusPill");
+  const chip = document.getElementById("assigneeChip");
+  if(!pill) return;
+  chip?.classList.remove("open");
+  pill.classList.toggle("popOpen");
+}
+
 function renderAssignChip(threadData){
   const chip       = document.getElementById("assigneeChip");
   const chipAv     = document.getElementById("assigneeChipAv");
@@ -16126,7 +16189,7 @@ function renderAssignChip(threadData){
       ? emailTeamMembers.map((m,idx) => {
           const ini = m.name.split(" ").map(w=>w[0]).join("").toUpperCase().slice(0,2);
           const col = colors[idx % colors.length];
-          return `<div class="em-ap-item" onclick="assignThreadTo(${m.id})">
+          return `<div class="em-ap-item" onclick="event.stopPropagation();assignThreadTo(${m.id});">
             <span class="em-chip-av" style="background:${col};">${escapeHtml(ini)}</span>
             <span>${escapeHtml(m.name)}</span>
             <span class="em-ap-role">${escapeHtml(m.role||"")}</span>
@@ -16452,6 +16515,10 @@ async function loadEmails(options={}){
   }
 
   if(!silent && list){
+    // Clear the cached fingerprint so the next renderEmails() actually
+    // replaces innerHTML — otherwise an unchanged fingerprint would
+    // short-circuit and leave "Loading..." text visible indefinitely.
+    list.dataset.fp = "";
     list.innerHTML = `<div class="empty">Loading email threads...</div>`;
   }
 
@@ -16463,7 +16530,7 @@ async function loadEmails(options={}){
     const data = await response.json();
 
     if(!data.success){
-      if(list) list.innerHTML = `<div class="empty">Unable to load email threads.</div>`;
+      if(list){ list.dataset.fp = ""; list.innerHTML = `<div class="empty">Unable to load email threads.</div>`; }
       return;
     }
 
@@ -16489,7 +16556,7 @@ async function loadEmails(options={}){
       clearEmailDetail();
     }
   }catch(error){
-    if(list) list.innerHTML = `<div class="empty">Error loading threads: ${error.message}</div>`;
+    if(list){ list.dataset.fp = ""; list.innerHTML = `<div class="empty">Error loading threads: ${error.message}</div>`; }
   }
 }
 
@@ -16518,6 +16585,18 @@ function updateEmailStats(){
   // Update picker pill badge + inbox bar with fresh counts
   updateEmailBadge(newCount);
   updateEmailInboxBar(threads.length, newCount);
+
+  // Update Unread filter tab badge (red pill, hides when zero)
+  const _unTab = document.getElementById("emTabUnreadCount");
+  if(_unTab){
+    const unreadThreads = threads.filter(t => getThreadUnreadCount(t) > 0).length;
+    if(unreadThreads > 0){
+      _unTab.textContent = unreadThreads > 99 ? "99+" : String(unreadThreads);
+      _unTab.style.display = "inline-flex";
+    } else {
+      _unTab.style.display = "none";
+    }
+  }
 }
 
 function getThreadStateKey(){
@@ -16633,12 +16712,17 @@ function closeThreadMenus(){
 }
 
 document.addEventListener("click", closeThreadMenus);
-document.addEventListener("click", function(){
-  // Close email section popovers on outside click
-  document.getElementById("emMoreWrap")?.classList.remove("open");
-  document.getElementById("emManageWrap")?.classList.remove("open");
-  document.getElementById("assigneeChip")?.classList.remove("open");
-  document.getElementById("statusPill")?.classList.remove("popOpen");
+document.addEventListener("click", function(e){
+  // Close email section popovers ONLY when the click landed outside the
+  // popover's own container — relying on inline event.stopPropagation()
+  // turned out to be fragile (a click could open and then re-close the
+  // chip in the same tick).
+  const t = e.target;
+  if(!t || !t.closest) return;
+  if(!t.closest("#emMoreWrap"))   document.getElementById("emMoreWrap")?.classList.remove("open");
+  if(!t.closest("#emManageWrap")) document.getElementById("emManageWrap")?.classList.remove("open");
+  if(!t.closest("#assigneeChip")) document.getElementById("assigneeChip")?.classList.remove("open");
+  if(!t.closest("#statusPill"))   document.getElementById("statusPill")?.classList.remove("popOpen");
 });
 
 function setEmailFilter(status, el){
