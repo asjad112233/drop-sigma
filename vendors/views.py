@@ -17,11 +17,11 @@ from stores.models import Store
 
 @api_view(["GET"])
 def vendor_list(request):
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
     store_id = request.GET.get("store_id")
-    if request.user.is_authenticated and not request.user.is_superuser:
-        vendors = Vendor.objects.filter(assigned_store__user=request.user).order_by("-id").select_related("assigned_store")
-    else:
-        vendors = Vendor.objects.all().order_by("-id").select_related("assigned_store")
+    # Per-user scope. No superuser fallback — /superadmin/ has its own panel.
+    vendors = Vendor.objects.filter(assigned_store__user=request.user).order_by("-id").select_related("assigned_store")
     if store_id:
         vendors = vendors.filter(assigned_store_id=store_id)
     serializer = VendorSerializer(vendors, many=True)
@@ -101,12 +101,19 @@ def vendor_list(request):
 
 @api_view(["POST"])
 def vendor_create(request):
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
     data = request.data.copy()
     password = data.get("password", "").strip()
 
     email = data.get("email", "").strip()
     if Vendor.objects.filter(email=email).exists():
         return Response({"success": False, "errors": {"email": ["A vendor with this email already exists."]}}, status=400)
+
+    # Per-user scope: the assigned_store on the new vendor must belong to the requester.
+    assigned_store_id = data.get("assigned_store") or data.get("assigned_store_id")
+    if assigned_store_id and not Store.objects.filter(id=assigned_store_id, user=request.user).exists():
+        return Response({"success": False, "errors": {"assigned_store": ["Store not found or not yours."]}}, status=400)
 
     serializer = VendorSerializer(data=data)
     if not serializer.is_valid():
@@ -142,7 +149,10 @@ def vendor_create(request):
 
 @api_view(["DELETE"])
 def vendor_delete(request, vendor_id):
-    vendor = get_object_or_404(Vendor, id=vendor_id)
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
+    # Per-user scope: only delete vendors attached to the requester's stores.
+    vendor = get_object_or_404(Vendor, id=vendor_id, assigned_store__user=request.user)
     if vendor.user:
         vendor.user.delete()
     vendor.delete()
@@ -151,7 +161,9 @@ def vendor_delete(request, vendor_id):
 
 @api_view(["POST"])
 def vendor_update_permissions(request, vendor_id):
-    vendor = get_object_or_404(Vendor, id=vendor_id)
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
+    vendor = get_object_or_404(Vendor, id=vendor_id, assigned_store__user=request.user)
     new_perms = request.data.get("permissions", {})
     changed_by = request.data.get("changed_by", "Admin")
 
@@ -179,7 +191,9 @@ def vendor_update_permissions(request, vendor_id):
 @api_view(["GET"])
 def vendor_permission_logs_api(request, vendor_id):
     from .models import VendorPermissionLog
-    vendor = get_object_or_404(Vendor, id=vendor_id)
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
+    vendor = get_object_or_404(Vendor, id=vendor_id, assigned_store__user=request.user)
     logs = VendorPermissionLog.objects.filter(vendor=vendor)
     data = [{
         "id": l.id,
@@ -194,10 +208,15 @@ def vendor_permission_logs_api(request, vendor_id):
 
 @api_view(["GET"])
 def tracking_queue_api(request):
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
     store_id = request.GET.get("store_id")
     status_filter = request.GET.get("status", "pending")
 
-    qs = VendorTrackingSubmission.objects.select_related("order", "vendor").order_by("-submitted_at")
+    # Per-user scope: only show submissions on the requester's own orders.
+    qs = VendorTrackingSubmission.objects.filter(
+        order__store__user=request.user
+    ).select_related("order", "vendor").order_by("-submitted_at")
     if store_id:
         qs = qs.filter(order__store_id=store_id)
     if status_filter != "all":
@@ -228,8 +247,11 @@ def tracking_queue_api(request):
 
 @api_view(["POST"])
 def approve_tracking_api(request, submission_id):
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
     try:
-        sub = get_object_or_404(VendorTrackingSubmission, id=submission_id)
+        # Per-user scope: only approve submissions on the requester's orders.
+        sub = get_object_or_404(VendorTrackingSubmission, id=submission_id, order__store__user=request.user)
         sub.status = "approved"
         sub.reviewed_at = timezone.now()
         sub.save()
@@ -270,7 +292,9 @@ def approve_tracking_api(request, submission_id):
 
 @api_view(["POST"])
 def reject_tracking_api(request, submission_id):
-    sub = get_object_or_404(VendorTrackingSubmission, id=submission_id)
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
+    sub = get_object_or_404(VendorTrackingSubmission, id=submission_id, order__store__user=request.user)
     reason = request.data.get("reason", "").strip()
 
     sub.status = "rejected"
@@ -293,8 +317,11 @@ def reject_tracking_api(request, submission_id):
 @api_view(["GET", "POST"])
 def tracking_queue_settings_api(request):
     """Get or set auto-approve toggle for a store's tracking queue."""
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
     store_id = request.data.get("store_id") or request.GET.get("store_id")
-    store = get_object_or_404(Store, id=store_id) if store_id else None
+    # Per-user scope on the target store.
+    store = get_object_or_404(Store, id=store_id, user=request.user) if store_id else None
 
     if request.method == "GET":
         if not store:
@@ -325,8 +352,10 @@ def tracking_queue_settings_api(request):
 @api_view(["POST"])
 def approve_tracking_permanent_api(request, submission_id):
     """Approve this submission AND permanently auto-approve all future submissions for this product."""
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
     try:
-        sub = get_object_or_404(VendorTrackingSubmission, id=submission_id)
+        sub = get_object_or_404(VendorTrackingSubmission, id=submission_id, order__store__user=request.user)
 
         sub.status = "approved"
         sub.reviewed_at = timezone.now()
@@ -379,8 +408,13 @@ def approve_tracking_permanent_api(request, submission_id):
 @api_view(["DELETE"])
 def remove_product_auto_approve_api(request, product_id):
     """Remove a product from the permanent auto-approve list."""
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
     store_id = request.data.get("store_id") or request.GET.get("store_id")
-    ProductTrackingAutoApprove.objects.filter(product_id=product_id, store_id=store_id).delete()
+    # Per-user scope on the store.
+    ProductTrackingAutoApprove.objects.filter(
+        product_id=product_id, store_id=store_id, store__user=request.user
+    ).delete()
     return Response({"success": True})
 
 
@@ -612,18 +646,24 @@ def vendor_submit_tracking_api(request, order_id):
 
 @api_view(["DELETE"])
 def remove_perm_assignment_api(request, assignment_id):
-    assignment = get_object_or_404(ProductVendorAssignment, id=assignment_id)
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
+    # Per-user scope: only delete assignments inside the requester's stores.
+    assignment = get_object_or_404(ProductVendorAssignment, id=assignment_id, store__user=request.user)
     assignment.delete()
     return Response({"success": True, "message": "Permanent assignment removed."})
 
 
 @api_view(["POST", "DELETE"])
 def store_full_vendor_api(request, store_id):
-    store = get_object_or_404(Store, id=store_id)
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
+    # Per-user scope on both the store and the vendor.
+    store = get_object_or_404(Store, id=store_id, user=request.user)
     vendor_id = request.data.get("vendor_id")
     if not vendor_id:
         return Response({"success": False, "message": "vendor_id required"}, status=400)
-    vendor = get_object_or_404(Vendor, id=vendor_id)
+    vendor = get_object_or_404(Vendor, id=vendor_id, assigned_store__user=request.user)
     if request.method == "POST":
         StoreVendorAssignment.objects.get_or_create(vendor=vendor, store=store, defaults={"is_active": True})
         return Response({"success": True, "message": f"{vendor.name} assigned to {store.name}"})
@@ -634,8 +674,10 @@ def store_full_vendor_api(request, store_id):
 
 @api_view(["POST"])
 def vendor_toggle_store_scope_api(request, vendor_id, store_id):
-    vendor = get_object_or_404(Vendor, id=vendor_id)
-    store = get_object_or_404(Store, id=store_id)
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
+    vendor = get_object_or_404(Vendor, id=vendor_id, assigned_store__user=request.user)
+    store = get_object_or_404(Store, id=store_id, user=request.user)
     action = request.data.get("action", "set_full")
     if action == "set_full":
         StoreVendorAssignment.objects.get_or_create(vendor=vendor, store=store, defaults={"is_active": True})
@@ -659,7 +701,9 @@ def _get_product_image(vendor, product_id):
 
 @api_view(["GET"])
 def vendor_products_api(request, vendor_id):
-    vendor = get_object_or_404(Vendor, id=vendor_id)
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
+    vendor = get_object_or_404(Vendor, id=vendor_id, assigned_store__user=request.user)
 
     permanent = ProductVendorAssignment.objects.filter(vendor=vendor, is_active=True).select_related("store")
 
@@ -752,7 +796,9 @@ def vendor_tracking_history_api(request):
 
 @api_view(["POST"])
 def vendor_update_status(request, vendor_id):
-    vendor = get_object_or_404(Vendor, id=vendor_id)
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
+    vendor = get_object_or_404(Vendor, id=vendor_id, assigned_store__user=request.user)
     new_status = request.data.get("status")
     if new_status not in ("active", "inactive"):
         return Response({"success": False, "message": "Invalid status."}, status=400)
@@ -763,8 +809,10 @@ def vendor_update_status(request, vendor_id):
 
 @api_view(["GET", "POST"])
 def vendor_store_manage_products_api(request, vendor_id, store_id):
-    vendor = get_object_or_404(Vendor, id=vendor_id)
-    store = get_object_or_404(Store, id=store_id)
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
+    vendor = get_object_or_404(Vendor, id=vendor_id, assigned_store__user=request.user)
+    store = get_object_or_404(Store, id=store_id, user=request.user)
 
     if request.method == "POST":
         action = request.data.get("action")

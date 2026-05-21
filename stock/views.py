@@ -63,7 +63,8 @@ def _product_data(product, include_variants=True):
 @require_http_methods(["GET"])
 def stock_dashboard_api(request):
     store_id = request.GET.get("store_id")
-    qs = StockProduct.objects.select_related("store").prefetch_related("variants__entry")
+    # Per-user scope: only show stock from the requester's own stores.
+    qs = StockProduct.objects.filter(store__user=request.user).select_related("store").prefetch_related("variants__entry")
     if store_id:
         qs = qs.filter(store_id=store_id)
 
@@ -96,8 +97,9 @@ def stock_sync_api(request):
     if not store_id:
         return JsonResponse({"success": False, "message": "store_id required"}, status=400)
 
+    # Per-user scope: requester must own the store they're syncing.
     try:
-        store = Store.objects.get(id=store_id)
+        store = Store.objects.get(id=store_id, user=request.user)
     except Store.DoesNotExist:
         return JsonResponse({"success": False, "message": "Store not found"}, status=404)
 
@@ -150,7 +152,10 @@ def stock_entry_api(request):
     if request.method == "GET":
         variant_id = request.GET.get("variant_id")
         try:
-            variant = StockVariant.objects.select_related("product__store").get(id=variant_id)
+            # Per-user scope: the variant must belong to one of the requester's stores.
+            variant = StockVariant.objects.select_related("product__store").get(
+                id=variant_id, product__store__user=request.user
+            )
         except StockVariant.DoesNotExist:
             return JsonResponse({"success": False, "message": "Variant not found"}, status=404)
         StockEntry.objects.get_or_create(variant=variant)
@@ -163,7 +168,8 @@ def stock_entry_api(request):
     action = data.get("action", "adjust")
 
     try:
-        variant = StockVariant.objects.get(id=variant_id)
+        # Per-user scope on update as well.
+        variant = StockVariant.objects.get(id=variant_id, product__store__user=request.user)
     except StockVariant.DoesNotExist:
         return JsonResponse({"success": False, "message": "Variant not found"}, status=404)
 
@@ -202,6 +208,8 @@ def _try_populate_image_from_orders(product):
 
 
 def stock_add_product_api(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({"success": False, "message": "Authentication required"}, status=401)
     data = json.loads(request.body)
     store_id = data.get("store_id")
     product_name = data.get("product_name", "").strip()
@@ -214,8 +222,9 @@ def stock_add_product_api(request):
     if not store_id or not product_name:
         return JsonResponse({"success": False, "message": "store_id and product_name required"}, status=400)
 
+    # Per-user scope: requester must own the destination store.
     try:
-        store = Store.objects.get(id=store_id)
+        store = Store.objects.get(id=store_id, user=request.user)
     except Store.DoesNotExist:
         return JsonResponse({"success": False, "message": "Store not found"}, status=404)
 
@@ -275,8 +284,9 @@ def stock_bulk_upload_api(request):
     if not store_id or not upload_file:
         return JsonResponse({"success": False, "message": "store_id and file required"}, status=400)
 
+    # Per-user scope: only allow upload into the requester's own store.
     try:
-        store = Store.objects.get(id=store_id)
+        store = Store.objects.get(id=store_id, user=request.user)
     except Store.DoesNotExist:
         return JsonResponse({"success": False, "message": "Store not found"}, status=404)
 
@@ -332,8 +342,9 @@ def stock_deduct_api(request):
     qty = int(data.get("quantity", 1))
     order_id = data.get("order_id")
 
+    # Per-user scope on the variant being deducted.
     try:
-        variant = StockVariant.objects.get(id=variant_id)
+        variant = StockVariant.objects.get(id=variant_id, product__store__user=request.user)
     except StockVariant.DoesNotExist:
         return JsonResponse({"success": False, "message": "Variant not found"}, status=404)
 
@@ -346,7 +357,8 @@ def stock_deduct_api(request):
     order = None
     if order_id:
         try:
-            order = Order.objects.get(id=order_id)
+            # Per-user scope on the linked order too.
+            order = Order.objects.get(id=order_id, store__user=request.user)
         except Order.DoesNotExist:
             pass
 
@@ -366,7 +378,10 @@ def stock_audit_api(request):
     store_id = request.GET.get("store_id")
     limit = min(int(request.GET.get("limit", 100)), 500)
 
-    qs = StockAuditLog.objects.select_related("variant__product__store", "order")
+    # Per-user scope: audit log only shows entries from the requester's own stores.
+    qs = StockAuditLog.objects.filter(
+        variant__product__store__user=request.user
+    ).select_related("variant__product__store", "order")
 
     if variant_id:
         qs = qs.filter(variant_id=variant_id)
@@ -404,8 +419,9 @@ def stock_fetch_store_products_api(request):
     if not store_id:
         return JsonResponse({"success": False, "message": "store_id required"}, status=400)
 
+    # Per-user scope: only the requester's own store may be probed.
     try:
-        store = Store.objects.get(id=store_id)
+        store = Store.objects.get(id=store_id, user=request.user)
     except Store.DoesNotExist:
         return JsonResponse({"success": False, "message": "Store not found"}, status=404)
 
@@ -523,8 +539,9 @@ def stock_import_products_api(request):
     if not store_id or not selected:
         return JsonResponse({"success": False, "message": "store_id and products required"}, status=400)
 
+    # Per-user scope: requester must own the destination store.
     try:
-        store = Store.objects.get(id=store_id)
+        store = Store.objects.get(id=store_id, user=request.user)
     except Store.DoesNotExist:
         return JsonResponse({"success": False, "message": "Store not found"}, status=404)
 
@@ -567,7 +584,10 @@ def stock_export_api(request):
     """Export stock as CSV or XLSX download."""
     store_id = request.GET.get("store_id")
     fmt = request.GET.get("format", "csv").lower()
-    qs = StockVariant.objects.select_related("product__store", "entry")
+    # Per-user scope: only export the requester's own stock.
+    qs = StockVariant.objects.filter(
+        product__store__user=request.user
+    ).select_related("product__store", "entry")
     if store_id:
         qs = qs.filter(product__store_id=store_id)
 
@@ -653,7 +673,8 @@ def stock_bulk_update_api(request):
             if variant_id is None or new_qty is None:
                 continue
             try:
-                variant = StockVariant.objects.get(id=variant_id)
+                # Per-user scope: silently skip variants outside the requester's stores.
+                variant = StockVariant.objects.get(id=variant_id, product__store__user=request.user)
             except StockVariant.DoesNotExist:
                 continue
             entry, _ = StockEntry.objects.get_or_create(variant=variant)
@@ -680,6 +701,8 @@ def stock_assign_order_api(request):
     """POST: assign stock variants to order line items (+ optional permanent rule)."""
     if request.method != "POST":
         return JsonResponse({"error": "POST only"}, status=405)
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "Authentication required"}, status=401)
 
     try:
         data = json.loads(request.body)
@@ -691,8 +714,9 @@ def stock_assign_order_api(request):
     permanent  = bool(data.get("permanent", False))
     store_id   = data.get("store_id")
 
+    # Per-user scope on the order being modified.
     try:
-        order = Order.objects.get(id=order_id)
+        order = Order.objects.get(id=order_id, store__user=request.user)
     except Order.DoesNotExist:
         return JsonResponse({"error": "Order not found"}, status=404)
 
@@ -704,7 +728,10 @@ def stock_assign_order_api(request):
             quantity   = max(1, int(a.get("quantity", 1)))
 
             try:
-                variant = StockVariant.objects.select_related("product").get(id=variant_id)
+                # Variant must also belong to the requester's stores.
+                variant = StockVariant.objects.select_related("product").get(
+                    id=variant_id, product__store__user=request.user
+                )
             except StockVariant.DoesNotExist:
                 results.append({"product_id": product_id, "ok": False, "error": "Variant not found"})
                 continue
@@ -728,7 +755,8 @@ def stock_assign_order_api(request):
 
             if permanent and store_id:
                 try:
-                    store = Store.objects.get(id=store_id)
+                    # Permanent rule store must also be ours.
+                    store = Store.objects.get(id=store_id, user=request.user)
                     StockAutoRule.objects.update_or_create(
                         store=store, product_id=product_id,
                         defaults={"variant": variant},
@@ -745,16 +773,20 @@ def stock_assign_order_api(request):
 def stock_order_assignments_api(request):
     """GET: return stock assignment status for orders in a store.
        DELETE ?rule_id=X : remove a permanent auto-rule."""
+    if not request.user.is_authenticated:
+        return JsonResponse({"success": False, "message": "Authentication required"}, status=401)
 
     if request.method == "DELETE":
         rule_id = request.GET.get("rule_id")
-        StockAutoRule.objects.filter(id=rule_id).delete()
+        # Per-user scope: only delete the requester's own auto-rules.
+        StockAutoRule.objects.filter(id=rule_id, store__user=request.user).delete()
         return JsonResponse({"success": True})
 
     store_id = request.GET.get("store_id")
-    qs = StockOrderAssignment.objects.select_related(
-        "variant__product", "variant__entry", "order"
-    )
+    # Per-user scope on every read.
+    qs = StockOrderAssignment.objects.filter(
+        order__store__user=request.user
+    ).select_related("variant__product", "variant__entry", "order")
     if store_id:
         qs = qs.filter(order__store_id=store_id)
 
@@ -779,7 +811,7 @@ def stock_order_assignments_api(request):
 
     auto_rules = {}
     if store_id:
-        for r in StockAutoRule.objects.filter(store_id=store_id).select_related("variant"):
+        for r in StockAutoRule.objects.filter(store_id=store_id, store__user=request.user).select_related("variant"):
             auto_rules[r.product_id] = {
                 "rule_id": r.id,
                 "variant_id": r.variant_id,
@@ -796,6 +828,8 @@ def stock_order_assignments_api(request):
 def stock_orders_api(request):
     """GET: all orders that have stock assigned + their details.
        POST action=add_tracking: save tracking number to order."""
+    if not request.user.is_authenticated:
+        return JsonResponse({"success": False, "message": "Authentication required"}, status=401)
 
     if request.method == "POST":
         try:
@@ -810,7 +844,8 @@ def stock_orders_api(request):
             tracking_company = data.get("tracking_company", "").strip()
             tracking_url     = data.get("tracking_url", "").strip()
             try:
-                order = Order.objects.get(id=order_id)
+                # Per-user scope: requester must own the order.
+                order = Order.objects.get(id=order_id, store__user=request.user)
                 order.tracking_number  = tracking_number
                 order.tracking_company = tracking_company
                 if tracking_url:
@@ -828,7 +863,10 @@ def stock_orders_api(request):
         if action == "remove_assignment":
             assignment_id = data.get("assignment_id")
             try:
-                a = StockOrderAssignment.objects.select_related("variant__entry").get(id=assignment_id)
+                # Per-user scope on the assignment's underlying order.
+                a = StockOrderAssignment.objects.select_related("variant__entry").get(
+                    id=assignment_id, order__store__user=request.user
+                )
                 # Restore stock
                 entry, _ = StockEntry.objects.get_or_create(variant=a.variant)
                 qty_before = entry.quantity
@@ -849,7 +887,10 @@ def stock_orders_api(request):
 
     # ── GET ──
     store_id = request.GET.get("store_id")
-    qs = StockOrderAssignment.objects.select_related(
+    # Per-user scope on every read.
+    qs = StockOrderAssignment.objects.filter(
+        order__store__user=request.user
+    ).select_related(
         "order__store", "order__assigned_vendor",
         "variant__product", "variant__entry",
     )
@@ -1001,8 +1042,9 @@ def vendor_assign_stock_api(request):
 
     from vendors.models import Vendor
     try:
-        store   = Store.objects.get(id=store_id)
-        vendor  = Vendor.objects.get(id=vendor_id)
+        # Per-user scope on every linked object.
+        store   = Store.objects.get(id=store_id, user=request.user)
+        vendor  = Vendor.objects.get(id=vendor_id, assigned_store__user=request.user)
         product = StockProduct.objects.get(id=product_id, store=store)
     except Exception as e:
         return JsonResponse({"success": False, "message": str(e)}, status=404)
@@ -1036,7 +1078,10 @@ def vendor_assignments_list_api(request):
     vendor_id = request.GET.get("vendor_id")
     status    = request.GET.get("status")
 
-    qs = VendorStockAssignment.objects.select_related("store", "vendor", "product").prefetch_related("lines__variant")
+    # Per-user scope: list is rooted in the requester's stores only.
+    qs = VendorStockAssignment.objects.filter(
+        store__user=request.user
+    ).select_related("store", "vendor", "product").prefetch_related("lines__variant")
     if store_id:
         qs = qs.filter(store_id=store_id)
     if vendor_id:
@@ -1044,8 +1089,10 @@ def vendor_assignments_list_api(request):
     if status:
         qs = qs.filter(status=status)
 
-    # Stats
-    all_for_store = VendorStockAssignment.objects.filter(store_id=store_id) if store_id else VendorStockAssignment.objects.all()
+    # Stats — same per-user scope (no cross-tenant fallback).
+    all_for_store = VendorStockAssignment.objects.filter(store__user=request.user)
+    if store_id:
+        all_for_store = all_for_store.filter(store_id=store_id)
     stats = {
         "total":                 all_for_store.count(),
         "pending_pricing":       all_for_store.filter(status="pending_pricing").count(),
@@ -1066,7 +1113,9 @@ def vendor_assignments_list_api(request):
 @require_http_methods(["GET"])
 def vendor_assignment_detail_api(request, assignment_id):
     try:
-        a = VendorStockAssignment.objects.select_related("store", "vendor", "product").prefetch_related("lines__variant").get(id=assignment_id)
+        a = VendorStockAssignment.objects.select_related("store", "vendor", "product").prefetch_related("lines__variant").get(
+            id=assignment_id, store__user=request.user
+        )
     except VendorStockAssignment.DoesNotExist:
         return JsonResponse({"success": False, "message": "Not found"}, status=404)
     return JsonResponse({"success": True, "assignment": _assignment_data(a)})
@@ -1077,7 +1126,7 @@ def vendor_assignment_detail_api(request, assignment_id):
 def vendor_assignment_approve_api(request, assignment_id):
     """Admin approves a pending_approval assignment and records payment."""
     try:
-        a = VendorStockAssignment.objects.get(id=assignment_id)
+        a = VendorStockAssignment.objects.get(id=assignment_id, store__user=request.user)
     except VendorStockAssignment.DoesNotExist:
         return JsonResponse({"success": False, "message": "Not found"}, status=404)
 
@@ -1113,7 +1162,7 @@ def vendor_assignment_approve_api(request, assignment_id):
 @require_http_methods(["POST"])
 def vendor_assignment_reject_api(request, assignment_id):
     try:
-        a = VendorStockAssignment.objects.get(id=assignment_id)
+        a = VendorStockAssignment.objects.get(id=assignment_id, store__user=request.user)
     except VendorStockAssignment.DoesNotExist:
         return JsonResponse({"success": False, "message": "Not found"}, status=404)
 
@@ -1147,7 +1196,7 @@ def vendor_assignment_reject_api(request, assignment_id):
 @require_http_methods(["POST"])
 def vendor_assignment_permanent_reject_api(request, assignment_id):
     try:
-        a = VendorStockAssignment.objects.get(id=assignment_id)
+        a = VendorStockAssignment.objects.get(id=assignment_id, store__user=request.user)
     except VendorStockAssignment.DoesNotExist:
         return JsonResponse({"success": False, "message": "Not found"}, status=404)
 
@@ -1183,8 +1232,10 @@ def vendor_stock_tracker_api(request):
     store_id  = request.GET.get("store_id")
     vendor_id = request.GET.get("vendor_id")
 
+    # Per-user scope: tracker is rooted in the requester's stores only.
     qs = VendorStockAssignmentLine.objects.filter(
-        assignment__status="approved"
+        assignment__status="approved",
+        assignment__store__user=request.user,
     ).select_related("assignment__vendor", "assignment__product", "variant")
 
     if store_id:

@@ -32,14 +32,14 @@ from .services import (
 
 
 @api_view(["GET"])
-@permission_classes([AllowAny])
 def orders_poll_api(request):
     """Lightweight endpoint — returns latest order id + total count. Used by frontend polling."""
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
     store_id = request.GET.get("store_id")
-    if request.user.is_authenticated and not request.user.is_superuser:
-        qs = Order.objects.filter(store__user=request.user)
-    else:
-        qs = Order.objects.all()
+    # Per-user scope: only count orders inside the requester's own stores.
+    # No superuser fallback — cross-tenant access belongs in /superadmin/.
+    qs = Order.objects.filter(store__user=request.user)
     if store_id:
         qs = qs.filter(store_id=store_id)
     latest = qs.order_by("-id").values("id").first()
@@ -61,7 +61,10 @@ def sync_orders(request, store_id):
     from datetime import datetime, timedelta
     from django.utils import timezone as _tz
 
-    store = get_object_or_404(Store, id=store_id)
+    if not request.user.is_authenticated:
+        return JsonResponse({"success": False, "message": "Authentication required"}, status=401)
+    # Per-user scope: only sync stores the requester owns.
+    store = get_object_or_404(Store, id=store_id, user=request.user)
 
     # Read params from either GET or POST body
     range_key  = (request.GET.get("range") or request.POST.get("range") or "30d").lower()
@@ -128,14 +131,14 @@ def sync_orders(request, store_id):
 
 @api_view(["GET"])
 def orders_list_api(request):
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
     store_id = request.GET.get("store_id")
     status = request.GET.get("status")
     search = request.GET.get("search")
 
-    if request.user.is_authenticated and not request.user.is_superuser:
-        orders = Order.objects.filter(store__user=request.user).order_by("-created_at")
-    else:
-        orders = Order.objects.all().order_by("-created_at")
+    # Per-user scope. No superuser fallback — /superadmin/ has its own panel.
+    orders = Order.objects.filter(store__user=request.user).order_by("-created_at")
 
     if store_id:
         orders = orders.filter(store_id=store_id)
@@ -161,7 +164,10 @@ def orders_list_api(request):
 
 @api_view(["GET"])
 def order_detail_api(request, order_id):
-    order = get_object_or_404(Order, id=order_id)
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
+    # Per-user scope: tenants can only inspect their own orders.
+    order = get_object_or_404(Order, id=order_id, store__user=request.user)
     serializer = OrderSerializer(order)
 
     return Response({
@@ -177,11 +183,8 @@ def delete_order_api(request, order_id):
     if not request.user.is_authenticated:
         return Response({"success": False, "message": "Not authenticated"}, status=401)
 
-    # Per-user scope: admin can only delete orders from stores they own.
-    if request.user.is_superuser:
-        order = get_object_or_404(Order, id=order_id)
-    else:
-        order = get_object_or_404(Order, id=order_id, store__user=request.user)
+    # Per-user scope. No superuser fallback (memory rule).
+    order = get_object_or_404(Order, id=order_id, store__user=request.user)
 
     order_num = order.external_order_id or str(order.id)
     order.delete()
@@ -193,11 +196,11 @@ def overview_api(request):
     from datetime import timedelta
     from vendors.models import VendorTrackingSubmission
 
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
     store_id = request.GET.get("store_id")
-    if request.user.is_authenticated and not request.user.is_superuser:
-        orders = Order.objects.select_related("store", "assigned_vendor").filter(store__user=request.user)
-    else:
-        orders = Order.objects.select_related("store", "assigned_vendor").all()
+    # Per-user scope. No superuser fallback — overview is a tenant page.
+    orders = Order.objects.select_related("store", "assigned_vendor").filter(store__user=request.user)
     if store_id:
         orders = orders.filter(store_id=store_id)
 
@@ -239,11 +242,8 @@ def overview_api(request):
             "created_at": o.created_at.isoformat() if o.created_at else None,
         })
 
-    # Store stats — scoped to current user
-    if request.user.is_authenticated and not request.user.is_superuser:
-        stores_qs = Store.objects.filter(user=request.user, is_active=True)
-    else:
-        stores_qs = Store.objects.filter(is_active=True)
+    # Store stats — strictly scoped to current user.
+    stores_qs = Store.objects.filter(user=request.user, is_active=True)
     if store_id:
         stores_qs = stores_qs.filter(id=store_id)
     store_stats = []
@@ -259,12 +259,9 @@ def overview_api(request):
             "last_synced": s.last_synced.isoformat() if getattr(s, "last_synced", None) else None,
         })
 
-    # Top vendors by order count — scoped to current user's stores
+    # Top vendors by order count — strictly scoped to current user's stores.
     top_vendors = []
-    if request.user.is_authenticated and not request.user.is_superuser:
-        vendor_qs = Vendor.objects.filter(status="active", assigned_store__user=request.user)
-    else:
-        vendor_qs = Vendor.objects.filter(status="active")
+    vendor_qs = Vendor.objects.filter(status="active", assigned_store__user=request.user)
     for v in vendor_qs[:6]:
         v_orders = orders.filter(assigned_vendor=v)
         top_vendors.append({
@@ -275,16 +272,16 @@ def overview_api(request):
         })
     top_vendors.sort(key=lambda x: x["order_count"], reverse=True)
 
-    # Tracking queue
-    pending_tracking = VendorTrackingSubmission.objects.filter(status="pending").count()
+    # Tracking queue — strictly scoped to the current tenant's orders.
+    pending_tracking = VendorTrackingSubmission.objects.filter(
+        status="pending",
+        order__store__user=request.user,
+    ).count()
 
-    # Email stats
+    # Email stats — strictly scoped to current user's stores.
     try:
         from emails.models import EmailMessage, EmailThreadAssignment
-        if request.user.is_authenticated and not request.user.is_superuser:
-            email_qs = EmailMessage.objects.filter(store__user=request.user)
-        else:
-            email_qs = EmailMessage.objects.all()
+        email_qs = EmailMessage.objects.filter(store__user=request.user)
         if store_id:
             email_qs = email_qs.filter(store_id=store_id)
         email_unread = email_qs.filter(is_read=False).count()
@@ -303,8 +300,11 @@ def overview_api(request):
             "store_name": e.store.name if e.store else "—",
             "created_at": e.created_at.isoformat() if e.created_at else None,
         } for e in recent_emails_raw]
-        # Open (unresolved) thread assignments
-        open_threads = EmailThreadAssignment.objects.filter(is_resolved=False).count()
+        # Open (unresolved) thread assignments — scoped to the tenant's stores.
+        open_threads = EmailThreadAssignment.objects.filter(
+            is_resolved=False,
+            store__user=request.user,
+        ).count()
     except Exception:
         email_unread = email_new = email_open = email_replied = email_today = open_threads = 0
         recent_emails = []
@@ -339,7 +339,10 @@ def overview_api(request):
 
 @api_view(["POST"])
 def assign_order_api(request, order_id):
-    order = get_object_or_404(Order, id=order_id)
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
+    # Per-user scope: tenant can only assign orders inside their own stores.
+    order = get_object_or_404(Order, id=order_id, store__user=request.user)
     member_id = request.data.get("member_id")
 
     if not member_id:
@@ -348,7 +351,9 @@ def assign_order_api(request, order_id):
             "message": "member_id is required"
         }, status=400)
 
-    member = get_object_or_404(TeamMember, id=member_id)
+    # Member must also belong to the tenant — never assign across tenants.
+    # `owner` on TeamMember = the tenant who manages them.
+    member = get_object_or_404(TeamMember, id=member_id, owner=request.user)
 
     order.assigned_to = member
     order.save()
@@ -370,9 +375,12 @@ def assign_order_api(request, order_id):
 
 @api_view(["POST"])
 def auto_assign_orders_api(request):
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
     store_id = request.data.get("store_id")
 
-    orders = Order.objects.filter(assigned_to__isnull=True)
+    # Per-user scope: only the requester's own unassigned orders are eligible.
+    orders = Order.objects.filter(assigned_to__isnull=True, store__user=request.user)
 
     if store_id:
         orders = orders.filter(store_id=store_id)
@@ -392,7 +400,10 @@ def auto_assign_orders_api(request):
 
 @api_view(["POST"])
 def assign_vendor_to_order_api(request, order_id):
-    order = get_object_or_404(Order, id=order_id)
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
+    # Per-user scope on the order being mutated.
+    order = get_object_or_404(Order, id=order_id, store__user=request.user)
 
     vendor_id = request.data.get("vendor_id")
     permanent = request.data.get("permanent", False)
@@ -403,7 +414,9 @@ def assign_vendor_to_order_api(request, order_id):
             "message": "vendor_id is required"
         }, status=400)
 
-    vendor = get_object_or_404(Vendor, id=vendor_id)
+    # Vendor must also belong to this tenant.
+    # `assigned_store__user` is the tenant; `Vendor.user` is the vendor's own login.
+    vendor = get_object_or_404(Vendor, id=vendor_id, assigned_store__user=request.user)
 
     order.assigned_vendor = vendor
     order.assignment_type = "manual"
@@ -431,10 +444,12 @@ def assign_vendor_to_order_api(request, order_id):
             }
         )
 
-        # Retroactively assign same vendor to all existing orders for this product
+        # Retroactively assign same vendor to all existing unassigned orders
+        # for this product — but ONLY within the requester's own stores.
         unassigned = Order.objects.filter(
             product_id=order.product_id,
-            assigned_vendor__isnull=True
+            assigned_vendor__isnull=True,
+            store__user=request.user,
         ).exclude(id=order.id)
         for o in unassigned:
             o.assigned_vendor = vendor
@@ -453,6 +468,8 @@ def assign_vendor_to_order_api(request, order_id):
 
 @api_view(["POST"])
 def bulk_assign_vendor_api(request):
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
     order_ids = request.data.get("order_ids", [])
     vendor_id = request.data.get("vendor_id")
     permanent = request.data.get("permanent", False)
@@ -469,9 +486,11 @@ def bulk_assign_vendor_api(request):
             "message": "vendor_id is required"
         }, status=400)
 
-    vendor = get_object_or_404(Vendor, id=vendor_id)
+    # Vendor must belong to this tenant.
+    vendor = get_object_or_404(Vendor, id=vendor_id, assigned_store__user=request.user)
 
-    orders = Order.objects.filter(id__in=order_ids)
+    # Per-user scope on every bulk-target — silently drop ids that aren't ours.
+    orders = Order.objects.filter(id__in=order_ids, store__user=request.user)
 
     assigned_count = 0
     permanent_count = 0
@@ -498,8 +517,12 @@ def bulk_assign_vendor_api(request):
                 }
             )
             permanent_count += 1
-            # Retroactively assign to all existing unassigned orders with same product
-            for o in Order.objects.filter(product_id=order.product_id, assigned_vendor__isnull=True).exclude(id=order.id):
+            # Retroactively assign — STAY within the requester's own stores.
+            for o in Order.objects.filter(
+                product_id=order.product_id,
+                assigned_vendor__isnull=True,
+                store__user=request.user,
+            ).exclude(id=order.id):
                 o.assigned_vendor = vendor
                 o.assignment_type = "permanent_auto"
                 o.vendor_status = "assigned"
@@ -517,6 +540,8 @@ def bulk_assign_vendor_api(request):
 
 @api_view(["POST"])
 def remove_product_vendor_assignment_api(request):
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
     store_id = request.data.get("store_id")
     product_id = request.data.get("product_id")
 
@@ -526,9 +551,11 @@ def remove_product_vendor_assignment_api(request):
             "message": "store_id and product_id are required"
         }, status=400)
 
+    # Per-user scope: only the requester's own store mappings can be removed.
     ProductVendorAssignment.objects.filter(
         store_id=store_id,
-        product_id=product_id
+        product_id=product_id,
+        store__user=request.user,
     ).delete()
 
     return Response({
@@ -539,7 +566,9 @@ def remove_product_vendor_assignment_api(request):
 
 @api_view(["POST"])
 def save_order_tracking_api(request, order_id):
-    order = get_object_or_404(Order, id=order_id)
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
+    order = get_object_or_404(Order, id=order_id, store__user=request.user)
     tracking_number = request.data.get("tracking_number", "").strip()
     if not tracking_number:
         return Response({"success": False, "message": "Tracking number is required."}, status=400)
@@ -579,7 +608,9 @@ def save_order_tracking_api(request, order_id):
 
 @api_view(["POST"])
 def fetch_live_tracking_api(request, order_id):
-    order = get_object_or_404(Order, id=order_id)
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
+    order = get_object_or_404(Order, id=order_id, store__user=request.user)
     if not order.tracking_url:
         return Response({"success": False, "message": "No tracking URL saved for this order."}, status=400)
 
@@ -613,7 +644,9 @@ def fetch_live_tracking_api(request, order_id):
 
 @api_view(["GET"])
 def order_activity_api(request, order_id):
-    order = get_object_or_404(Order, id=order_id)
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
+    order = get_object_or_404(Order, id=order_id, store__user=request.user)
     activities = order.activities.all()
     data = [
         {
@@ -710,11 +743,8 @@ def order_notes_api(request, order_id):
     if not request.user.is_authenticated:
         return Response({"success": False, "message": "Not authenticated"}, status=401)
 
-    # Per-user scope — admin can only access orders from their stores.
-    if request.user.is_superuser:
-        order = get_object_or_404(Order, id=order_id)
-    else:
-        order = get_object_or_404(Order, id=order_id, store__user=request.user)
+    # Per-user scope. No superuser fallback (memory rule).
+    order = get_object_or_404(Order, id=order_id, store__user=request.user)
 
     if request.method == "POST":
         text = (request.data.get("text") or "").strip()

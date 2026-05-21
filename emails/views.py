@@ -693,6 +693,8 @@ def send_email_api(request):
 
 @api_view(["GET"])
 def emails_list_api(request):
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
     store_id = request.GET.get("store_id")
     status = request.GET.get("status")
 
@@ -701,7 +703,8 @@ def emails_list_api(request):
     if store_id and not EmailAccount.objects.filter(store_id=store_id, is_active=True).exists():
         return Response({"success": True, "count": 0, "emails": []})
 
-    emails = EmailMessage.objects.all().order_by("-created_at")
+    # Per-user scope: only the requester's own inbox messages.
+    emails = EmailMessage.objects.filter(store__user=request.user).order_by("-created_at")
 
     if store_id:
         emails = emails.filter(store_id=store_id)
@@ -720,7 +723,10 @@ def emails_list_api(request):
 
 @api_view(["GET"])
 def email_detail_api(request, email_id):
-    email = get_object_or_404(EmailMessage, id=email_id)
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
+    # Per-user scope: only the requester's own inbox messages.
+    email = get_object_or_404(EmailMessage, id=email_id, store__user=request.user)
     serializer = EmailMessageSerializer(email)
 
     return Response({
@@ -731,12 +737,13 @@ def email_detail_api(request, email_id):
 
 @csrf_exempt
 @api_view(["POST"])
-@authentication_classes([])
-@permission_classes([AllowAny])
 def toggle_email_read_api(request, email_id):
     """Flip the is_read flag on a single email — used by the More-menu.
     If the EmailAccount has mark_read_in_gmail=True, also flips the Gmail label."""
-    email = get_object_or_404(EmailMessage, id=email_id)
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
+    # Per-user scope: tenants can only mark their own emails read/unread.
+    email = get_object_or_404(EmailMessage, id=email_id, store__user=request.user)
     new_state = not email.is_read
     email.is_read = new_state
     email.save(update_fields=["is_read"])
@@ -756,12 +763,13 @@ def toggle_email_read_api(request, email_id):
 
 @csrf_exempt
 @api_view(["POST"])
-@authentication_classes([])
-@permission_classes([AllowAny])
 def archive_email_thread_api(request, email_id):
     """Mark a thread as archived. Sets status='archived' on the latest message,
     and records the archive timestamp on the EmailThreadAssignment if one exists."""
-    email = get_object_or_404(EmailMessage, id=email_id)
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
+    # Per-user scope.
+    email = get_object_or_404(EmailMessage, id=email_id, store__user=request.user)
     email.status = "archived"
     email.save(update_fields=["status"])
     # Also flag the thread assignment if present, so it disappears from active queues.
@@ -777,13 +785,16 @@ def archive_email_thread_api(request, email_id):
 
 @api_view(["GET"])
 def email_threads_api(request):
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
     store_id = request.GET.get("store_id")
 
     # Guard: empty result if no active EmailAccount for this store.
     if store_id and not EmailAccount.objects.filter(store_id=store_id, is_active=True).exists():
         return Response({"success": True, "count": 0, "threads": []})
 
-    emails = EmailMessage.objects.all().order_by("-created_at")
+    # Per-user scope: only the requester's own inbox.
+    emails = EmailMessage.objects.filter(store__user=request.user).order_by("-created_at")
 
     if store_id:
         emails = emails.filter(store_id=store_id)
@@ -791,7 +802,10 @@ def email_threads_api(request):
     assignments = {}
     resolved_map = {}
     if store_id:
-        for ta in EmailThreadAssignment.objects.filter(store_id=store_id).select_related("assigned_to").prefetch_related("co_assignees"):
+        # Per-user scope: only show thread assignments on stores the requester owns.
+        for ta in EmailThreadAssignment.objects.filter(
+            store_id=store_id, store__user=request.user
+        ).select_related("assigned_to").prefetch_related("co_assignees"):
             key = ta.contact.lower()
             resolved_map[key] = {
                 "is_resolved": ta.is_resolved,
@@ -875,6 +889,8 @@ def email_threads_api(request):
 
 @api_view(["GET"])
 def email_thread_detail_api(request):
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
     store_id = request.GET.get("store_id")
     contact = extract_clean_email(request.GET.get("contact"))
 
@@ -884,7 +900,8 @@ def email_thread_detail_api(request):
             "message": "Contact email is required."
         }, status=400)
 
-    emails = EmailMessage.objects.all().order_by("created_at")
+    # Per-user scope.
+    emails = EmailMessage.objects.filter(store__user=request.user).order_by("created_at")
 
     if store_id:
         emails = emails.filter(store_id=store_id)
@@ -917,10 +934,11 @@ def email_thread_detail_api(request):
 
 @csrf_exempt
 @api_view(["POST"])
-@authentication_classes([])
-@permission_classes([AllowAny])
 def generate_ai_draft_api(request, email_id):
-    email = get_object_or_404(EmailMessage, id=email_id)
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
+    # Per-user scope.
+    email = get_object_or_404(EmailMessage, id=email_id, store__user=request.user)
 
     # Load tenant's email account to apply tone, custom instructions, signature
     account = EmailAccount.objects.filter(store=email.store, is_active=True).first()
@@ -1312,18 +1330,18 @@ def ai_playground_api(request):
 
 @csrf_exempt
 @api_view(["POST"])
-@authentication_classes([])
-@permission_classes([AllowAny])
 def auto_suggest_reply_api(request):
     """Detect customer tone and return a tone-appropriate reply suggestion."""
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
     store_id = request.data.get("store_id")
     contact = extract_clean_email(request.data.get("contact", ""))
 
     if not store_id or not contact:
         return Response({"success": False, "message": "store_id and contact required."}, status=400)
 
-    # Use same thread-matching logic as email_thread_detail_api
-    emails = EmailMessage.objects.filter(store_id=store_id).order_by("created_at")
+    # Per-user scope on every read.
+    emails = EmailMessage.objects.filter(store_id=store_id, store__user=request.user).order_by("created_at")
     thread_emails = [e for e in emails if get_thread_contact(e) == contact]
 
     if not thread_emails:
@@ -1367,10 +1385,11 @@ def auto_suggest_reply_api(request):
 
 @csrf_exempt
 @api_view(["POST"])
-@authentication_classes([])
-@permission_classes([AllowAny])
 def send_email_reply_api(request, email_id):
-    email = get_object_or_404(EmailMessage, id=email_id)
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
+    # Per-user scope: reply only to emails inside the requester's stores.
+    email = get_object_or_404(EmailMessage, id=email_id, store__user=request.user)
 
     reply_text = request.data.get("reply_text") or email.ai_draft
     cc           = (request.data.get("cc") or "").strip() or None
@@ -2706,12 +2725,13 @@ def send_auto_status_email(order, new_status):
 # data for the frontend to decide "did anything change since last time?".
 
 @api_view(["GET"])
-@authentication_classes([])
-@permission_classes([AllowAny])
 def latest_email_event_api(request):
     from .models import EmailMessage
+    if not request.user.is_authenticated:
+        return Response({"max_id": 0, "max_ts": "", "unread": 0}, status=401)
     store_id = request.GET.get("store_id") or ""
-    qs = EmailMessage.objects.all()
+    # Per-user scope: poller only sees the requester's own inbox.
+    qs = EmailMessage.objects.filter(store__user=request.user)
     if store_id:
         try:
             qs = qs.filter(store_id=int(store_id))

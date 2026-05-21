@@ -488,9 +488,11 @@ def _diagnose_store(store):
 
 # ✅ STORE HEALTH CHECK — real API ping with diagnosis
 @api_view(["GET"])
-@permission_classes([AllowAny])
 def store_health_api(request, store_id):
-    store = get_object_or_404(Store, id=store_id)
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
+    # Per-user scope: only diagnose stores the requester actually owns.
+    store = get_object_or_404(Store, id=store_id, user=request.user)
     result = _diagnose_store(store)
     return Response({"success": True, **result})
 
@@ -499,9 +501,11 @@ def store_health_api(request, store_id):
 
 # 🔥 DELETE STORE
 @api_view(["DELETE", "POST"])  # POST kept for backwards-compat with old frontend
-@permission_classes([AllowAny])
 def delete_store_api(request, store_id):
-    store = get_object_or_404(Store, id=store_id)
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
+    # Per-user scope: tenants can only delete their own stores.
+    store = get_object_or_404(Store, id=store_id, user=request.user)
     store.delete()
 
     return Response({
