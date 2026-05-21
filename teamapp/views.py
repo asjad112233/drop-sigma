@@ -1484,25 +1484,46 @@ def _build_invitation_email(name, invite_url, invited_by):
 
 def _send_invitation_email(to_email, subject, html):
     """Send a team invitation from the platform sender (noreply@dropsigma.com).
-    Returns (sent: bool, error_msg: str). Never raises.
+    Returns (sent: bool, error_msg: str). Synchronous — we wait for the
+    SMTP/Resend roundtrip so the API can report real failures instead of
+    pretending success while the message silently dies.
 
-    Uses Django's built-in SMTP via the EMAIL_HOST_USER configured in
-    settings.py — this is the platform's own mailbox (noreply@dropsigma.com),
-    not the tenant's Gmail. Invitations are a platform operation, so they
-    must come from the brand sender."""
+    Tries two paths in order so whichever the tenant's infra has wired up
+    actually works:
+      1. Resend API (the historical path — fast, what signup verification
+         uses too). Needs RESEND_API_KEY.
+      2. Django SMTP via EMAIL_HOST_USER / EMAIL_HOST_PASSWORD (Gmail).
+    """
     import logging
     from django.conf import settings
-    from django.core.mail import EmailMultiAlternatives
     logger = logging.getLogger(__name__)
 
-    if not settings.EMAIL_HOST_USER or not settings.EMAIL_HOST_PASSWORD:
-        return False, ("Server email is not configured (EMAIL_HOST_USER / "
-                       "EMAIL_HOST_PASSWORD missing). Set them and retry.")
+    errors = []
 
-    from_addr = settings.DEFAULT_FROM_EMAIL or settings.EMAIL_HOST_USER
-
-    def _do():
+    # ── Path 1: Resend (historical default for platform mail) ─────────
+    resend_key = os.getenv("RESEND_API_KEY", "")
+    if resend_key:
         try:
+            import resend as _resend
+            _resend.api_key = resend_key
+            result = _resend.Emails.send({
+                "from":    "Drop Sigma <noreply@dropsigma.com>",
+                "to":      [to_email],
+                "subject": subject,
+                "html":    html,
+            })
+            logger.info("Invitation email sent via Resend to %s (id=%s)",
+                        to_email, getattr(result, "id", result))
+            return True, ""
+        except Exception as exc:
+            errors.append(f"Resend: {exc}")
+            logger.warning("Resend send failed for %s: %s", to_email, exc)
+
+    # ── Path 2: Django SMTP fallback ──────────────────────────────────
+    if settings.EMAIL_HOST_USER and settings.EMAIL_HOST_PASSWORD:
+        try:
+            from django.core.mail import EmailMultiAlternatives
+            from_addr = settings.DEFAULT_FROM_EMAIL or settings.EMAIL_HOST_USER
             msg = EmailMultiAlternatives(
                 subject=subject,
                 body="Open in an HTML-capable email client to view this invitation.",
@@ -1511,13 +1532,19 @@ def _send_invitation_email(to_email, subject, html):
             )
             msg.attach_alternative(html, "text/html")
             msg.send(fail_silently=False)
-            logger.info("Invitation email sent to %s from %s", to_email, from_addr)
+            logger.info("Invitation email sent via SMTP to %s from %s",
+                        to_email, from_addr)
+            return True, ""
         except Exception as exc:
-            logger.error("Failed to send invitation email to %s: %s", to_email, exc)
+            errors.append(f"SMTP: {exc}")
+            logger.warning("SMTP send failed for %s: %s", to_email, exc)
 
-    # Fire-and-forget so the API response is fast.
-    threading.Thread(target=_do, daemon=True).start()
-    return True, ""
+    if not resend_key and not (settings.EMAIL_HOST_USER and settings.EMAIL_HOST_PASSWORD):
+        return False, ("Server email is not configured. Set either "
+                       "RESEND_API_KEY or EMAIL_HOST_USER + EMAIL_HOST_PASSWORD "
+                       "on the server, then retry.")
+
+    return False, "Email send failed: " + " | ".join(errors)
 
 
 @api_view(["POST"])

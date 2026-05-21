@@ -1404,24 +1404,43 @@ def _build_vendor_invitation_email(name, invite_url, invited_by, store_name):
 
 
 def _send_vendor_invitation_email(to_email, subject, html):
-    """Send a vendor invitation from the platform sender (noreply@dropsigma.com).
-    Returns (sent: bool, error_msg: str). Never raises.
+    """Send a vendor invitation. Synchronous so failures surface to the
+    user instead of dying silently in a daemon thread.
 
-    Uses Django's built-in SMTP via EMAIL_HOST_USER configured in
-    settings.py — platform brand sender, not the tenant's Gmail."""
-    import logging, threading
+    Tries Resend (historical default), then Django SMTP via
+    EMAIL_HOST_USER as a fallback. Always sends from
+    noreply@dropsigma.com — the platform brand sender, not the
+    tenant's own Gmail."""
+    import logging
     from django.conf import settings
-    from django.core.mail import EmailMultiAlternatives
     logger = logging.getLogger(__name__)
 
-    if not settings.EMAIL_HOST_USER or not settings.EMAIL_HOST_PASSWORD:
-        return False, ("Server email is not configured (EMAIL_HOST_USER / "
-                       "EMAIL_HOST_PASSWORD missing). Set them and retry.")
+    errors = []
 
-    from_addr = settings.DEFAULT_FROM_EMAIL or settings.EMAIL_HOST_USER
-
-    def _do():
+    # ── Path 1: Resend ────────────────────────────────────────────────
+    resend_key = os.getenv("RESEND_API_KEY", "")
+    if resend_key:
         try:
+            import resend as _resend
+            _resend.api_key = resend_key
+            result = _resend.Emails.send({
+                "from":    "Drop Sigma <noreply@dropsigma.com>",
+                "to":      [to_email],
+                "subject": subject,
+                "html":    html,
+            })
+            logger.info("Vendor invitation sent via Resend to %s (id=%s)",
+                        to_email, getattr(result, "id", result))
+            return True, ""
+        except Exception as exc:
+            errors.append(f"Resend: {exc}")
+            logger.warning("Vendor Resend send failed for %s: %s", to_email, exc)
+
+    # ── Path 2: Django SMTP fallback ──────────────────────────────────
+    if settings.EMAIL_HOST_USER and settings.EMAIL_HOST_PASSWORD:
+        try:
+            from django.core.mail import EmailMultiAlternatives
+            from_addr = settings.DEFAULT_FROM_EMAIL or settings.EMAIL_HOST_USER
             msg = EmailMultiAlternatives(
                 subject=subject,
                 body="Open in an HTML-capable email client to view this invitation.",
@@ -1430,12 +1449,19 @@ def _send_vendor_invitation_email(to_email, subject, html):
             )
             msg.attach_alternative(html, "text/html")
             msg.send(fail_silently=False)
-            logger.info("Vendor invitation email sent to %s from %s", to_email, from_addr)
+            logger.info("Vendor invitation sent via SMTP to %s from %s",
+                        to_email, from_addr)
+            return True, ""
         except Exception as exc:
-            logger.error("Failed to send vendor invitation email to %s: %s", to_email, exc)
+            errors.append(f"SMTP: {exc}")
+            logger.warning("Vendor SMTP send failed for %s: %s", to_email, exc)
 
-    threading.Thread(target=_do, daemon=True).start()
-    return True, ""
+    if not resend_key and not (settings.EMAIL_HOST_USER and settings.EMAIL_HOST_PASSWORD):
+        return False, ("Server email is not configured. Set either "
+                       "RESEND_API_KEY or EMAIL_HOST_USER + EMAIL_HOST_PASSWORD "
+                       "on the server, then retry.")
+
+    return False, "Email send failed: " + " | ".join(errors)
 
 
 @api_view(["POST"])
