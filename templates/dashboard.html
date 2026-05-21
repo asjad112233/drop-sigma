@@ -24269,11 +24269,15 @@ function _aiRenderAssistantBubble(text){
 function _aiSourceTag(src){
   if(!src) return "";
   let label = src, color = "#94a3b8", bg = "#f1f5f9";
-  if(src.startsWith("groq:llama-3.3-70b")) { label = "Groq 70B"; color = "#7c3aed"; bg = "#ede9fe"; }
-  else if(src.startsWith("groq:llama-3.1-8b")) { label = "Groq 8B"; color = "#2563eb"; bg = "#dbeafe"; }
-  else if(src.startsWith("groq:")) { label = "Groq"; color = "#2563eb"; bg = "#dbeafe"; }
-  else if(src === "matcher_fallback") { label = "Offline (fallback)"; color = "#b45309"; bg = "#fef3c7"; }
-  else if(src === "matcher") { label = "Offline"; color = "#475569"; bg = "#e2e8f0"; }
+  const cached = src.includes("(cached)");
+  if(src.startsWith("groq:llama-3.3-70b"))        { label = "Groq 70B";    color = "#7c3aed"; bg = "#ede9fe"; }
+  else if(src.startsWith("groq:openai/gpt-oss-120b")){ label = "GPT-OSS 120B"; color = "#059669"; bg = "#d1fae5"; }
+  else if(src.startsWith("groq:openai/gpt-oss-20b")) { label = "GPT-OSS 20B";  color = "#0891b2"; bg = "#cffafe"; }
+  else if(src.startsWith("groq:llama-3.1-8b"))    { label = "Groq 8B";     color = "#2563eb"; bg = "#dbeafe"; }
+  else if(src.startsWith("groq:"))                { label = "Groq";        color = "#2563eb"; bg = "#dbeafe"; }
+  else if(src === "matcher_fallback")             { label = "Offline (fallback)"; color = "#b45309"; bg = "#fef3c7"; }
+  else if(src === "matcher")                      { label = "Offline";     color = "#475569"; bg = "#e2e8f0"; }
+  if(cached) label += " · cached";
   return `<span style="display:inline-block;font-size:9.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:${color};background:${bg};padding:2px 6px;border-radius:4px;margin-top:6px;">${_aiEsc(label)}</span>`;
 }
 
