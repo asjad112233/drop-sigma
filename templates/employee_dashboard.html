@@ -1429,8 +1429,24 @@ function openOrderDetail(orderId){
     <div class="od-row"><span class="od-key">Name</span><span class="od-val">${esc(o.customer_name)}</span></div>
     <div class="od-row"><span class="od-key">Phone</span><span class="od-val">${esc(o.customer_phone)}</span></div>
     <div class="od-row"><span class="od-key">Email</span><span class="od-val">${esc(o.customer_email)}</span></div>
-    <div class="od-row"><span class="od-key">City / Country</span><span class="od-val">${esc(o.customer_city)}, ${esc(o.customer_country)}</span></div>
-    <div class="od-row"><span class="od-key">Address</span><span class="od-val">${esc(o.customer_address)}</span></div>
+
+    <div class="od-section-lbl">Shipping Address</div>
+    ${(()=>{
+      const a = o.shipping_address || {};
+      const hasAny = a.line1 || a.line2 || a.city || a.state || a.postal_code || a.country;
+      if(!hasAny){
+        return `<div style="padding:10px 12px;background:#fef3c7;border:1px solid #fde68a;border-radius:8px;font-size:12px;color:#92400e;margin:6px 0 10px;">⚠ Shipping address not provided by the customer.</div>`;
+      }
+      const lines = [
+        a.name ? `<b>${esc(a.name)}</b>` : "",
+        a.company ? esc(a.company) : "",
+        a.line1 ? esc(a.line1) : "",
+        a.line2 ? esc(a.line2) : "",
+        [a.city, a.state, a.postal_code].filter(Boolean).map(esc).join(", "),
+        a.country ? esc(a.country) : "",
+      ].filter(Boolean).join("\n");
+      return `<div style="white-space:pre-line;padding:10px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;line-height:1.55;margin:6px 0 10px;">${lines}</div>`;
+    })()}
 
     <div class="od-section-lbl">Tracking</div>
     <div class="od-row"><span class="od-key">Tracking Number</span><span class="od-val">${o.tracking_number ? esc(o.tracking_number) : "Not submitted yet"}</span></div>

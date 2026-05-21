@@ -317,13 +317,9 @@ def employee_orders_api(request):
         if order.raw_data and isinstance(order.raw_data, dict):
             line_items = order.raw_data.get("line_items", [])
 
-        billing = (order.raw_data or {}).get("billing", {})
-        full_address = ", ".join(filter(None, [
-            billing.get("address_1", ""),
-            order.city or billing.get("city", ""),
-            billing.get("postcode", ""),
-            order.country or billing.get("country", ""),
-        ]))
+        # Shipping address now sourced from the order's structured helper —
+        # picks up street/state/zip that the old billing-only path was missing.
+        shipping = order.shipping_address
 
         data.append({
             "id":                 order.id,
@@ -332,7 +328,8 @@ def employee_orders_api(request):
             "customer_phone":     order.customer_phone or "-",
             "customer_city":      order.city or "-",
             "customer_country":   order.country or "-",
-            "customer_address":   full_address or "-",
+            "customer_address":   order.shipping_address_text or "-",
+            "shipping_address":   shipping,
             "customer_email":     order.customer_email or "-",
             "product_name":       order.product_name or "-",
             "payment_status":     order.payment_status or "-",

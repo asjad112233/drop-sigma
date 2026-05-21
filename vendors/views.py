@@ -524,6 +524,9 @@ def vendor_orders_api(request):
             line_items = order.raw_data.get("line_items", [])
 
         billing = (order.raw_data or {}).get("billing", {})
+        # Shipping address is non-optional for vendors — they literally cannot
+        # ship the order without it, so it bypasses the permission gate.
+        shipping = order.shipping_address
 
         row = {
             "id": order.id,
@@ -531,6 +534,8 @@ def vendor_orders_api(request):
             "customer_name": order.customer_name or "-",
             "customer_city": order.city or "-",
             "customer_country": order.country or "-",
+            "shipping_address": shipping,
+            "shipping_address_text": order.shipping_address_text,
             "created_at": order.created_at.isoformat() if order.created_at else None,
             "product_name": order.product_name or "",
             "payment_status": order.payment_status or "-",
@@ -577,15 +582,10 @@ def vendor_orders_api(request):
             row["store_url"] = order.store.store_url if order.store else None
         if perm("show_customer_phone"):
             row["customer_phone"] = order.customer_phone or "-"
-        if perm("show_customer_address"):
-            full_address = ", ".join(filter(None, [
-                billing.get("address_1", ""),
-                billing.get("address_2", ""),
-                order.city or billing.get("city", ""),
-                billing.get("postcode", ""),
-                order.country or billing.get("country", ""),
-            ]))
-            row["customer_address"] = full_address or "-"
+        # Legacy field — older vendor UIs read `customer_address` as a flat
+        # string. Keep populated from the same shipping source so old + new
+        # portals stay consistent.
+        row["customer_address"] = order.shipping_address_text or "-"
 
         data.append(row)
 

@@ -71,6 +71,77 @@ class Order(models.Model):
     def __str__(self):
         return self.external_order_id
 
+    # ───────────────────────────────────────────────────────────────────
+    # Address helpers — the Order model only stores city/country as
+    # top-level columns, but the full shipping/billing address always
+    # lives in raw_data (WC + Shopify sync persists the original
+    # payload). Surface it as a structured dict the UI can render
+    # without each portal having to grok platform-specific JSON shapes.
+    # ───────────────────────────────────────────────────────────────────
+    def _address_from_raw(self, kind):
+        """kind: 'shipping' or 'billing'.
+        WooCommerce keys: shipping / billing (nested first_name, address_1, etc.)
+        Shopify keys:     shipping_address / billing_address (nested address1, etc.)
+        Returns a normalised dict or {} when nothing usable is present.
+        """
+        raw = self.raw_data or {}
+        if not isinstance(raw, dict):
+            return {}
+
+        # Platform detection — WC sends 'billing' as a dict; Shopify uses
+        # 'billing_address'/'shipping_address'. Try both shapes.
+        if kind == "shipping":
+            src = raw.get("shipping") or raw.get("shipping_address") or {}
+        else:
+            src = raw.get("billing") or raw.get("billing_address") or {}
+        if not isinstance(src, dict):
+            return {}
+
+        # WC uses address_1/2; Shopify uses address1/2. Read whichever exists.
+        line1 = (src.get("address_1") or src.get("address1") or "").strip()
+        line2 = (src.get("address_2") or src.get("address2") or "").strip()
+        first = (src.get("first_name") or "").strip()
+        last  = (src.get("last_name")  or "").strip()
+        full_name = (src.get("name") or f"{first} {last}").strip()
+
+        return {
+            "name":         full_name,
+            "company":      (src.get("company") or "").strip(),
+            "line1":        line1,
+            "line2":        line2,
+            "city":         (src.get("city") or "").strip(),
+            "state":        (src.get("state") or src.get("province") or "").strip(),
+            "postal_code":  (src.get("postcode") or src.get("zip") or "").strip(),
+            "country":      (src.get("country_code") or src.get("country") or "").strip(),
+            "phone":        (src.get("phone") or "").strip(),
+            "email":        (src.get("email") or "").strip(),
+        }
+
+    @property
+    def shipping_address(self):
+        """Where the customer wants the order delivered. Falls back to
+        billing if shipping is empty (some merchants only collect one)."""
+        sh = self._address_from_raw("shipping")
+        # Treat an address as empty if both line1 and city are missing —
+        # WC populates a hollow shipping dict on virtual orders.
+        if not sh.get("line1") and not sh.get("city"):
+            return self._address_from_raw("billing")
+        return sh
+
+    @property
+    def billing_address(self):
+        return self._address_from_raw("billing")
+
+    @property
+    def shipping_address_text(self):
+        """One-line formatted version for legacy contexts that want a
+        ready-to-display string (vendor lists, emails, etc.)."""
+        a = self.shipping_address
+        parts = [a.get("name"), a.get("line1"), a.get("line2"),
+                 a.get("city"), a.get("state"), a.get("postal_code"),
+                 a.get("country")]
+        return ", ".join(p for p in parts if p)
+
 
 class OrderActivity(models.Model):
     TYPES = [

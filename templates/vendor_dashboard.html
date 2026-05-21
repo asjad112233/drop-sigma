@@ -1585,11 +1585,28 @@ function openOrderDetail(orderId){
             ${showEmail ? `<div style="grid-column:1/-1;"><div class="vpd-info-label">Email</div><div class="vpd-info-value"><a href="mailto:${esc(order.customer_email||"")}" style="color:#2563eb;">${esc(order.customer_email||"-")}</a></div></div>` : ""}
           </div>
           <div class="vpd-divider"></div>
-          <div class="vpd-info-label" style="margin-bottom:8px;">Delivery Address</div>
-          ${showAddr
-            ? `<div class="vpd-address">${esc(order.customer_address||[order.customer_city,order.customer_country].filter(Boolean).join(", ")||"-")}</div>`
-            : `<div class="vpd-address">${esc([order.customer_city,order.customer_country].filter(Boolean).join(", ")||"City / Country only — full address hidden by admin.")}</div>`
-          }
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+            <span class="vpd-info-label" style="margin:0;">Shipping Address</span>
+            <button type="button" onclick="(()=>{const t=document.getElementById('vpdShipAddrCopy');if(!t)return;navigator.clipboard.writeText(t.innerText);this.innerText='Copied ✓';setTimeout(()=>this.innerText='Copy',1200);})()" style="margin-left:auto;font-size:10.5px;background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:3px 9px;color:#3b4358;font-weight:700;cursor:pointer;">Copy</button>
+          </div>
+          ${(()=>{
+            const a = order.shipping_address || {};
+            const hasAny = a.line1 || a.line2 || a.city || a.state || a.postal_code || a.country;
+            if(!hasAny){
+              return `<div style="padding:11px 13px;background:#fef3c7;border:1px solid #fde68a;border-radius:9px;font-size:12px;color:#92400e;">
+                ⚠ Shipping address not provided by the customer. Contact admin if you need it.
+              </div>`;
+            }
+            const lines = [
+              a.name ? `<b>${esc(a.name)}</b>` : "",
+              a.company ? esc(a.company) : "",
+              a.line1 ? esc(a.line1) : "",
+              a.line2 ? esc(a.line2) : "",
+              [a.city, a.state, a.postal_code].filter(Boolean).map(esc).join(", "),
+              a.country ? esc(a.country) : "",
+            ].filter(Boolean).join("\n");
+            return `<div id="vpdShipAddrCopy" class="vpd-address" style="white-space:pre-line;line-height:1.6;">${lines}</div>`;
+          })()}
         </div>
       </div>
 

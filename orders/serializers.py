@@ -13,6 +13,13 @@ class OrderSerializer(serializers.ModelSerializer):
     assigned_vendor_name = serializers.CharField(source="assigned_vendor.name", read_only=True)
     assigned_vendor_company = serializers.CharField(source="assigned_vendor.company_name", read_only=True)
 
+    # Full structured shipping + billing addresses parsed from raw_data so
+    # every UI (admin, vendor, employee) can render street/city/state/zip
+    # without re-parsing WC vs Shopify JSON shapes themselves.
+    shipping_address      = serializers.ReadOnlyField()
+    billing_address       = serializers.ReadOnlyField()
+    shipping_address_text = serializers.ReadOnlyField()
+
     class Meta:
         model = Order
         fields = [
@@ -33,6 +40,9 @@ class OrderSerializer(serializers.ModelSerializer):
             "customer_phone",
             "country",
             "city",
+            "shipping_address",
+            "billing_address",
+            "shipping_address_text",
             "total_price",
             "currency",
             "payment_status",
