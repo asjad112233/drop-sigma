@@ -24320,6 +24320,7 @@ function renderAdminHistory(){
       <h3>Drop Sigma AI</h3>
       <div class="stat">Online · Trained on every feature</div>
     </div>
+    <button id="aiSoundToggle" class="close" onclick="aiToggleSound()" aria-label="Sound" style="font-size:15px;width:30px;height:30px;margin-right:4px;" title="Notification sound">🔔</button>
     <button class="close" onclick="aiClose()" aria-label="Close">×</button>
   </div>
   <div class="ai-quickbar">
@@ -24451,11 +24452,13 @@ async function aiSend(){
     document.getElementById("aiTypingRow")?.remove();
     if(!d.success){
       _aiRenderAssistantBubble(d.message || "Sorry — I couldn't get an answer just now. Try again?");
+      _aiPlayPing();
       btn.disabled = false; return;
     }
     _aiRenderAssistantReply(d);
     _aiHistory.push({role:"assistant", content: d.reply || JSON.stringify(d).slice(0,500)});
     _aiSaveHistory();
+    _aiPlayPing();
   }catch(e){
     document.getElementById("aiTypingRow")?.remove();
     _aiRenderAssistantBubble("⚠️ Network error: " + (e?.message || e));
@@ -24463,6 +24466,39 @@ async function aiSend(){
   btn.disabled = false;
   _aiScroll();
 }
+
+/* Soft notification beep when the AI's reply lands. Reuses the existing
+   Web-Audio helper that powers the email "new mail" ping — no extra
+   asset, no external file. Honours the per-user mute toggle persisted
+   in localStorage (key: ds_support_ai_sound_v1). */
+const _AI_SOUND_KEY = "ds_support_ai_sound_v1";  // "on" or "off"
+function _aiSoundEnabled(){
+  try { return (localStorage.getItem(_AI_SOUND_KEY) || "on") !== "off"; }
+  catch(_) { return true; }
+}
+function _aiPlayPing(){
+  if(!_aiSoundEnabled()) return;
+  try { _playEmailNotifSound(); } catch(_){}
+}
+function aiToggleSound(){
+  const next = _aiSoundEnabled() ? "off" : "on";
+  try { localStorage.setItem(_AI_SOUND_KEY, next); } catch(_){}
+  const btn = document.getElementById("aiSoundToggle");
+  if(btn){
+    btn.textContent = next === "on" ? "🔔" : "🔕";
+    btn.title = next === "on" ? "Sound on — click to mute" : "Sound muted — click to unmute";
+  }
+  // Tiny confirmation ping when re-enabling, so user knows it's working.
+  if(next === "on"){ try { _playEmailNotifSound(); } catch(_){} }
+}
+// Sync the icon to the saved preference on first load.
+(function _aiInitSoundIcon(){
+  const btn = document.getElementById("aiSoundToggle");
+  if(!btn) return;
+  const on = _aiSoundEnabled();
+  btn.textContent = on ? "🔔" : "🔕";
+  btn.title = on ? "Sound on — click to mute" : "Sound muted — click to unmute";
+})();
 
 function _aiRenderAssistantBubble(text){
   const body = document.getElementById("aiBody");
