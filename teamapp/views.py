@@ -180,15 +180,41 @@ def delete_team_member_api(request, member_id):
 
 # ─── Admin: Assignment Rules ──────────────────────────────────────────────────
 
+def _rules_acting_owner(user, perm_key):
+    """Tenant uses themselves; employee with perm_key uses their owner."""
+    if not user.is_authenticated:
+        return None
+    member = user.team_profile.filter(is_active=True).select_related("owner").first() if hasattr(user, "team_profile") else None
+    if member:
+        if not (member.permissions or {}).get(perm_key):
+            return None
+        return member.owner or user
+    return user
+
+
 @api_view(["GET"])
 def assignment_rules_api(request):
-    qs = AssignmentRule.objects.filter(owner=request.user).order_by("-id") if request.user.is_authenticated else AssignmentRule.objects.none()
+    if not request.user.is_authenticated:
+        return Response({"success": True, "rules": []})
+    owner = _rules_acting_owner(request.user, "view_rules") or _rules_acting_owner(request.user, "manage_rules")
+    # Tenant always sees own; employee needs view_rules OR manage_rules
+    if not owner and request.user.team_profile.filter(is_active=True).exists():
+        return Response({"success": False, "message": "Not allowed."}, status=403)
+    if not owner:
+        owner = request.user
+    qs = AssignmentRule.objects.filter(owner=owner).order_by("-id")
     serializer = AssignmentRuleSerializer(qs, many=True)
     return Response({"success": True, "rules": serializer.data})
 
 
 @api_view(["POST"])
 def create_assignment_rule_api(request):
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
+    owner = _rules_acting_owner(request.user, "manage_rules")
+    if not owner:
+        return Response({"success": False, "message": "Not allowed."}, status=403)
+
     rule_type      = request.data.get("rule_type")
     assign_to_role = request.data.get("assign_to_role")
     is_active      = request.data.get("is_active", True)
@@ -197,7 +223,7 @@ def create_assignment_rule_api(request):
         return Response({"success": False, "message": "rule_type and assign_to_role are required."}, status=400)
 
     rule, created = AssignmentRule.objects.update_or_create(
-        owner=request.user,
+        owner=owner,
         rule_type=rule_type,
         defaults={"assign_to_role": assign_to_role, "is_active": is_active}
     )
@@ -323,6 +349,8 @@ def employee_orders_api(request):
 
         data.append({
             "id":                 order.id,
+            "store_id":           order.store_id,
+            "store_name":         order.store.name if order.store_id else "",
             "order_number":       order.external_order_id,
             "customer_name":      order.customer_name or "-",
             "customer_phone":     order.customer_phone or "-",
@@ -373,7 +401,21 @@ def employee_emails_api(request):
     from emails.models import EmailThreadAssignment, EmailMessage
     from emails.views import get_thread_contact, extract_clean_email
 
-    assignments = EmailThreadAssignment.objects.filter(assigned_to=member).select_related("store")
+    # `view_all_threads`: employee sees every thread in owner's stores, not
+    # just assigned ones. Without it, only their assigned threads.
+    if (member.permissions or {}).get("view_all_threads") and member.owner_id:
+        assignments = EmailThreadAssignment.objects.filter(
+            store__user=member.owner
+        ).select_related("store")
+        # Honour allowed_stores narrowing.
+        allowed = (member.permissions or {}).get("allowed_stores") or []
+        if allowed:
+            try:
+                assignments = assignments.filter(store_id__in=[int(s) for s in allowed])
+            except (TypeError, ValueError):
+                pass
+    else:
+        assignments = EmailThreadAssignment.objects.filter(assigned_to=member).select_related("store")
     threads = []
 
     for ta in assignments:
@@ -1650,6 +1692,15 @@ def send_employee_invitation_api(request):
     if not request.user.is_authenticated:
         return Response({"success": False, "message": "Login required."}, status=401)
 
+    # Tenant invites under themselves; employee with `invite_members`
+    # permission invites under the tenant they work for.
+    owner_user = request.user
+    em = request.user.team_profile.filter(is_active=True).first()
+    if em:
+        if not (em.permissions or {}).get("invite_members"):
+            return Response({"success": False, "message": "Not allowed — your account doesn't have invite permission."}, status=403)
+        owner_user = em.owner or request.user
+
     name   = (request.data.get("name") or "").strip()
     email  = (request.data.get("email") or "").strip().lower()  # normalise once
     role   = request.data.get("role", "support")
@@ -1679,7 +1730,7 @@ def send_employee_invitation_api(request):
     # un-expired pending invitation to the same address, return a clear
     # "already invited" message instead of silently sending a new one.
     pending = EmployeeInvitation.objects.filter(
-        owner=request.user, email__iexact=email, status="pending"
+        owner=owner_user, email__iexact=email, status="pending"
     ).first()
     if pending and pending.expires_at and pending.expires_at > timezone.now():
         return Response({
@@ -1690,12 +1741,12 @@ def send_employee_invitation_api(request):
 
     # Otherwise expire stale pending invites so we don't pile up rows.
     EmployeeInvitation.objects.filter(
-        owner=request.user, email__iexact=email, status="pending"
+        owner=owner_user, email__iexact=email, status="pending"
     ).update(status="expired")
 
     expires_at = timezone.now() + datetime.timedelta(hours=48)
     inv = EmployeeInvitation.objects.create(
-        owner=request.user,
+        owner=owner_user,
         name=name,
         email=email,
         role=role,

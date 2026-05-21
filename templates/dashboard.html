@@ -14180,28 +14180,26 @@ async function deleteTeamMember(memberId, memberName){
 
 // ══ CREATE EMPLOYEE ══
 
-// `wired: true` means this permission actually surfaces (or hides) UI in
-// the employee portal today. `wired: false` flags ones the catalog
-// announces but that don't yet have any backing section / button — those
-// render as disabled in the admin's Edit Access modal so granting them
-// is honest about doing nothing until the feature ships.
+// Every permission below is wired end-to-end: backend gates the endpoint
+// + frontend hides/shows the matching surface in the employee portal.
+// Future permissions added here should keep this contract.
 const EMP_ALL_PERMS = [
-  {key:"view_orders",    name:"Orders",           desc:"View & manage orders",        group:"🗂️ Dashboard Sections", wired:true},
-  {key:"view_stores",    name:"Stores",           desc:"View connected stores",        group:"🗂️ Dashboard Sections", wired:true},
-  {key:"view_vendors",   name:"Vendors",          desc:"View vendor panel",            group:"🗂️ Dashboard Sections", wired:true},
-  {key:"view_emails",    name:"Emails",           desc:"Access email threads",         group:"🗂️ Dashboard Sections", wired:true},
-  {key:"view_team",      name:"Team Assignment",  desc:"See team workload",            group:"🗂️ Dashboard Sections", wired:true},
-  {key:"view_rules",     name:"Assignment Rules", desc:"View auto-routing rules",      group:"🗂️ Dashboard Sections", wired:false},
-  {key:"assign_orders",  name:"Assign Orders",    desc:"Assign to team members",       group:"🛒 Order Actions",        wired:false},
-  {key:"sync_orders",    name:"Sync Orders",      desc:"Pull orders from store",       group:"🛒 Order Actions",        wired:false},
-  {key:"delete_orders",  name:"Delete Orders",    desc:"Permanently remove orders",    group:"🛒 Order Actions",        wired:false},
-  {key:"export_orders",  name:"Export Orders",    desc:"Download order data (CSV)",    group:"🛒 Order Actions",        wired:false},
-  {key:"manage_vendors", name:"Manage Vendors",   desc:"Create, edit & delete vendors",group:"🏭 Vendor Actions",       wired:false},
-  {key:"approve_tracking",name:"Approve Tracking",desc:"Approve/reject submissions",   group:"🏭 Vendor Actions",       wired:false},
-  {key:"invite_members", name:"Invite Members",   desc:"Create employee accounts",     group:"👥 Team & Rules",         wired:false},
-  {key:"manage_rules",   name:"Manage Rules",     desc:"Create assignment rules",      group:"👥 Team & Rules",         wired:false},
-  {key:"send_emails",    name:"Send Emails",      desc:"Email customers",              group:"✉️ Email Actions",        wired:false},
-  {key:"view_all_threads",name:"All Threads",     desc:"View all conversations",       group:"✉️ Email Actions",        wired:false},
+  {key:"view_orders",     name:"Orders",           desc:"View & manage orders",         group:"🗂️ Dashboard Sections", wired:true},
+  {key:"view_stores",     name:"Stores",           desc:"View connected stores",        group:"🗂️ Dashboard Sections", wired:true},
+  {key:"view_vendors",    name:"Vendors",          desc:"View vendor panel",            group:"🗂️ Dashboard Sections", wired:true},
+  {key:"view_emails",     name:"Emails",           desc:"Access email threads",         group:"🗂️ Dashboard Sections", wired:true},
+  {key:"view_team",       name:"Team Assignment",  desc:"See team workload",            group:"🗂️ Dashboard Sections", wired:true},
+  {key:"view_rules",      name:"Assignment Rules", desc:"View auto-routing rules",      group:"🗂️ Dashboard Sections", wired:true},
+  {key:"assign_orders",   name:"Assign Orders",    desc:"Reassign orders to team members", group:"🛒 Order Actions",   wired:true},
+  {key:"sync_orders",     name:"Sync Orders",      desc:"Pull orders from connected store", group:"🛒 Order Actions",  wired:true},
+  {key:"delete_orders",   name:"Delete Orders",    desc:"Permanently remove orders",    group:"🛒 Order Actions",        wired:true},
+  {key:"export_orders",   name:"Export Orders",    desc:"Download order data (CSV)",    group:"🛒 Order Actions",        wired:true},
+  {key:"manage_vendors",  name:"Manage Vendors",   desc:"Create, edit & delete vendors",group:"🏭 Vendor Actions",       wired:true},
+  {key:"approve_tracking",name:"Approve Tracking", desc:"Approve/reject tracking submissions", group:"🏭 Vendor Actions", wired:true},
+  {key:"invite_members",  name:"Invite Members",   desc:"Send team invitations",        group:"👥 Team & Rules",         wired:true},
+  {key:"manage_rules",    name:"Manage Rules",     desc:"Create / edit assignment rules", group:"👥 Team & Rules",       wired:true},
+  {key:"send_emails",     name:"Send Emails",      desc:"Reply to customer threads",    group:"✉️ Email Actions",        wired:true},
+  {key:"view_all_threads",name:"All Threads",      desc:"See every thread in the tenant's inbox (not just assigned)", group:"✉️ Email Actions", wired:true},
 ];
 
 const EMP_ROLE_DEFAULTS = {

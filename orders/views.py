@@ -31,6 +31,72 @@ from .services import (
 )
 
 
+# ─── Per-user access helpers ──────────────────────────────────────────────
+# These extend the existing "store__user=request.user" tenant scope so an
+# employee with the matching permission can also act on the tenant's data.
+# Pattern: tenant always wins; if not the tenant, check active TeamMember
+# under the relevant owner AND the permission flag.
+def _employee_for(user):
+    """Return the active TeamMember row for this user, or None."""
+    if not user or not user.is_authenticated:
+        return None
+    return TeamMember.objects.filter(user=user, is_active=True).select_related("owner").first()
+
+
+def _user_can_act_on_store(user, store, perm_key):
+    """Tenant owns the store ▸ allowed.
+    Employee under the tenant with perm_key granted ▸ allowed.
+    Anyone else ▸ blocked. Used by sync_orders, export_orders, etc."""
+    if not user or not user.is_authenticated or not store:
+        return False
+    if store.user_id == user.id:
+        return True
+    member = _employee_for(user)
+    if not member or not member.owner_id:
+        return False
+    if member.owner_id != store.user_id:
+        return False
+    if not (member.permissions or {}).get(perm_key):
+        return False
+    # Respect allowed_stores allow-list if the admin narrowed it.
+    allowed = (member.permissions or {}).get("allowed_stores") or []
+    if allowed:
+        try:
+            allowed_ids = {int(s) for s in allowed}
+            if store.id not in allowed_ids:
+                return False
+        except (TypeError, ValueError):
+            pass
+    return True
+
+
+def _user_can_act_on_order(user, order, perm_key):
+    """Same logic as _user_can_act_on_store but starting from an Order."""
+    if not user or not user.is_authenticated or not order or not order.store_id:
+        return False
+    return _user_can_act_on_store(user, order.store, perm_key)
+
+
+def _scoped_orders_qs(user, perm_key):
+    """Base queryset: every Order the requester can act on with perm_key.
+    Tenant gets all their orders; employee gets orders inside the owner's
+    stores (narrowed by allowed_stores if set)."""
+    if not user or not user.is_authenticated:
+        return Order.objects.none()
+    own = Order.objects.filter(store__user=user)
+    member = _employee_for(user)
+    if member and member.owner_id and (member.permissions or {}).get(perm_key):
+        emp_qs = Order.objects.filter(store__user=member.owner)
+        allowed = (member.permissions or {}).get("allowed_stores") or []
+        if allowed:
+            try:
+                emp_qs = emp_qs.filter(store_id__in=[int(s) for s in allowed])
+            except (TypeError, ValueError):
+                pass
+        return (own | emp_qs).distinct()
+    return own
+
+
 @api_view(["GET"])
 def orders_poll_api(request):
     """Lightweight endpoint — returns latest order id + total count. Used by frontend polling."""
@@ -63,8 +129,10 @@ def sync_orders(request, store_id):
 
     if not request.user.is_authenticated:
         return JsonResponse({"success": False, "message": "Authentication required"}, status=401)
-    # Per-user scope: only sync stores the requester owns.
-    store = get_object_or_404(Store, id=store_id, user=request.user)
+    # Per-user scope: tenant always; employees with `sync_orders` permission too.
+    store = get_object_or_404(Store, id=store_id)
+    if not _user_can_act_on_store(request.user, store, "sync_orders"):
+        return JsonResponse({"success": False, "message": "Not allowed."}, status=403)
 
     # Read params from either GET or POST body
     range_key  = (request.GET.get("range") or request.POST.get("range") or "30d").lower()
@@ -179,12 +247,14 @@ def order_detail_api(request, order_id):
 
 @api_view(["DELETE"])
 def delete_order_api(request, order_id):
-    """Delete an order. Scoped to the current admin user via the store owner."""
+    """Delete an order. Allowed for the store owner OR an employee with
+    `delete_orders` permission whose owner owns the store."""
     if not request.user.is_authenticated:
         return Response({"success": False, "message": "Not authenticated"}, status=401)
 
-    # Per-user scope. No superuser fallback (memory rule).
-    order = get_object_or_404(Order, id=order_id, store__user=request.user)
+    order = get_object_or_404(Order, id=order_id)
+    if not _user_can_act_on_order(request.user, order, "delete_orders"):
+        return Response({"success": False, "message": "Not allowed."}, status=403)
 
     order_num = order.external_order_id or str(order.id)
     order.delete()
@@ -341,8 +411,10 @@ def overview_api(request):
 def assign_order_api(request, order_id):
     if not request.user.is_authenticated:
         return Response({"success": False, "message": "Authentication required"}, status=401)
-    # Per-user scope: tenant can only assign orders inside their own stores.
-    order = get_object_or_404(Order, id=order_id, store__user=request.user)
+    # Tenant OR employee with `assign_orders` permission may assign.
+    order = get_object_or_404(Order, id=order_id)
+    if not _user_can_act_on_order(request.user, order, "assign_orders"):
+        return Response({"success": False, "message": "Not allowed."}, status=403)
     member_id = request.data.get("member_id")
 
     if not member_id:
@@ -351,9 +423,11 @@ def assign_order_api(request, order_id):
             "message": "member_id is required"
         }, status=400)
 
-    # Member must also belong to the tenant — never assign across tenants.
-    # `owner` on TeamMember = the tenant who manages them.
-    member = get_object_or_404(TeamMember, id=member_id, owner=request.user)
+    # Scope the target member to the relevant tenant (owner of the order's
+    # store), not necessarily the requester — covers the employee case where
+    # requester != tenant.
+    owner_user_id = order.store.user_id
+    member = get_object_or_404(TeamMember, id=member_id, owner_id=owner_user_id)
 
     order.assigned_to = member
     order.save()
@@ -1096,17 +1170,23 @@ def _orders_row(o):
 
 @csrf_exempt
 def orders_export_api(request):
-    """Export orders as CSV or XLSX with optional filters."""
+    """Export orders as CSV or XLSX with optional filters.
+    Allowed for the store owner OR an employee with `export_orders`."""
     import csv as _csv
     import io as _io
     from django.http import HttpResponse
+
+    if not request.user.is_authenticated:
+        return JsonResponse({"success": False, "message": "Authentication required"}, status=401)
 
     fmt      = (request.GET.get("format") or "csv").lower()
     store_id = request.GET.get("store_id")
     status   = request.GET.get("status")
     search   = request.GET.get("search")
 
-    qs = Order.objects.select_related("store").order_by("-created_at")
+    # Per-user scope via the helper — tenant gets own orders; employee
+    # with export_orders gets owner's orders narrowed by allowed_stores.
+    qs = _scoped_orders_qs(request.user, "export_orders").select_related("store").order_by("-created_at")
     if store_id:
         qs = qs.filter(store_id=store_id)
     if status:

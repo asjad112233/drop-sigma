@@ -1388,8 +1388,21 @@ def auto_suggest_reply_api(request):
 def send_email_reply_api(request, email_id):
     if not request.user.is_authenticated:
         return Response({"success": False, "message": "Authentication required"}, status=401)
-    # Per-user scope: reply only to emails inside the requester's stores.
-    email = get_object_or_404(EmailMessage, id=email_id, store__user=request.user)
+    # Tenant: any email inside their stores. Employee with `send_emails`:
+    # emails inside their owner's stores (narrowed by allowed_stores).
+    email = get_object_or_404(EmailMessage, id=email_id)
+    allowed = False
+    if email.store_id:
+        if email.store.user_id == request.user.id:
+            allowed = True
+        else:
+            member = request.user.team_profile.filter(is_active=True).select_related("owner").first() if hasattr(request.user, "team_profile") else None
+            if member and member.owner_id == email.store.user_id and (member.permissions or {}).get("send_emails"):
+                ast = (member.permissions or {}).get("allowed_stores") or []
+                if not ast or str(email.store_id) in [str(x) for x in ast]:
+                    allowed = True
+    if not allowed:
+        return Response({"success": False, "message": "Not allowed."}, status=403)
 
     reply_text = request.data.get("reply_text") or email.ai_draft
     cc           = (request.data.get("cc") or "").strip() or None

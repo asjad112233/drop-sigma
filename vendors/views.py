@@ -99,10 +99,25 @@ def vendor_list(request):
     return Response(data)
 
 
+def _resolve_acting_owner(user, perm_key):
+    """For Vendor / Rule / etc. mutations: tenant acts under themselves,
+    employee with perm_key acts under their owner. Returns (owner_user, error_response)."""
+    if not user.is_authenticated:
+        return None, Response({"success": False, "message": "Authentication required"}, status=401)
+    member = user.team_profile.filter(is_active=True).select_related("owner").first() if hasattr(user, "team_profile") else None
+    if member:
+        if not (member.permissions or {}).get(perm_key):
+            return None, Response({"success": False, "message": f"Not allowed — missing {perm_key} permission."}, status=403)
+        return (member.owner or user), None
+    return user, None
+
+
 @api_view(["POST"])
 def vendor_create(request):
     if not request.user.is_authenticated:
         return Response({"success": False, "message": "Authentication required"}, status=401)
+    owner_user, err = _resolve_acting_owner(request.user, "manage_vendors")
+    if err: return err
     data = request.data.copy()
     password = data.get("password", "").strip()
 
@@ -110,9 +125,10 @@ def vendor_create(request):
     if Vendor.objects.filter(email=email).exists():
         return Response({"success": False, "errors": {"email": ["A vendor with this email already exists."]}}, status=400)
 
-    # Per-user scope: the assigned_store on the new vendor must belong to the requester.
+    # The assigned_store on the new vendor must belong to the owner (tenant
+    # — either the requester directly or the employee's parent tenant).
     assigned_store_id = data.get("assigned_store") or data.get("assigned_store_id")
-    if assigned_store_id and not Store.objects.filter(id=assigned_store_id, user=request.user).exists():
+    if assigned_store_id and not Store.objects.filter(id=assigned_store_id, user=owner_user).exists():
         return Response({"success": False, "errors": {"assigned_store": ["Store not found or not yours."]}}, status=400)
 
     serializer = VendorSerializer(data=data)
@@ -149,10 +165,9 @@ def vendor_create(request):
 
 @api_view(["DELETE"])
 def vendor_delete(request, vendor_id):
-    if not request.user.is_authenticated:
-        return Response({"success": False, "message": "Authentication required"}, status=401)
-    # Per-user scope: only delete vendors attached to the requester's stores.
-    vendor = get_object_or_404(Vendor, id=vendor_id, assigned_store__user=request.user)
+    owner_user, err = _resolve_acting_owner(request.user, "manage_vendors")
+    if err: return err
+    vendor = get_object_or_404(Vendor, id=vendor_id, assigned_store__user=owner_user)
     if vendor.user:
         vendor.user.delete()
     vendor.delete()
@@ -161,9 +176,9 @@ def vendor_delete(request, vendor_id):
 
 @api_view(["POST"])
 def vendor_update_permissions(request, vendor_id):
-    if not request.user.is_authenticated:
-        return Response({"success": False, "message": "Authentication required"}, status=401)
-    vendor = get_object_or_404(Vendor, id=vendor_id, assigned_store__user=request.user)
+    owner_user, err = _resolve_acting_owner(request.user, "manage_vendors")
+    if err: return err
+    vendor = get_object_or_404(Vendor, id=vendor_id, assigned_store__user=owner_user)
     new_perms = request.data.get("permissions", {})
     changed_by = request.data.get("changed_by", "Admin")
 
@@ -213,10 +228,25 @@ def tracking_queue_api(request):
     store_id = request.GET.get("store_id")
     status_filter = request.GET.get("status", "pending")
 
-    # Per-user scope: only show submissions on the requester's own orders.
+    # Tenant sees their own queue; employee with `approve_tracking` sees
+    # their owner's queue (narrowed by allowed_stores if set).
+    qs_user = request.user
+    member = request.user.team_profile.filter(is_active=True).select_related("owner").first() if hasattr(request.user, "team_profile") else None
+    if member and (member.permissions or {}).get("approve_tracking") and member.owner_id:
+        qs_user = member.owner
+
     qs = VendorTrackingSubmission.objects.filter(
-        order__store__user=request.user
+        order__store__user=qs_user
     ).select_related("order", "vendor").order_by("-submitted_at")
+
+    # Honour employee's allowed_stores narrowing.
+    if member and member.owner_id == qs_user.id:
+        allowed = (member.permissions or {}).get("allowed_stores") or []
+        if allowed:
+            try:
+                qs = qs.filter(order__store_id__in=[int(s) for s in allowed])
+            except (TypeError, ValueError):
+                pass
     if store_id:
         qs = qs.filter(order__store_id=store_id)
     if status_filter != "all":
@@ -245,13 +275,30 @@ def tracking_queue_api(request):
     return Response({"success": True, "submissions": data, "count": len(data)})
 
 
+def _can_act_on_submission(user, submission, perm_key):
+    """Tenant owns the order's store ▸ allowed.
+    Employee with perm_key under the same owner ▸ allowed."""
+    if not user or not user.is_authenticated or not submission:
+        return False
+    store = submission.order.store if submission.order_id else None
+    if not store:
+        return False
+    if store.user_id == user.id:
+        return True
+    member = user.team_profile.filter(is_active=True).select_related("owner").first() if hasattr(user, "team_profile") else None
+    if not member or not member.owner_id or member.owner_id != store.user_id:
+        return False
+    return bool((member.permissions or {}).get(perm_key))
+
+
 @api_view(["POST"])
 def approve_tracking_api(request, submission_id):
     if not request.user.is_authenticated:
         return Response({"success": False, "message": "Authentication required"}, status=401)
     try:
-        # Per-user scope: only approve submissions on the requester's orders.
-        sub = get_object_or_404(VendorTrackingSubmission, id=submission_id, order__store__user=request.user)
+        sub = get_object_or_404(VendorTrackingSubmission, id=submission_id)
+        if not _can_act_on_submission(request.user, sub, "approve_tracking"):
+            return Response({"success": False, "message": "Not allowed."}, status=403)
         sub.status = "approved"
         sub.reviewed_at = timezone.now()
         sub.save()
@@ -313,7 +360,9 @@ def approve_tracking_api(request, submission_id):
 def reject_tracking_api(request, submission_id):
     if not request.user.is_authenticated:
         return Response({"success": False, "message": "Authentication required"}, status=401)
-    sub = get_object_or_404(VendorTrackingSubmission, id=submission_id, order__store__user=request.user)
+    sub = get_object_or_404(VendorTrackingSubmission, id=submission_id)
+    if not _can_act_on_submission(request.user, sub, "approve_tracking"):
+        return Response({"success": False, "message": "Not allowed."}, status=403)
     reason = request.data.get("reason", "").strip()
 
     sub.status = "rejected"

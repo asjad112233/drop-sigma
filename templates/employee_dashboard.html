@@ -545,7 +545,10 @@ body{font-family:'Inter','Segoe UI',sans-serif;background:var(--bg);color:var(--
             <div class="panel-title">Assigned Orders</div>
             <div class="panel-sub" id="ordersCount">Loading...</div>
           </div>
-          <button class="btn btn-ghost" onclick="loadMyOrders()">↻ Refresh</button>
+          <div id="ordersHeaderActions" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <button class="btn btn-ghost" onclick="loadMyOrders()">↻ Refresh</button>
+            <!-- Action buttons gated on permissions, rendered by buildOrdersHeader() -->
+          </div>
         </div>
         <div class="tbl-wrap">
           <table class="tbl">
@@ -620,7 +623,7 @@ body{font-family:'Inter','Segoe UI',sans-serif;background:var(--bg);color:var(--
       </div>
     </section>
 
-    <!-- ── Vendors (read-only, gated by view_vendors) ── -->
+    <!-- ── Vendors (gated by view_vendors; mutations by manage_vendors) ── -->
     <section class="section" id="secVendors">
       <div class="page-head">
         <h1>Vendors</h1>
@@ -632,7 +635,10 @@ body{font-family:'Inter','Segoe UI',sans-serif;background:var(--bg);color:var(--
             <div class="panel-title">Vendor List</div>
             <div class="panel-sub" id="vendorsCount">Loading...</div>
           </div>
-          <button class="btn btn-ghost" onclick="loadMyVendors()">↻ Refresh</button>
+          <div id="vendorsHeaderActions" style="display:flex;gap:8px;">
+            <button class="btn btn-ghost" onclick="loadMyVendors()">↻ Refresh</button>
+            <!-- Add Vendor button rendered by buildVendorHeader() when manage_vendors granted -->
+          </div>
         </div>
         <div class="tbl-wrap">
           <table class="tbl">
@@ -643,9 +649,75 @@ body{font-family:'Inter','Segoe UI',sans-serif;background:var(--bg);color:var(--
                 <th>Phone</th>
                 <th>Store</th>
                 <th>Status</th>
+                <th></th>
               </tr>
             </thead>
             <tbody id="vendorsTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Assignment Rules (view_rules + optional manage_rules) ── -->
+    <section class="section" id="secRules">
+      <div class="page-head">
+        <h1>Assignment Rules</h1>
+        <p>Auto-routing rules that pick a teammate when a new order or email arrives.</p>
+      </div>
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title">Rules</div>
+            <div class="panel-sub" id="rulesCount">Loading...</div>
+          </div>
+          <div id="rulesHeaderActions" style="display:flex;gap:8px;">
+            <button class="btn btn-ghost" onclick="loadMyRules()">↻ Refresh</button>
+            <!-- Add Rule button rendered when manage_rules granted -->
+          </div>
+        </div>
+        <div class="tbl-wrap">
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th>Trigger</th>
+                <th>Assigns To Role</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="rulesTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Tracking Queue (gated by approve_tracking) ── -->
+    <section class="section" id="secTrackingQueue">
+      <div class="page-head">
+        <h1>Tracking Queue</h1>
+        <p>Vendor tracking submissions awaiting your approval.</p>
+      </div>
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title">Pending Approvals</div>
+            <div class="panel-sub" id="trackingQueueCount">Loading...</div>
+          </div>
+          <button class="btn btn-ghost" onclick="loadMyTrackingQueue()">↻ Refresh</button>
+        </div>
+        <div class="tbl-wrap">
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th>Order</th>
+                <th>Customer</th>
+                <th>Vendor</th>
+                <th>Courier</th>
+                <th>Tracking #</th>
+                <th>Submitted</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="trackingQueueTableBody"></tbody>
           </table>
         </div>
       </div>
@@ -663,7 +735,10 @@ body{font-family:'Inter','Segoe UI',sans-serif;background:var(--bg);color:var(--
             <div class="panel-title">Members</div>
             <div class="panel-sub" id="teamCount">Loading...</div>
           </div>
-          <button class="btn btn-ghost" onclick="loadMyTeam()">↻ Refresh</button>
+          <div id="teamHeaderActions" style="display:flex;gap:8px;">
+            <button class="btn btn-ghost" onclick="loadMyTeam()">↻ Refresh</button>
+            <!-- Invite button rendered by buildTeamHeader() when invite_members perm is granted -->
+          </div>
         </div>
         <div id="teamGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;padding:18px;">
           <div style="grid-column:1/-1;text-align:center;color:#94a3b8;padding:30px;font-size:13px;">Loading team...</div>
@@ -1110,11 +1185,13 @@ async function boot(){
     buildSidebar();
     try{ if(localStorage.getItem("ecSbCollapsed")==="1"){ document.querySelector(".layout")?.classList.add("ec-sb-collapsed"); } }catch(e){}
     renderOverview();
-    if(perm("view_orders"))  loadMyOrders();
-    if(perm("view_emails"))  loadMyEmails();
-    if(perm("view_stores"))  loadMyStores();
-    if(perm("view_vendors")) loadMyVendors();
-    if(perm("view_team"))    loadMyTeam();
+    if(perm("view_orders"))      loadMyOrders();
+    if(perm("view_emails"))      loadMyEmails();
+    if(perm("view_stores"))      loadMyStores();
+    if(perm("view_vendors"))     loadMyVendors();
+    if(perm("view_team"))        loadMyTeam();
+    if(perm("approve_tracking")) loadMyTrackingQueue();
+    if(perm("view_rules") || perm("manage_rules")) loadMyRules();
     _ecWsBackground();
   }catch(e){
     document.getElementById("overviewTitle").style.color="#ef4444";
@@ -1185,11 +1262,13 @@ async function _ecRefreshAccess(){
     try { buildSidebar(); } catch(_) {}
     try { renderOverview(); } catch(_) {}
     // Lazy-load sections that just became visible
-    if(perm("view_orders")  && typeof loadMyOrders  === "function") loadMyOrders();
-    if(perm("view_emails")  && typeof loadMyEmails  === "function") loadMyEmails();
-    if(perm("view_stores")  && typeof loadMyStores  === "function") loadMyStores();
-    if(perm("view_vendors") && typeof loadMyVendors === "function") loadMyVendors();
-    if(perm("view_team")    && typeof loadMyTeam    === "function") loadMyTeam();
+    if(perm("view_orders")      && typeof loadMyOrders        === "function") loadMyOrders();
+    if(perm("view_emails")      && typeof loadMyEmails        === "function") loadMyEmails();
+    if(perm("view_stores")      && typeof loadMyStores        === "function") loadMyStores();
+    if(perm("view_vendors")     && typeof loadMyVendors       === "function") loadMyVendors();
+    if(perm("view_team")        && typeof loadMyTeam          === "function") loadMyTeam();
+    if(perm("approve_tracking") && typeof loadMyTrackingQueue === "function") loadMyTrackingQueue();
+    if((perm("view_rules") || perm("manage_rules")) && typeof loadMyRules === "function") loadMyRules();
     // Soft heads-up so the user knows something shifted
     try{
       if(typeof _ecShowInAppNotif === "function"){
@@ -1292,17 +1371,19 @@ function buildSidebar(){
   const statusColors = {available:"#10b981",busy:"#ef4444",limited:"#f59e0b",offline:"#94a3b8"};
 
   const navItems = [
-    {id:"secOverview", icon:"🏠", label:"Overview",  always:true},
-    {id:"secOrders",   icon:"🛒", label:"My Orders", perm:"view_orders"},
-    {id:"secStores",   icon:"🏬", label:"Stores",    perm:"view_stores"},
-    {id:"secVendors",  icon:"🏭", label:"Vendors",   perm:"view_vendors"},
-    {id:"secEmails",   icon:"📧", label:"My Emails", perm:"view_emails"},
-    {id:"secTeam",     icon:"👥", label:"Team",      perm:"view_team"},
-    {id:"secTasks",    icon:"✅", label:"My Tasks",  always:true},
-    {id:"secChat",     icon:"💬", label:"Team Chat", always:true},
+    {id:"secOverview",      icon:"🏠", label:"Overview",       always:true},
+    {id:"secOrders",        icon:"🛒", label:"My Orders",      perm:"view_orders"},
+    {id:"secStores",        icon:"🏬", label:"Stores",         perm:"view_stores"},
+    {id:"secVendors",       icon:"🏭", label:"Vendors",        perm:"view_vendors"},
+    {id:"secTrackingQueue", icon:"🚚", label:"Tracking Queue", perm:"approve_tracking"},
+    {id:"secEmails",        icon:"📧", label:"My Emails",      perm:"view_emails"},
+    {id:"secTeam",          icon:"👥", label:"Team",           perm:"view_team"},
+    {id:"secRules",         icon:"🔁", label:"Rules",          perm:"view_rules", altPerm:"manage_rules"},
+    {id:"secTasks",         icon:"✅", label:"My Tasks",       always:true},
+    {id:"secChat",          icon:"💬", label:"Team Chat",      always:true},
   ];
 
-  const navHTML = navItems.filter(n=>n.always||perm(n.perm)).map(n=>`
+  const navHTML = navItems.filter(n => n.always || perm(n.perm) || (n.altPerm && perm(n.altPerm))).map(n=>`
     <button class="nav-item ${n.id==="secOverview"?"active":""}"
       id="nav_${n.id}" onclick="switchSection('${n.id}')">
       <span class="nav-icon">${n.icon}</span>${n.label}
@@ -1462,7 +1543,135 @@ function renderOverview(){
 }
 
 // ── My Orders ──
+
+/* Render the header action buttons (Sync, Export) gated on the matching
+   permissions. Re-runs on every loadMyOrders + every permission refresh. */
+function _renderOrderHeaderActions(){
+  const wrap = document.getElementById("ordersHeaderActions");
+  if(!wrap) return;
+  // Strip out everything except the original Refresh button (first child).
+  while(wrap.children.length > 1) wrap.removeChild(wrap.lastChild);
+  if(perm("sync_orders")){
+    const b = document.createElement("button");
+    b.className = "btn";
+    b.style.background = "linear-gradient(135deg,#6366f1,#06b6d4)";
+    b.style.color = "#fff";
+    b.innerHTML = "⟳ Sync from Store";
+    b.onclick = empSyncOrders;
+    wrap.appendChild(b);
+  }
+  if(perm("export_orders")){
+    const b = document.createElement("button");
+    b.className = "btn btn-ghost";
+    b.innerHTML = "📥 Export CSV";
+    b.onclick = empExportOrders;
+    wrap.appendChild(b);
+  }
+}
+
+async function empSyncOrders(){
+  // Pick the store from the loaded orders — single-store case is the common
+  // employee shape. For multi-store we just sync each one in turn.
+  const stores = new Set();
+  (myOrders || []).forEach(o => { if(o.store_id) stores.add(o.store_id); });
+  if(!stores.size){
+    // Fallback: pull employee's stores list if no orders loaded yet
+    try{
+      const r = await fetch("/employee/api/stores/");
+      const d = await r.json();
+      if(d.success){ (d.stores||[]).forEach(s => stores.add(s.id)); }
+    }catch(_){}
+  }
+  if(!stores.size){ alert("No store available to sync."); return; }
+  let synced = 0, failed = 0;
+  for(const sid of stores){
+    try{
+      const r = await fetch(`/orders/api/sync/${sid}/?range=30d`, {method:"POST", headers:{"X-CSRFToken": getCSRFToken()}});
+      const d = await r.json();
+      if(d.success){ synced += d.orders_synced || 0; } else { failed++; }
+    }catch(_){ failed++; }
+  }
+  alert(`Sync complete — ${synced} orders pulled${failed ? ` (${failed} store(s) failed)` : ""}.`);
+  loadMyOrders();
+}
+
+function empExportOrders(){
+  // Backend orders_export_api already scopes to the requester via
+  // _scoped_orders_qs (tenant OR employee with export_orders).
+  window.open("/orders/api/export/?format=csv", "_blank");
+}
+
+async function empDeleteOrder(orderId){
+  if(!confirm(`Delete this order permanently? This can't be undone.`)) return;
+  try{
+    const r = await fetch(`/orders/api/${orderId}/`, {
+      method: "DELETE",
+      headers: {"X-CSRFToken": getCSRFToken()}
+    });
+    const raw = await r.text();
+    let d; try { d = JSON.parse(raw); } catch(_) { d = {success:false, message:`HTTP ${r.status}`}; }
+    if(d.success){
+      // Close detail modal + refresh list
+      const overlay = document.getElementById("odOverlay");
+      if(overlay) overlay.style.display = "none";
+      document.body.style.overflow = "";
+      loadMyOrders();
+    } else {
+      alert("Delete failed: " + (d.message || "Unknown error"));
+    }
+  }catch(e){
+    alert("Delete failed: " + e.message);
+  }
+}
+
+async function empAssignOrder(orderId){
+  // Fetch this owner's team members so the employee can pick a reassignee.
+  let members = [];
+  try{
+    const r = await fetch("/employee/api/team/");
+    const d = await r.json();
+    if(d.success) members = (d.members || []).filter(m => !m.is_self);
+  }catch(_){}
+  if(!members.length){
+    // Fallback — at least let them know
+    alert("No teammates available to assign to. Make sure 'View Team' is granted as well.");
+    return;
+  }
+  // Tiny prompt-based picker — keeps the UI minimal but functional.
+  const labels = members.map((m,i) => `${i+1}. ${m.name} (${m.role.replace(/_/g," ")})`).join("\n");
+  const pick = prompt(`Reassign this order to:\n${labels}\n\nEnter the number:`);
+  const idx = parseInt(pick, 10) - 1;
+  if(isNaN(idx) || idx < 0 || idx >= members.length) return;
+  const member = members[idx];
+  try{
+    const r = await fetch(`/orders/api/${orderId}/assign/`, {
+      method: "POST",
+      headers: {"Content-Type":"application/json", "X-CSRFToken": getCSRFToken()},
+      body: JSON.stringify({member_id: member.id})
+    });
+    const raw = await r.text();
+    let d; try { d = JSON.parse(raw); } catch(_) { d = {success:false, message:`HTTP ${r.status}`}; }
+    if(d.success){
+      alert(`Reassigned to ${member.name}.`);
+      const overlay = document.getElementById("odOverlay");
+      if(overlay) overlay.style.display = "none";
+      document.body.style.overflow = "";
+      loadMyOrders();
+    } else {
+      alert("Reassign failed: " + (d.message || "Unknown error"));
+    }
+  }catch(e){
+    alert("Reassign failed: " + e.message);
+  }
+}
+
+function getCSRFToken(){
+  const c = document.cookie.split("; ").find(r => r.startsWith("csrftoken="));
+  return c ? c.split("=")[1] : "";
+}
+
 async function loadMyOrders(){
+  _renderOrderHeaderActions();
   document.getElementById("ordersTableBody").innerHTML =
     `<tr><td colspan="8" style="text-align:center;padding:40px;color:#94a3b8;">Loading...</td></tr>`;
 
@@ -1545,6 +1754,13 @@ function openOrderDetail(orderId){
     : `<div style="color:#94a3b8;font-size:13px;">No line items available.</div>`;
 
   document.getElementById("odBody").innerHTML = `
+    <!-- Permission-gated action bar at the top of the order detail -->
+    ${(perm("assign_orders") || perm("delete_orders")) ? `
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;padding:10px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;">
+        ${perm("assign_orders") ? `<button class="btn" style="background:#6366f1;color:#fff;font-size:12px;padding:6px 12px;" onclick="empAssignOrder(${orderId})">👥 Reassign</button>` : ""}
+        ${perm("delete_orders") ? `<button class="btn" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;font-size:12px;padding:6px 12px;" onclick="empDeleteOrder(${orderId})">🗑 Delete Order</button>` : ""}
+      </div>` : ""}
+
     <div class="od-section-lbl">Order Info</div>
     <div class="od-row"><span class="od-key">Order Number</span><span class="od-val">#${esc(o.order_number)}</span></div>
     <div class="od-row"><span class="od-key">Payment Status</span><span class="od-val">${payBadge(o.payment_status)}</span></div>
@@ -1668,25 +1884,84 @@ async function loadMyStores(){
   }
 }
 
-// ── Vendors (read-only) ──
+// ── Vendors (view + optional manage) ──
+function _renderVendorHeaderActions(){
+  const wrap = document.getElementById("vendorsHeaderActions");
+  if(!wrap) return;
+  while(wrap.children.length > 1) wrap.removeChild(wrap.lastChild);
+  if(perm("manage_vendors")){
+    const b = document.createElement("button");
+    b.className = "btn";
+    b.style.background = "linear-gradient(135deg,#6366f1,#06b6d4)";
+    b.style.color = "#fff";
+    b.innerHTML = "➕ Add Vendor";
+    b.onclick = empOpenAddVendor;
+    wrap.appendChild(b);
+  }
+}
+
+async function empOpenAddVendor(){
+  // Need a store to attach the vendor to — fetch the employee's accessible stores.
+  let stores = [];
+  try{
+    const r = await fetch("/employee/api/stores/");
+    const d = await r.json();
+    if(d.success) stores = d.stores || [];
+  }catch(_){}
+  if(!stores.length){
+    alert("No store available — Add Vendor needs view_stores too.");
+    return;
+  }
+  const name  = prompt("Vendor name:"); if(!name||!name.trim()) return;
+  const email = prompt("Vendor email:"); if(!email||!email.trim()) return;
+  const password = prompt("Vendor password (8+ chars):"); if(!password||password.length<8){ alert("Password must be 8+ chars."); return; }
+  const labels = stores.map((s,i) => `${i+1}. ${s.name}`).join("\n");
+  const pick = prompt(`Assign to which store?\n${labels}\n\nEnter the number:`, "1");
+  const idx = parseInt(pick,10)-1;
+  if(isNaN(idx) || idx<0 || idx>=stores.length) return;
+  const store = stores[idx];
+  fetch("/vendors/api/create/", {
+    method: "POST",
+    headers: {"Content-Type":"application/json", "X-CSRFToken": getCSRFToken()},
+    body: JSON.stringify({name: name.trim(), email: email.trim(), password, assigned_store: store.id})
+  }).then(r => r.text()).then(raw => {
+    let d; try { d = JSON.parse(raw); } catch(_) { d = {success:false, message:"Server error"}; }
+    if(d.success){ alert(`Vendor "${name.trim()}" created.`); loadMyVendors(); }
+    else { alert("Failed: " + (d.message || JSON.stringify(d.errors||{}))); }
+  }).catch(e => alert("Failed: " + e.message));
+}
+
+async function empDeleteVendor(vendorId, vendorName){
+  if(!confirm(`Delete vendor "${vendorName}"? This can't be undone.`)) return;
+  try{
+    const r = await fetch(`/vendors/api/delete/${vendorId}/`, {method:"DELETE", headers:{"X-CSRFToken": getCSRFToken()}});
+    const raw = await r.text();
+    let d; try { d = JSON.parse(raw); } catch(_) { d = {success:false, message:`HTTP ${r.status}`}; }
+    if(d.success){ loadMyVendors(); }
+    else { alert("Delete failed: " + (d.message||"Unknown error")); }
+  }catch(e){ alert("Delete failed: " + e.message); }
+}
+
 async function loadMyVendors(){
   if(!perm("view_vendors")) return;
+  _renderVendorHeaderActions();
   const tbody = document.getElementById("vendorsTableBody");
   const count = document.getElementById("vendorsCount");
-  if(tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:30px;font-size:13px;">Loading vendors...</td></tr>`;
+  if(tbody) tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:30px;font-size:13px;">Loading vendors...</td></tr>`;
   try{
     const r = await fetch("/employee/api/vendors/");
     const d = await r.json();
     if(!d.success){
-      if(tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#ef4444;padding:20px;font-size:13px;">${esc(d.message||"Failed to load vendors")}</td></tr>`;
+      if(tbody) tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#ef4444;padding:20px;font-size:13px;">${esc(d.message||"Failed to load vendors")}</td></tr>`;
       return;
     }
     const items = d.vendors || [];
     if(count) count.textContent = items.length ? `${items.length} vendor${items.length===1?"":"s"}` : "No vendors yet";
     if(!items.length){
-      if(tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:30px;font-size:13px;">No vendors in your access scope.</td></tr>`;
+      if(tbody) tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:30px;font-size:13px;">No vendors in your access scope.</td></tr>`;
       return;
     }
+    const canManage = perm("manage_vendors");
     if(tbody) tbody.innerHTML = items.map(v => `
       <tr>
         <td><div style="font-weight:700;color:#0b0f1a;">${esc(v.name||"—")}</div>${v.company_name ? `<div style="font-size:11.5px;color:#94a3b8;">${esc(v.company_name)}</div>` : ""}</td>
@@ -1694,15 +1969,52 @@ async function loadMyVendors(){
         <td>${esc(v.phone||"—")}</td>
         <td>${esc(v.store_name||"—")}</td>
         <td><span style="font-size:10.5px;font-weight:800;padding:3px 9px;border-radius:99px;${v.status==="active" ? "color:#059669;background:rgba(16,185,129,.10);" : "color:#64748b;background:rgba(100,116,139,.12);"}">${esc(v.status||"unknown").toUpperCase()}</span></td>
+        <td style="text-align:right;">
+          ${canManage ? `<button class="btn" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;font-size:11px;padding:4px 9px;" onclick="empDeleteVendor(${v.id}, '${esc((v.name||"").replace(/'/g,"\\'"))}')">Delete</button>` : ""}
+        </td>
       </tr>`).join("");
   }catch(e){
-    if(tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#ef4444;padding:20px;font-size:13px;">${esc(e.message||e)}</td></tr>`;
+    if(tbody) tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#ef4444;padding:20px;font-size:13px;">${esc(e.message||e)}</td></tr>`;
   }
 }
 
 // ── Team (read-only) ──
+function _renderTeamHeaderActions(){
+  const wrap = document.getElementById("teamHeaderActions");
+  if(!wrap) return;
+  while(wrap.children.length > 1) wrap.removeChild(wrap.lastChild);
+  if(perm("invite_members")){
+    const b = document.createElement("button");
+    b.className = "btn";
+    b.style.background = "linear-gradient(135deg,#6366f1,#06b6d4)";
+    b.style.color = "#fff";
+    b.innerHTML = "➕ Invite Member";
+    b.onclick = empOpenInviteMember;
+    wrap.appendChild(b);
+  }
+}
+
+function empOpenInviteMember(){
+  const name  = prompt("New member's full name:");
+  if(!name || !name.trim()) return;
+  const email = prompt("Their email address:");
+  if(!email || !email.trim()) return;
+  const role  = prompt("Role — support / order_manager / refund_manager / vendor_manager / email_manager (default: support):", "support") || "support";
+
+  fetch("/teamapp/invite/send/", {
+    method: "POST",
+    headers: {"Content-Type":"application/json", "X-CSRFToken": getCSRFToken()},
+    body: JSON.stringify({name: name.trim(), email: email.trim(), role: role.trim()})
+  }).then(r => r.text()).then(raw => {
+    let d; try { d = JSON.parse(raw); } catch(_) { d = {success:false, message:"Server error"}; }
+    alert(d.success ? `Invitation sent to ${email.trim()}.` : ("Failed: " + (d.message || "Unknown error")));
+    if(d.success) loadMyTeam();
+  }).catch(e => alert("Failed: " + e.message));
+}
+
 async function loadMyTeam(){
   if(!perm("view_team")) return;
+  _renderTeamHeaderActions();
   const grid = document.getElementById("teamGrid");
   const count = document.getElementById("teamCount");
   if(grid) grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:#94a3b8;padding:30px;font-size:13px;">Loading team...</div>`;
@@ -1743,6 +2055,135 @@ async function loadMyTeam(){
   }catch(e){
     if(grid) grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:#ef4444;padding:20px;font-size:13px;">${esc(e.message||e)}</div>`;
   }
+}
+
+// ── Assignment Rules (view_rules / manage_rules) ──
+function _renderRulesHeaderActions(){
+  const wrap = document.getElementById("rulesHeaderActions");
+  if(!wrap) return;
+  while(wrap.children.length > 1) wrap.removeChild(wrap.lastChild);
+  if(perm("manage_rules")){
+    const b = document.createElement("button");
+    b.className = "btn";
+    b.style.background = "linear-gradient(135deg,#6366f1,#06b6d4)";
+    b.style.color = "#fff";
+    b.innerHTML = "➕ Add Rule";
+    b.onclick = empOpenAddRule;
+    wrap.appendChild(b);
+  }
+}
+
+function empOpenAddRule(){
+  const triggers = ["new_order", "new_email", "refund_request", "tracking_submitted"];
+  const labels = triggers.map((t,i) => `${i+1}. ${t.replace(/_/g," ")}`).join("\n");
+  const tPick = prompt(`Trigger when:\n${labels}\n\nEnter number:`, "1");
+  const tIdx = parseInt(tPick,10)-1;
+  if(isNaN(tIdx)||tIdx<0||tIdx>=triggers.length) return;
+  const role = prompt("Assign to role — support / order_manager / refund_manager / vendor_manager / email_manager:", "support");
+  if(!role||!role.trim()) return;
+  fetch("/teamapp/rules/create/", {
+    method:"POST",
+    headers:{"Content-Type":"application/json","X-CSRFToken": getCSRFToken()},
+    body: JSON.stringify({rule_type: triggers[tIdx], assign_to_role: role.trim(), is_active: true})
+  }).then(r=>r.text()).then(raw=>{
+    let d; try { d = JSON.parse(raw); } catch(_) { d = {success:false, message:"Server error"}; }
+    if(d.success){ loadMyRules(); }
+    else { alert("Failed: " + (d.message||"Unknown error")); }
+  }).catch(e => alert("Failed: " + e.message));
+}
+
+async function loadMyRules(){
+  if(!perm("view_rules") && !perm("manage_rules")) return;
+  _renderRulesHeaderActions();
+  const tbody = document.getElementById("rulesTableBody");
+  const count = document.getElementById("rulesCount");
+  if(tbody) tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;color:#94a3b8;padding:30px;font-size:13px;">Loading rules...</td></tr>`;
+  try{
+    const r = await fetch("/teamapp/rules/");
+    const d = await r.json();
+    if(!d.success){
+      if(tbody) tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;color:#ef4444;padding:20px;font-size:13px;">${esc(d.message||"Failed to load")}</td></tr>`;
+      return;
+    }
+    const items = d.rules || [];
+    if(count) count.textContent = items.length ? `${items.length} rule${items.length===1?"":"s"}` : "No rules configured yet";
+    if(!items.length){
+      if(tbody) tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;color:#94a3b8;padding:30px;font-size:13px;">No assignment rules. ${perm("manage_rules")?"Click + Add Rule to create one.":""}</td></tr>`;
+      return;
+    }
+    if(tbody) tbody.innerHTML = items.map(r => `
+      <tr>
+        <td><b>${esc((r.rule_type||"").replace(/_/g," "))}</b></td>
+        <td style="text-transform:capitalize;">${esc((r.assign_to_role||"").replace(/_/g," "))}</td>
+        <td><span style="font-size:10.5px;font-weight:800;padding:3px 9px;border-radius:99px;${r.is_active ? "color:#059669;background:rgba(16,185,129,.10);" : "color:#94a3b8;background:rgba(148,163,184,.14);"}">${r.is_active?"Active":"Inactive"}</span></td>
+      </tr>`).join("");
+  }catch(e){
+    if(tbody) tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;color:#ef4444;padding:20px;font-size:13px;">${esc(e.message||e)}</td></tr>`;
+  }
+}
+
+// ── Tracking Queue (employee with approve_tracking) ──
+async function loadMyTrackingQueue(){
+  if(!perm("approve_tracking")) return;
+  const tbody = document.getElementById("trackingQueueTableBody");
+  const count = document.getElementById("trackingQueueCount");
+  if(tbody) tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:30px;font-size:13px;">Loading queue...</td></tr>`;
+  try{
+    const r = await fetch("/vendors/api/tracking-queue/?status=pending");
+    const d = await r.json();
+    if(!d.success){
+      if(tbody) tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#ef4444;padding:20px;font-size:13px;">${esc(d.message||"Failed to load")}</td></tr>`;
+      return;
+    }
+    const items = d.submissions || [];
+    if(count) count.textContent = items.length ? `${items.length} pending` : "All caught up — nothing to review";
+    if(!items.length){
+      if(tbody) tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:30px;font-size:13px;">Nothing pending right now.</td></tr>`;
+      return;
+    }
+    if(tbody) tbody.innerHTML = items.map(s => `
+      <tr>
+        <td><b style="color:#6366f1;">#${esc(s.order_number||"")}</b></td>
+        <td>${esc(s.customer_name||"—")}</td>
+        <td>${esc(s.vendor_name||"—")}</td>
+        <td>${esc(s.courier_name||"—")}</td>
+        <td><code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;font-size:11.5px;">${esc(s.tracking_number||"—")}</code></td>
+        <td style="color:#94a3b8;font-size:12px;">${s.submitted_at ? fmtDate(s.submitted_at) : "—"}</td>
+        <td style="white-space:nowrap;">
+          <button class="btn" style="background:#10b981;color:#fff;font-size:11px;padding:4px 10px;margin-right:4px;" onclick="empApproveTracking(${s.id})">✓ Approve</button>
+          <button class="btn" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;font-size:11px;padding:4px 10px;" onclick="empRejectTracking(${s.id})">✕ Reject</button>
+        </td>
+      </tr>`).join("");
+  }catch(e){
+    if(tbody) tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#ef4444;padding:20px;font-size:13px;">${esc(e.message||e)}</td></tr>`;
+  }
+}
+
+async function empApproveTracking(subId){
+  if(!confirm("Approve this tracking submission and notify the customer?")) return;
+  try{
+    const r = await fetch(`/vendors/api/tracking-queue/${subId}/approve/`, {method:"POST", headers:{"X-CSRFToken": getCSRFToken()}});
+    const raw = await r.text();
+    let d; try { d = JSON.parse(raw); } catch(_) { d = {success:false, message:`HTTP ${r.status}`}; }
+    if(d.success){ loadMyTrackingQueue(); }
+    else { alert("Approve failed: " + (d.message||"Unknown error")); }
+  }catch(e){ alert("Approve failed: " + e.message); }
+}
+
+async function empRejectTracking(subId){
+  const reason = prompt("Why are you rejecting this tracking? (optional)");
+  if(reason === null) return; // user cancelled
+  try{
+    const r = await fetch(`/vendors/api/tracking-queue/${subId}/reject/`, {
+      method: "POST",
+      headers: {"Content-Type":"application/json", "X-CSRFToken": getCSRFToken()},
+      body: JSON.stringify({reason: reason || ""})
+    });
+    const raw = await r.text();
+    let d; try { d = JSON.parse(raw); } catch(_) { d = {success:false, message:`HTTP ${r.status}`}; }
+    if(d.success){ loadMyTrackingQueue(); }
+    else { alert("Reject failed: " + (d.message||"Unknown error")); }
+  }catch(e){ alert("Reject failed: " + e.message); }
 }
 
 // ── My Emails ──
