@@ -136,12 +136,37 @@ def create_team_member_api(request):
 
 @api_view(["DELETE"])
 def delete_team_member_api(request, member_id):
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
+
     try:
         member = TeamMember.objects.get(id=member_id, owner=request.user)
-        member.user.delete()
-        return Response({"success": True, "message": "Employee deleted."})
     except TeamMember.DoesNotExist:
-        return Response({"success": False, "message": "Employee not found."}, status=404)
+        return Response({"success": False, "message": "Team member not found."}, status=404)
+
+    # CRITICAL safety net: never delete the tenant's OWN User account through
+    # this endpoint. If a TeamMember row somehow points its `user` FK at the
+    # tenant themselves (legacy data, accidental signup auto-add), deleting
+    # would cascade-wipe every store, order, vendor, email, and stock entry.
+    if member.user_id and member.user_id == request.user.id:
+        # Detach the User link and remove only the TeamMember row, so the
+        # stray entry disappears from the list without nuking the account.
+        member.user = None
+        member.save(update_fields=["user"])
+        member.delete()
+        return Response({"success": True, "message": "Removed your own entry from the team list (your admin account is untouched)."})
+
+    try:
+        if member.user_id:
+            # Cascade-deletes the TeamMember row alongside the linked User.
+            member.user.delete()
+        else:
+            # Orphan row (legacy data with user=NULL) — drop it directly.
+            member.delete()
+    except Exception as e:
+        return Response({"success": False, "message": f"Delete failed: {e}"}, status=500)
+
+    return Response({"success": True, "message": "Team member removed."})
 
 
 # ─── Admin: Assignment Rules ──────────────────────────────────────────────────

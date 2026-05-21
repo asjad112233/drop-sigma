@@ -13926,12 +13926,20 @@ async function deleteTeamMember(memberId, memberName){
       method: "DELETE",
       headers: {"X-CSRFToken": getCSRFToken()}
     });
-    const d = await r.json();
+    // Resilient parse: if the server returned an HTML error page (5xx, 404
+    // template, login redirect), .json() throws "Unexpected token '<'…".
+    // Read the body once and only treat as JSON when it actually is.
+    const raw = await r.text();
+    let d;
+    try { d = JSON.parse(raw); }
+    catch(_) {
+      d = { success: false, message: `Server returned HTTP ${r.status} (non-JSON). Try refreshing.` };
+    }
     if(d.success){
       _taLastMembers = [];  // clear cache so deleted member isn't shown from cache
       loadTeamMembers();
     } else {
-      await _alert("Delete failed: " + (d.message || "Unknown error"), "Error", "❌");
+      await _alert("Delete failed: " + (d.message || `HTTP ${r.status}`), "Error", "❌");
     }
   }catch(e){
     await _alert("Delete failed: " + e.message, "Error", "❌");
