@@ -463,21 +463,12 @@ def assign_vendor_to_order_api(request, order_id):
             }
         )
 
-        # Retroactively assign same vendor to all existing unassigned orders
-        # for this product — but ONLY within the requester's own stores.
-        unassigned = Order.objects.filter(
-            product_id=order.product_id,
-            assigned_vendor__isnull=True,
-            store__user=request.user,
-        ).exclude(id=order.id)
-        for o in unassigned:
-            o.assigned_vendor = vendor
-            o.assignment_type = "permanent_auto"
-            o.vendor_status = "assigned"
-            o.save(update_fields=["assigned_vendor", "assignment_type", "vendor_status"])
-            log_activity(o, "vendor_assigned",
-                         f"Vendor '{vendor.name}' auto-assigned by product mapping",
-                         actor="System")
+        # ⚠ Intentionally NO retroactive assignment here. Permanent assignment
+        # applies only to *future* orders that arrive after this point — the
+        # webhook / sync path will pick the rule up via attach_permanent_vendor
+        # in orders/services.py. Already-fetched orders keep whatever state
+        # the admin had set on them, so a single manual assignment doesn't
+        # silently sweep older orders.
 
     return Response({
         "success": True,
@@ -536,19 +527,9 @@ def bulk_assign_vendor_api(request):
                 }
             )
             permanent_count += 1
-            # Retroactively assign — STAY within the requester's own stores.
-            for o in Order.objects.filter(
-                product_id=order.product_id,
-                assigned_vendor__isnull=True,
-                store__user=request.user,
-            ).exclude(id=order.id):
-                o.assigned_vendor = vendor
-                o.assignment_type = "permanent_auto"
-                o.vendor_status = "assigned"
-                o.save(update_fields=["assigned_vendor", "assignment_type", "vendor_status"])
-                log_activity(o, "vendor_assigned",
-                             f"Vendor '{vendor.name}' auto-assigned by product mapping",
-                             actor="System")
+            # ⚠ No retroactive sweep — the rule only catches *future* orders
+            # of this product. Already-fetched orders in the bulk selection
+            # were assigned above explicitly; everything else stays as-is.
 
     return Response({
         "success": True,
