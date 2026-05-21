@@ -12608,12 +12608,19 @@ async function deleteStore(storeId, storeName){
   try{
     const csrfToken = getCSRFToken();
 
-    const response = await fetch(`/stores/api/delete/${storeId}/`, {
+    // Send the flag THREE WAYS so a body-stripping proxy can't lose it:
+    //   1) JSON body (preferred — what the backend reads first)
+    //   2) Query string (?delete_ai_training=1) as a fallback
+    //   3) X-Delete-Ai-Training custom header (last-resort signal)
+    const flag = deleteAiTraining ? "1" : "0";
+    const url  = `/stores/api/delete/${storeId}/?delete_ai_training=${flag}`;
+    const response = await fetch(url, {
       method: "DELETE",
       credentials: "same-origin",
       headers: {
         "Content-Type": "application/json",
-        "X-CSRFToken": csrfToken
+        "X-CSRFToken": csrfToken,
+        "X-Delete-Ai-Training": flag,
       },
       body: JSON.stringify({ confirm_delete: true, delete_ai_training: deleteAiTraining })
     });

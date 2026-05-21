@@ -560,11 +560,35 @@ def delete_store_api(request, store_id):
     # Per-user scope: tenants can only delete their own stores.
     store = get_object_or_404(Store, id=store_id, user=request.user)
 
-    # Default behaviour: PRESERVE AI training so the tenant can reconnect
-    # the same shop later without re-uploading every knowledge snippet.
-    # Caller may opt in to a full reset by passing delete_ai_training=true.
-    delete_ai_training = bool(request.data.get("delete_ai_training", False)) if request.data else False
+    # Read delete_ai_training from EVERY plausible source — some proxies
+    # strip the body off DELETE requests, and a stale browser tab may not
+    # have the body-sending JS yet, so we accept ?delete_ai_training=1 in
+    # the query string as a fallback. Truthy values: "1", "true", "yes",
+    # "on", True. Anything else → preserve.
+    def _truthy(v):
+        return str(v).strip().lower() in ("1", "true", "yes", "on")
+
+    raw = (
+        (request.data.get("delete_ai_training") if hasattr(request, "data") and request.data else None)
+        or request.GET.get("delete_ai_training")
+        or request.POST.get("delete_ai_training")
+        or request.META.get("HTTP_X_DELETE_AI_TRAINING")  # custom header fallback
+        or False
+    )
+    delete_ai_training = _truthy(raw)
     user = request.user
+
+    # Log so production diagnostics show exactly what we received and what
+    # the flag resolved to — solves the "I clicked the checkbox, why
+    # didn't anything happen?" debugging gap.
+    import logging
+    _log = logging.getLogger(__name__)
+    _log.info(
+        "delete_store_api: store_id=%s user=%s method=%s raw_flag=%r resolved=%s body=%r qs=%r",
+        store_id, user.id, request.method, raw, delete_ai_training,
+        dict(request.data) if hasattr(request, "data") and request.data else {},
+        dict(request.GET),
+    )
 
     snapshot_taken = False
     reset_counts = {"profiles": 0, "snippets": 0, "feedbacks": 0, "snapshots": 0}
@@ -602,9 +626,11 @@ def delete_store_api(request, store_id):
     store.delete()
 
     return Response({
-        "success":                True,
-        "message":                "Store deleted successfully",
-        "ai_training_preserved":  snapshot_taken,
-        "ai_training_reset":      bool(delete_ai_training),
+        "success":                  True,
+        "message":                  "Store deleted successfully",
+        "ai_training_preserved":    snapshot_taken,
+        "ai_training_reset":        bool(delete_ai_training),
         "ai_training_reset_counts": reset_counts if delete_ai_training else None,
+        # Echo what we received so the UI can verify the round-trip.
+        "_debug_received_flag":     raw,
     })
