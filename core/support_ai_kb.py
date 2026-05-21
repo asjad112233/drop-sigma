@@ -140,6 +140,21 @@ FEATURES = {
                 "Type the note > click + Add",
                 "Customer notes also email the customer via your connected Gmail",
             ],
+            "filter_by_status": [
+                "Sidebar > Orders",
+                "Use the status pills at the top: Pending, Processing, Shipped, Delivered, Cancelled, Refunded",
+                "Click a pill to filter — click 'All' to reset",
+            ],
+            "search": [
+                "Sidebar > Orders",
+                "Use the search bar at the top",
+                "Search by order #, customer name, customer email, or tracking #",
+            ],
+            "refresh_sync": [
+                "Sidebar > Orders",
+                "Click the 🔄 refresh icon (top bar)",
+                "Pulls latest orders from your connected store immediately",
+            ],
         },
     },
 
@@ -248,6 +263,46 @@ FEATURES = {
                 "Type in the reply box, or click ✦ Generate AI to draft",
                 "Click CC/BCC + Note buttons to expand more options",
                 "Click Send",
+            ],
+            "attach_file": [
+                "Open the Compose modal (+ New Email button)",
+                "Click the 📎 paperclip icon in the toolbar",
+                "Pick files from your computer (max ~25MB total)",
+                "Attached files show as chips above the Send button",
+            ],
+            "cc_bcc": [
+                "Compose modal: click 'CC / BCC' toggle at the top",
+                "Reply box: same 'CC / BCC' button just above the textarea",
+                "Add comma-separated email addresses",
+            ],
+            "ai_draft": [
+                "Open any thread",
+                "Click '✦ Draft' button in the conversation header (top-right)",
+                "AI generates a contextual reply based on your AI Training settings",
+                "Edit if needed, then click Send",
+            ],
+            "resolve_thread": [
+                "Open any thread",
+                "Click the green Status pill (top-right of conversation header)",
+                "Pick '✓ Resolve' — thread moves to Resolved filter",
+                "Re-open later from the Status pill if needed",
+            ],
+            "assign_thread": [
+                "Open any thread",
+                "Click the Assignee chip (top-right of conversation header)",
+                "Pick a teammate from the list",
+                "They get notified and the thread appears in their Assigned filter",
+            ],
+            "internal_note": [
+                "Open any thread",
+                "Click 'Note' button in the reply toolbar",
+                "Yellow note box appears — type context for your team only",
+                "Notes are NEVER sent to the customer",
+            ],
+            "live_sync_toggle": [
+                "Look for 'Live Sync' chip in the email section header",
+                "Click to pause/resume real-time email sync",
+                "Paused = no auto-refresh; you'll see new mail only on Refresh click",
             ],
             "use_templates": [
                 "Compose modal > 📄 Templates button",
@@ -428,7 +483,22 @@ FEATURES = {
         "actions": {
             "profile": ["Sidebar > Settings > Profile tab",
                         "Update your name, email, password"],
+            "change_password": [
+                "Sidebar > Settings > Profile tab",
+                "Click 'Change Password'",
+                "Enter current password, then new password twice",
+                "Click Save",
+            ],
             "billing": ["Sidebar > Settings > Billing tab — manage plan + payment method"],
+            "logout": [
+                "Click your avatar in the top-right corner",
+                "Click 'Logout' from the dropdown",
+                "Or visit /logout/ directly",
+            ],
+            "notifications": [
+                "Sidebar > Settings > Notifications tab",
+                "Toggle browser notifications, sound alerts, email digests",
+            ],
             "team_permissions": ["Sidebar > Team > click member > Permissions tab"],
         },
     },
@@ -447,6 +517,29 @@ FEATURES = {
             "auto_approve_settings": [
                 "Sidebar > Tracking Queue > Settings",
                 "Toggle 'Auto-approve all from trusted vendors' to skip the queue",
+            ],
+        },
+    },
+
+    "portals": {
+        "label": "Vendor & Employee Portals",
+        "where": "Separate login URLs outside the admin dashboard",
+        "actions": {
+            "vendor_login": [
+                "Vendors log in at /vendor/login/",
+                "They see orders assigned to them, can submit tracking, view stock",
+                "You create vendor accounts from Sidebar > Vendors > + New Vendor",
+            ],
+            "employee_login": [
+                "Employees log in at /employee/login/",
+                "They see only what their role + permissions allow (orders, emails, etc.)",
+                "You create employee accounts from Sidebar > Team > + New Team Member",
+            ],
+            "vendor_submit_tracking": [
+                "Vendor logs in at /vendor/login/",
+                "Opens any assigned order",
+                "Pastes tracking number + picks courier > Submit",
+                "It lands in YOUR Tracking Queue for approval",
             ],
         },
     },

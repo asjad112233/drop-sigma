@@ -272,7 +272,7 @@ def _action_pretty(action_key: str) -> str:
     return action_key.replace("_", " ").strip()
 
 
-def _format_match(section_key: str, action_key: str) -> dict:
+def _format_match(section_key: str, action_key: str, confidence: str = "high") -> dict:
     feat = FEATURES[section_key]
     steps_raw = feat["actions"][action_key]
     label = feat.get("label", section_key.title())
@@ -311,6 +311,7 @@ def _format_match(section_key: str, action_key: str) -> dict:
         "steps": steps,
         "breadcrumb": breadcrumb,
         "deep_link": section_key if section_key in DEEP_LINKS else "",
+        "_confidence": confidence,
     }
 
 
@@ -335,6 +336,7 @@ def _format_low_confidence(top_candidates: List[Tuple[int, str, str]]) -> dict:
         "steps": suggestions,
         "breadcrumb": [],
         "deep_link": "",
+        "_confidence": "low",
     }
 
 
@@ -354,6 +356,7 @@ def _fallback_no_match() -> dict:
         "steps": [],
         "breadcrumb": [],
         "deep_link": "",
+        "_confidence": "none",
     }
 
 
@@ -391,8 +394,8 @@ def match_question(question: str) -> dict:
 
     if top_score < _MIN_CONFIDENT_SCORE:
         # Single weak match — show it anyway, plus a hint.
-        result = _format_match(top_skey, top_akey)
+        result = _format_match(top_skey, top_akey, confidence="low")
         result["reply"] = "Best match I found — let me know if you meant something else:"
         return result
 
-    return _format_match(top_skey, top_akey)
+    return _format_match(top_skey, top_akey, confidence="high")
