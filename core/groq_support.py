@@ -38,12 +38,13 @@ log = logging.getLogger(__name__)
 _GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 # Model rotation order. Each entry has its own 30 RPM free-tier quota,
-# so failures cascade through ~90 effective RPM before the offline matcher
-# takes over. Keep this list to currently-supported Groq free-tier models.
+# so a busy minute can stack ~60 effective RPM before falling through to
+# the matcher. Keep this list to currently-supported Groq free-tier
+# models — older entries like gemma2-9b-it and mixtral were decommissioned
+# and removed from this rotation.
 _MODELS = (
     "llama-3.3-70b-versatile",
     "llama-3.1-8b-instant",
-    "gemma2-9b-it",
 )
 
 # Short timeout — if Groq is slow, fail fast and try next model / fallback.
@@ -98,7 +99,8 @@ def _call_groq(model: str, messages: list) -> Optional[str]:
         return None
 
     if r.status_code == 429:
-        log.info("groq_support: %s rate-limited, falling through", model)
+        # Visible at WARNING so production logs surface real rate-limit pressure.
+        log.warning("groq_support: %s rate-limited, falling through", model)
         return None
     if r.status_code >= 400:
         log.warning("groq_support: %s returned %s: %s", model, r.status_code, r.text[:200])
@@ -181,28 +183,22 @@ def _matcher_result(question: str, source_tag: str) -> dict:
 def answer(question: str, history: list | None = None) -> dict:
     """Top-level entry. Returns the response dict the view will JSON-encode.
 
-    Cost-optimised flow (matcher-first):
-      1. Try the offline keyword matcher — instant, $0.
-      2. If matcher returns a HIGH-confidence answer → done. No API call.
-      3. Otherwise → escalate to Groq (rotates models). Conversational reply.
-      4. Total Groq failure → return matcher's low-confidence result anyway.
+    Pure-Groq flow (matcher is ONLY a final safety net):
+      1. Try every Groq model in rotation. First valid JSON wins.
+      2. If every Groq model fails (rate limit, network, non-JSON), THEN
+         fall back to the offline keyword matcher so the FAB still shows
+         something useful.
 
-    Real-world impact: ~70-80% of common FAQ questions never hit the API."""
+    Matching the user's preference: Groq's conversational, Roman-Urdu-aware
+    replies are higher quality than the matcher's canned KB phrasing.
+    Mixed routing felt inconsistent in real use."""
     if not question or not question.strip():
         return _matcher_result(question or "", "matcher")
 
-    # Step 1: always try the matcher first.
-    matcher_result = _matcher_result(question, "matcher")
-    confidence = matcher_result.get("_confidence", "high")
-
-    # Step 2: high-confidence match → return without spending an API call.
-    if confidence == "high":
-        return matcher_result
-
-    # Step 3: low/no confidence — escalate to Groq if configured.
+    # No API key → matcher is the only option.
     if not settings.GROQ_API_KEY:
-        # No key → return the matcher's best-effort result.
-        return matcher_result
+        log.debug("groq_support: no GROQ_API_KEY, using offline matcher")
+        return _matcher_result(question, "matcher")
 
     messages = _build_messages(question, history or [])
     t0 = time.time()
@@ -219,7 +215,6 @@ def answer(question: str, history: list | None = None) -> dict:
         result["_latency_ms"] = int((time.time() - t0) * 1000)
         return result
 
-    # Step 4: every Groq model failed — fall back to the matcher's best guess.
+    # Every Groq model failed (rate-limited or down) — final safety net.
     log.info("groq_support: all models failed, falling back to keyword matcher")
-    matcher_result["_source"] = "matcher_fallback"
-    return matcher_result
+    return _matcher_result(question, "matcher_fallback")
