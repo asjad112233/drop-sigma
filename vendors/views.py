@@ -1404,27 +1404,38 @@ def _build_vendor_invitation_email(name, invite_url, invited_by, store_name):
 
 
 def _send_vendor_invitation_email(to_email, subject, html):
-    import logging
+    """Send a vendor invitation from the platform sender (noreply@dropsigma.com).
+    Returns (sent: bool, error_msg: str). Never raises.
+
+    Uses Django's built-in SMTP via EMAIL_HOST_USER configured in
+    settings.py — platform brand sender, not the tenant's Gmail."""
+    import logging, threading
+    from django.conf import settings
+    from django.core.mail import EmailMultiAlternatives
     logger = logging.getLogger(__name__)
+
+    if not settings.EMAIL_HOST_USER or not settings.EMAIL_HOST_PASSWORD:
+        return False, ("Server email is not configured (EMAIL_HOST_USER / "
+                       "EMAIL_HOST_PASSWORD missing). Set them and retry.")
+
+    from_addr = settings.DEFAULT_FROM_EMAIL or settings.EMAIL_HOST_USER
 
     def _do():
         try:
-            import resend as _resend
-            api_key = os.getenv("RESEND_API_KEY", "")
-            if not api_key:
-                logger.warning("RESEND_API_KEY not set — vendor invitation email not sent to %s", to_email)
-                return
-            _resend.api_key = api_key
-            result = _resend.Emails.send({
-                "from":    "Drop Sigma <noreply@dropsigma.com>",
-                "to":      [to_email],
-                "subject": subject,
-                "html":    html,
-            })
-            logger.info("Vendor invitation email sent to %s — id: %s", to_email, getattr(result, "id", result))
+            msg = EmailMultiAlternatives(
+                subject=subject,
+                body="Open in an HTML-capable email client to view this invitation.",
+                from_email=f"Drop Sigma <{from_addr}>",
+                to=[to_email],
+            )
+            msg.attach_alternative(html, "text/html")
+            msg.send(fail_silently=False)
+            logger.info("Vendor invitation email sent to %s from %s", to_email, from_addr)
         except Exception as exc:
             logger.error("Failed to send vendor invitation email to %s: %s", to_email, exc)
+
     threading.Thread(target=_do, daemon=True).start()
+    return True, ""
 
 
 @api_view(["POST"])
@@ -1470,7 +1481,12 @@ def send_vendor_invitation_api(request):
 
     invited_by = request.user.get_full_name() or request.user.username
     html = _build_vendor_invitation_email(name, invite_url, invited_by, store.name)
-    _send_vendor_invitation_email(email, f"You're invited as a vendor partner on Drop Sigma", html)
+    sent, err = _send_vendor_invitation_email(email, f"You're invited as a vendor partner on Drop Sigma", html)
+
+    if not sent:
+        # Roll back so the user can retry once email is configured.
+        inv.delete()
+        return Response({"success": False, "message": err}, status=500)
 
     return Response({"success": True, "message": f"Invitation sent to {email}."})
 

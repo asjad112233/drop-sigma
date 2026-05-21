@@ -1420,7 +1420,6 @@ def task_comments_api(request, task_id):
 # ─── Employee Invitations ─────────────────────────────────────────────────────
 
 import os
-import resend as _resend
 
 _INV_LOGO = """<table cellpadding="0" cellspacing="0"><tr>
   <td style="background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:14px;width:44px;height:44px;text-align:center;vertical-align:middle;">
@@ -1484,26 +1483,41 @@ def _build_invitation_email(name, invite_url, invited_by):
 
 
 def _send_invitation_email(to_email, subject, html):
+    """Send a team invitation from the platform sender (noreply@dropsigma.com).
+    Returns (sent: bool, error_msg: str). Never raises.
+
+    Uses Django's built-in SMTP via the EMAIL_HOST_USER configured in
+    settings.py — this is the platform's own mailbox (noreply@dropsigma.com),
+    not the tenant's Gmail. Invitations are a platform operation, so they
+    must come from the brand sender."""
     import logging
+    from django.conf import settings
+    from django.core.mail import EmailMultiAlternatives
     logger = logging.getLogger(__name__)
+
+    if not settings.EMAIL_HOST_USER or not settings.EMAIL_HOST_PASSWORD:
+        return False, ("Server email is not configured (EMAIL_HOST_USER / "
+                       "EMAIL_HOST_PASSWORD missing). Set them and retry.")
+
+    from_addr = settings.DEFAULT_FROM_EMAIL or settings.EMAIL_HOST_USER
 
     def _do():
         try:
-            api_key = os.getenv("RESEND_API_KEY", "")
-            if not api_key:
-                logger.warning("RESEND_API_KEY not set — invitation email not sent to %s", to_email)
-                return
-            _resend.api_key = api_key
-            result = _resend.Emails.send({
-                "from":    "Drop Sigma <noreply@dropsigma.com>",
-                "to":      [to_email],
-                "subject": subject,
-                "html":    html,
-            })
-            logger.info("Invitation email sent to %s — id: %s", to_email, getattr(result, "id", result))
+            msg = EmailMultiAlternatives(
+                subject=subject,
+                body="Open in an HTML-capable email client to view this invitation.",
+                from_email=f"Drop Sigma <{from_addr}>",
+                to=[to_email],
+            )
+            msg.attach_alternative(html, "text/html")
+            msg.send(fail_silently=False)
+            logger.info("Invitation email sent to %s from %s", to_email, from_addr)
         except Exception as exc:
             logger.error("Failed to send invitation email to %s: %s", to_email, exc)
+
+    # Fire-and-forget so the API response is fast.
     threading.Thread(target=_do, daemon=True).start()
+    return True, ""
 
 
 @api_view(["POST"])
@@ -1546,7 +1560,13 @@ def send_employee_invitation_api(request):
 
     invited_by = request.user.get_full_name() or request.user.username
     html = _build_invitation_email(name, invite_url, invited_by)
-    _send_invitation_email(email, f"You're invited to join {invited_by} on Drop Sigma", html)
+    sent, err = _send_invitation_email(email, f"You're invited to join {invited_by} on Drop Sigma", html)
+
+    if not sent:
+        # Roll the invitation back so the user can retry cleanly once
+        # the server email is configured.
+        inv.delete()
+        return Response({"success": False, "message": err}, status=500)
 
     return Response({"success": True, "message": f"Invitation sent to {email}."})
 
