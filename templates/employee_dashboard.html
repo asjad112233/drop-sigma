@@ -1149,7 +1149,15 @@ async function _ecWsBackground(){
 
 function _ecStartPoll(){
   if(_ecPollTimer) return;
-  _ecPollTimer = setInterval(_ecPollTick, 8000);
+  // 5s cadence so admin-side permission edits feel near-instant. Also wire
+  // a focus listener so the FIRST thing that runs on tab-return is a
+  // permission refresh — covers the common case where admin updated
+  // permissions while the employee was in a different tab.
+  _ecPollTimer = setInterval(_ecPollTick, 5000);
+  if(!window._ecFocusHook){
+    window.addEventListener("focus", () => { try { _ecRefreshAccess(); } catch(_){} });
+    window._ecFocusHook = true;
+  }
 }
 
 /* Pick up access changes the admin makes from their portal — every 8 sec

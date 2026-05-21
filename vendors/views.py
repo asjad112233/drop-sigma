@@ -1541,6 +1541,34 @@ def send_vendor_invitation_api(request):
 
 
 @api_view(["GET"])
+def vendor_me_api(request):
+    """Lightweight identity + permissions endpoint the vendor portal can
+    poll every few seconds to pick up admin-side access changes instantly.
+    Returns the live permissions dict so the portal can re-render columns,
+    hide/show buttons, and refresh data without a page reload."""
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Not authenticated"}, status=401)
+    try:
+        vendor = request.user.vendor_profile
+    except Exception:
+        return Response({"success": False, "message": "Not a vendor"}, status=403)
+
+    return Response({
+        "success": True,
+        "vendor": {
+            "id":             vendor.id,
+            "name":           vendor.name,
+            "email":          vendor.email,
+            "status":         vendor.status,
+            "company_name":   vendor.company_name or "",
+            "store_id":       vendor.assigned_store_id,
+            "store_name":     vendor.assigned_store.name if vendor.assigned_store_id else "",
+            "permissions":    vendor.permissions or {},
+        }
+    })
+
+
+@api_view(["GET"])
 def vendor_invitations_api(request):
     """List vendor invitations this admin has sent."""
     if not request.user.is_authenticated:

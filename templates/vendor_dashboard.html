@@ -2808,10 +2808,46 @@ async function _vcWsBackground(){
 
 function _vcStartPoll(){
   if(_vcPollTimer) return;
-  _vcPollTimer = setInterval(_vcPollTick, 8000);
+  // Tightened to 5s so admin-side permission changes light up in the
+  // vendor portal almost in real-time, not after an 8s wait.
+  _vcPollTimer = setInterval(_vcPollTick, 5000);
+  // Also re-check immediately whenever the user tabs back to this window —
+  // covers the common "admin updates while vendor is in another tab" case.
+  if(!window._vpFocusHook){
+    window.addEventListener("focus", () => { try { _vpRefreshAccess(); } catch(_){} });
+    window._vpFocusHook = true;
+  }
+}
+
+/* Pick up admin-side permission changes for THIS vendor and re-render the
+   orders table + header without a page reload. Mirrors employee portal's
+   _ecRefreshAccess. Runs every poll tick (5s) and on window-focus. */
+async function _vpRefreshAccess(){
+  try{
+    const r = await fetch("/vendor/api/me/", {cache:"no-store"});
+    if(!r.ok) return;
+    const d = await r.json();
+    if(!d.success || !d.vendor) return;
+    const fresh = d.vendor.permissions || {};
+    const cur   = vendorPerms || {};
+    // Cheap deep-compare on every key we care about.
+    const keys = new Set([...Object.keys(cur), ...Object.keys(fresh)]);
+    let changed = false;
+    for(const k of keys){ if(!!cur[k] !== !!fresh[k]){ changed = true; break; } }
+    if(!changed) return;
+
+    vendorPerms = fresh;
+    // Re-pull the orders list so customer fields show/hide per the new
+    // permission set. loadVendorOrders also rebuilds the table header.
+    try { if(typeof loadVendorOrders === "function") loadVendorOrders(); } catch(_){}
+    // Soft heads-up so the vendor knows their access shifted.
+    try { if(typeof _vcShowInAppNotif === "function") _vcShowInAppNotif("Drop Sigma", "Access updated", "Your admin updated your portal access.", null); } catch(_){}
+  }catch(_){}
 }
 
 async function _vcPollTick(){
+  // Run permission refresh alongside the chat poll.
+  _vpRefreshAccess();
   try{
     const chatBtn = document.querySelector('.vp-nav button[data-tab="chat"]');
     const chatActive = chatBtn && chatBtn.classList.contains("active");
