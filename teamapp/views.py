@@ -1553,7 +1553,7 @@ def send_employee_invitation_api(request):
         return Response({"success": False, "message": "Login required."}, status=401)
 
     name   = (request.data.get("name") or "").strip()
-    email  = (request.data.get("email") or "").strip()
+    email  = (request.data.get("email") or "").strip().lower()  # normalise once
     role   = request.data.get("role", "support")
     status = request.data.get("status", "available")
     perms  = request.data.get("permissions", {})
@@ -1561,14 +1561,39 @@ def send_employee_invitation_api(request):
     if not name or not email:
         return Response({"success": False, "message": "Name and email are required."}, status=400)
 
-    if TeamMember.objects.filter(email=email).exists():
-        return Response({"success": False, "message": "An employee with this email already exists."}, status=400)
+    # Case-insensitive existence checks. Previous code did `email=email` which
+    # only matched when the stored row's case matched exactly — so an existing
+    # "john@example.com" would fail to be detected when a user typed
+    # "John@Example.com", letting the invitation slip through.
+    if TeamMember.objects.filter(email__iexact=email).exists():
+        return Response({
+            "success": False,
+            "message": f"\"{email}\" is already a team member somewhere on Drop Sigma."
+        }, status=400)
 
-    if User.objects.filter(email=email).exists():
-        return Response({"success": False, "message": "A user with this email already exists."}, status=400)
+    if User.objects.filter(email__iexact=email).exists():
+        return Response({
+            "success": False,
+            "message": f"\"{email}\" already has a Drop Sigma account. Ask them to log in instead."
+        }, status=400)
 
-    # Expire any existing pending invites for this email under this owner
-    EmployeeInvitation.objects.filter(owner=request.user, email=email, status="pending").update(status="expired")
+    # Stop spam-resending the same pending invite — if THIS tenant has an
+    # un-expired pending invitation to the same address, return a clear
+    # "already invited" message instead of silently sending a new one.
+    pending = EmployeeInvitation.objects.filter(
+        owner=request.user, email__iexact=email, status="pending"
+    ).first()
+    if pending and pending.expires_at and pending.expires_at > timezone.now():
+        return Response({
+            "success": False,
+            "message": f"You already invited \"{email}\". The previous invite is still valid until "
+                       f"{pending.expires_at.strftime('%b %d, %H:%M UTC')}."
+        }, status=400)
+
+    # Otherwise expire stale pending invites so we don't pile up rows.
+    EmployeeInvitation.objects.filter(
+        owner=request.user, email__iexact=email, status="pending"
+    ).update(status="expired")
 
     expires_at = timezone.now() + datetime.timedelta(hours=48)
     inv = EmployeeInvitation.objects.create(
