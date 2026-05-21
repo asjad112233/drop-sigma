@@ -24419,6 +24419,10 @@ async function aiSend(){
   const btn = document.getElementById("aiSendBtn");
   btn.disabled = true;
 
+  // Outgoing "swoosh" the moment the message leaves the user's keyboard —
+  // before the bubble even renders, so the audio matches the visual cue.
+  _aiPlaySendSound();
+
   const body = document.getElementById("aiBody");
 
   // 1) Push user message bubble
@@ -24467,19 +24471,88 @@ async function aiSend(){
   _aiScroll();
 }
 
-/* Soft notification beep when the AI's reply lands. Reuses the existing
-   Web-Audio helper that powers the email "new mail" ping — no extra
-   asset, no external file. Honours the per-user mute toggle persisted
-   in localStorage (key: ds_support_ai_sound_v1). */
+/* WhatsApp-style chat sounds — two distinct cues, generated on the fly
+   with Web Audio API so we don't ship any binary asset:
+
+     SEND   — a rising "swoosh"  (~150ms, 350 → 900 Hz, lowpass-filtered)
+     RECEIVE — a soft "pop"      (~220ms, two quick descending pings)
+
+   Honours the per-user mute toggle (ds_support_ai_sound_v1). Both
+   sounds are wrapped in try/catch so a browser without AudioContext
+   never breaks the reply flow. */
 const _AI_SOUND_KEY = "ds_support_ai_sound_v1";  // "on" or "off"
 function _aiSoundEnabled(){
   try { return (localStorage.getItem(_AI_SOUND_KEY) || "on") !== "off"; }
   catch(_) { return true; }
 }
-function _aiPlayPing(){
-  if(!_aiSoundEnabled()) return;
-  try { _playEmailNotifSound(); } catch(_){}
+function _aiAudioCtx(){
+  try {
+    if(!window._aiAudioCtx){
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if(!Ctx) return null;
+      window._aiAudioCtx = new Ctx();
+    }
+    if(window._aiAudioCtx.state === "suspended") window._aiAudioCtx.resume();
+    return window._aiAudioCtx;
+  } catch(_) { return null; }
 }
+
+function _aiPlaySendSound(){
+  if(!_aiSoundEnabled()) return;
+  const ctx = _aiAudioCtx();
+  if(!ctx) return;
+  try{
+    const t0 = ctx.currentTime;
+    // Rising "swoosh": frequency ramps up while a lowpass filter sweeps
+    // open — gives the breathy outgoing-message feel.
+    const osc = ctx.createOscillator();
+    const filt = ctx.createBiquadFilter();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(350, t0);
+    osc.frequency.exponentialRampToValueAtTime(900, t0 + 0.13);
+    filt.type = "lowpass";
+    filt.frequency.setValueAtTime(800, t0);
+    filt.frequency.exponentialRampToValueAtTime(3000, t0 + 0.13);
+    filt.Q.value = 0.7;
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.linearRampToValueAtTime(0.13, t0 + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.0008, t0 + 0.15);
+    osc.connect(filt).connect(gain).connect(ctx.destination);
+    osc.start(t0);
+    osc.stop(t0 + 0.18);
+  }catch(_){}
+}
+
+function _aiPlayReceiveSound(){
+  if(!_aiSoundEnabled()) return;
+  const ctx = _aiAudioCtx();
+  if(!ctx) return;
+  try{
+    const t0 = ctx.currentTime;
+    // Two quick descending pings — WhatsApp's "incoming" character: a
+    // bright first note, then a softer second one ~70ms later.
+    const playPing = (start, freq1, freq2, peak) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(freq1, start);
+      osc.frequency.exponentialRampToValueAtTime(freq2, start + 0.08);
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.linearRampToValueAtTime(peak, start + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0006, start + 0.13);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(start);
+      osc.stop(start + 0.16);
+    };
+    playPing(t0,         1320, 1050, 0.16);  // bright opener
+    playPing(t0 + 0.07,  1050, 820,  0.11);  // softer follow
+  }catch(_){}
+}
+
+/* Legacy name kept so older call-sites still work. Points at the
+   receive sound — that's where _aiPlayPing was being used. */
+function _aiPlayPing(){ _aiPlayReceiveSound(); }
 function aiToggleSound(){
   const next = _aiSoundEnabled() ? "off" : "on";
   try { localStorage.setItem(_AI_SOUND_KEY, next); } catch(_){}
@@ -24488,8 +24561,9 @@ function aiToggleSound(){
     btn.textContent = next === "on" ? "🔔" : "🔕";
     btn.title = next === "on" ? "Sound on — click to mute" : "Sound muted — click to unmute";
   }
-  // Tiny confirmation ping when re-enabling, so user knows it's working.
-  if(next === "on"){ try { _playEmailNotifSound(); } catch(_){} }
+  // Confirmation ping when re-enabling so user knows it's working — uses
+  // the receive sound (more pleasant as a "ready" cue than the swoosh).
+  if(next === "on"){ _aiPlayReceiveSound(); }
 }
 // Sync the icon to the saved preference on first load.
 (function _aiInitSoundIcon(){
