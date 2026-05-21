@@ -4410,14 +4410,14 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
               </div>
             </div>
             <div style="display:flex;align-items:center;gap:8px;">
-              <div style="font-size:12px;font-weight:700;color:#6366f1;" id="setupProgressText">0 / 3 done</div>
+              <div style="font-size:12px;font-weight:700;color:#6366f1;" id="setupProgressText">0 / 4 done</div>
               <div style="width:80px;height:6px;background:#e2e8f0;border-radius:999px;overflow:hidden;">
                 <div id="setupProgressBar" style="height:100%;width:0%;background:linear-gradient(90deg,#6366f1,#8b5cf6);border-radius:999px;transition:width .5s ease;"></div>
               </div>
             </div>
           </div>
           <!-- steps -->
-          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;position:relative;z-index:1;">
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;position:relative;z-index:1;">
 
             <!-- Step 1: Connect Store -->
             <div id="setupStep1" onclick="setupStepClick(1)" style="background:#f8fafc;border:1.5px solid #e3e8f0;border-radius:16px;padding:16px 18px;cursor:pointer;transition:all .2s;"
@@ -4461,26 +4461,22 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
               <div style="margin-top:12px;display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:700;color:#2563eb;">Enable →</div>
             </div>
 
-          </div>
-        </div>
-      </div>
+            <!-- Step 4: Setup AI -->
+            <div id="setupStep4" onclick="setupStepClick(4)" style="background:#f8fafc;border:1.5px solid #e3e8f0;border-radius:16px;padding:16px 18px;cursor:pointer;transition:all .2s;"
+              onmouseover="this.style.background='#f5f3ff';this.style.borderColor='#c4b5fd';this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 20px rgba(124,58,237,.12)'"
+              onmouseout="this.style.background='#f8fafc';this.style.borderColor='#e3e8f0';this.style.transform='translateY(0)';this.style.boxShadow='none'">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;">
+                <div style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#7c3aed,#6366f1);display:grid;place-items:center;font-size:20px;box-shadow:0 4px 12px rgba(124,58,237,.25);flex-shrink:0;">🪄</div>
+                <div id="setupStep4Check" style="display:none;width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,#22c55e,#16a34a);place-items:center;font-size:13px;color:#fff;font-weight:900;box-shadow:0 4px 10px rgba(34,197,94,.35);">✓</div>
+                <div id="setupStep4Num" style="width:24px;height:24px;border-radius:50%;border:2px solid #cbd5e1;display:grid;place-items:center;font-size:11px;font-weight:800;color:#94a3b8;">4</div>
+              </div>
+              <div style="font-size:13.5px;font-weight:800;color:#0f172a;margin-bottom:4px;letter-spacing:-.01em;">Setup your AI</div>
+              <div style="font-size:12px;color:#64748b;line-height:1.5;">25 quick tap-to-answer questions · ~12 min · unlocks 90%+ AI accuracy</div>
+              <div style="margin-top:12px;display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:700;color:#7c3aed;">Start →</div>
+            </div>
 
-      <!-- ★ AI SETUP CTA ★ -->
-      <div id="aisCta" style="background:linear-gradient(135deg,#7c3aed 0%,#6366f1 50%,#06b6d4 100%);color:#fff;border-radius:20px;padding:22px 26px;margin-bottom:22px;display:flex;align-items:center;justify-content:space-between;gap:20px;box-shadow:0 18px 50px rgba(124,58,237,.28);position:relative;overflow:hidden;flex-wrap:wrap;">
-        <button onclick="aisDismissCta()" title="Dismiss this card" aria-label="Dismiss" style="position:absolute;top:10px;right:14px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.25);color:#fff;width:26px;height:26px;border-radius:50%;cursor:pointer;font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center;z-index:3;font-family:inherit;">×</button>
-        <div style="position:absolute;right:-40px;top:-40px;width:200px;height:200px;background:radial-gradient(circle,rgba(255,255,255,.18),transparent 60%);border-radius:50%;pointer-events:none;"></div>
-        <div style="display:flex;align-items:center;gap:16px;position:relative;z-index:2;flex:1;min-width:280px;">
-          <div style="width:52px;height:52px;border-radius:14px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:24px;border:1px solid rgba(255,255,255,.25);flex-shrink:0;">🪄</div>
-          <div>
-            <span style="display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:800;background:rgba(255,255,255,.22);padding:4px 10px;border-radius:99px;text-transform:uppercase;letter-spacing:.3px;margin-bottom:6px;">⚡ Recommended · 12 min · 90%+ accuracy</span>
-            <h3 style="margin:0 0 4px;font-size:18px;font-weight:800;letter-spacing:-.3px;color:#fff;">Setup your AI</h3>
-            <p style="margin:0;opacity:.92;font-size:13px;line-height:1.5;max-width:560px;color:#fff;">The AI will ask 25 quick questions and train itself on your business — mostly tap-to-answer, no typing needed. Every chip question also has a "type your own answer" option. Skip anytime, but completing them unlocks 90%+ AI accuracy.</p>
           </div>
         </div>
-        <button onclick="aisOpen()" style="background:#fff;color:#6366f1;border:none;font-family:inherit;font-weight:800;padding:12px 22px;border-radius:11px;font-size:13.5px;cursor:pointer;display:flex;align-items:center;gap:8px;box-shadow:0 8px 20px rgba(0,0,0,.18);position:relative;z-index:2;transition:.15s;flex-shrink:0;" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='none'">
-          Start Setup
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-        </button>
       </div>
 
       <!-- ALERT BANNER -->
@@ -11017,32 +11013,30 @@ function aisDone(){
   chat.scrollTop = chat.scrollHeight;
 }
 
-/* Hide the "Setup your AI" CTA on the Overview if the tenant has already
-   completed it (wizard finished OR they've filled in the Training Studio
-   profile directly). Checks the local flag first (instant), then the server
-   profile (truth) so the CTA stays hidden after reload / on another device. */
-// User can dismiss the AI setup CTA manually (persisted)
+/* Setup-Step-4 (AI) completion sync. The Setup-your-AI step now lives
+   inside the Get-Started wizard card (Step 4). These helpers keep its
+   "done" state honest across devices/reloads by syncing localStorage
+   flags with the server-side AI Training profile. */
 function aisDismissCta(){
-  const cta = document.getElementById('aisCta');
-  if(cta) cta.style.display = 'none';
+  /* Kept for backwards-compat (the old purple CTA had a Dismiss button).
+     Marks Step 4 as dismissed so the wizard treats it complete. */
   try { localStorage.setItem('dropsigma_ais_dismissed', '1'); } catch(_){}
+  try { loadSetupWizard(); } catch(_) {}
 }
 
 async function aisHideCtaIfComplete(){
-  const cta = document.getElementById('aisCta');
-  if(!cta) return;
-  try { if(localStorage.getItem('dropsigma_ais_dismissed') === '1'){ cta.style.display = 'none'; return; } } catch(e) {}
-  try { if(localStorage.getItem('dropsigma_ais_completed') === '1'){ cta.style.display = 'none'; return; } } catch(e) {}
+  try { if(localStorage.getItem('dropsigma_ais_dismissed') === '1') return; } catch(_){}
+  try { if(localStorage.getItem('dropsigma_ais_completed') === '1') return; } catch(_){}
   try {
     const r = await fetch('/emails/api/ai-training/profile/');
     const d = await r.json();
     const p = d && d.profile;
     /* "Complete enough" = the AI has a business_name to anchor its identity. */
     if(p && (p.business_name || '').trim()){
-      cta.style.display = 'none';
-      try { localStorage.setItem('dropsigma_ais_completed', '1'); } catch(e) {}
+      try { localStorage.setItem('dropsigma_ais_completed', '1'); } catch(_) {}
+      try { loadSetupWizard(); } catch(_) {}
     }
-  } catch(e) {}
+  } catch(_) {}
 }
 
 /* Populate AI Training Studio with wizard answers */
@@ -11361,8 +11355,16 @@ async function loadSetupWizard(){
     const hasStore   = (storesData.stores?.length > 0) || (Array.isArray(storesData) && storesData.length > 0);
     const hasEmail   = emailData.connected === true;
     const hasAuto    = autoData.auto_email_enabled === true;
+    // Step 4 — AI setup is "done" if the tenant has either completed the
+    // 25-question wizard OR explicitly dismissed it. Both flags live in
+    // localStorage and were already set by the AI wizard / dismiss flow.
+    let hasAi = false;
+    try {
+      hasAi = localStorage.getItem('dropsigma_ais_completed') === '1'
+           || localStorage.getItem('dropsigma_ais_dismissed') === '1';
+    } catch(_) {}
 
-    const allDone = hasStore && hasEmail && hasAuto;
+    const allDone = hasStore && hasEmail && hasAuto && hasAi;
     const wizard  = document.getElementById("setupWizard");
     if(!wizard) return;
 
@@ -11373,10 +11375,11 @@ async function loadSetupWizard(){
     _setStep(1, hasStore);
     _setStep(2, hasEmail);
     _setStep(3, hasAuto);
+    _setStep(4, hasAi);
 
-    const done = [hasStore,hasEmail,hasAuto].filter(Boolean).length;
-    document.getElementById("setupProgressText").textContent = `${done} / 3 done`;
-    document.getElementById("setupProgressBar").style.width = `${Math.round(done/3*100)}%`;
+    const done = [hasStore,hasEmail,hasAuto,hasAi].filter(Boolean).length;
+    document.getElementById("setupProgressText").textContent = `${done} / 4 done`;
+    document.getElementById("setupProgressBar").style.width = `${Math.round(done/4*100)}%`;
   }catch(e){ console.warn("Setup wizard:", e); }
 }
 
@@ -11406,6 +11409,11 @@ function setupStepClick(n){
       const templatesBtn = document.getElementById("emNavTemplates");
       if(templatesBtn) templatesBtn.click();
     }, 300);
+  }
+  if(n === 4){
+    // Launch the 25-question AI setup wizard inline (same flow the old
+    // standalone purple CTA used).
+    try { aisOpen(); } catch(_) {}
   }
 }
 
