@@ -24542,23 +24542,26 @@ function _aiPlayReceiveSound(){
   if(!ctx) return;
   try{
     const t0 = ctx.currentTime;
-    // Two quick descending pings — WhatsApp's "incoming" character: a
-    // bright first note, then a softer second one ~70ms later.
-    const playPing = (start, freq1, freq2, peak) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = "triangle";
-      osc.frequency.setValueAtTime(freq1, start);
-      osc.frequency.exponentialRampToValueAtTime(freq2, start + 0.08);
-      gain.gain.setValueAtTime(0.0001, start);
-      gain.gain.linearRampToValueAtTime(peak, start + 0.012);
-      gain.gain.exponentialRampToValueAtTime(0.0006, start + 0.13);
-      osc.connect(gain).connect(ctx.destination);
-      osc.start(start);
-      osc.stop(start + 0.16);
-    };
-    playPing(t0,         1320, 1050, 0.16);  // bright opener
-    playPing(t0 + 0.07,  1050, 820,  0.11);  // softer follow
+    // Mirrors the send swoosh — same sine + lowpass body so the
+    // perceived weight matches — but with the frequency + filter
+    // sweep running DOWNWARD (incoming feel). Slightly bigger gain
+    // so it sits at the same loudness as the send sound on the ear.
+    const osc = ctx.createOscillator();
+    const filt = ctx.createBiquadFilter();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(750, t0);
+    osc.frequency.exponentialRampToValueAtTime(420, t0 + 0.13);
+    filt.type = "lowpass";
+    filt.frequency.setValueAtTime(3200, t0);
+    filt.frequency.exponentialRampToValueAtTime(900, t0 + 0.13);
+    filt.Q.value = 0.7;
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.linearRampToValueAtTime(0.15, t0 + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.0008, t0 + 0.16);
+    osc.connect(filt).connect(gain).connect(ctx.destination);
+    osc.start(t0);
+    osc.stop(t0 + 0.19);
   }catch(_){}
 }
 
