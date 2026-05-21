@@ -3,12 +3,17 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.views.decorators.csrf import csrf_exempt
+from django.views.generic.base import RedirectView
 from . import views
 from teamapp import views as teamapp_views
 from vendors import views as vendor_views
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    # Chrome / Safari request /favicon.ico unconditionally, even when a
+    # <link rel="icon"> is present. Send them to our static SVG so the
+    # tab actually has a brand mark instead of the generic globe.
+    path("favicon.ico", RedirectView.as_view(url="/static/favicon.svg", permanent=True)),
     path("", views.homepage, name="home"),
     path("dashboard/", views.dashboard_page, name="dashboard"),
     path("login/", views.admin_login_page, name="admin_login"),
