@@ -135,7 +135,7 @@ def _notify_admin_new_order(order):
             priority="high",
             title=f"New order #{order.external_order_id} from {order.store.name}",
             body=f"{customer} ordered for {order.currency} {order.total_price}.",
-            action_url=f"/dashboard/#orders/{order.id}",
+            action_url=f"/dashboard/?section=orders&order_id={order.id}",
             action_label="View order",
             related_order_id=order.id,
         )
@@ -158,7 +158,7 @@ def _notify_vendor_assigned(order):
             title=f"New order assigned: #{order.external_order_id}",
             body=f"{order.customer_name or 'A customer'} ordered {order.product_name or 'an item'}. "
                  f"Please ship and submit tracking.",
-            action_url=f"/vendor/dashboard/#order/{order.id}",
+            action_url=f"/vendor/?tab=orders&order_id={order.id}",
             action_label="View",
             related_order_id=order.id,
         )
@@ -178,7 +178,7 @@ def _notify_employee_assigned(order, member):
             title=f"Order #{order.external_order_id} assigned to you",
             body=f"Auto-routed by {member.role.replace('_',' ').title()} rule. "
                  f"Customer: {order.customer_name or '—'}.",
-            action_url=f"/employee/dashboard/#order/{order.id}",
+            action_url=f"/employee/?order_id={order.id}",
             action_label="Open",
             related_order_id=order.id,
         )

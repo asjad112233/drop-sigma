@@ -1241,7 +1241,7 @@ def tasks_create_api(request):
                 title=f"New task assigned: {task.title}",
                 body=(task.description or "")[:240] or
                      f"Assigned by {request.user.get_full_name() or request.user.username}.",
-                action_url=f"/employee/dashboard/#tasks/{task.id}",
+                action_url=f"/employee/?task_id={task.id}",
                 action_label="Open",
                 related_task_id=task.id,
             )

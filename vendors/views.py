@@ -295,7 +295,7 @@ def approve_tracking_api(request, submission_id):
                     title=f"Tracking approved for #{order.external_order_id}",
                     body=f"Your tracking {sub.tracking_number} was approved. "
                          f"Order status updated to Shipped automatically.",
-                    action_url="/vendor/dashboard/#tracking-history",
+                    action_url="/vendor/?tab=tracking",
                     action_label="View",
                     related_order_id=order.id,
                 )
@@ -342,7 +342,7 @@ def reject_tracking_api(request, submission_id):
                 title=f"Tracking rejected — please resubmit for #{order.external_order_id}",
                 body=(f'Admin note: "{reason}"' if reason else
                       "Your tracking submission was rejected. Please verify and resubmit."),
-                action_url=f"/vendor/dashboard/#order/{order.id}",
+                action_url=f"/vendor/?tab=orders&order_id={order.id}",
                 action_label="Resubmit",
                 related_order_id=order.id,
             )
@@ -691,7 +691,7 @@ def vendor_submit_tracking_api(request, order_id):
                 priority="medium",
                 title=f"Vendor submitted tracking for #{order.external_order_id}",
                 body=f"{vendor.name} submitted tracking number {tracking_number}. Awaiting your approval.",
-                action_url="/dashboard/#tracking-queue",
+                action_url="/dashboard/?section=trackingQueue",
                 action_label="Review",
                 related_order_id=order.id,
             )

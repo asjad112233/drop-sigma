@@ -232,18 +232,37 @@ Include with:
     `).join('');
     $list.innerHTML = html;
     $list.querySelectorAll('[data-notif-id]').forEach(el => {
-      el.addEventListener('click', () => onItemClick(el));
+      el.addEventListener('click', (ev) => {
+        // If the click landed on the inner "Open" button, intercept and
+        // navigate SPA-style (showSection / switchTab) instead of the
+        // legacy <a href> full reload.
+        const actionBtn = ev.target.closest('.ds-notif-action');
+        if(actionBtn){
+          ev.preventDefault();
+          ev.stopPropagation();
+          const url = actionBtn.dataset.actionUrl || el.dataset.actionUrl || '';
+          onItemClick(el);
+          navigateToAction(url);
+          return;
+        }
+        // Click anywhere else on the row → also navigate (whole row is a target).
+        const rowUrl = el.dataset.actionUrl || '';
+        onItemClick(el);
+        if(rowUrl) navigateToAction(rowUrl);
+      });
     });
   }
 
   function renderItem(n){
     const pri = (n.priority === 'urgent' || n.priority === 'high')
       ? `<span class="ds-pri ${n.priority}">${n.priority}</span>` : '';
+    // Action button is a real button — we intercept click to do SPA navigation
+    // via showSection() / switchTab() instead of triggering a full page reload.
     const actions = n.action_url
-      ? `<a href="${escHtml(n.action_url)}" class="ds-notif-action primary">${escHtml(n.action_label || 'Open')}</a>`
+      ? `<button type="button" class="ds-notif-action primary" data-action-url="${escHtml(n.action_url)}">${escHtml(n.action_label || 'Open')}</button>`
       : '';
     return `
-      <div class="ds-notif-item ${n.is_read ? '' : 'unread'}" data-notif-id="${n.id}">
+      <div class="ds-notif-item ${n.is_read ? '' : 'unread'}" data-notif-id="${n.id}" data-action-url="${escHtml(n.action_url || '')}">
         <div class="ds-notif-icon c-${escHtml(n.category)}"><i class="${escHtml(n.icon || 'fa-regular fa-bell')}"></i></div>
         <div class="ds-notif-body">
           <div class="ds-notif-hd">${escHtml(n.title)}${pri}</div>
@@ -256,6 +275,105 @@ Include with:
         <span class="ds-notif-dot"></span>
       </div>
     `;
+  }
+
+  /* Smart navigator: parse the notification's action_url and route to the
+     right section inside the SPA when possible. Falls back to a full URL
+     navigation only when we don't recognise the route. Same code runs in
+     all three portals — feature detection (typeof showSection === 'function')
+     decides which portal we're in. */
+  function navigateToAction(url){
+    if(!url) return;
+    let u;
+    try { u = new URL(url, window.location.origin); }
+    catch(_) { window.location.href = url; return; }
+
+    const path  = u.pathname;
+    const qs    = u.searchParams;
+    const hash  = (u.hash || '').replace(/^#/, '');
+
+    // Helper: parse legacy hash URLs like "#tracking-queue" or "#orders/123"
+    // and pull out the section name + optional item id.
+    function fromHash(h){
+      if(!h) return {};
+      const seg = h.split('/');
+      const name = (seg[0] || '').replace(/-/g, '').toLowerCase();
+      const itemId = seg[1] || null;
+      // Map common hash names to canonical section keys used by showSection()
+      const map = {
+        'orders':'orders', 'order':'orders',
+        'trackingqueue':'trackingQueue', 'tracking':'trackingQueue',
+        'stores':'stores', 'store':'stores',
+        'vendors':'vendors', 'vendor':'vendors',
+        'emails':'emails', 'email':'emails',
+        'team':'team',
+        'tasks':'tasks', 'task':'tasks',
+        'stock':'stock',
+        'analytics':'analytics',
+        'aitraining':'aiTraining',
+        'overview':'overview', 'dashboard':'overview',
+        'chat':'chat',
+        'trackinghistory':'tracking', 'history':'history',
+        'profile':'profile',
+      };
+      return { section: map[name] || null, itemId };
+    }
+
+    // ─── Admin portal (dashboard.html) ───────────────────────────────────
+    if(typeof window.showSection === 'function' && path === '/dashboard/'){
+      let section = qs.get('section');
+      let itemId  = qs.get('order_id') || qs.get('email_id') || qs.get('task_id');
+      if(!section){
+        const parsed = fromHash(hash);
+        section = parsed.section;
+        itemId  = itemId || parsed.itemId;
+      }
+      if(section){
+        // Stash extra context so the section can pre-open a detail modal.
+        window._notifContext = { section, itemId, raw: url };
+        // Keep the URL bar honest (close the panel + reflect new state).
+        try { history.pushState({}, '', `/dashboard/?section=${section}`); } catch(_){}
+        $panel.classList.remove('open');
+        try { window.showSection(section); } catch(_){}
+        return;
+      }
+    }
+
+    // ─── Vendor portal (vendor_dashboard.html — uses switchTab) ──────────
+    if(typeof window.switchTab === 'function' && (path === '/vendor/' || path.startsWith('/vendor/'))){
+      let tab = qs.get('tab');
+      if(!tab){
+        const parsed = fromHash(hash);
+        tab = parsed.section;
+      }
+      if(tab){
+        // Map admin-section names to vendor tab names where they differ.
+        const vendorMap = {
+          orders:'orders', order:'orders',
+          trackingQueue:'tracking', tracking:'tracking',
+          tracking_history:'tracking', history:'history',
+          stock:'stock', chat:'chat', profile:'profile',
+        };
+        tab = vendorMap[tab] || tab;
+        $panel.classList.remove('open');
+        const btn = document.querySelector(`.vp-nav button[data-tab="${tab}"]`);
+        try { window.switchTab(tab, btn || null); } catch(_){}
+        return;
+      }
+    }
+
+    // ─── Employee portal — currently chat-only; just dismiss panel ──────
+    if(path === '/employee/' || path.startsWith('/employee/')){
+      $panel.classList.remove('open');
+      // No SPA router on this portal — full navigation is the only option.
+      if(url && url !== window.location.href){
+        window.location.href = url;
+      }
+      return;
+    }
+
+    // ─── Fallback: full URL navigation ───────────────────────────────────
+    window.location.href = url;
   }
 
   async function refresh(){
@@ -316,12 +434,18 @@ Include with:
       </div>
       <button class="ds-toast-close" type="button"><i class="fa-solid fa-xmark"></i></button>
     `;
-    el.querySelector('.ds-toast-close').addEventListener('click', () => removeToast(el));
+    el.querySelector('.ds-toast-close').addEventListener('click', (e) => {
+      e.stopPropagation();
+      removeToast(el);
+    });
     if (n.action_url){
       el.style.cursor = 'pointer';
       el.addEventListener('click', e => {
         if (e.target.closest('.ds-toast-close')) return;
-        window.location.href = n.action_url;
+        // Mark the notification read in the background so the badge updates.
+        try { api(`/notifications/api/${n.id}/read/`, { method:'POST' }); } catch(_){}
+        navigateToAction(n.action_url);
+        removeToast(el);
       });
     }
     $toastStack.appendChild(el);
