@@ -1008,3 +1008,104 @@ def paypal_capture_order(request):
     price, label = _apply_coupon(plan_key, coupon_code)
     _activate_subscription(request.user, plan_key, price, f"PayPal{label}")
     return JsonResponse({"ok": True})
+
+
+# ─── Support AI — in-app help assistant ─────────────────────────────────────
+def support_ai_ask(request):
+    """Tenant-facing AI help. Pass a question; returns structured guidance JSON
+    (reply + optional steps + breadcrumb + deep_link). Frontend renders this
+    as either a paragraph or a step-by-step card.
+
+    POST body: { question: str, history: [{role, content}, ...] (optional) }
+    Returns:   { success, reply, steps?, breadcrumb?, deep_link? }
+    """
+    import json as _json
+    if request.method != "POST":
+        return JsonResponse({"success": False, "message": "POST required."}, status=405)
+    if not request.user.is_authenticated:
+        return JsonResponse({"success": False, "message": "Sign in to use the AI assistant."}, status=401)
+
+    try:
+        body = _json.loads(request.body or b"{}")
+    except Exception:
+        body = {}
+    question = (body.get("question") or "").strip()
+    history  = body.get("history") or []
+    if not question:
+        return JsonResponse({"success": False, "message": "Question is required."}, status=400)
+    if len(question) > 2000:
+        return JsonResponse({"success": False, "message": "Question too long (max 2000 chars)."}, status=400)
+
+    # Build the AI prompt
+    from core.support_ai_kb import build_system_prompt, DEEP_LINKS
+    try:
+        from emails.services import call_claude
+    except Exception as e:
+        return JsonResponse({"success": False, "message": f"AI client unavailable: {e}"}, status=500)
+
+    system_prompt = build_system_prompt()
+
+    # Include the last few turns of conversation for context (max 6 turns)
+    context_lines = []
+    for turn in (history or [])[-6:]:
+        role = turn.get("role", "user")
+        content = (turn.get("content") or "").strip()[:500]
+        if content:
+            context_lines.append(f"{role.upper()}: {content}")
+    if context_lines:
+        prompt = "Conversation so far:\n" + "\n".join(context_lines) + f"\n\nUSER: {question}\n\nRespond as the assistant in the JSON format described."
+    else:
+        prompt = f"USER: {question}\n\nRespond as the assistant in the JSON format described."
+
+    try:
+        raw = call_claude(prompt, system=system_prompt, max_tokens=900)
+    except Exception as e:
+        return JsonResponse({
+            "success": False,
+            "message": "AI is temporarily unavailable. Please try again in a moment.",
+            "_error": str(e),
+        }, status=503)
+
+    # Parse the JSON the model returned
+    payload = None
+    if raw:
+        # Try to extract the first {...} block if the model wrapped it
+        text = raw.strip()
+        if text.startswith("```"):
+            text = text.split("```", 2)[1].strip()
+            if text.startswith("json"):
+                text = text[4:].strip()
+        try:
+            payload = _json.loads(text)
+        except Exception:
+            # Fallback: try to find the outer JSON braces
+            import re
+            m = re.search(r"\{[\s\S]*\}", text)
+            if m:
+                try:
+                    payload = _json.loads(m.group(0))
+                except Exception:
+                    payload = None
+
+    if not payload or not isinstance(payload, dict):
+        # Last-resort: return the raw text as a plain reply
+        return JsonResponse({
+            "success": True,
+            "reply": (raw or "I couldn't generate a structured answer — could you rephrase?").strip(),
+        })
+
+    reply       = payload.get("reply") or ""
+    steps       = payload.get("steps") or []
+    breadcrumb  = payload.get("breadcrumb") or []
+    deep_link   = payload.get("deep_link") or ""
+    # Resolve deep_link key to a URL hash the frontend can use
+    deep_link_url = DEEP_LINKS.get(deep_link, "") if deep_link else ""
+
+    return JsonResponse({
+        "success":       True,
+        "reply":         reply,
+        "steps":         steps,
+        "breadcrumb":    breadcrumb,
+        "deep_link":     deep_link,
+        "deep_link_url": deep_link_url,
+    })

@@ -23889,5 +23889,324 @@ function renderAdminHistory(){
   tbody.innerHTML=rows;
 }
 </script>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     Drop Sigma AI — in-app Support Assistant (floating bottom-right)
+     ═══════════════════════════════════════════════════════════════ -->
+<style>
+.ai-fab{position:fixed;bottom:24px;right:24px;z-index:10000;display:flex;align-items:center;gap:10px;padding:14px 20px 14px 16px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;border-radius:50px;cursor:pointer;box-shadow:0 14px 35px rgba(99,102,241,.45);font-family:inherit;font-size:14px;font-weight:800;letter-spacing:-.2px;transition:all .2s;animation:_aiFabPulse 2.5s ease-in-out infinite;}
+.ai-fab:hover{transform:translateY(-3px) scale(1.03);box-shadow:0 20px 45px rgba(99,102,241,.55);}
+.ai-fab .icon{width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-size:16px;position:relative;flex-shrink:0;}
+.ai-fab .icon::after{content:"";position:absolute;top:-2px;right:-2px;width:10px;height:10px;border-radius:50%;background:#10b981;border:2px solid #6366f1;}
+.ai-fab .ti{display:flex;flex-direction:column;align-items:flex-start;line-height:1.2;}
+.ai-fab .ti small{font-size:10px;font-weight:600;opacity:.85;letter-spacing:.04em;text-transform:uppercase;}
+@keyframes _aiFabPulse{0%,100%{box-shadow:0 14px 35px rgba(99,102,241,.45);}50%{box-shadow:0 14px 35px rgba(99,102,241,.45),0 0 0 10px rgba(99,102,241,.1);}}
+.ai-fab.hide{display:none;}
+
+.ai-panel{position:fixed;bottom:24px;right:24px;z-index:10001;width:420px;max-width:calc(100vw - 32px);height:640px;max-height:calc(100vh - 48px);background:#fff;border-radius:22px;box-shadow:0 25px 60px rgba(15,23,42,.18);display:flex;flex-direction:column;overflow:hidden;transform:translateY(20px) scale(.96);opacity:0;pointer-events:none;transition:all .25s cubic-bezier(.2,.8,.2,1);}
+.ai-panel.open{transform:translateY(0) scale(1);opacity:1;pointer-events:auto;}
+
+.ai-head{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;padding:18px;display:flex;align-items:center;gap:12px;}
+.ai-head .av{width:44px;height:44px;border-radius:13px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;border:1px solid rgba(255,255,255,.2);}
+.ai-head .info{flex:1;min-width:0;}
+.ai-head .info h3{font-size:15px;font-weight:800;letter-spacing:-.3px;margin:0;}
+.ai-head .info .stat{font-size:11.5px;opacity:.88;display:flex;align-items:center;gap:5px;margin-top:2px;}
+.ai-head .info .stat::before{content:"";width:7px;height:7px;border-radius:50%;background:#34d399;box-shadow:0 0 8px #34d399;}
+.ai-head .close{width:32px;height:32px;border-radius:10px;background:rgba(255,255,255,.15);border:none;color:#fff;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;font-family:inherit;}
+.ai-head .close:hover{background:rgba(255,255,255,.25);}
+
+.ai-quickbar{padding:10px 14px;background:#f8fafc;border-bottom:1px solid #e3e8f0;display:flex;gap:6px;flex-wrap:wrap;}
+.ai-chip{padding:6px 11px;background:#fff;border:1px solid #e3e8f0;border-radius:99px;font-size:11.5px;font-weight:600;color:#0f172a;cursor:pointer;font-family:inherit;transition:.12s;display:inline-flex;align-items:center;gap:5px;}
+.ai-chip:hover{background:#eef2ff;color:#4338ca;border-color:#c7d2fe;}
+
+.ai-body{flex:1;overflow-y:auto;padding:18px;background:linear-gradient(180deg,#fff,#fafbfd);display:flex;flex-direction:column;gap:14px;}
+.ai-msg{display:flex;gap:10px;animation:_aiMsgIn .25s ease-out;}
+@keyframes _aiMsgIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+.ai-msg.user{justify-content:flex-end;}
+.ai-msg-av{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;flex-shrink:0;font-weight:900;}
+.ai-msg.user .ai-msg-av{background:#0f172a;order:2;font-size:10px;}
+.ai-bubble{background:#fff;border:1px solid #e3e8f0;border-radius:14px;padding:11px 14px;font-size:13.5px;color:#0f172a;max-width:300px;box-shadow:0 2px 8px rgba(15,23,42,.04);line-height:1.55;}
+.ai-msg.user .ai-bubble{background:#eef2ff;border-color:#c7d2fe;color:#1e1b4b;}
+.ai-bubble b{color:#0f172a;}
+.ai-bubble code{background:#eef2ff;color:#4338ca;padding:1px 5px;border-radius:4px;font-size:12px;}
+
+.ai-steps{background:#fff;border:1px solid #e3e8f0;border-radius:14px;padding:0;max-width:340px;overflow:hidden;box-shadow:0 4px 12px rgba(15,23,42,.06);}
+.ai-steps-head{padding:12px 14px;background:linear-gradient(135deg,#eef2ff,#ede9fe);border-bottom:1px solid #e3e8f0;}
+.ai-steps-head .lbl{font-size:9.5px;font-weight:900;color:#4338ca;text-transform:uppercase;letter-spacing:.07em;}
+.ai-steps-head .ti{font-size:13.5px;font-weight:800;color:#0f172a;margin-top:3px;}
+.ai-step{display:flex;gap:10px;padding:11px 14px;border-bottom:1px solid #e3e8f0;font-size:12.5px;color:#0f172a;}
+.ai-step:last-of-type{border-bottom:none;}
+.ai-step-num{width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;font-weight:900;font-size:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
+.ai-step-body{flex:1;min-width:0;line-height:1.45;}
+.ai-step-body b{color:#0f172a;font-weight:700;}
+.ai-step-body .nav{display:inline-flex;align-items:center;gap:4px;background:#eef2ff;color:#4338ca;padding:1px 7px;border-radius:5px;font-weight:700;font-size:11.5px;border:1px solid #c7d2fe;}
+.ai-step-body .hint{font-size:11.5px;color:#64748b;margin-top:3px;}
+.ai-steps-take{padding:10px 14px;background:#f8fafc;border-top:1px solid #e3e8f0;display:flex;gap:6px;align-items:center;}
+.ai-take-btn{flex:1;padding:8px 12px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;border-radius:9px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;justify-content:center;gap:5px;transition:.12s;}
+.ai-take-btn:hover{transform:translateY(-1px);box-shadow:0 6px 14px rgba(99,102,241,.4);}
+.ai-take-btn.outline{background:#fff;color:#4338ca;border:1px solid #c7d2fe;}
+.ai-take-btn.outline:hover{background:#eef2ff;}
+.ai-breadcrumb{display:inline-flex;align-items:center;gap:5px;background:#0f172a;color:#fff;padding:5px 10px;border-radius:7px;font-size:11px;font-weight:600;margin-top:6px;}
+.ai-breadcrumb .sep{opacity:.4;}
+
+.ai-typing{display:inline-flex;align-items:center;gap:5px;background:#fff;border:1px solid #e3e8f0;border-radius:14px;padding:11px 14px;}
+.ai-typing span{width:7px;height:7px;border-radius:50%;background:#6366f1;animation:_aiTyping 1.2s ease-in-out infinite;}
+.ai-typing span:nth-child(2){animation-delay:.18s;}
+.ai-typing span:nth-child(3){animation-delay:.36s;}
+@keyframes _aiTyping{0%,60%,100%{transform:translateY(0);opacity:.4;}30%{transform:translateY(-4px);opacity:1;}}
+
+.ai-input-bar{border-top:1px solid #e3e8f0;padding:12px;background:#fff;display:flex;gap:8px;align-items:flex-end;}
+.ai-input-bar textarea{flex:1;padding:10px 12px;border:1px solid #e3e8f0;border-radius:10px;font-family:inherit;font-size:13px;color:#0f172a;resize:none;outline:none;max-height:80px;line-height:1.4;}
+.ai-input-bar textarea:focus{border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.12);}
+.ai-send{width:40px;height:40px;border:none;border-radius:10px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:.12s;font-family:inherit;}
+.ai-send:hover{transform:translateY(-1px) scale(1.04);box-shadow:0 6px 14px rgba(99,102,241,.35);}
+.ai-send:disabled{opacity:.5;cursor:not-allowed;}
+
+.ai-foot{padding:7px 14px;background:#f8fafc;border-top:1px solid #e3e8f0;font-size:10.5px;color:#94a3b8;text-align:center;display:flex;align-items:center;justify-content:center;gap:5px;}
+.ai-foot strong{color:#4338ca;font-weight:700;}
+.ai-foot button.reset{background:none;border:none;color:#94a3b8;cursor:pointer;font-family:inherit;font-size:10.5px;padding:0 4px;text-decoration:underline;}
+.ai-foot button.reset:hover{color:#4338ca;}
+</style>
+
+<button class="ai-fab" id="aiFab" onclick="aiOpen()">
+  <span class="icon">✦</span>
+  <span class="ti">Drop Sigma AI<small>Ask anything · online</small></span>
+</button>
+
+<div class="ai-panel" id="aiPanel">
+  <div class="ai-head">
+    <div class="av">✦</div>
+    <div class="info">
+      <h3>Drop Sigma AI</h3>
+      <div class="stat">Online · Trained on every feature</div>
+    </div>
+    <button class="close" onclick="aiClose()" aria-label="Close">×</button>
+  </div>
+  <div class="ai-quickbar">
+    <button class="ai-chip" onclick="aiAsk('How do I add stock to my warehouse?')">📦 Add stock</button>
+    <button class="ai-chip" onclick="aiAsk('How do I connect a new store?')">🏪 Connect store</button>
+    <button class="ai-chip" onclick="aiAsk('How do I add a vendor?')">🤝 Add vendor</button>
+    <button class="ai-chip" onclick="aiAsk('How do I send a bulk email?')">📧 Bulk email</button>
+    <button class="ai-chip" onclick="aiAsk('How do I set up auto-emails on order status change?')">⚡ Auto-emails</button>
+    <button class="ai-chip" onclick="aiAsk('How do I train the AI on my brand voice?')">✨ Train AI</button>
+  </div>
+  <div class="ai-body" id="aiBody"></div>
+  <div class="ai-input-bar">
+    <textarea id="aiInput" placeholder="Ask anything about Drop Sigma…" rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();aiSend();}"></textarea>
+    <button class="ai-send" id="aiSendBtn" onclick="aiSend()" aria-label="Send">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+    </button>
+  </div>
+  <div class="ai-foot">
+    Powered by <strong>Drop Sigma AI</strong> · <button class="reset" onclick="aiResetHistory()">Reset chat</button>
+  </div>
+</div>
+
+<script>
+/* ─── Drop Sigma AI Help — frontend ────────────────────────────────────── */
+let _aiHistory = [];  // [{role:"user"|"assistant", content:"..."}]
+const _AI_HISTORY_KEY = "ds_support_ai_history_v1";
+const _AI_MAX_HISTORY = 20;
+
+function _aiEsc(s){const d=document.createElement("div");d.textContent=String(s==null?"":s);return d.innerHTML;}
+function _aiRenderInline(t){
+  // Light markdown: **bold**, `code`, line breaks
+  let s = _aiEsc(t);
+  s = s.replace(/\*\*([^*]+)\*\*/g,"<b>$1</b>");
+  s = s.replace(/`([^`]+)`/g,"<code>$1</code>");
+  s = s.replace(/\n/g,"<br>");
+  return s;
+}
+
+function aiOpen(){
+  document.getElementById("aiPanel").classList.add("open");
+  document.getElementById("aiFab").classList.add("hide");
+  _aiLoadHistory();
+  if(!_aiHistory.length) _aiShowWelcome();
+  setTimeout(()=>document.getElementById("aiInput").focus(), 250);
+  setTimeout(_aiScroll, 100);
+}
+function aiClose(){
+  document.getElementById("aiPanel").classList.remove("open");
+  document.getElementById("aiFab").classList.remove("hide");
+}
+
+function _aiShowWelcome(){
+  const body = document.getElementById("aiBody");
+  body.innerHTML = `
+    <div class="ai-msg">
+      <div class="ai-msg-av">✦</div>
+      <div class="ai-bubble">
+        👋 Hi! I'm <b>Drop Sigma AI</b>. I know every section, button, and setting in your portal — ask me anything!<br><br>
+        Try: <i>"How do I add stock?"</i> or <i>"Where do I see visitor analytics?"</i>
+      </div>
+    </div>`;
+}
+
+function aiAsk(q){
+  document.getElementById("aiInput").value = q;
+  aiSend();
+}
+
+async function aiSend(){
+  const inp = document.getElementById("aiInput");
+  const text = (inp.value || "").trim();
+  if(!text) return;
+  inp.value = "";
+  inp.style.height = "auto";
+  const btn = document.getElementById("aiSendBtn");
+  btn.disabled = true;
+
+  const body = document.getElementById("aiBody");
+
+  // 1) Push user message bubble
+  body.insertAdjacentHTML("beforeend", `
+    <div class="ai-msg user">
+      <div class="ai-bubble">${_aiRenderInline(text)}</div>
+      <div class="ai-msg-av">YOU</div>
+    </div>`);
+  _aiScroll();
+
+  // 2) Push typing indicator
+  body.insertAdjacentHTML("beforeend", `
+    <div class="ai-msg" id="aiTypingRow">
+      <div class="ai-msg-av">✦</div>
+      <div class="ai-typing"><span></span><span></span><span></span></div>
+    </div>`);
+  _aiScroll();
+
+  // 3) Push to history + persist
+  _aiHistory.push({role:"user", content:text});
+  _aiSaveHistory();
+
+  // 4) Call backend
+  try{
+    const r = await fetch("/support-ai/ask/", {
+      method:"POST",
+      headers:{"Content-Type":"application/json","X-CSRFToken": (typeof getCSRFToken==="function"?getCSRFToken():"")},
+      body: JSON.stringify({question: text, history: _aiHistory.slice(-_AI_MAX_HISTORY)}),
+    });
+    const d = await r.json();
+    document.getElementById("aiTypingRow")?.remove();
+    if(!d.success){
+      _aiRenderAssistantBubble(d.message || "Sorry — I couldn't get an answer just now. Try again?");
+      btn.disabled = false; return;
+    }
+    _aiRenderAssistantReply(d);
+    _aiHistory.push({role:"assistant", content: d.reply || JSON.stringify(d).slice(0,500)});
+    _aiSaveHistory();
+  }catch(e){
+    document.getElementById("aiTypingRow")?.remove();
+    _aiRenderAssistantBubble("⚠️ Network error: " + (e?.message || e));
+  }
+  btn.disabled = false;
+  _aiScroll();
+}
+
+function _aiRenderAssistantBubble(text){
+  const body = document.getElementById("aiBody");
+  body.insertAdjacentHTML("beforeend", `
+    <div class="ai-msg">
+      <div class="ai-msg-av">✦</div>
+      <div class="ai-bubble">${_aiRenderInline(text)}</div>
+    </div>`);
+  _aiScroll();
+}
+
+function _aiRenderAssistantReply(d){
+  const body = document.getElementById("aiBody");
+  // If structured steps, render as step card. Otherwise plain bubble.
+  if(Array.isArray(d.steps) && d.steps.length){
+    const crumb = (d.breadcrumb || []).map(_aiEsc).reduce((a,b,i,arr) => a + (i>0?'<span class="sep">›</span>':'') + '<span class="crumb">'+b+'</span>', '');
+    const stepRows = d.steps.map((st,i) => {
+      const navHtml = st.nav ? `<br><span class="nav">${_aiEsc(st.nav)}</span>` : "";
+      const hintHtml = st.hint ? `<div class="hint">${_aiEsc(st.hint)}</div>` : "";
+      return `<div class="ai-step">
+        <div class="ai-step-num">${i+1}</div>
+        <div class="ai-step-body">${_aiRenderInline(st.action || "")}${navHtml}${hintHtml}</div>
+      </div>`;
+    }).join("");
+    const titleText = _aiEsc(d.reply || "Step-by-step guide");
+    const takeBtn = d.deep_link_url
+      ? `<button class="ai-take-btn" onclick="aiDeepLink('${_aiEsc(d.deep_link_url).replace(/'/g, "&#39;")}')">⚡ Take me there</button>`
+      : "";
+    body.insertAdjacentHTML("beforeend", `
+      <div class="ai-msg">
+        <div class="ai-msg-av">✦</div>
+        <div class="ai-bubble" style="padding:0;border:none;background:transparent;box-shadow:none;max-width:340px;">
+          <div class="ai-steps">
+            <div class="ai-steps-head">
+              <div class="lbl">⚡ Step-by-step guide</div>
+              <div class="ti">${titleText}</div>
+              ${crumb ? `<div class="ai-breadcrumb">${crumb}</div>` : ""}
+            </div>
+            ${stepRows}
+            ${takeBtn ? `<div class="ai-steps-take">${takeBtn}</div>` : ""}
+          </div>
+        </div>
+      </div>`);
+  } else {
+    _aiRenderAssistantBubble(d.reply || "I'm not sure how to help with that — could you rephrase?");
+  }
+}
+
+function aiDeepLink(urlHash){
+  // urlHash looks like "#section=stock" — extract section name + call showSection if defined
+  aiClose();
+  try{
+    const m = /section=([a-zA-Z_]+)/.exec(urlHash || "");
+    if(m && typeof showSection === "function"){
+      showSection(m[1]);
+      return;
+    }
+    // Fallback: set location hash
+    if(urlHash) location.hash = urlHash;
+  }catch(e){ console.warn("aiDeepLink:", e); }
+}
+
+function _aiScroll(){
+  const body = document.getElementById("aiBody");
+  if(body) body.scrollTop = body.scrollHeight;
+}
+
+function _aiSaveHistory(){
+  try{ localStorage.setItem(_AI_HISTORY_KEY, JSON.stringify(_aiHistory.slice(-_AI_MAX_HISTORY))); }catch(e){}
+}
+function _aiLoadHistory(){
+  try{
+    const raw = localStorage.getItem(_AI_HISTORY_KEY);
+    if(!raw) return;
+    const arr = JSON.parse(raw);
+    if(!Array.isArray(arr)) return;
+    _aiHistory = arr;
+    if(arr.length){
+      // Re-render the saved history (lightweight — just bubbles, no step cards)
+      const body = document.getElementById("aiBody");
+      body.innerHTML = arr.map(t => {
+        if(t.role === "user"){
+          return `<div class="ai-msg user"><div class="ai-bubble">${_aiRenderInline(t.content || "")}</div><div class="ai-msg-av">YOU</div></div>`;
+        }
+        return `<div class="ai-msg"><div class="ai-msg-av">✦</div><div class="ai-bubble">${_aiRenderInline(t.content || "")}</div></div>`;
+      }).join("");
+    }
+  }catch(e){}
+}
+function aiResetHistory(){
+  _aiHistory = [];
+  try{ localStorage.removeItem(_AI_HISTORY_KEY); }catch(e){}
+  _aiShowWelcome();
+}
+
+// Esc to close, Cmd/Ctrl+K to open
+document.addEventListener("keydown", e => {
+  if(e.key === "Escape" && document.getElementById("aiPanel").classList.contains("open")) aiClose();
+  if((e.metaKey || e.ctrlKey) && (e.key === "k" || e.key === "K")){
+    e.preventDefault();
+    if(document.getElementById("aiPanel").classList.contains("open")) aiClose();
+    else aiOpen();
+  }
+});
+</script>
+
 </body>
 </html>

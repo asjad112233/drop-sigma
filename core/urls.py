@@ -20,6 +20,9 @@ urlpatterns = [
     path("verify-email/<uuid:token>/", views.verify_email_view, name="verify_email"),
     path("api/profile/", views.api_profile, name="api_profile"),
     path("profile/", views.profile_page, name="profile"),
+
+    # Support AI — in-app help assistant
+    path("support-ai/ask/", csrf_exempt(views.support_ai_ask), name="support_ai_ask"),
     path("upgrade/", views.upgrade_view, name="upgrade"),
     path("checkout/", views.checkout_view, name="checkout"),
     path("checkout/free/", views.checkout_free, name="checkout_free"),
