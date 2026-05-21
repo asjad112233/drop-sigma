@@ -1623,6 +1623,95 @@ def send_employee_invitation_api(request):
     return Response({"success": True, "message": f"Invitation sent to {email}."})
 
 
+@api_view(["GET"])
+def team_invitations_api(request):
+    """List invitations this admin has sent — with status, role, expiry."""
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Login required."}, status=401)
+
+    # First mark any pending invitations whose deadline passed as expired,
+    # so the UI status is honest without needing a cron job.
+    EmployeeInvitation.objects.filter(
+        owner=request.user, status="pending", expires_at__lt=timezone.now()
+    ).update(status="expired")
+
+    rows = (EmployeeInvitation.objects
+            .filter(owner=request.user)
+            .order_by("-created_at")[:100])
+
+    items = [{
+        "id":         inv.id,
+        "name":       inv.name,
+        "email":      inv.email,
+        "role":       inv.role,
+        "permissions": inv.permissions or {},
+        "status":     inv.status,                              # pending/accepted/expired
+        "created_at": inv.created_at.isoformat() if inv.created_at else None,
+        "expires_at": inv.expires_at.isoformat() if inv.expires_at else None,
+    } for inv in rows]
+
+    return Response({"success": True, "invitations": items})
+
+
+@api_view(["POST"])
+def team_invitation_revoke_api(request, invite_id):
+    """Cancel a pending invitation — moves it to 'expired' state."""
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Login required."}, status=401)
+    try:
+        inv = EmployeeInvitation.objects.get(id=invite_id, owner=request.user)
+    except EmployeeInvitation.DoesNotExist:
+        return Response({"success": False, "message": "Invitation not found."}, status=404)
+    if inv.status != "pending":
+        return Response({"success": False, "message": f"Invitation is already {inv.status}."}, status=400)
+    inv.status = "expired"
+    inv.save(update_fields=["status"])
+    return Response({"success": True, "message": "Invitation revoked."})
+
+
+@api_view(["PATCH"])
+def update_team_member_api(request, member_id):
+    """Edit a team member's role + permissions + status. Used by the
+    Edit Access modal in the Team Assignment section."""
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Login required."}, status=401)
+    try:
+        member = TeamMember.objects.get(id=member_id, owner=request.user)
+    except TeamMember.DoesNotExist:
+        return Response({"success": False, "message": "Team member not found."}, status=404)
+
+    payload = request.data or {}
+    if "role" in payload:
+        new_role = (payload.get("role") or "").strip()
+        valid_roles = {k for k, _ in TeamMember.ROLE_CHOICES}
+        if new_role and new_role in valid_roles:
+            member.role = new_role
+    if "status" in payload:
+        new_status = (payload.get("status") or "").strip()
+        valid_status = {k for k, _ in TeamMember.STATUS_CHOICES}
+        if new_status and new_status in valid_status:
+            member.status = new_status
+    if "permissions" in payload and isinstance(payload["permissions"], dict):
+        member.permissions = payload["permissions"]
+    if "is_active" in payload:
+        member.is_active = bool(payload["is_active"])
+    if "name" in payload and payload["name"]:
+        member.name = (payload["name"] or "").strip()[:255]
+    member.save()
+    return Response({
+        "success": True,
+        "member": {
+            "id":          member.id,
+            "name":        member.name,
+            "email":       member.email,
+            "role":        member.role,
+            "status":      member.status,
+            "is_active":   member.is_active,
+            "permissions": member.permissions or {},
+        }
+    })
+
+
 def accept_invitation_page(request, token):
     try:
         inv = EmployeeInvitation.objects.get(token=token)

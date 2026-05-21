@@ -1540,6 +1540,51 @@ def send_vendor_invitation_api(request):
     return Response({"success": True, "message": f"Invitation sent to {email}."})
 
 
+@api_view(["GET"])
+def vendor_invitations_api(request):
+    """List vendor invitations this admin has sent."""
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Login required."}, status=401)
+
+    # Auto-expire stale pending rows so the UI is honest.
+    VendorInvitation.objects.filter(
+        owner=request.user, status="pending", expires_at__lt=timezone.now()
+    ).update(status="expired")
+
+    rows = (VendorInvitation.objects
+            .filter(owner=request.user)
+            .select_related("store")
+            .order_by("-created_at")[:100])
+
+    items = [{
+        "id":         inv.id,
+        "name":       inv.name,
+        "email":      inv.email,
+        "store_id":   inv.store_id,
+        "store_name": inv.store.name if inv.store_id else "",
+        "status":     inv.status,
+        "created_at": inv.created_at.isoformat() if inv.created_at else None,
+        "expires_at": inv.expires_at.isoformat() if inv.expires_at else None,
+    } for inv in rows]
+    return Response({"success": True, "invitations": items})
+
+
+@api_view(["POST"])
+def vendor_invitation_revoke_api(request, invite_id):
+    """Cancel a pending vendor invitation."""
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Login required."}, status=401)
+    try:
+        inv = VendorInvitation.objects.get(id=invite_id, owner=request.user)
+    except VendorInvitation.DoesNotExist:
+        return Response({"success": False, "message": "Invitation not found."}, status=404)
+    if inv.status != "pending":
+        return Response({"success": False, "message": f"Invitation is already {inv.status}."}, status=400)
+    inv.status = "expired"
+    inv.save(update_fields=["status"])
+    return Response({"success": True, "message": "Invitation revoked."})
+
+
 def accept_vendor_invitation_page(request, token):
     try:
         inv = VendorInvitation.objects.select_related("store").get(token=token)

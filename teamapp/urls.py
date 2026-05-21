@@ -28,4 +28,8 @@ urlpatterns = [
     path("tasks/<int:task_id>/comments/",       views.task_comments_api),
     # Invitations
     path("invite/send/",                        views.send_employee_invitation_api),
+    path("invite/list/",                        views.team_invitations_api),
+    path("invite/<int:invite_id>/revoke/",      views.team_invitation_revoke_api),
+    # Edit team member access (role/permissions/status)
+    path("members/<int:member_id>/update/",     views.update_team_member_api),
 ]

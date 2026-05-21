@@ -22,4 +22,6 @@ urlpatterns = [
     path("<int:vendor_id>/credentials/", views.vendor_credentials_api, name="vendor_credentials"),
     path("<int:vendor_id>/reset-password/", views.vendor_reset_password_api, name="vendor_reset_password"),
     path("invite/send/", views.send_vendor_invitation_api, name="send_vendor_invitation"),
+    path("invite/list/", views.vendor_invitations_api, name="vendor_invitations_list"),
+    path("invite/<int:invite_id>/revoke/", views.vendor_invitation_revoke_api, name="vendor_invitation_revoke"),
 ]
