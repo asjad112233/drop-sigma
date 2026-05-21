@@ -12657,13 +12657,24 @@ async function deleteStore(storeId, storeName){
       await loadProjectSwitcher();
       loadStores();
 
-      // Force-refresh AI Training Studio if it's loaded — otherwise the
-      // user might keep staring at cached pre-delete data and think the
-      // wipe didn't fire.
+      // Clear every AI-training key the dashboard caches in localStorage.
+      // Without this the Studio reloads from the BROWSER cache and shows
+      // pre-delete data even after the DB has been wiped — that's the
+      // "kuch delete nahi hua" the user kept reporting.
+      if(data.ai_training_reset){
+        try {
+          localStorage.removeItem("dropsigma_ai_training_state_v1"); // AIT_STATE_KEY
+          localStorage.removeItem("aitState");                        // legacy key
+          localStorage.removeItem("dropsigma_ais_completed");         // setup-wizard "done" flag
+          localStorage.removeItem("dropsigma_ais_dismissed");         // setup-wizard "dismissed" flag
+          window._aitServerSnippets = [];
+        } catch(_) {}
+      }
+
+      // Also force a fresh server fetch so the Studio repaints from the
+      // (now-empty) DB rather than any in-memory state.
       try {
-        if(typeof aitLoadProfile === "function")      aitLoadProfile();
-        if(typeof aitLoadKnowledge === "function")    aitLoadKnowledge();
-        if(typeof aitLoadExamples === "function")     aitLoadExamples();
+        if(typeof aitLoadFromServer === "function") aitLoadFromServer();
       } catch(_) {}
 
       return;
