@@ -427,6 +427,25 @@ def assign_vendor_to_order_api(request, order_id):
                  f"Vendor '{vendor.name}' assigned manually",
                  actor="Admin")
 
+    # Notify vendor of new assignment
+    try:
+        from notifications.services import notify
+        if vendor.user_id:
+            notify(
+                recipient=vendor.user,
+                audience="vendor",
+                category="order",
+                priority="high",
+                title=f"New order assigned: #{order.external_order_id}",
+                body=f"{order.customer_name or 'A customer'} ordered "
+                     f"{order.product_name or 'an item'}. Please ship and submit tracking.",
+                action_url=f"/vendor/dashboard/#order/{order.id}",
+                action_label="View",
+                related_order_id=order.id,
+            )
+    except Exception:
+        pass
+
     if permanent:
         if not order.product_id:
             return Response({

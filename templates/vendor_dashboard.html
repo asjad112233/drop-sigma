@@ -524,6 +524,11 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
 <!-- CSRF fallback form (for JS POSTs when cookie unavailable) -->
 <form id="csrfForm" style="display:none;">{% csrf_token %}</form>
 
+<!-- Floating notification bell (vendor audience) -->
+<div style="position:fixed;top:14px;right:20px;z-index:9998;">
+  {% include "_notification_bar.html" with audience="vendor" %}
+</div>
+
 <!-- Sidebar -->
 <div class="vp-sidebar" id="vpSidebar">
   <button class="vp-sb-toggle" id="vpSbToggleBtn" onclick="vpToggleSidebar()" title="Collapse sidebar">

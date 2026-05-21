@@ -283,6 +283,25 @@ def approve_tracking_api(request, submission_id):
         except Exception:
             pass
 
+        # Notify vendor of approval
+        try:
+            from notifications.services import notify
+            if sub.vendor.user_id:
+                notify(
+                    recipient=sub.vendor.user,
+                    audience="vendor",
+                    category="tracking",
+                    priority="medium",
+                    title=f"Tracking approved for #{order.external_order_id}",
+                    body=f"Your tracking {sub.tracking_number} was approved. "
+                         f"Order status updated to Shipped automatically.",
+                    action_url="/vendor/dashboard/#tracking-history",
+                    action_label="View",
+                    related_order_id=order.id,
+                )
+        except Exception:
+            pass
+
         return Response({"success": True, "message": "Tracking approved and customer notified."})
     except Exception as e:
         import logging
@@ -310,6 +329,25 @@ def reject_tracking_api(request, submission_id):
     if reason:
         reject_desc += f" Reason: {reason}"
     log_activity(order, "tracking_rejected", reject_desc, actor="Admin")
+
+    # Notify vendor of rejection
+    try:
+        from notifications.services import notify
+        if sub.vendor.user_id:
+            notify(
+                recipient=sub.vendor.user,
+                audience="vendor",
+                category="tracking",
+                priority="high",
+                title=f"Tracking rejected — please resubmit for #{order.external_order_id}",
+                body=(f'Admin note: "{reason}"' if reason else
+                      "Your tracking submission was rejected. Please verify and resubmit."),
+                action_url=f"/vendor/dashboard/#order/{order.id}",
+                action_label="Resubmit",
+                related_order_id=order.id,
+            )
+    except Exception:
+        pass
 
     return Response({"success": True, "message": "Tracking submission rejected."})
 
@@ -640,6 +678,25 @@ def vendor_submit_tracking_api(request, order_id):
     log_activity(order, "tracking_submitted",
                  f"Vendor '{vendor.name}' submitted tracking: {tracking_number}",
                  actor=vendor.name)
+
+    # Notify admin (tenant owner) of pending tracking review
+    try:
+        from notifications.services import notify
+        owner = getattr(order.store, "user", None)
+        if owner:
+            notify(
+                recipient=owner,
+                audience="admin",
+                category="tracking",
+                priority="medium",
+                title=f"Vendor submitted tracking for #{order.external_order_id}",
+                body=f"{vendor.name} submitted tracking number {tracking_number}. Awaiting your approval.",
+                action_url="/dashboard/#tracking-queue",
+                action_label="Review",
+                related_order_id=order.id,
+            )
+    except Exception:
+        pass
 
     return Response({"success": True, "message": "Tracking submitted for approval.", "submission_id": sub.id})
 

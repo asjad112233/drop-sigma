@@ -1,0 +1,397 @@
+{% comment %}
+Reusable notification bell + dropdown panel + toast stack.
+Include with:
+    {% include "_notification_bar.html" with audience="admin" %}
+    {% include "_notification_bar.html" with audience="vendor" %}
+    {% include "_notification_bar.html" with audience="employee" %}
+
+`audience` filter is forwarded to the API so each portal sees only its own.
+{% endcomment %}
+
+<style>
+/* Notification bell + panel — scoped under .ds-notif-root to avoid collisions */
+.ds-notif-root{position:relative;display:inline-flex;align-items:center;font-family:'Inter',system-ui,-apple-system,sans-serif;}
+
+.ds-notif-bell{width:42px;height:42px;border-radius:11px;display:flex;align-items:center;justify-content:center;
+  background:#f8fafc;border:1px solid #eef2f7;color:#0a0d1c;font-size:16px;
+  transition:all .2s cubic-bezier(.4,0,.2,1);position:relative;cursor:pointer;}
+.ds-notif-bell:hover{background:#fff;box-shadow:0 8px 22px -10px rgba(15,23,42,.18);}
+.ds-notif-bell.ringing{animation:dsBellWobble .65s ease-in-out;}
+@keyframes dsBellWobble{0%,100%{transform:rotate(0);}20%{transform:rotate(-12deg);}40%{transform:rotate(10deg);}60%{transform:rotate(-6deg);}80%{transform:rotate(4deg);}}
+
+.ds-notif-badge{position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;padding:0 5px;
+  background:linear-gradient(135deg,#ef4444,#ec4899);color:#fff;border-radius:99px;font-size:10px;
+  font-weight:900;display:flex;align-items:center;justify-content:center;border:2px solid #fff;
+  letter-spacing:-.02em;font-variant-numeric:tabular-nums;
+  box-shadow:0 4px 10px -2px rgba(239,68,68,.45);transition:transform .3s cubic-bezier(.34,1.56,.64,1);}
+.ds-notif-badge.zero{display:none;}
+.ds-notif-badge.bump{animation:dsBadgeBump .5s cubic-bezier(.34,1.56,.64,1);}
+@keyframes dsBadgeBump{0%{transform:scale(1);}40%{transform:scale(1.35);}100%{transform:scale(1);}}
+
+.ds-notif-panel{position:absolute;top:calc(100% + 10px);right:0;width:420px;max-height:640px;
+  background:#fff;border:1px solid #eef2f7;border-radius:18px;
+  box-shadow:0 20px 50px -20px rgba(15,23,42,.25),0 8px 24px rgba(15,23,42,.06);
+  display:flex;flex-direction:column;overflow:hidden;
+  opacity:0;transform:translateY(-12px) scale(.96);pointer-events:none;
+  transition:all .22s cubic-bezier(.4,0,.2,1);z-index:9999;}
+.ds-notif-panel.open{opacity:1;transform:translateY(0) scale(1);pointer-events:auto;}
+
+.ds-notif-head{padding:18px 20px 14px;border-bottom:1px solid #eef2f7;background:linear-gradient(180deg,#fafbfd,#fff);}
+.ds-notif-head-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+.ds-notif-title{font-size:16px;font-weight:900;letter-spacing:-.015em;display:flex;align-items:center;gap:8px;color:#0a0d1c;}
+.ds-notif-title .ds-count{background:linear-gradient(135deg,#ede9fe,#ddd6fe);color:#5b21b6;font-size:11px;font-weight:800;
+  padding:2px 8px;border-radius:99px;}
+.ds-notif-mark{font-size:11px;font-weight:700;color:#6366f1;transition:.15s;
+  padding:4px 8px;border-radius:6px;background:none;border:none;cursor:pointer;font-family:inherit;}
+.ds-notif-mark:hover{background:linear-gradient(135deg,#ede9fe,#ddd6fe);}
+
+.ds-notif-tabs{display:flex;gap:5px;}
+.ds-notif-tab{padding:6px 12px;font-size:11px;font-weight:700;color:#5b6478;
+  border-radius:7px;transition:.15s;display:inline-flex;align-items:center;gap:5px;
+  background:none;border:none;cursor:pointer;font-family:inherit;}
+.ds-notif-tab:hover{background:#f1f5f9;color:#0a0d1c;}
+.ds-notif-tab.on{background:#0a0d1c;color:#fff;}
+.ds-notif-tab .n{background:rgba(255,255,255,.2);padding:1px 6px;border-radius:99px;font-size:9px;font-weight:800;
+  min-width:18px;text-align:center;}
+.ds-notif-tab:not(.on) .n{background:#e5e7eb;color:#5b6478;}
+
+.ds-notif-list{flex:1;overflow-y:auto;padding:4px 0;min-height:200px;}
+.ds-notif-list::-webkit-scrollbar{width:6px;}
+.ds-notif-list::-webkit-scrollbar-thumb{background:#e5e7eb;border-radius:3px;}
+.ds-notif-day{padding:10px 20px 4px;font-size:10px;font-weight:800;color:#94a3b8;
+  letter-spacing:.1em;text-transform:uppercase;}
+
+.ds-notif-item{display:flex;gap:12px;padding:12px 20px;border-bottom:1px solid #eef2f7;
+  cursor:pointer;transition:background .15s;position:relative;}
+.ds-notif-item:hover{background:#f8fafc;}
+.ds-notif-item.unread{background:linear-gradient(90deg,rgba(99,102,241,.05),transparent);}
+.ds-notif-item.unread::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:#6366f1;}
+
+.ds-notif-icon{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;
+  font-size:14px;flex-shrink:0;}
+.ds-notif-icon.c-order   {background:#dcfce7;color:#15803d;}
+.ds-notif-icon.c-tracking{background:#ede9fe;color:#6d28d9;}
+.ds-notif-icon.c-email   {background:#dbeafe;color:#1d4ed8;}
+.ds-notif-icon.c-chat    {background:#fef3c7;color:#92400e;}
+.ds-notif-icon.c-task    {background:#e0e7ff;color:#3730a3;}
+.ds-notif-icon.c-payment {background:#fce7f3;color:#9d174d;}
+.ds-notif-icon.c-store   {background:#fee2e2;color:#991b1b;}
+.ds-notif-icon.c-ai      {background:linear-gradient(135deg,#ede9fe,#ddd6fe);color:#7c3aed;}
+.ds-notif-icon.c-vendor  {background:#fef3c7;color:#a16207;}
+.ds-notif-icon.c-system  {background:#e2e8f0;color:#475569;}
+
+.ds-notif-body{flex:1;min-width:0;}
+.ds-notif-hd{font-size:13px;font-weight:700;color:#0a0d1c;line-height:1.4;letter-spacing:-.005em;}
+.ds-notif-item.unread .ds-notif-hd{font-weight:800;}
+.ds-notif-hd .ds-pri{display:inline-block;margin-left:5px;font-size:9px;font-weight:800;padding:1px 6px;border-radius:4px;
+  letter-spacing:.06em;text-transform:uppercase;vertical-align:middle;}
+.ds-notif-hd .ds-pri.urgent{background:#fee2e2;color:#b91c1c;}
+.ds-notif-hd .ds-pri.high{background:#fef3c7;color:#92400e;}
+.ds-notif-sub{font-size:11.5px;color:#5b6478;margin-top:3px;line-height:1.5;}
+.ds-notif-meta{display:flex;justify-content:space-between;align-items:center;margin-top:8px;}
+.ds-notif-time{font-size:10.5px;color:#94a3b8;font-weight:600;}
+.ds-notif-actions{display:flex;gap:6px;}
+.ds-notif-action{font-size:10.5px;font-weight:700;padding:4px 10px;border-radius:6px;transition:.15s;
+  text-decoration:none;cursor:pointer;font-family:inherit;border:none;}
+.ds-notif-action.primary{background:#0a0d1c;color:#fff;}
+.ds-notif-action.primary:hover{background:#000;}
+.ds-notif-action.ghost{background:#f1f5f9;color:#0a0d1c;}
+.ds-notif-action.ghost:hover{background:#e5e7eb;}
+.ds-notif-dot{position:absolute;top:18px;right:16px;width:7px;height:7px;border-radius:50%;background:#6366f1;
+  box-shadow:0 0 0 3px rgba(99,102,241,.18);}
+.ds-notif-item:not(.unread) .ds-notif-dot{display:none;}
+
+.ds-notif-empty{padding:48px 20px;text-align:center;color:#94a3b8;}
+.ds-notif-empty .ic{font-size:36px;opacity:.4;}
+.ds-notif-empty p{font-size:13px;margin-top:8px;font-weight:600;}
+
+.ds-notif-foot{padding:12px 20px;border-top:1px solid #eef2f7;background:#f8fafc;
+  display:flex;justify-content:space-between;align-items:center;}
+.ds-notif-foot a{font-size:12px;font-weight:700;color:#6366f1;text-decoration:none;display:inline-flex;align-items:center;gap:6px;}
+.ds-notif-foot a:hover{color:#a855f7;}
+.ds-notif-foot .ds-settings{font-size:11px;color:#5b6478;font-weight:600;}
+
+/* Toast stack */
+.ds-toast-stack{position:fixed;top:74px;right:18px;z-index:99999;display:flex;flex-direction:column;gap:10px;
+  pointer-events:none;font-family:'Inter',sans-serif;}
+.ds-toast{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:14px 36px 14px 16px;
+  box-shadow:0 16px 40px -8px rgba(15,23,42,.25);
+  display:flex;gap:12px;width:340px;align-items:flex-start;
+  animation:dsToastIn .4s cubic-bezier(.34,1.56,.64,1);pointer-events:auto;position:relative;overflow:hidden;}
+.ds-toast::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:#6366f1;}
+.ds-toast.c-order::before{background:#10b981;}
+.ds-toast.c-tracking::before{background:#a855f7;}
+.ds-toast.c-email::before{background:#3b82f6;}
+.ds-toast.c-chat::before{background:#f59e0b;}
+.ds-toast.c-store::before{background:#ef4444;}
+.ds-toast.c-ai::before{background:linear-gradient(180deg,#a855f7,#ec4899);}
+.ds-toast.c-task::before{background:#3730a3;}
+.ds-toast.c-vendor::before{background:#a16207;}
+.ds-toast-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;
+  font-size:14px;flex-shrink:0;}
+.ds-toast-body{flex:1;min-width:0;}
+.ds-toast-title{font-size:13px;font-weight:800;color:#0a0d1c;line-height:1.35;}
+.ds-toast-sub{font-size:11.5px;color:#5b6478;margin-top:3px;line-height:1.5;}
+.ds-toast-time{font-size:10px;color:#94a3b8;font-weight:700;margin-top:5px;letter-spacing:.04em;text-transform:uppercase;}
+.ds-toast-close{position:absolute;top:8px;right:10px;width:20px;height:20px;border-radius:6px;color:#94a3b8;
+  font-size:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.15s;
+  background:none;border:none;font-family:inherit;}
+.ds-toast-close:hover{background:#e5e7eb;color:#0a0d1c;}
+@keyframes dsToastIn{from{opacity:0;transform:translateX(40px) scale(.92);}to{opacity:1;transform:translateX(0) scale(1);}}
+@keyframes dsToastOut{to{opacity:0;transform:translateX(60px) scale(.92);}}
+
+@media(max-width:760px){
+  .ds-notif-panel{width:calc(100vw - 24px);right:-8px;}
+  .ds-toast{width:calc(100vw - 36px);}
+}
+</style>
+
+<div class="ds-notif-root">
+  <button class="ds-notif-bell" id="dsNotifBell" type="button" title="Notifications">
+    <i class="fa-regular fa-bell"></i>
+    <span class="ds-notif-badge zero" id="dsNotifBadge">0</span>
+  </button>
+
+  <div class="ds-notif-panel" id="dsNotifPanel" role="dialog" aria-label="Notifications">
+    <div class="ds-notif-head">
+      <div class="ds-notif-head-row">
+        <div class="ds-notif-title">Notifications <span class="ds-count" id="dsPanelCount">0 new</span></div>
+        <button class="ds-notif-mark" id="dsMarkAll" type="button">Mark all as read</button>
+      </div>
+      <div class="ds-notif-tabs">
+        <button class="ds-notif-tab on" data-tab="all" type="button">All <span class="n" id="dsTabAll">0</span></button>
+        <button class="ds-notif-tab" data-tab="unread" type="button">Unread <span class="n" id="dsTabUnread">0</span></button>
+      </div>
+    </div>
+
+    <div class="ds-notif-list" id="dsNotifList">
+      <div class="ds-notif-empty"><div class="ic">⏳</div><p>Loading…</p></div>
+    </div>
+
+    <div class="ds-notif-foot">
+      <a href="#" id="dsNotifAllLink">View all <i class="fa-solid fa-arrow-right"></i></a>
+      <span class="ds-settings"><i class="fa-solid fa-sliders"></i> Auto-refresh every 20s</span>
+    </div>
+  </div>
+</div>
+
+<div class="ds-toast-stack" id="dsToastStack"></div>
+
+<script>
+(function(){
+  if (window.__dsNotifLoaded) return;
+  window.__dsNotifLoaded = true;
+
+  const AUDIENCE = "{{ audience|default:'admin'|escapejs }}";
+  const POLL_MS  = 20000;
+
+  const $bell   = document.getElementById('dsNotifBell');
+  const $panel  = document.getElementById('dsNotifPanel');
+  const $badge  = document.getElementById('dsNotifBadge');
+  const $list   = document.getElementById('dsNotifList');
+  const $panelCount = document.getElementById('dsPanelCount');
+  const $tabAll  = document.getElementById('dsTabAll');
+  const $tabUnread = document.getElementById('dsTabUnread');
+  const $markAll = document.getElementById('dsMarkAll');
+  const $toastStack = document.getElementById('dsToastStack');
+
+  let currentTab = 'all';
+  let lastSeenIds = new Set();
+  let firstLoad = true;
+
+  function escHtml(s){
+    return String(s||"").replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function csrfToken(){
+    const c = document.cookie.split('; ').find(r => r.startsWith('csrftoken='));
+    return c ? c.split('=')[1] : '';
+  }
+
+  async function api(url, opts){
+    opts = opts || {};
+    opts.headers = Object.assign({
+      'X-Requested-With':'XMLHttpRequest',
+      'X-CSRFToken': csrfToken(),
+      'Content-Type':'application/json',
+    }, opts.headers || {});
+    opts.credentials = 'same-origin';
+    const r = await fetch(url, opts);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  }
+
+  function renderGroups(groups){
+    if (!groups || groups.length === 0){
+      $list.innerHTML = '<div class="ds-notif-empty"><div class="ic">🎉</div><p>You\'re all caught up!</p></div>';
+      return;
+    }
+    const html = groups.map(g => `
+      <div class="ds-notif-day">${escHtml(g.day)}</div>
+      ${g.items.map(n => renderItem(n)).join('')}
+    `).join('');
+    $list.innerHTML = html;
+    $list.querySelectorAll('[data-notif-id]').forEach(el => {
+      el.addEventListener('click', () => onItemClick(el));
+    });
+  }
+
+  function renderItem(n){
+    const pri = (n.priority === 'urgent' || n.priority === 'high')
+      ? `<span class="ds-pri ${n.priority}">${n.priority}</span>` : '';
+    const actions = n.action_url
+      ? `<a href="${escHtml(n.action_url)}" class="ds-notif-action primary">${escHtml(n.action_label || 'Open')}</a>`
+      : '';
+    return `
+      <div class="ds-notif-item ${n.is_read ? '' : 'unread'}" data-notif-id="${n.id}">
+        <div class="ds-notif-icon c-${escHtml(n.category)}"><i class="${escHtml(n.icon || 'fa-regular fa-bell')}"></i></div>
+        <div class="ds-notif-body">
+          <div class="ds-notif-hd">${escHtml(n.title)}${pri}</div>
+          ${n.body ? `<div class="ds-notif-sub">${escHtml(n.body)}</div>` : ''}
+          <div class="ds-notif-meta">
+            <span class="ds-notif-time">${escHtml(n.time_ago)}</span>
+            ${actions ? `<div class="ds-notif-actions">${actions}</div>` : ''}
+          </div>
+        </div>
+        <span class="ds-notif-dot"></span>
+      </div>
+    `;
+  }
+
+  async function refresh(){
+    try {
+      const data = await api(`/notifications/api/list/?audience=${AUDIENCE}&tab=${currentTab}&limit=40`);
+      renderGroups(data.groups);
+      const unread = data.unread_count || 0;
+      const total  = data.total || 0;
+      updateBadge(unread);
+      $tabAll.textContent     = total;
+      $tabUnread.textContent  = unread;
+      $panelCount.textContent = unread + ' new';
+
+      // Detect new arrivals → toast
+      const allIds = new Set();
+      (data.groups || []).forEach(g => g.items.forEach(i => allIds.add(i.id)));
+      if (!firstLoad){
+        (data.groups || []).forEach(g => g.items.forEach(i => {
+          if (!i.is_read && !lastSeenIds.has(i.id)){
+            spawnToast(i);
+            ringBell();
+          }
+        }));
+      }
+      lastSeenIds = allIds;
+      firstLoad = false;
+    } catch(e){
+      // Silently ignore — user may not be authenticated yet
+    }
+  }
+
+  function updateBadge(n){
+    const prev = parseInt($badge.textContent, 10) || 0;
+    $badge.textContent = n > 99 ? '99+' : n;
+    $badge.classList.toggle('zero', n === 0);
+    if (n > prev && prev >= 0){
+      $badge.classList.remove('bump');
+      void $badge.offsetWidth;
+      $badge.classList.add('bump');
+    }
+  }
+
+  function ringBell(){
+    $bell.classList.remove('ringing');
+    void $bell.offsetWidth;
+    $bell.classList.add('ringing');
+  }
+
+  function spawnToast(n){
+    const el = document.createElement('div');
+    el.className = 'ds-toast c-' + n.category;
+    el.innerHTML = `
+      <div class="ds-toast-icon ds-notif-icon c-${escHtml(n.category)}"><i class="${escHtml(n.icon || 'fa-regular fa-bell')}"></i></div>
+      <div class="ds-toast-body">
+        <div class="ds-toast-title">${escHtml(n.title)}</div>
+        ${n.body ? `<div class="ds-toast-sub">${escHtml(n.body)}</div>` : ''}
+        <div class="ds-toast-time">${escHtml(n.time_ago)}</div>
+      </div>
+      <button class="ds-toast-close" type="button"><i class="fa-solid fa-xmark"></i></button>
+    `;
+    el.querySelector('.ds-toast-close').addEventListener('click', () => removeToast(el));
+    if (n.action_url){
+      el.style.cursor = 'pointer';
+      el.addEventListener('click', e => {
+        if (e.target.closest('.ds-toast-close')) return;
+        window.location.href = n.action_url;
+      });
+    }
+    $toastStack.appendChild(el);
+    setTimeout(() => removeToast(el), 6000);
+  }
+
+  function removeToast(el){
+    if (!el.parentNode) return;
+    el.style.animation = 'dsToastOut .35s cubic-bezier(.4,0,.2,1) forwards';
+    setTimeout(() => el.remove(), 350);
+  }
+
+  async function onItemClick(el){
+    const id = el.dataset.notifId;
+    if (!id) return;
+    if (!el.classList.contains('unread')) return;
+    el.classList.remove('unread');
+    try {
+      await api(`/notifications/api/${id}/read/`, { method:'POST' });
+      // Decrement counters locally
+      const newUnread = Math.max(0, (parseInt($tabUnread.textContent, 10) || 0) - 1);
+      $tabUnread.textContent = newUnread;
+      $panelCount.textContent = newUnread + ' new';
+      updateBadge(newUnread);
+    } catch(e){}
+  }
+
+  // Bell toggle
+  $bell.addEventListener('click', e => {
+    e.stopPropagation();
+    $panel.classList.toggle('open');
+    if ($panel.classList.contains('open')) refresh();
+  });
+  document.addEventListener('click', e => {
+    if (!$panel.contains(e.target) && !$bell.contains(e.target)){
+      $panel.classList.remove('open');
+    }
+  });
+
+  // Tabs
+  document.querySelectorAll('.ds-notif-tab').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('.ds-notif-tab').forEach(x => x.classList.toggle('on', x === b));
+      currentTab = b.dataset.tab;
+      refresh();
+    });
+  });
+
+  // Mark all read
+  $markAll.addEventListener('click', async () => {
+    try {
+      await api('/notifications/api/read-all/', {
+        method:'POST',
+        body: JSON.stringify({ audience: AUDIENCE })
+      });
+      refresh();
+    } catch(e){}
+  });
+
+  // Initial + polling (only when tab is visible)
+  refresh();
+  setInterval(() => {
+    if (document.hidden) return;
+    api(`/notifications/api/unread-count/`).then(d => {
+      const n = d.count || 0;
+      const prev = parseInt($badge.textContent, 10) || 0;
+      if (n !== prev){
+        refresh();
+      }
+    }).catch(()=>{});
+  }, POLL_MS);
+})();
+</script>

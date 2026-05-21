@@ -51,4 +51,5 @@ urlpatterns = [
     path("vendor/login/activate/<uuid:token>/",        vendor_views.vendor_activate_login_by_token),
     path("stock/", include("stock.urls")),
     path("superadmin/", include("superadmin.urls")),
+    path("notifications/", include("notifications.urls")),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

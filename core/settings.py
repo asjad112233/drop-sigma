@@ -67,6 +67,7 @@ INSTALLED_APPS = [
     'vendors',
     'stock',
     'superadmin',
+    'notifications',
 ]
 
 ASGI_APPLICATION = 'core.asgi.application'

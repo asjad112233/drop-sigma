@@ -98,7 +98,11 @@ def process_woocommerce_order(store, item):
             log_activity(order_obj, "assigned",
                          f"Auto-assigned to {member.name} ({member.role})",
                          actor="System")
+            _notify_employee_assigned(order_obj, member)
         apply_vendor_auto_assignment(order_obj)
+        _notify_admin_new_order(order_obj)
+        if order_obj.assigned_vendor_id:
+            _notify_vendor_assigned(order_obj)
         # Fire auto email for the new order's status
         _fire_auto_email(order_obj, new_status)
     elif old_status is not None and new_status.lower() != old_status.lower():
@@ -112,6 +116,72 @@ def _fire_auto_email(order, new_status):
     try:
         from emails.views import send_auto_status_email
         send_auto_status_email(order, new_status)
+    except Exception:
+        pass
+
+
+def _notify_admin_new_order(order):
+    """Tell the tenant owner a new order just landed."""
+    try:
+        from notifications.services import notify
+        owner = getattr(order.store, "user", None)
+        if not owner:
+            return
+        customer = order.customer_name or "a customer"
+        notify(
+            recipient=owner,
+            audience="admin",
+            category="order",
+            priority="high",
+            title=f"New order #{order.external_order_id} from {order.store.name}",
+            body=f"{customer} ordered for {order.currency} {order.total_price}.",
+            action_url=f"/dashboard/#orders/{order.id}",
+            action_label="View order",
+            related_order_id=order.id,
+        )
+    except Exception:
+        pass
+
+
+def _notify_vendor_assigned(order):
+    """Tell the assigned vendor about the new order."""
+    try:
+        from notifications.services import notify
+        vendor_user = getattr(order.assigned_vendor, "user", None)
+        if not vendor_user:
+            return
+        notify(
+            recipient=vendor_user,
+            audience="vendor",
+            category="order",
+            priority="high",
+            title=f"New order assigned: #{order.external_order_id}",
+            body=f"{order.customer_name or 'A customer'} ordered {order.product_name or 'an item'}. "
+                 f"Please ship and submit tracking.",
+            action_url=f"/vendor/dashboard/#order/{order.id}",
+            action_label="View",
+            related_order_id=order.id,
+        )
+    except Exception:
+        pass
+
+
+def _notify_employee_assigned(order, member):
+    """Tell the auto-assigned team member about the new order."""
+    try:
+        from notifications.services import notify
+        notify(
+            recipient=getattr(member, "user", None),
+            audience="employee",
+            category="order",
+            priority="medium",
+            title=f"Order #{order.external_order_id} assigned to you",
+            body=f"Auto-routed by {member.role.replace('_',' ').title()} rule. "
+                 f"Customer: {order.customer_name or '—'}.",
+            action_url=f"/employee/dashboard/#order/{order.id}",
+            action_label="Open",
+            related_order_id=order.id,
+        )
     except Exception:
         pass
 
@@ -200,7 +270,11 @@ def process_shopify_order(store, item):
             log_activity(order_obj, "assigned",
                          f"Auto-assigned to {member.name} ({member.role})",
                          actor="System")
+            _notify_employee_assigned(order_obj, member)
         apply_vendor_auto_assignment(order_obj)
+        _notify_admin_new_order(order_obj)
+        if order_obj.assigned_vendor_id:
+            _notify_vendor_assigned(order_obj)
 
     return order_obj, created
 

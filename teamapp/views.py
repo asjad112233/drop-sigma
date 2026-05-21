@@ -1195,6 +1195,24 @@ def tasks_create_api(request):
 
     if assigned_to:
         _send_task_assignment_dm(request.user, assigned_to, task)
+        # Notify the employee via notification bar
+        try:
+            from notifications.services import notify
+            priority_map = {"high": "high", "medium": "medium", "low": "low"}
+            notify(
+                recipient=assigned_to.user,
+                audience="employee",
+                category="task",
+                priority=priority_map.get(task.priority, "medium"),
+                title=f"New task assigned: {task.title}",
+                body=(task.description or "")[:240] or
+                     f"Assigned by {request.user.get_full_name() or request.user.username}.",
+                action_url=f"/employee/dashboard/#tasks/{task.id}",
+                action_label="Open",
+                related_task_id=task.id,
+            )
+        except Exception:
+            pass
 
     return Response({"task": _task_to_dict(task)})
 

@@ -4141,6 +4141,11 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
 <div id="gLoader"></div>
 <form id="csrfHiddenForm" style="display:none;">{% csrf_token %}</form>
 
+<!-- Floating notification bell (admin audience) -->
+<div style="position:fixed;top:14px;right:20px;z-index:9998;">
+  {% include "_notification_bar.html" with audience="admin" %}
+</div>
+
 {% if is_impersonating %}
 <div id="impersonationBanner" style="background:linear-gradient(135deg,#f59e0b,#ef4444);color:#fff;padding:10px 24px;display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:700;box-shadow:0 2px 8px rgba(239,68,68,.3);position:sticky;top:0;z-index:9999;">
   <div>

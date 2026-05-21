@@ -496,6 +496,11 @@ body{font-family:'Inter','Segoe UI',sans-serif;background:var(--bg);color:var(--
 
 <div id="gLoader"></div>
 
+<!-- Floating notification bell (employee audience) -->
+<div style="position:fixed;top:14px;right:20px;z-index:9998;">
+  {% include "_notification_bar.html" with audience="employee" %}
+</div>
+
 <!-- Mobile hamburger (only visible <901px via CSS) -->
 <button class="ec-mobile-toggle" type="button" id="ecMobileToggle" onclick="ecToggleMobileNav()" aria-label="Open navigation">
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
