@@ -564,24 +564,47 @@ def delete_store_api(request, store_id):
     # the same shop later without re-uploading every knowledge snippet.
     # Caller may opt in to a full reset by passing delete_ai_training=true.
     delete_ai_training = bool(request.data.get("delete_ai_training", False)) if request.data else False
+    user = request.user
 
     snapshot_taken = False
-    if not delete_ai_training:
+    reset_counts = {"profiles": 0, "snippets": 0, "feedbacks": 0, "snapshots": 0}
+
+    if delete_ai_training:
+        # ☑ Checkbox: WIPE EVERYTHING. Per the rule "complete reset", we
+        # interpret this as a tenant-wide wipe — every AiTrainingProfile,
+        # KnowledgeSnippet, AiReplyFeedback, and any pending snapshot
+        # belonging to this user goes. That way the AI Training Studio
+        # genuinely looks empty after the delete, not just the deleted
+        # store's slice (which the user might never have been viewing
+        # in the first place).
+        try:
+            from emails.models import AiTrainingProfile, KnowledgeSnippet, AiReplyFeedback, PendingAiTrainingSnapshot
+            reset_counts["profiles"]  = AiTrainingProfile.objects.filter(store__user=user).count()
+            reset_counts["snippets"]  = KnowledgeSnippet.objects.filter(store__user=user).count()
+            reset_counts["feedbacks"] = AiReplyFeedback.objects.filter(store__user=user).count()
+            reset_counts["snapshots"] = PendingAiTrainingSnapshot.objects.filter(user=user).count()
+            AiTrainingProfile.objects.filter(store__user=user).delete()
+            KnowledgeSnippet.objects.filter(store__user=user).delete()
+            AiReplyFeedback.objects.filter(store__user=user).delete()
+            PendingAiTrainingSnapshot.objects.filter(user=user).delete()
+        except Exception:
+            pass
+    else:
+        # ☐ Unchecked — snapshot the deleted store's training so it
+        # can be restored if the same store URL is reconnected later.
         try:
             from emails.services import snapshot_ai_training_for_store
             snap = snapshot_ai_training_for_store(store)
             snapshot_taken = snap is not None
         except Exception:
             snapshot_taken = False
-    # If delete_ai_training is True we skip the snapshot — Django's CASCADE
-    # will wipe AiTrainingProfile + KnowledgeSnippet + AiReplyFeedback when
-    # the store is deleted below.
 
     store.delete()
 
     return Response({
-        "success": True,
-        "message": "Store deleted successfully",
-        "ai_training_preserved": snapshot_taken,
-        "ai_training_reset":     bool(delete_ai_training),
+        "success":                True,
+        "message":                "Store deleted successfully",
+        "ai_training_preserved":  snapshot_taken,
+        "ai_training_reset":      bool(delete_ai_training),
+        "ai_training_reset_counts": reset_counts if delete_ai_training else None,
     })

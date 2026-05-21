@@ -12576,8 +12576,8 @@ function _confirmDeleteStoreWithAiOption(storeName){
           <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:13px;color:#0b0f1a;">
             <input type="checkbox" id="dsAiResetCheckbox" style="width:16px;height:16px;flex-shrink:0;accent-color:#dc2626;margin-top:2px;">
             <span>
-              <b style="font-weight:700;">Also delete all AI training data associated with this store</b>
-              <div style="font-size:11.5px;color:#64748b;margin-top:3px;line-height:1.5;">Unchecked (default): training data is preserved so you can reconnect the same store later and pick up where you left off.</div>
+              <b style="font-weight:700;">Also reset all my AI training data</b>
+              <div style="font-size:11.5px;color:#64748b;margin-top:3px;line-height:1.5;">When checked: every AI Training profile, knowledge snippet, and reply-correction in your account is wiped — AI Training Studio resets to empty. Unchecked (default): training stays put so you can reconnect the same store later and resume where you left off.</div>
             </span>
           </label>
         </div>
@@ -12626,7 +12626,20 @@ async function deleteStore(storeId, storeName){
     }
 
     if(response.ok && data.success){
-      _showNewOrderToast2("✅ Store deleted successfully.");
+      // Build a clear success toast that tells the user EXACTLY what the
+      // AI-training reset did, since that was the source of the previous
+      // "nothing changed?" confusion.
+      let msg = "✅ Store deleted successfully.";
+      if(data.ai_training_reset){
+        const c = data.ai_training_reset_counts || {};
+        const totalRows = (c.profiles||0) + (c.snippets||0) + (c.feedbacks||0) + (c.snapshots||0);
+        msg = totalRows
+          ? `✅ Store deleted + AI Training reset (${c.profiles||0} profile(s), ${c.snippets||0} snippet(s) cleared).`
+          : "✅ Store deleted (AI Training was already empty).";
+      } else if(data.ai_training_preserved){
+        msg = "✅ Store deleted. AI training kept — reconnect the same store URL to resume it.";
+      }
+      _showNewOrderToast2(msg);
 
       if(String(selectedStoreId) === String(storeId)){
         selectedStoreId = "";
@@ -12636,6 +12649,16 @@ async function deleteStore(storeId, storeName){
 
       await loadProjectSwitcher();
       loadStores();
+
+      // Force-refresh AI Training Studio if it's loaded — otherwise the
+      // user might keep staring at cached pre-delete data and think the
+      // wipe didn't fire.
+      try {
+        if(typeof aitLoadProfile === "function")      aitLoadProfile();
+        if(typeof aitLoadKnowledge === "function")    aitLoadKnowledge();
+        if(typeof aitLoadExamples === "function")     aitLoadExamples();
+      } catch(_) {}
+
       return;
     }
 
