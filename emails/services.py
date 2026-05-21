@@ -15,6 +15,163 @@ from orders.models import Order
 from .models import EmailMessage, EmailAccount, EmailAttachment
 
 
+# ════════════════════════════════════════════════════════════════════════════
+# 🧠 AI Training snapshot / restore — used by the store delete + connect flow
+#    so a tenant can delete a store without losing the AI training they've
+#    built up, and have it auto-restored when they reconnect the SAME store.
+# ════════════════════════════════════════════════════════════════════════════
+
+def _normalise_store_url(url):
+    """Compare-safe canonical form: lowercased, trailing slash stripped,
+    protocol-agnostic."""
+    if not url:
+        return ""
+    u = str(url).strip().lower().rstrip("/")
+    # Drop the protocol so http:// vs https:// don't break the match.
+    for prefix in ("https://", "http://"):
+        if u.startswith(prefix):
+            u = u[len(prefix):]
+            break
+    return u
+
+
+def snapshot_ai_training_for_store(store):
+    """Capture every AI-training row tied to `store` into a JSON-able blob
+    on the user's PendingAiTrainingSnapshot. Returns the snapshot row, or
+    None if there was no usable training data (and so no point keeping it).
+    Caller is expected to delete the store AFTER this returns — Django's
+    CASCADE will then take out the originals automatically."""
+    from .models import AiTrainingProfile, KnowledgeSnippet, AiReplyFeedback, PendingAiTrainingSnapshot
+
+    user = getattr(store, "user", None)
+    if user is None:
+        return None
+
+    profile = AiTrainingProfile.objects.filter(store=store).first()
+    profile_data = {}
+    if profile:
+        profile_data = {
+            "business_name":      profile.business_name,
+            "niche":               profile.niche,
+            "description":         profile.description,
+            "language":            profile.language,
+            "support_hours":       profile.support_hours,
+            "tones":               profile.tones,
+            "reply_length":        profile.reply_length,
+            "signoff":             profile.signoff,
+            "voice_example":       profile.voice_example,
+            "mode":                profile.mode,
+            "toggles":             profile.toggles,
+            "wizard_answers":      profile.wizard_answers,
+            "wizard_completed_at": profile.wizard_completed_at.isoformat() if profile.wizard_completed_at else None,
+            "extras":              profile.extras,
+        }
+
+    snippets_data = [{
+        "category":    s.category,
+        "title":       s.title,
+        "text":        s.text,
+        "from_wizard": s.from_wizard,
+        "order_idx":   s.order_idx,
+    } for s in KnowledgeSnippet.objects.filter(store=store)]
+
+    feedbacks_data = [{
+        "feedback_type":    f.feedback_type,
+        "ai_draft":         f.ai_draft,
+        "final_text":       f.final_text,
+        "correction_note":  f.correction_note,
+        "customer_message": f.customer_message,
+        "actor_id":         f.actor_id,
+    } for f in AiReplyFeedback.objects.filter(store=store)]
+
+    if not (profile_data or snippets_data or feedbacks_data):
+        # Store has no training to preserve — nothing to do.
+        return None
+
+    obj, _ = PendingAiTrainingSnapshot.objects.update_or_create(
+        user=user,
+        defaults={
+            "source_store_url":  store.store_url or "",
+            "source_store_name": store.name or "",
+            "profile_json":      profile_data,
+            "snippets_json":     snippets_data,
+            "feedbacks_json":    feedbacks_data,
+        },
+    )
+    return obj
+
+
+def consume_pending_ai_training(user, new_store):
+    """Called right after a NEW store is created. Looks for a pending
+    snapshot on the user:
+      • snapshot.source_store_url == new_store.store_url → restore the
+        training onto the new store (tenant reconnected the same shop).
+      • snapshot.source_store_url != new_store.store_url → discard the
+        snapshot (tenant connected a different shop — that's the
+        auto-reset trigger).
+      • no snapshot → no-op.
+
+    Returns one of: 'restored', 'reset', None.
+    """
+    from .models import AiTrainingProfile, KnowledgeSnippet, AiReplyFeedback, PendingAiTrainingSnapshot
+
+    snap = PendingAiTrainingSnapshot.objects.filter(user=user).first()
+    if not snap:
+        return None
+
+    same = _normalise_store_url(snap.source_store_url) == _normalise_store_url(new_store.store_url)
+
+    if not same:
+        # Different store reconnected → tenant explicitly switched. Drop
+        # the snapshot so the new store starts with a clean training slate.
+        snap.delete()
+        return "reset"
+
+    # Same store reconnected → restore.
+    p = snap.profile_json or {}
+    if p:
+        AiTrainingProfile.objects.update_or_create(
+            store=new_store,
+            defaults={
+                "business_name":      p.get("business_name", "") or "",
+                "niche":              p.get("niche", "") or "",
+                "description":        p.get("description", "") or "",
+                "language":           p.get("language", "English") or "English",
+                "support_hours":      p.get("support_hours", "") or "",
+                "tones":              p.get("tones") or [],
+                "reply_length":       p.get("reply_length", "Medium") or "Medium",
+                "signoff":            p.get("signoff", "") or "",
+                "voice_example":      p.get("voice_example", "") or "",
+                "mode":               p.get("mode", "draft") or "draft",
+                "toggles":            p.get("toggles") or {},
+                "wizard_answers":     p.get("wizard_answers") or {},
+                "extras":             p.get("extras") or {},
+            },
+        )
+    for s in (snap.snippets_json or []):
+        KnowledgeSnippet.objects.create(
+            store=new_store,
+            category=s.get("category") or "FAQ",
+            title=s.get("title") or "",
+            text=s.get("text") or "",
+            from_wizard=bool(s.get("from_wizard")),
+            order_idx=int(s.get("order_idx") or 0),
+        )
+    for f in (snap.feedbacks_json or []):
+        AiReplyFeedback.objects.create(
+            store=new_store,
+            feedback_type=f.get("feedback_type") or "edit",
+            ai_draft=f.get("ai_draft") or "",
+            final_text=f.get("final_text") or "",
+            correction_note=f.get("correction_note") or "",
+            customer_message=f.get("customer_message") or "",
+            actor_id=f.get("actor_id"),
+        )
+
+    snap.delete()
+    return "restored"
+
+
 # =========================
 # 🤖 CLAUDE (ANTHROPIC) CONFIG
 # =========================

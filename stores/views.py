@@ -139,9 +139,19 @@ def create_store_api(request):
 
     _register_webhook_for_store(store, request)
 
+    # If the user previously deleted a store with AI training preserved,
+    # restore it now (same URL) OR discard it (different URL = auto-reset).
+    ai_action = None
+    try:
+        from emails.services import consume_pending_ai_training
+        ai_action = consume_pending_ai_training(user, store)
+    except Exception:
+        ai_action = None
+
     return Response({
         "success": True,
-        "store": StoreSerializer(store).data
+        "store": StoreSerializer(store).data,
+        "ai_training_action": ai_action,  # "restored" | "reset" | None
     })
 
 
@@ -293,11 +303,21 @@ def wc_callback_api(request):
     _register_webhook_for_store(store, request)
     _kickoff_initial_sync(store)
 
+    # Same restore-or-reset path as the manual create endpoint.
+    ai_action = None
+    if created:
+        try:
+            from emails.services import consume_pending_ai_training
+            ai_action = consume_pending_ai_training(user, store)
+        except Exception:
+            ai_action = None
+
     return Response({
         "success": True,
         "message": "WooCommerce store connected successfully.",
         "store_id": store.id,
-        "created": created
+        "created": created,
+        "ai_training_action": ai_action,
     })
 
 
@@ -539,9 +559,29 @@ def delete_store_api(request, store_id):
         return Response({"success": False, "message": "Authentication required"}, status=401)
     # Per-user scope: tenants can only delete their own stores.
     store = get_object_or_404(Store, id=store_id, user=request.user)
+
+    # Default behaviour: PRESERVE AI training so the tenant can reconnect
+    # the same shop later without re-uploading every knowledge snippet.
+    # Caller may opt in to a full reset by passing delete_ai_training=true.
+    delete_ai_training = bool(request.data.get("delete_ai_training", False)) if request.data else False
+
+    snapshot_taken = False
+    if not delete_ai_training:
+        try:
+            from emails.services import snapshot_ai_training_for_store
+            snap = snapshot_ai_training_for_store(store)
+            snapshot_taken = snap is not None
+        except Exception:
+            snapshot_taken = False
+    # If delete_ai_training is True we skip the snapshot — Django's CASCADE
+    # will wipe AiTrainingProfile + KnowledgeSnippet + AiReplyFeedback when
+    # the store is deleted below.
+
     store.delete()
 
     return Response({
         "success": True,
-        "message": "Store deleted successfully"
+        "message": "Store deleted successfully",
+        "ai_training_preserved": snapshot_taken,
+        "ai_training_reset":     bool(delete_ai_training),
     })

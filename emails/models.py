@@ -291,6 +291,29 @@ class AiTrainingProfile(models.Model):
         return f"AI Profile · {self.business_name or self.store_id}"
 
 
+class PendingAiTrainingSnapshot(models.Model):
+    """When a tenant deletes a store without checking "also reset AI", we
+    snapshot the AI training data here so it can be auto-restored if they
+    later reconnect the SAME store URL. If they connect a DIFFERENT store
+    URL we discard this snapshot — that's the "auto-reset on replacement"
+    semantic the tenant asked for.
+
+    One snapshot per user at a time — re-deleting overwrites the previous."""
+    user                = models.OneToOneField(
+        'auth.User', on_delete=models.CASCADE,
+        related_name='pending_ai_training_snapshot'
+    )
+    source_store_url    = models.URLField(max_length=600)
+    source_store_name   = models.CharField(max_length=255, blank=True, default='')
+    profile_json        = models.JSONField(default=dict, blank=True)
+    snippets_json       = models.JSONField(default=list, blank=True)
+    feedbacks_json      = models.JSONField(default=list, blank=True)
+    created_at          = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Pending AI snapshot for {self.user_id} ← {self.source_store_url}"
+
+
 class KnowledgeSnippet(models.Model):
     """
     Knowledge base entry for a store's AI.
