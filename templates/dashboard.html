@@ -24263,6 +24263,20 @@ function _aiRenderAssistantBubble(text){
   _aiScroll();
 }
 
+// Tiny pill that shows which backend served the reply — Groq 70B vs 8B
+// vs the offline matcher. Cheap debug aid so we can tell at a glance
+// whether production is actually reaching Groq.
+function _aiSourceTag(src){
+  if(!src) return "";
+  let label = src, color = "#94a3b8", bg = "#f1f5f9";
+  if(src.startsWith("groq:llama-3.3-70b")) { label = "Groq 70B"; color = "#7c3aed"; bg = "#ede9fe"; }
+  else if(src.startsWith("groq:llama-3.1-8b")) { label = "Groq 8B"; color = "#2563eb"; bg = "#dbeafe"; }
+  else if(src.startsWith("groq:")) { label = "Groq"; color = "#2563eb"; bg = "#dbeafe"; }
+  else if(src === "matcher_fallback") { label = "Offline (fallback)"; color = "#b45309"; bg = "#fef3c7"; }
+  else if(src === "matcher") { label = "Offline"; color = "#475569"; bg = "#e2e8f0"; }
+  return `<span style="display:inline-block;font-size:9.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:${color};background:${bg};padding:2px 6px;border-radius:4px;margin-top:6px;">${_aiEsc(label)}</span>`;
+}
+
 function _aiRenderAssistantReply(d){
   const body = document.getElementById("aiBody");
   // If structured steps, render as step card. Otherwise plain bubble.
@@ -24292,11 +24306,18 @@ function _aiRenderAssistantReply(d){
             </div>
             ${stepRows}
             ${takeBtn ? `<div class="ai-steps-take">${takeBtn}</div>` : ""}
+            ${_aiSourceTag(d._source)}
           </div>
         </div>
       </div>`);
   } else {
-    _aiRenderAssistantBubble(d.reply || "I'm not sure how to help with that — could you rephrase?");
+    const sourceTag = _aiSourceTag(d._source);
+    body.insertAdjacentHTML("beforeend", `
+      <div class="ai-msg">
+        <div class="ai-msg-av">✦</div>
+        <div class="ai-bubble">${_aiRenderInline(d.reply || "I'm not sure how to help with that — could you rephrase?")}${sourceTag ? `<br>${sourceTag}` : ""}</div>
+      </div>`);
+    _aiScroll();
   }
 }
 
