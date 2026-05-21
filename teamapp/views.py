@@ -40,7 +40,7 @@ def team_members_api(request):
             "is_admin": True,
         }]
         fellow_qs = TeamMember.objects.filter(owner=owner, is_active=True).exclude(user=request.user).order_by("name")
-        fellow = [{"user": m.user_id, "name": m.name, "role": m.role, "status": m.status, "is_admin": False} for m in fellow_qs]
+        fellow = [{"id": m.id, "user": m.user_id, "name": m.name, "role": m.role, "status": m.status, "is_admin": False} for m in fellow_qs]
         return Response({"success": True, "members": fellow, "admin_contacts": admin_contacts})
 
     # Vendor view: return their store's admin as top contact + store's employees
@@ -63,7 +63,7 @@ def team_members_api(request):
                 "is_admin": True,
             }]
             team_qs = TeamMember.objects.filter(owner=owner, is_active=True).order_by("name")
-            fellow = [{"user": m.user_id, "name": m.name, "role": m.role, "status": m.status, "is_admin": False} for m in team_qs]
+            fellow = [{"id": m.id, "user": m.user_id, "name": m.name, "role": m.role, "status": m.status, "is_admin": False} for m in team_qs]
             return Response({"success": True, "members": fellow, "admin_contacts": admin_contacts})
     except Exception:
         pass
@@ -74,7 +74,16 @@ def team_members_api(request):
     from django.db.models import Q
 
     emp_qs = TeamMember.objects.filter(owner=request.user, is_active=True).order_by("name")
-    employees = [{"user": m.user_id, "name": m.name, "role": m.role, "status": m.status, "is_admin": False, "is_vendor": False} for m in emp_qs]
+    employees = [{
+        "id": m.id,
+        "user": m.user_id,
+        "name": m.name,
+        "role": m.role,
+        "status": m.status,
+        "is_admin": False,
+        "is_vendor": False,
+        "is_self": m.user_id == request.user.id,
+    } for m in emp_qs]
 
     # Find vendors via accepted invitations (primary) OR store ownership (secondary)
     inv_emails = list(VendorInvitation.objects.filter(owner=request.user, status="accepted").values_list("email", flat=True))

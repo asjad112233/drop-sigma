@@ -13816,12 +13816,12 @@ function _renderTeamGrid(members){
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
           <span class="ta-status ${status}">${statusTxt}</span>
-          <div class="ta-dots-wrap">
+          ${m.id ? `<div class="ta-dots-wrap">
             <button class="ta-dots-btn" onclick="toggleMemberMenu(event,${m.id})" title="Options">⋮</button>
             <div class="ta-dots-menu" id="memberMenu_${m.id}">
-              <button class="danger" onclick="deleteTeamMember(${m.id},'${escapeJs(m.name)}')">🗑 Delete Member</button>
+              <button class="danger" onclick="deleteTeamMember(${m.id},'${escapeJs(m.name)}')">🗑 ${m.is_self ? 'Remove from list' : 'Delete Member'}</button>
             </div>
-          </div>
+          </div>` : ''}
         </div>
       </div>
       <div class="ta-workload-row"><span>Workload</span><span>${workload}%</span></div>
