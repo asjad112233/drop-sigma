@@ -1078,7 +1078,46 @@ function _ecStartPoll(){
   _ecPollTimer = setInterval(_ecPollTick, 8000);
 }
 
+/* Pick up access changes the admin makes from their portal — every 8 sec
+   we re-fetch the employee's own member record and, if role/status/permissions
+   shifted, refresh empPerms + the sidebar so newly-granted sections appear
+   (or revoked ones disappear) without requiring a page reload. */
+async function _ecRefreshAccess(){
+  try{
+    const r = await fetch("/employee/api/me/", {cache:"no-store"});
+    if(!r.ok) return;
+    const d = await r.json();
+    if(!d.success || !d.member) return;
+    const fresh = d.member;
+    const prevPerms = empPerms || {};
+    const newPerms  = fresh.permissions || {};
+
+    // Cheap deep-compare on the permission keys we care about.
+    const keys = new Set([...Object.keys(prevPerms), ...Object.keys(newPerms)]);
+    let changed = false;
+    for(const k of keys){ if(!!prevPerms[k] !== !!newPerms[k]){ changed = true; break; } }
+    if(!changed && fresh.role === empMember.role && fresh.status === empMember.status) return;
+
+    empMember = fresh;
+    empPerms  = newPerms;
+    try { buildSidebar(); } catch(_) {}
+    try { renderOverview(); } catch(_) {}
+    // Lazy-load sections that just became visible
+    if(perm("view_orders") && typeof loadMyOrders === "function") loadMyOrders();
+    if(perm("view_emails") && typeof loadMyEmails === "function") loadMyEmails();
+    // Soft heads-up so the user knows something shifted
+    try{
+      if(typeof _ecShowInAppNotif === "function"){
+        _ecShowInAppNotif("Drop Sigma", "Access updated", "Your admin updated your portal access.", null);
+      }
+    }catch(_){}
+  }catch(_){}
+}
+
 async function _ecPollTick(){
+  // Run access refresh alongside the chat poll — same cadence, one extra
+  // tiny request, so any admin-side permission change shows up within 8s.
+  _ecRefreshAccess();
   try{
     const r = await fetch("/teamapp/chat/channels/");
     const d = await r.json();
