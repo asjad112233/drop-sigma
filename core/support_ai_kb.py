@@ -336,6 +336,44 @@ FEATURES = {
         },
     },
 
+    "team_chat": {
+        "label": "Team Chat",
+        "where": "Sidebar > Team Chat",
+        "actions": {
+            "open": [
+                "Sidebar > Team Chat",
+                "You'll see Channels and Direct Messages on the left",
+                "Click any channel or DM to open the conversation",
+            ],
+            "create_channel": [
+                "Sidebar > Team Chat",
+                "Click + (top-right of the sidebar) or 'Add channel'",
+                "Pick a name, choose Public or Private, add members",
+                "Click Create — channel appears under Channels",
+            ],
+            "send_message": [
+                "Open any channel or DM",
+                "Type in the message box at the bottom",
+                "Press Enter to send (Shift+Enter for a new line)",
+                "Attach files with the 📎 icon, use @mention to ping a teammate",
+            ],
+            "direct_message": [
+                "Sidebar > Team Chat > Direct Messages section",
+                "Click + (next to Direct Messages) to start a new 1:1",
+                "Pick a teammate from the list",
+                "Type and send — only the two of you see this thread",
+            ],
+            "mention_teammate": [
+                "Inside any message, type @ to open the mention list",
+                "Pick a teammate — they'll get a notification",
+            ],
+            "search": [
+                "Use the search bar at the top of Team Chat",
+                "Searches across all channels and DMs you have access to",
+            ],
+        },
+    },
+
     "tasks": {
         "label": "Tasks (Kanban Board)",
         "where": "Sidebar > Tasks",
@@ -459,6 +497,7 @@ DEEP_LINKS = {
     "emails":         "#section=emails",
     "ai_training":    "#section=aiTraining",
     "team":           "#section=team",
+    "team_chat":      "#section=chat",
     "tasks":          "#section=tasks",
     "analytics":      "#section=analytics",
     "settings":       "#section=settings",
