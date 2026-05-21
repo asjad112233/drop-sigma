@@ -1,6 +1,7 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.models import User
 from django.conf import settings
+from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
@@ -13,6 +14,13 @@ import ssl
 from .models import Store
 from .serializers import StoreSerializer
 from vendors.models import StoreVendorAssignment
+
+# Signer for the WooCommerce OAuth `user_id` parameter. We sign a compact
+# payload (user_pk + store_url + name) so we don't have to push JSON through
+# the URL — WC's nonce verification breaks when the user_id has spaces /
+# quotes / braces that the browser or WC plugin may re-encode mid-flow.
+_WC_OAUTH_SIGNER = TimestampSigner(salt="wc-oauth-state-v1")
+_WC_OAUTH_MAX_AGE = 30 * 60  # 30 minutes — plenty for a user to approve
 
 
 def _register_webhook_for_store(store, request):
@@ -165,17 +173,27 @@ def auto_connect_store(request):
     from stores.tunnel import get_base_url
     base_url = get_base_url(request=request, wait_secs=0)
 
-    user_id_data = {
+    # Require auth — the callback uses request.user identity transitively.
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Login required."}, status=401)
+
+    # Sign a compact state token instead of stuffing JSON into `user_id`.
+    # WC's wc-auth plugin computes a nonce against the exact querystring it
+    # initially saw; when the value carries spaces / quotes / braces those can
+    # get re-encoded between authorize → access_granted (especially when the
+    # admin clicks "Approve" and WC builds the redirect URL itself), and the
+    # nonce verification fails with "Invalid nonce verification".
+    state_token = _WC_OAUTH_SIGNER.sign_object({
         "name":      name,
         "store_url": store_url,
         "user_pk":   request.user.pk,
-    }
+    })
 
     params = {
-        "app_name": "VendorFlow AI",
-        "scope": "read_write",
-        "user_id": json.dumps(user_id_data),
-        "return_url": f"{base_url}/stores/connect/success/",
+        "app_name":     "VendorFlow AI",
+        "scope":        "read_write",
+        "user_id":      state_token,
+        "return_url":   f"{base_url}/stores/connect/success/",
         "callback_url": f"{base_url}/stores/api/wc-callback/",
     }
 
@@ -204,13 +222,28 @@ def wc_callback_api(request):
     key_id          = request.data.get("key_id")
     user_id_raw     = request.data.get("user_id", "")
 
-    logger.info(f"WC callback received: ck={bool(consumer_key)} cs={bool(consumer_secret)} user_id_raw={user_id_raw!r}")
+    logger.info(f"WC callback received: ck={bool(consumer_key)} cs={bool(consumer_secret)} user_id_len={len(user_id_raw or '')}")
 
-    # user_id carries JSON: {"name": "...", "store_url": "...", "user_pk": ...}
-    try:
-        user_data = json.loads(user_id_raw) if user_id_raw else {}
-    except Exception:
-        user_data = {}
+    # `user_id` is now a TimestampSigner token (current flow). Legacy flows
+    # may still carry a JSON blob (in-flight requests started before the
+    # nonce-fix deploy), so we try the signed form first and fall through
+    # to the old JSON parse for compat.
+    user_data = {}
+    if user_id_raw:
+        try:
+            user_data = _WC_OAUTH_SIGNER.unsign_object(user_id_raw, max_age=_WC_OAUTH_MAX_AGE)
+        except SignatureExpired:
+            logger.warning("WC callback: signed state expired")
+            return Response({
+                "success": False,
+                "message": "OAuth state expired. Please reconnect from the dashboard."
+            }, status=400)
+        except BadSignature:
+            # Either tampering OR a legacy JSON payload from before the fix.
+            try:
+                user_data = json.loads(user_id_raw)
+            except Exception:
+                user_data = {}
 
     name      = user_data.get("name", "WooCommerce Store")
     store_url = user_data.get("store_url", "").rstrip("/")
