@@ -1,6 +1,7 @@
 import hashlib
 import hmac
 import base64
+import requests
 
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
@@ -625,6 +626,217 @@ def order_activity_api(request, order_id):
         for a in activities
     ]
     return Response({"success": True, "activities": data, "count": len(data)})
+
+
+# ─── Order Notes & Activity (merged WC + OrderActivity timeline) ────────────
+
+def _classify_activity_kind(activity_type, description):
+    """Map OrderActivity.activity_type → UI kind for color coding."""
+    t = (activity_type or "").lower()
+    if t == "note_private":           return "private"
+    if t == "note_customer":          return "customer"
+    if t in ("tracking_approved",):   return "success"
+    if t in ("tracking_rejected",):   return "failed"
+    if t in ("tracking_submitted",
+             "tracking_added"):       return "success"
+    if t in ("received", "assigned",
+             "vendor_assigned"):      return "system"
+    # Generic notes default to private
+    if t == "note":                   return "private"
+    return "system"
+
+
+def _classify_wc_note_kind(wc_note):
+    """Map WooCommerce note → UI kind. WC has: customer_note (bool), note (text)."""
+    text = (wc_note.get("note") or "").lower()
+    # WC's "system" notes start with phrases like "Order status changed"
+    if "declined" in text or "failed" in text or "could not" in text:
+        return "failed"
+    if "out for delivery" in text or "shipped" in text or "completed" in text:
+        return "success"
+    if "warning" in text:
+        return "warning"
+    if wc_note.get("customer_note"):
+        return "customer"
+    # Plain WC private notes
+    if "order status changed" in text or "added by" in text or "stock reduced" in text:
+        return "system"
+    return "private"
+
+
+def _fetch_wc_notes(order):
+    """Pull notes from WooCommerce for this order. Returns [] if not WC or on error."""
+    store = order.store
+    if not store or (store.platform or "").lower() != "woocommerce":
+        return []
+    if not store.api_key or not store.api_secret or not order.external_order_id:
+        return []
+    try:
+        url = f"{store.store_url.rstrip('/')}/wp-json/wc/v3/orders/{order.external_order_id}/notes"
+        r = requests.get(url, auth=(store.api_key, store.api_secret),
+                         params={"type": "any"}, timeout=8)
+        if r.status_code != 200:
+            return []
+        return r.json() or []
+    except Exception:
+        return []
+
+
+def _push_wc_note(order, text, is_customer_note=False):
+    """POST a note to WooCommerce. Returns (success, wc_note_id_or_error_msg)."""
+    store = order.store
+    if not store or (store.platform or "").lower() != "woocommerce":
+        return False, "Not a WooCommerce order"
+    if not store.api_key or not store.api_secret or not order.external_order_id:
+        return False, "Store not connected"
+    try:
+        url = f"{store.store_url.rstrip('/')}/wp-json/wc/v3/orders/{order.external_order_id}/notes"
+        r = requests.post(
+            url, auth=(store.api_key, store.api_secret),
+            json={"note": text, "customer_note": bool(is_customer_note)},
+            timeout=10,
+        )
+        if r.status_code in (200, 201):
+            return True, r.json().get("id")
+        return False, f"WC API {r.status_code}"
+    except Exception as e:
+        return False, str(e)
+
+
+@api_view(["GET", "POST"])
+def order_notes_api(request, order_id):
+    """GET: merged WC + OrderActivity timeline (newest first)
+       POST: add a private/customer note (saves locally + pushes to WC)."""
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Not authenticated"}, status=401)
+
+    # Per-user scope — admin can only access orders from their stores.
+    if request.user.is_superuser:
+        order = get_object_or_404(Order, id=order_id)
+    else:
+        order = get_object_or_404(Order, id=order_id, store__user=request.user)
+
+    if request.method == "POST":
+        text = (request.data.get("text") or "").strip()
+        kind = (request.data.get("kind") or "private").lower()
+        if kind not in ("private", "customer"):
+            kind = "private"
+        if not text:
+            return Response({"success": False, "message": "Note text is required."}, status=400)
+
+        # Save locally with kind encoded into activity_type
+        actor_name = request.user.get_full_name() or request.user.username
+        activity_type = "note_customer" if kind == "customer" else "note_private"
+        from .models import OrderActivity
+        act = OrderActivity.objects.create(
+            order=order, activity_type=activity_type,
+            description=text, actor=actor_name,
+        )
+
+        # Push to WooCommerce too (so the WC admin stays in sync)
+        wc_ok, wc_info = _push_wc_note(order, text, is_customer_note=(kind == "customer"))
+
+        # If customer-facing, also email via the store's connected Gmail
+        # (per project rule: never Brevo — only send via tenant's own inbox).
+        if kind == "customer" and order.customer_email:
+            try:
+                from emails.views import send_email_with_store_account
+                subject = f"Update on your order #{order.external_order_id}"
+                send_email_with_store_account(
+                    store=order.store,
+                    recipient=order.customer_email,
+                    subject=subject,
+                    body=f"<p>Hi {order.customer_name or 'there'},</p><p>{text}</p>",
+                )
+            except Exception:
+                # Don't block the note save if email fails — note is still saved.
+                pass
+
+        return Response({
+            "success": True,
+            "id": act.id,
+            "wc_pushed": wc_ok,
+            "wc_info": wc_info,
+        })
+
+    # ── GET: merged timeline ──────────────────────────────────────────────
+    merged = []
+
+    # 1) Drop Sigma OrderActivity rows
+    current_username = request.user.username
+    for a in order.activities.all():
+        kind = _classify_activity_kind(a.activity_type, a.description)
+        # Allow delete only on tenant-added notes by the same actor (or superuser)
+        is_tenant_note = a.activity_type in ("note_private", "note_customer", "note")
+        actor_owns = is_tenant_note and (
+            request.user.is_superuser
+            or (a.actor and (
+                a.actor == current_username
+                or a.actor == request.user.get_full_name()
+            ))
+        )
+        merged.append({
+            "id":         a.id,
+            "kind":       kind,
+            "label":      None,  # falls back to UI default per kind
+            "body":       a.description,
+            "actor":      a.actor or "—",
+            "source":     "Drop Sigma",
+            "at":         a.created_at.isoformat(),
+            "can_delete": bool(actor_owns),
+        })
+
+    # 2) WooCommerce order notes
+    wc_synced = False
+    wc_notes = _fetch_wc_notes(order)
+    if wc_notes:
+        wc_synced = True
+    for wn in wc_notes:
+        kind = _classify_wc_note_kind(wn)
+        merged.append({
+            "id":         f"wc-{wn.get('id')}",  # string so we don't collide with local int ids
+            "kind":       kind,
+            "label":      None,
+            "body":       wn.get("note") or "",
+            "actor":      wn.get("author") or "WooCommerce",
+            "source":     "WooCommerce",
+            "at":         wn.get("date_created_gmt") or wn.get("date_created") or "",
+            "can_delete": False,  # WC notes are immutable from here
+        })
+
+    # Sort newest first
+    def _sort_key(n):
+        return n.get("at") or ""
+    merged.sort(key=_sort_key, reverse=True)
+
+    return Response({
+        "success":   True,
+        "notes":     merged,
+        "count":     len(merged),
+        "wc_synced": wc_synced,
+    })
+
+
+@api_view(["DELETE"])
+def order_note_delete_api(request, note_id):
+    """Delete a tenant-created note. Only the author (or a superuser) can delete."""
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Not authenticated"}, status=401)
+    from .models import OrderActivity
+    act = get_object_or_404(OrderActivity, id=note_id)
+    # Scope: order must belong to a store the user owns
+    if not request.user.is_superuser and act.order.store and act.order.store.user_id != request.user.id:
+        return Response({"success": False, "message": "Not authorised."}, status=403)
+    # Only tenant-added notes can be deleted (immutable system events stay)
+    if act.activity_type not in ("note_private", "note_customer", "note"):
+        return Response({"success": False, "message": "System events cannot be deleted."}, status=400)
+    # Author check
+    if not request.user.is_superuser:
+        author_username = act.actor or ""
+        if author_username not in (request.user.username, request.user.get_full_name()):
+            return Response({"success": False, "message": "Only the note author can delete it."}, status=403)
+    act.delete()
+    return Response({"success": True})
 
 
 @api_view(["POST"])
