@@ -605,10 +605,14 @@ def disconnect_email_account_api(request):
 @authentication_classes([])
 @permission_classes([AllowAny])
 def send_email_api(request):
-    subject = request.data.get("subject")
-    body = request.data.get("body")
+    subject   = request.data.get("subject")
+    body      = request.data.get("body")
     recipient = request.data.get("recipient")
-    store_id = request.data.get("store_id")
+    store_id  = request.data.get("store_id")
+    cc        = (request.data.get("cc")  or "").strip() or None
+    bcc       = (request.data.get("bcc") or "").strip() or None
+    order_id  = request.data.get("order_id")
+    skip_sig  = str(request.data.get("skip_signature", "")).lower() in ("1", "true", "yes")
 
     if not subject or not body or not recipient:
         return Response({
@@ -624,6 +628,11 @@ def send_email_api(request):
             "message": "Store not found."
         }, status=404)
 
+    # Optional signature append (only if not skipped and a signature is set)
+    account = EmailAccount.objects.filter(store=store, is_active=True).first()
+    if account and account.signature and not skip_sig:
+        body = body.rstrip() + "\n\n--\n" + account.signature
+
     files = request.FILES.getlist("attachments")
 
     try:
@@ -633,16 +642,25 @@ def send_email_api(request):
             subject=subject,
             body=body,
             files=files,
+            cc=cc,
+            bcc=bcc,
         )
-
-        print("🔥 USING STORE SMTP COMPOSE 🔥")
-        print("FROM EMAIL:", from_email)
 
     except Exception as e:
         return Response({
             "success": False,
             "message": str(e)
         }, status=400)
+
+    raw_meta = {
+        "type": "outgoing",
+        "source": "compose",
+        "sent_from": from_email,
+        "cc": cc or "",
+        "bcc": bcc or "",
+        "linked_order_id": order_id or "",
+        "attachment_names": [f.name for f in files][:30],
+    }
 
     email_obj = EmailMessage.objects.create(
         store=store,
@@ -652,11 +670,7 @@ def send_email_api(request):
         body=body,
         status="replied",
         is_read=True,
-        raw_data={
-            "type": "outgoing",
-            "source": "compose",
-            "sent_from": from_email
-        }
+        raw_data=raw_meta
     )
 
     for f in files:

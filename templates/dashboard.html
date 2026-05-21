@@ -2168,6 +2168,51 @@ table{border-collapse:separate!important;border-spacing:0!important;border-radiu
 .chat-bubble.html-email{padding:6px!important;overflow:hidden!important;max-width:100%!important;background:#fff!important;border:1px solid #e5e7eb!important;}
 #emailsSection.active{display:flex!important;flex-direction:column!important;height:100%!important;min-height:0!important;overflow:hidden!important;padding-bottom:0!important}#emailsSection .topbar{flex:0 0 auto!important}.email-chat-layout{flex:1 1 auto!important;min-height:0!important;height:auto!important;overflow:hidden!important}.chat-sidebar.card,.chat-email-list,.chat-window{height:100%!important;min-height:0!important;overflow:hidden!important;border-radius:26px!important}.chat-sidebar.card{overflow-y:auto!important}.chat-body,#emailsList{overflow-y:auto!important;min-height:0!important}.chat-header,.chat-reply-area{flex:0 0 auto!important}.chat-body{flex:1 1 auto!important}.email-folder{background:var(--vf-surface-2)!important;color:var(--vf-text)!important;border:1px solid transparent!important}.email-folder.active,.email-folder:hover{background:linear-gradient(135deg,rgba(53,207,255,.14),rgba(139,92,246,.12))!important;border-color:rgba(53,207,255,.3)!important}.chat-header,.chat-reply-area{background:var(--vf-surface)!important;border-color:var(--vf-line)!important}.chat-body{background:linear-gradient(180deg,rgba(53,207,255,.05),rgba(139,92,246,.04))!important}.chat-bubble.customer{background:var(--vf-surface)!important;color:var(--vf-text)!important;border-color:var(--vf-line)!important}
 .modal-bg{backdrop-filter:blur(10px)!important;background:rgba(2,6,23,.62)!important;overflow-y:auto!important}.modal{border-radius:30px!important;max-width:980px!important}.modal-head h2{color:var(--vf-text)!important}.table-scroll,.table-wrap{overflow:auto!important;max-width:100%!important;border-radius:26px!important}#overviewSection,#storesSection,#ordersSection,#teamSection,#vendorsSection,#trackingQueueSection,#stockSection{overflow:visible!important}body.vf-dark-mode .card p,body.vf-dark-mode .card span,body.vf-dark-mode .sub,body.vf-dark-mode label{color:var(--vf-muted)!important}body.vf-dark-mode h1,body.vf-dark-mode h2,body.vf-dark-mode h3,body.vf-dark-mode b{color:#fff!important}
+
+/* ── Compose Email modal — enhancements (toolbar, rich body, attachments) ── */
+.cmp-toolbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:8px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;margin-bottom:14px;}
+.cmp-tb{padding:6px 11px;border:1px solid #e2e8f0;background:#fff;border-radius:7px;font-size:12px;font-weight:700;color:#475569;cursor:pointer;font-family:inherit;transition:.12s;}
+.cmp-tb:hover{background:#eef2ff;color:#4338ca;border-color:#c7d2fe;}
+.cmp-tb.on{background:#4338ca;color:#fff;border-color:#4338ca;}
+.cmp-tb-spacer{flex:1;}
+.cmp-sig-toggle{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:#475569;cursor:pointer;user-select:none;padding:0 6px;}
+.cmp-sig-toggle input{accent-color:#6366f1;cursor:pointer;}
+
+.cmp-rt{display:flex;align-items:center;gap:4px;padding:6px 8px;background:#fff;border:1px solid #e2e8f0;border-bottom:none;border-radius:10px 10px 0 0;}
+.cmp-rt button{padding:5px 10px;border:none;background:transparent;border-radius:6px;font-size:12px;color:#475569;cursor:pointer;font-family:inherit;font-weight:600;transition:.1s;}
+.cmp-rt button:hover{background:#f1f5f9;color:#0f172a;}
+.cmp-rt-sep{width:1px;height:18px;background:#e2e8f0;margin:0 4px;}
+
+.cmp-body{min-height:180px;max-height:340px;overflow-y:auto;padding:14px;border:1px solid #e2e8f0;border-radius:0 0 10px 10px;font-size:13.5px;line-height:1.55;color:#0f172a;outline:none;background:#fff;}
+.cmp-body:focus{border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.10);}
+.cmp-body:empty::before{content:attr(placeholder);color:#94a3b8;}
+.cmp-body ul,.cmp-body ol{padding-left:22px;margin:6px 0;}
+.cmp-body a{color:#2563eb;text-decoration:underline;}
+
+.cmp-attach-area{margin-top:14px;border:1.5px dashed #cbd5e1;border-radius:11px;padding:14px;background:#f9fafb;transition:.15s;}
+.cmp-attach-area.drag{background:#eef2ff;border-color:#6366f1;border-style:solid;}
+.cmp-attach-prompt{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12.5px;color:#475569;}
+.cmp-attach-pick{padding:6px 14px;background:#4338ca;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;}
+.cmp-attach-pick:hover{background:#3730a3;}
+
+.cmp-attach-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+.cmp-attach-list:empty{display:none;}
+.cmp-attach-item{display:flex;align-items:center;gap:8px;padding:7px 10px 7px 12px;background:#fff;border:1px solid #e2e8f0;border-radius:9px;font-size:12px;color:#0f172a;max-width:240px;}
+.cmp-attach-item .ic{font-size:18px;flex-shrink:0;}
+.cmp-attach-item .nm{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;}
+.cmp-attach-item .sz{color:#94a3b8;font-size:11px;font-weight:500;}
+.cmp-attach-item .rm{background:none;border:none;color:#dc2626;cursor:pointer;font-size:14px;line-height:1;padding:0 2px;font-family:inherit;}
+.cmp-attach-item .rm:hover{color:#991b1b;}
+.cmp-attach-item.too-big{background:#fef2f2;border-color:#fecaca;}
+.cmp-attach-item.too-big .nm{color:#b91c1c;}
+
+/* Template picker popup */
+.cmp-tpl-pop{position:fixed;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:8px;box-shadow:0 20px 50px rgba(15,23,42,.18);z-index:10000;width:340px;max-height:380px;overflow-y:auto;}
+.cmp-tpl-pop h4{font-size:11px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin:6px 8px 8px;}
+.cmp-tpl-item{padding:9px 11px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:8px;transition:.1s;}
+.cmp-tpl-item:hover{background:#eef2ff;}
+.cmp-tpl-item .ti{font-size:13px;font-weight:700;color:#0f172a;}
+.cmp-tpl-item .ts{font-size:11px;color:#64748b;}
 @media(max-width:1250px){.layout{grid-template-columns:230px minmax(0,1fr)!important}.cards{grid-template-columns:repeat(3,1fr)!important}.grid,.vendor-grid,#storesGrid{grid-template-columns:repeat(2,1fr)!important}.email-chat-layout{grid-template-columns:210px 310px minmax(0,1fr)!important}}
 @media(max-width:900px){html,body{overflow:auto!important}.layout{display:block!important;height:auto!important;overflow:visible!important}.sidebar{height:auto!important;position:relative!important}.main{height:auto!important;min-height:100vh!important;overflow:visible!important;padding:16px!important}.section{min-height:auto!important}.cards,.grid,.vendor-grid,#storesGrid{grid-template-columns:1fr!important}.topbar{flex-direction:column!important}.email-chat-layout{grid-template-columns:1fr!important;overflow:visible!important}#emailsSection.active{height:auto!important;overflow:visible!important}.chat-window{height:720px!important}}
 
@@ -9191,18 +9236,31 @@ Hi, I ordered the Korean glow serum 4 days ago, order #4521. Just received it bu
 </div>
 
 <div id="composeModal" class="modal-bg">
-  <div class="modal">
+  <div class="modal" style="max-width:720px;">
     <div class="modal-head">
       <div>
         <h2>Compose Email</h2>
-        <p class="sub">Send a new email using connected SMTP.</p>
+        <p class="sub">Send via your store's connected inbox (Gmail / SMTP).</p>
       </div>
       <button class="btn red" onclick="closeComposeModal()">Close</button>
+    </div>
+
+    <!-- Toolbar: Templates · AI · Link order · CC/BCC toggle -->
+    <div class="cmp-toolbar">
+      <button type="button" class="cmp-tb" onclick="cmpOpenTemplates()" title="Insert a saved template">📄 Templates</button>
+      <button type="button" class="cmp-tb" onclick="cmpAIDraft()" title="Generate body with AI">✦ AI Draft</button>
+      <button type="button" class="cmp-tb" onclick="cmpLinkOrder()" title="Link this email to an order">🔗 <span id="cmpOrderLabel">Link order</span></button>
+      <button type="button" class="cmp-tb" id="cmpCcBccBtn" onclick="cmpToggleCcBcc()" title="Show CC / BCC">＋ CC / BCC</button>
+      <span class="cmp-tb-spacer"></span>
+      <label class="cmp-sig-toggle" title="Append your store signature">
+        <input type="checkbox" id="cmpSigToggle" checked> <span>Signature</span>
+      </label>
     </div>
 
     <label>To</label>
     <input id="composeTo" placeholder="customer@email.com">
 
+    <!-- CC / BCC rows (hidden by default; toggled by button OR show_cc_bcc setting) -->
     <div class="em-compose-cc-row" style="display:none;">
       <label>Cc <span style="font-size:11px;color:#94a3b8;font-weight:500;">(comma-separated)</span></label>
       <input id="composeCc" placeholder="cc1@email.com, cc2@email.com">
@@ -9216,10 +9274,44 @@ Hi, I ordered the Korean glow serum 4 days ago, order #4521. Just received it bu
     <input id="composeSubject" placeholder="Email subject...">
 
     <label>Message</label>
-    <textarea id="composeBody" rows="8" style="width:100%;box-sizing:border-box;padding:12px;border:1px solid #d0d5dd;border-radius:12px;resize:vertical;" placeholder="Write your message..."></textarea>
+    <!-- Rich text mini-toolbar -->
+    <div class="cmp-rt">
+      <button type="button" onclick="cmpFmt('bold')" title="Bold (Ctrl+B)"><b>B</b></button>
+      <button type="button" onclick="cmpFmt('italic')" title="Italic (Ctrl+I)"><i>I</i></button>
+      <button type="button" onclick="cmpFmt('underline')" title="Underline (Ctrl+U)"><u>U</u></button>
+      <div class="cmp-rt-sep"></div>
+      <button type="button" onclick="cmpFmt('insertUnorderedList')" title="Bullet list">• List</button>
+      <button type="button" onclick="cmpFmt('insertOrderedList')" title="Numbered list">1. List</button>
+      <div class="cmp-rt-sep"></div>
+      <button type="button" onclick="cmpInsertLink()" title="Insert link">🔗 Link</button>
+      <button type="button" onclick="cmpFmt('removeFormat')" title="Clear formatting">Aa</button>
+      <span class="cmp-tb-spacer"></span>
+      <span id="cmpCharCount" style="font-size:11px;color:#94a3b8;">0 chars</span>
+    </div>
+    <div id="composeBodyRich" contenteditable="true"
+         oninput="cmpBodyChanged()"
+         onpaste="cmpHandlePaste(event)"
+         class="cmp-body" placeholder="Write your message…"></div>
+    <!-- Hidden textarea — preserved for backward compatibility with sendEmail() -->
+    <textarea id="composeBody" style="display:none;"></textarea>
+
+    <!-- Attachments drag-drop area -->
+    <div class="cmp-attach-area" id="cmpAttachArea"
+         ondragover="cmpDragOver(event)" ondragleave="cmpDragLeave(event)" ondrop="cmpDrop(event)">
+      <input type="file" id="cmpAttachInput" multiple style="display:none;" onchange="cmpFilesPicked(this.files)">
+      <div class="cmp-attach-prompt" id="cmpAttachPrompt">
+        <span style="font-size:18px;">📎</span>
+        <span style="font-weight:600;color:#475569;">Drag &amp; drop files here</span>
+        <span style="color:#94a3b8;">or</span>
+        <button type="button" class="cmp-attach-pick" onclick="document.getElementById('cmpAttachInput').click()">Browse</button>
+        <span style="color:#94a3b8;font-size:11px;margin-left:8px;">Max 20 MB total · PDF, PNG, JPG, DOCX, XLSX, CSV, TXT</span>
+      </div>
+      <div class="cmp-attach-list" id="cmpAttachList"></div>
+    </div>
 
     <div class="actions">
-      <button id="composeSendBtn" class="btn green" onclick="sendNewEmail()">Send Email</button>
+      <button id="composeSendBtn" class="btn green" onclick="sendNewEmail()">📨 Send Email</button>
+      <button id="composeSaveDraftBtn" class="btn" type="button" onclick="cmpSaveDraft()" title="Save as draft in your account">💾 Save Draft</button>
       <button class="btn dark" onclick="closeComposeModal()">Cancel</button>
     </div>
 
@@ -17771,72 +17863,359 @@ function _resetOrderModalLabels(){
   document.getElementById("odBreadcrumbBack").textContent = "Orders";
 }
 
+/* ─── Enhanced Compose Email Modal ──────────────────────────────────────── */
+let _cmpAttachments = [];      // {file, id} list
+let _cmpLinkedOrderId = null;
+const _CMP_MAX_TOTAL_BYTES = 20 * 1024 * 1024;  // 20 MB total
+const _CMP_ALLOWED_EXT = ["pdf","png","jpg","jpeg","gif","webp","svg","docx","doc","xlsx","xls","csv","txt","zip","rtf"];
+
 function openComposeModal(){
   document.getElementById("composeModal").style.display = "block";
   document.getElementById("composeMessage").innerText = "";
+  // Reset toolbar state
+  _cmpAttachments = [];
+  _cmpLinkedOrderId = null;
+  document.getElementById("cmpOrderLabel").textContent = "Link order";
+  document.getElementById("cmpCcBccBtn").classList.remove("on");
+  cmpRenderAttachments();
+  cmpBodyChanged();
 }
 
 function closeComposeModal(){
   document.getElementById("composeModal").style.display = "none";
 }
 
+/* ── Rich text ── */
+function cmpFmt(cmd){
+  document.execCommand(cmd, false, null);
+  document.getElementById("composeBodyRich").focus();
+  cmpBodyChanged();
+}
+function cmpInsertLink(){
+  const url = prompt("Link URL (https://…):");
+  if(!url) return;
+  const sel = window.getSelection();
+  if(!sel || !sel.toString().trim()){
+    // No selection — insert the URL as anchor text
+    document.execCommand("insertHTML", false,
+      `<a href="${url.replace(/"/g,"&quot;")}" target="_blank">${url}</a>`);
+  } else {
+    document.execCommand("createLink", false, url);
+  }
+  cmpBodyChanged();
+}
+function cmpBodyChanged(){
+  const rich = document.getElementById("composeBodyRich");
+  const hidden = document.getElementById("composeBody");
+  if(rich && hidden){ hidden.value = rich.innerHTML; }
+  const txtLen = rich ? (rich.innerText || "").length : 0;
+  const cc = document.getElementById("cmpCharCount");
+  if(cc) cc.textContent = txtLen.toLocaleString() + " chars";
+}
+function cmpHandlePaste(e){
+  // Strip pasted formatting → keep clean plain text + linebreaks
+  e.preventDefault();
+  const text = (e.clipboardData || window.clipboardData).getData("text/plain") || "";
+  document.execCommand("insertText", false, text);
+  cmpBodyChanged();
+}
+
+/* ── CC / BCC toggle (button + setting both work) ── */
+function cmpToggleCcBcc(){
+  const rows = document.querySelectorAll(".em-compose-cc-row");
+  const btn = document.getElementById("cmpCcBccBtn");
+  if(!rows.length) return;
+  const showing = rows[0].style.display !== "none";
+  rows.forEach(r => r.style.display = showing ? "none" : "block");
+  if(btn) btn.classList.toggle("on", !showing);
+}
+
+/* ── Attachments ── */
+function cmpDragOver(e){ e.preventDefault(); document.getElementById("cmpAttachArea").classList.add("drag"); }
+function cmpDragLeave(e){ document.getElementById("cmpAttachArea").classList.remove("drag"); }
+function cmpDrop(e){
+  e.preventDefault();
+  document.getElementById("cmpAttachArea").classList.remove("drag");
+  cmpFilesPicked(e.dataTransfer.files);
+}
+function cmpFilesPicked(fileList){
+  if(!fileList || !fileList.length) return;
+  Array.from(fileList).forEach(f => {
+    const ext = (f.name.split(".").pop() || "").toLowerCase();
+    const ok_ext = _CMP_ALLOWED_EXT.includes(ext);
+    _cmpAttachments.push({file: f, id: Date.now() + "_" + Math.random().toString(36).slice(2,7), tooBig: !ok_ext});
+  });
+  cmpRenderAttachments();
+}
+function cmpRemoveAttachment(id){
+  _cmpAttachments = _cmpAttachments.filter(a => a.id !== id);
+  cmpRenderAttachments();
+}
+function _cmpFileIcon(name){
+  const ext = (name.split(".").pop() || "").toLowerCase();
+  if(["pdf"].includes(ext)) return "📕";
+  if(["doc","docx","rtf"].includes(ext)) return "📘";
+  if(["xls","xlsx","csv"].includes(ext)) return "📗";
+  if(["png","jpg","jpeg","gif","webp","svg"].includes(ext)) return "🖼️";
+  if(["zip"].includes(ext)) return "🗜️";
+  if(["txt"].includes(ext)) return "📄";
+  return "📎";
+}
+function _cmpFmtBytes(b){
+  if(b < 1024) return b + " B";
+  if(b < 1024*1024) return (b/1024).toFixed(1) + " KB";
+  return (b/(1024*1024)).toFixed(2) + " MB";
+}
+function cmpRenderAttachments(){
+  const list = document.getElementById("cmpAttachList");
+  if(!list) return;
+  const total = _cmpAttachments.reduce((s,a) => s + a.file.size, 0);
+  list.innerHTML = _cmpAttachments.map(a => {
+    const overSize = total > _CMP_MAX_TOTAL_BYTES;
+    const cls = (a.tooBig || overSize) ? "too-big" : "";
+    const reason = a.tooBig ? " (unsupported type)" : (overSize ? " (over 20 MB total)" : "");
+    return `<div class="cmp-attach-item ${cls}">
+      <span class="ic">${_cmpFileIcon(a.file.name)}</span>
+      <span class="nm" title="${a.file.name.replace(/"/g,"&quot;")}">${escapeHtml(a.file.name)}${reason}</span>
+      <span class="sz">${_cmpFmtBytes(a.file.size)}</span>
+      <button type="button" class="rm" onclick="cmpRemoveAttachment('${a.id}')" title="Remove">×</button>
+    </div>`;
+  }).join("");
+}
+
+/* ── Template picker ── */
+async function cmpOpenTemplates(){
+  document.querySelectorAll(".cmp-tpl-pop").forEach(p => p.remove());
+  const btn = event?.target?.closest?.("button") || event?.target;
+  const pop = document.createElement("div");
+  pop.className = "cmp-tpl-pop";
+  pop.innerHTML = `<h4>Insert from saved templates</h4><div style="padding:18px 12px;color:#94a3b8;font-size:13px;">⏳ Loading templates…</div>`;
+  document.body.appendChild(pop);
+  if(btn){
+    const r = btn.getBoundingClientRect();
+    pop.style.top = (r.bottom + 6) + "px";
+    pop.style.left = Math.max(8, r.left) + "px";
+  }
+  setTimeout(() => {
+    document.addEventListener("click", function _close(e){
+      if(!pop.contains(e.target)){ pop.remove(); document.removeEventListener("click", _close); }
+    });
+  }, 10);
+  try{
+    const r = await fetch(`/emails/api/templates/?store_id=${selectedStoreId||""}`);
+    const d = await r.json();
+    const templates = (d && (d.templates || d.results)) || [];
+    if(!templates.length){
+      pop.querySelector("div:last-child").innerHTML = `<div style="padding:14px 12px;color:#94a3b8;font-size:12.5px;">No templates yet. Create one in <b>Templates</b> tab first.</div>`;
+      return;
+    }
+    pop.innerHTML = `<h4>Insert from saved templates</h4>` + templates.map(t => `
+      <div class="cmp-tpl-item" onclick="cmpUseTemplate(${t.id})">
+        <div style="flex:1;">
+          <div class="ti">${escapeHtml(t.name || "Untitled")}</div>
+          <div class="ts">${escapeHtml((t.subject || "").slice(0,60))}</div>
+        </div>
+      </div>`).join("");
+  }catch(e){
+    pop.querySelector("div:last-child").innerHTML = `<div style="padding:14px 12px;color:#dc2626;font-size:12.5px;">Could not load templates: ${escapeHtml(e.message)}</div>`;
+  }
+}
+async function cmpUseTemplate(tid){
+  document.querySelectorAll(".cmp-tpl-pop").forEach(p => p.remove());
+  try{
+    const r = await fetch(`/emails/api/templates/${tid}/`);
+    const d = await r.json();
+    const t = d && (d.template || d);
+    if(!t) return;
+    if(t.subject){ document.getElementById("composeSubject").value = t.subject; }
+    if(t.body){
+      // Body is HTML — drop into the rich editor
+      document.getElementById("composeBodyRich").innerHTML = t.body;
+      cmpBodyChanged();
+    }
+    document.getElementById("composeMessage").style.color = "#0a7b34";
+    document.getElementById("composeMessage").innerText = `✓ Loaded template: ${t.name || "Untitled"}`;
+  }catch(e){
+    document.getElementById("composeMessage").style.color = "#dc2626";
+    document.getElementById("composeMessage").innerText = "Template load failed: " + e.message;
+  }
+}
+
+/* ── AI Draft ── */
+async function cmpAIDraft(){
+  const prompt = window.prompt("What should the AI write? e.g. 'Order shipping delay apology with a 10% discount offer'", "");
+  if(!prompt) return;
+  const msg = document.getElementById("composeMessage");
+  msg.style.color = "#475569"; msg.innerText = "✦ AI is drafting…";
+  try{
+    const r = await fetch("/emails/api/ai-playground/", {
+      method:"POST",
+      headers:{"Content-Type":"application/json","X-CSRFToken": getCSRFToken()},
+      body: JSON.stringify({
+        system_prompt: "You are writing a one-off outbound email to a customer or business contact. Be professional, concise, and friendly.",
+        user_message: prompt,
+        auto_lookup: false,
+        store_id: selectedStoreId || null,
+      }),
+    });
+    const d = await r.json();
+    if(d.success && d.reply){
+      // If we got back HTML-ish, keep as-is; if plain, wrap newlines
+      const isHTML = /<\/?[a-z]+/i.test(d.reply);
+      document.getElementById("composeBodyRich").innerHTML = isHTML ? d.reply : d.reply.replace(/\n/g, "<br>");
+      cmpBodyChanged();
+      msg.style.color = "#0a7b34"; msg.innerText = "✓ AI draft inserted — edit before sending.";
+    } else {
+      msg.style.color = "#dc2626"; msg.innerText = (d && d.message) || "AI draft failed.";
+    }
+  }catch(e){
+    msg.style.color = "#dc2626"; msg.innerText = "AI draft failed: " + e.message;
+  }
+}
+
+/* ── Link to order ── */
+async function cmpLinkOrder(){
+  const num = window.prompt("Order number to link (e.g. 10247):", "");
+  if(!num) return;
+  const msg = document.getElementById("composeMessage");
+  try{
+    const r = await fetch(`/orders/api/lookup/?number=${encodeURIComponent(num)}`);
+    const d = await r.json();
+    if(d && (d.id || d.order_id || d.found)){
+      const oid = d.id || d.order_id;
+      _cmpLinkedOrderId = oid;
+      document.getElementById("cmpOrderLabel").textContent = `Order #${escapeHtml(num)}`;
+      msg.style.color = "#0a7b34"; msg.innerText = `✓ Linked to order #${num}`;
+    } else {
+      msg.style.color = "#dc2626"; msg.innerText = `Order #${num} not found.`;
+    }
+  }catch(e){
+    msg.style.color = "#dc2626"; msg.innerText = "Lookup failed: " + e.message;
+  }
+}
+
+/* ── Save Draft (browser-local for now) ── */
+function cmpSaveDraft(){
+  const draft = {
+    to: document.getElementById("composeTo").value,
+    cc: document.getElementById("composeCc")?.value || "",
+    bcc: document.getElementById("composeBcc")?.value || "",
+    subject: document.getElementById("composeSubject").value,
+    body: document.getElementById("composeBodyRich").innerHTML,
+    orderId: _cmpLinkedOrderId,
+    savedAt: new Date().toISOString(),
+  };
+  try{
+    localStorage.setItem("ds_compose_draft", JSON.stringify(draft));
+    const msg = document.getElementById("composeMessage");
+    msg.style.color = "#0a7b34"; msg.innerText = "💾 Draft saved to this browser. (Backend drafts coming soon.)";
+  }catch(e){
+    alert("Could not save draft: " + e.message);
+  }
+}
+function _cmpRestoreDraft(){
+  try{
+    const raw = localStorage.getItem("ds_compose_draft");
+    if(!raw) return;
+    const d = JSON.parse(raw);
+    if(!d) return;
+    document.getElementById("composeTo").value = d.to || "";
+    document.getElementById("composeSubject").value = d.subject || "";
+    document.getElementById("composeBodyRich").innerHTML = d.body || "";
+    if(d.cc){ document.getElementById("composeCc").value = d.cc; cmpToggleCcBcc(); }
+    if(d.bcc){ document.getElementById("composeBcc").value = d.bcc; }
+    if(d.orderId){
+      _cmpLinkedOrderId = d.orderId;
+      document.getElementById("cmpOrderLabel").textContent = `Order #${d.orderId}`;
+    }
+    cmpBodyChanged();
+  }catch(e){}
+}
+
+/* ── Send (FormData so attachments + cc/bcc flow through) ── */
 async function sendEmail(){
   const msg = document.getElementById("composeMessage");
   const btn = document.getElementById("composeSendBtn");
 
-  const ccVal  = (document.getElementById("composeCc")?.value || "").trim();
-  const bccVal = (document.getElementById("composeBcc")?.value || "").trim();
+  // Pull the latest rich body into the hidden textarea
+  cmpBodyChanged();
 
-  const payload = {
-    store_id: selectedStoreId,
-    recipient: document.getElementById("composeTo").value.trim(),
-    subject: document.getElementById("composeSubject").value.trim(),
-    body: document.getElementById("composeBody").value.trim()
-  };
-  if(ccVal)  payload.cc  = ccVal;
-  if(bccVal) payload.bcc = bccVal;
+  const to      = document.getElementById("composeTo").value.trim();
+  const subject = document.getElementById("composeSubject").value.trim();
+  const bodyHtml = document.getElementById("composeBodyRich").innerHTML.trim();
+  const bodyText = (document.getElementById("composeBodyRich").innerText || "").trim();
+  const ccVal   = (document.getElementById("composeCc")?.value || "").trim();
+  const bccVal  = (document.getElementById("composeBcc")?.value || "").trim();
+  const useSig  = document.getElementById("cmpSigToggle")?.checked;
 
-  if(!payload.recipient || !payload.subject || !payload.body){
-    msg.innerText = "To, subject, and message are required.";
+  if(!to || !subject || !bodyText){
     msg.style.color = "red";
+    msg.innerText = "To, subject, and message are required.";
+    return;
+  }
+
+  // Total attachment size check
+  const totalBytes = _cmpAttachments.reduce((s,a) => s + a.file.size, 0);
+  if(totalBytes > _CMP_MAX_TOTAL_BYTES){
+    msg.style.color = "red";
+    msg.innerText = `Attachments total ${(totalBytes/1024/1024).toFixed(1)} MB — exceeds 20 MB limit.`;
+    return;
+  }
+  const badExt = _cmpAttachments.find(a => a.tooBig);
+  if(badExt){
+    msg.style.color = "red";
+    msg.innerText = `"${badExt.file.name}" is an unsupported file type.`;
     return;
   }
 
   btn.innerText = "Sending...";
   btn.disabled = true;
-  msg.innerText = "Sending...";
-  msg.style.color = "#667085";
+  msg.style.color = "#667085"; msg.innerText = "Sending…";
 
   try{
+    const fd = new FormData();
+    fd.append("store_id",  selectedStoreId || "");
+    fd.append("recipient", to);
+    fd.append("subject",   subject);
+    fd.append("body",      bodyHtml);
+    if(ccVal)  fd.append("cc",  ccVal);
+    if(bccVal) fd.append("bcc", bccVal);
+    if(useSig === false) fd.append("skip_signature", "1");
+    if(_cmpLinkedOrderId) fd.append("order_id", String(_cmpLinkedOrderId));
+    _cmpAttachments.forEach(a => fd.append("attachments", a.file));
+
     const response = await fetch("/emails/api/send/", {
       method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify(payload)
+      headers: {"X-CSRFToken": getCSRFToken()},
+      body: fd,
     });
-
     const data = await response.json();
 
     if(data.success){
-      msg.innerText = "Email sent successfully ✅";
       msg.style.color = "green";
-
+      msg.innerText = "Email sent successfully ✅";
+      // Clear everything
       document.getElementById("composeTo").value = "";
       document.getElementById("composeSubject").value = "";
+      document.getElementById("composeBodyRich").innerHTML = "";
       document.getElementById("composeBody").value = "";
-
-      closeComposeModal();
-      loadEmails();
-    }else{
-      msg.innerText = data.message || "Error sending email";
+      if(document.getElementById("composeCc"))  document.getElementById("composeCc").value = "";
+      if(document.getElementById("composeBcc")) document.getElementById("composeBcc").value = "";
+      _cmpAttachments = [];
+      _cmpLinkedOrderId = null;
+      cmpRenderAttachments();
+      try{ localStorage.removeItem("ds_compose_draft"); }catch(e){}
+      setTimeout(() => { closeComposeModal(); if(typeof loadEmails === "function") loadEmails(); }, 400);
+    } else {
       msg.style.color = "red";
+      msg.innerText = data.message || "Error sending email";
     }
-
   }catch(error){
-    msg.innerText = error.message;
     msg.style.color = "red";
+    msg.innerText = error.message;
   }
 
-  btn.innerText = "Send Email";
+  btn.innerText = "📨 Send Email";
   btn.disabled = false;
 }
 
