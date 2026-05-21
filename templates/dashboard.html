@@ -24485,15 +24485,27 @@ function _aiSoundEnabled(){
   try { return (localStorage.getItem(_AI_SOUND_KEY) || "on") !== "off"; }
   catch(_) { return true; }
 }
+/* Lazy-init a shared AudioContext. NOTE: the storage key is intentionally
+   different from the function name — using the same name (e.g.
+   window._aiAudioCtx) silently aliases the function declaration, leaving
+   the AudioContext never stored and every subsequent call falling back
+   to the function reference (which has no .state, no oscillators…), so
+   no sound plays. Use a separate slot to avoid that footgun. */
 function _aiAudioCtx(){
   try {
-    if(!window._aiAudioCtx){
+    if(!window.__aiAudioCtxInstance){
       const Ctx = window.AudioContext || window.webkitAudioContext;
       if(!Ctx) return null;
-      window._aiAudioCtx = new Ctx();
+      window.__aiAudioCtxInstance = new Ctx();
     }
-    if(window._aiAudioCtx.state === "suspended") window._aiAudioCtx.resume();
-    return window._aiAudioCtx;
+    const ctx = window.__aiAudioCtxInstance;
+    if(ctx.state === "suspended"){
+      // resume() is async — browsers schedule the unlock for after the
+      // current user-gesture frame. We don't await it; the audio nodes
+      // we schedule below will start as soon as the context runs.
+      try { ctx.resume(); } catch(_) {}
+    }
+    return ctx;
   } catch(_) { return null; }
 }
 
