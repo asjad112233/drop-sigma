@@ -586,6 +586,104 @@ def employee_tasks_api(request):
     return Response({"success": True, "tasks": result})
 
 
+def _employee_owner_stores(member):
+    """The stores this employee can see — owner's stores, optionally
+    narrowed by the `allowed_stores` permission set by the admin."""
+    from stores.models import Store
+    qs = Store.objects.filter(user=member.owner, is_active=True).order_by("name")
+    allowed = (member.permissions or {}).get("allowed_stores")
+    if allowed:
+        try:
+            allowed_ids = [int(s) for s in allowed]
+            qs = qs.filter(id__in=allowed_ids)
+        except (TypeError, ValueError):
+            pass
+    return qs
+
+
+@api_view(["GET"])
+def employee_stores_api(request):
+    """Stores the employee can see. Gated by the `view_stores` permission."""
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Not authenticated"}, status=401)
+    member = request.user.team_profile.first()
+    if not member:
+        return Response({"success": False, "message": "Not an employee"}, status=403)
+    if not (member.permissions or {}).get("view_stores"):
+        return Response({"success": False, "message": "You don't have access to Stores."}, status=403)
+
+    stores = _employee_owner_stores(member)
+    data = [{
+        "id":          s.id,
+        "name":        s.name,
+        "platform":    s.platform,
+        "store_url":   s.store_url,
+        "is_active":   s.is_active,
+        "last_synced": s.last_synced.isoformat() if getattr(s, "last_synced", None) else None,
+    } for s in stores]
+    return Response({"success": True, "stores": data})
+
+
+@api_view(["GET"])
+def employee_vendors_api(request):
+    """Vendors attached to the employee's accessible stores. Gated by `view_vendors`."""
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Not authenticated"}, status=401)
+    member = request.user.team_profile.first()
+    if not member:
+        return Response({"success": False, "message": "Not an employee"}, status=403)
+    if not (member.permissions or {}).get("view_vendors"):
+        return Response({"success": False, "message": "You don't have access to Vendors."}, status=403)
+
+    from vendors.models import Vendor
+    stores = _employee_owner_stores(member)
+    vendors = (Vendor.objects
+               .filter(assigned_store__in=stores)
+               .select_related("assigned_store")
+               .distinct()
+               .order_by("name"))
+    data = [{
+        "id":           v.id,
+        "name":         v.name,
+        "email":        v.email,
+        "phone":        v.phone or "",
+        "company_name": v.company_name or "",
+        "country":      v.country or "",
+        "status":       v.status,
+        "store_name":   v.assigned_store.name if v.assigned_store_id else "",
+    } for v in vendors]
+    return Response({"success": True, "vendors": data})
+
+
+@api_view(["GET"])
+def employee_team_api(request):
+    """Fellow team members under the same owner. Gated by `view_team`."""
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Not authenticated"}, status=401)
+    member = request.user.team_profile.first()
+    if not member:
+        return Response({"success": False, "message": "Not an employee"}, status=403)
+    if not (member.permissions or {}).get("view_team"):
+        return Response({"success": False, "message": "You don't have access to Team."}, status=403)
+
+    if not member.owner_id:
+        return Response({"success": True, "members": []})
+
+    fellows = (TeamMember.objects
+               .filter(owner=member.owner, is_active=True)
+               .order_by("name"))
+    data = [{
+        "id":       m.id,
+        "name":     m.name,
+        "email":    m.email,
+        "role":     m.role,
+        "status":   m.status,
+        "workload": m.workload or 0,
+        "is_self":  m.user_id == request.user.id,
+    } for m in fellows]
+    return Response({"success": True, "members": data})
+
+
 @api_view(["PATCH"])
 def employee_task_update_api(request, task_id):
     """Employee can update status and progress of their own assigned task."""

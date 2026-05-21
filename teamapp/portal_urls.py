@@ -15,4 +15,8 @@ urlpatterns = [
     path("api/tasks/",                          views.employee_tasks_api),
     path("api/tasks/<int:task_id>/",            views.employee_task_update_api),
     path("api/tasks/<int:task_id>/comments/",   views.employee_task_comments_api),
+    # Permission-gated read-only views (Stores / Vendors / Team)
+    path("api/stores/",                         views.employee_stores_api),
+    path("api/vendors/",                        views.employee_vendors_api),
+    path("api/team/",                           views.employee_team_api),
 ]

@@ -600,6 +600,77 @@ body{font-family:'Inter','Segoe UI',sans-serif;background:var(--bg);color:var(--
       </div>
     </section>
 
+    <!-- ── My Stores (read-only, gated by view_stores) ── -->
+    <section class="section" id="secStores">
+      <div class="page-head">
+        <h1>Stores</h1>
+        <p>Stores you have read access to.</p>
+      </div>
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title">Connected Stores</div>
+            <div class="panel-sub" id="storesCount">Loading...</div>
+          </div>
+          <button class="btn btn-ghost" onclick="loadMyStores()">↻ Refresh</button>
+        </div>
+        <div id="storesGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;padding:18px;">
+          <div style="grid-column:1/-1;text-align:center;color:#94a3b8;padding:30px;font-size:13px;">Loading stores...</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Vendors (read-only, gated by view_vendors) ── -->
+    <section class="section" id="secVendors">
+      <div class="page-head">
+        <h1>Vendors</h1>
+        <p>Vendors attached to the stores you can access.</p>
+      </div>
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title">Vendor List</div>
+            <div class="panel-sub" id="vendorsCount">Loading...</div>
+          </div>
+          <button class="btn btn-ghost" onclick="loadMyVendors()">↻ Refresh</button>
+        </div>
+        <div class="tbl-wrap">
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Store</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="vendorsTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Team (read-only, gated by view_team) ── -->
+    <section class="section" id="secTeam">
+      <div class="page-head">
+        <h1>Team</h1>
+        <p>Fellow team members and their workload.</p>
+      </div>
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title">Members</div>
+            <div class="panel-sub" id="teamCount">Loading...</div>
+          </div>
+          <button class="btn btn-ghost" onclick="loadMyTeam()">↻ Refresh</button>
+        </div>
+        <div id="teamGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;padding:18px;">
+          <div style="grid-column:1/-1;text-align:center;color:#94a3b8;padding:30px;font-size:13px;">Loading team...</div>
+        </div>
+      </div>
+    </section>
+
     <!-- ── Team Chat (Premium) ── -->
     <section class="section" id="secChat" style="height:calc(100vh - 64px);display:none;flex-direction:column;padding:0;">
       <div class="tc-app" id="ecApp">
@@ -1039,8 +1110,11 @@ async function boot(){
     buildSidebar();
     try{ if(localStorage.getItem("ecSbCollapsed")==="1"){ document.querySelector(".layout")?.classList.add("ec-sb-collapsed"); } }catch(e){}
     renderOverview();
-    if(perm("view_orders")) loadMyOrders();
-    if(perm("view_emails")) loadMyEmails();
+    if(perm("view_orders"))  loadMyOrders();
+    if(perm("view_emails"))  loadMyEmails();
+    if(perm("view_stores"))  loadMyStores();
+    if(perm("view_vendors")) loadMyVendors();
+    if(perm("view_team"))    loadMyTeam();
     _ecWsBackground();
   }catch(e){
     document.getElementById("overviewTitle").style.color="#ef4444";
@@ -1103,8 +1177,11 @@ async function _ecRefreshAccess(){
     try { buildSidebar(); } catch(_) {}
     try { renderOverview(); } catch(_) {}
     // Lazy-load sections that just became visible
-    if(perm("view_orders") && typeof loadMyOrders === "function") loadMyOrders();
-    if(perm("view_emails") && typeof loadMyEmails === "function") loadMyEmails();
+    if(perm("view_orders")  && typeof loadMyOrders  === "function") loadMyOrders();
+    if(perm("view_emails")  && typeof loadMyEmails  === "function") loadMyEmails();
+    if(perm("view_stores")  && typeof loadMyStores  === "function") loadMyStores();
+    if(perm("view_vendors") && typeof loadMyVendors === "function") loadMyVendors();
+    if(perm("view_team")    && typeof loadMyTeam    === "function") loadMyTeam();
     // Soft heads-up so the user knows something shifted
     try{
       if(typeof _ecShowInAppNotif === "function"){
@@ -1209,7 +1286,10 @@ function buildSidebar(){
   const navItems = [
     {id:"secOverview", icon:"🏠", label:"Overview",  always:true},
     {id:"secOrders",   icon:"🛒", label:"My Orders", perm:"view_orders"},
+    {id:"secStores",   icon:"🏬", label:"Stores",    perm:"view_stores"},
+    {id:"secVendors",  icon:"🏭", label:"Vendors",   perm:"view_vendors"},
     {id:"secEmails",   icon:"📧", label:"My Emails", perm:"view_emails"},
+    {id:"secTeam",     icon:"👥", label:"Team",      perm:"view_team"},
     {id:"secTasks",    icon:"✅", label:"My Tasks",  always:true},
     {id:"secChat",     icon:"💬", label:"Team Chat", always:true},
   ];
@@ -1542,6 +1622,119 @@ function closeOrderDetail(){
   fireLoader();
   document.getElementById("odOverlay").style.display = "none";
   document.body.style.overflow = "";
+}
+
+// ── My Stores (read-only) ──
+async function loadMyStores(){
+  if(!perm("view_stores")) return;
+  const grid = document.getElementById("storesGrid");
+  const count = document.getElementById("storesCount");
+  if(grid) grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:#94a3b8;padding:30px;font-size:13px;">Loading stores...</div>`;
+  try{
+    const r = await fetch("/employee/api/stores/");
+    const d = await r.json();
+    if(!d.success){
+      if(grid) grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:#ef4444;padding:20px;font-size:13px;">${esc(d.message||"Failed to load stores")}</div>`;
+      return;
+    }
+    const items = d.stores || [];
+    if(count) count.textContent = items.length ? `${items.length} store${items.length===1?"":"s"}` : "No stores yet";
+    if(!items.length){
+      if(grid) grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:#94a3b8;padding:30px;font-size:13px;">No stores in your access scope.</div>`;
+      return;
+    }
+    if(grid) grid.innerHTML = items.map(s => `
+      <div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:16px;box-shadow:0 4px 10px rgba(15,23,42,.04);">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+          <div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#6366f1,#06b6d4);display:grid;place-items:center;color:#fff;font-weight:800;font-size:14px;">${esc((s.name||"?").slice(0,2).toUpperCase())}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:800;font-size:14px;color:#0b0f1a;letter-spacing:-.01em;">${esc(s.name||"—")}</div>
+            <div style="font-size:11.5px;color:#64748b;text-transform:capitalize;">${esc(s.platform||"—")}</div>
+          </div>
+          <span style="font-size:10px;font-weight:800;padding:3px 8px;border-radius:99px;${s.is_active ? "color:#059669;background:rgba(16,185,129,.10);" : "color:#dc2626;background:rgba(239,68,68,.10);"}">${s.is_active ? "Active" : "Inactive"}</span>
+        </div>
+        <div style="font-size:11.5px;color:#64748b;word-break:break-all;">${esc(s.store_url||"")}</div>
+      </div>`).join("");
+  }catch(e){
+    if(grid) grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:#ef4444;padding:20px;font-size:13px;">${esc(e.message||e)}</div>`;
+  }
+}
+
+// ── Vendors (read-only) ──
+async function loadMyVendors(){
+  if(!perm("view_vendors")) return;
+  const tbody = document.getElementById("vendorsTableBody");
+  const count = document.getElementById("vendorsCount");
+  if(tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:30px;font-size:13px;">Loading vendors...</td></tr>`;
+  try{
+    const r = await fetch("/employee/api/vendors/");
+    const d = await r.json();
+    if(!d.success){
+      if(tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#ef4444;padding:20px;font-size:13px;">${esc(d.message||"Failed to load vendors")}</td></tr>`;
+      return;
+    }
+    const items = d.vendors || [];
+    if(count) count.textContent = items.length ? `${items.length} vendor${items.length===1?"":"s"}` : "No vendors yet";
+    if(!items.length){
+      if(tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:30px;font-size:13px;">No vendors in your access scope.</td></tr>`;
+      return;
+    }
+    if(tbody) tbody.innerHTML = items.map(v => `
+      <tr>
+        <td><div style="font-weight:700;color:#0b0f1a;">${esc(v.name||"—")}</div>${v.company_name ? `<div style="font-size:11.5px;color:#94a3b8;">${esc(v.company_name)}</div>` : ""}</td>
+        <td>${esc(v.email||"—")}</td>
+        <td>${esc(v.phone||"—")}</td>
+        <td>${esc(v.store_name||"—")}</td>
+        <td><span style="font-size:10.5px;font-weight:800;padding:3px 9px;border-radius:99px;${v.status==="active" ? "color:#059669;background:rgba(16,185,129,.10);" : "color:#64748b;background:rgba(100,116,139,.12);"}">${esc(v.status||"unknown").toUpperCase()}</span></td>
+      </tr>`).join("");
+  }catch(e){
+    if(tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#ef4444;padding:20px;font-size:13px;">${esc(e.message||e)}</td></tr>`;
+  }
+}
+
+// ── Team (read-only) ──
+async function loadMyTeam(){
+  if(!perm("view_team")) return;
+  const grid = document.getElementById("teamGrid");
+  const count = document.getElementById("teamCount");
+  if(grid) grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:#94a3b8;padding:30px;font-size:13px;">Loading team...</div>`;
+  try{
+    const r = await fetch("/employee/api/team/");
+    const d = await r.json();
+    if(!d.success){
+      if(grid) grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:#ef4444;padding:20px;font-size:13px;">${esc(d.message||"Failed to load team")}</div>`;
+      return;
+    }
+    const items = d.members || [];
+    if(count) count.textContent = items.length ? `${items.length} member${items.length===1?"":"s"}` : "No team members";
+    if(!items.length){
+      if(grid) grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:#94a3b8;padding:30px;font-size:13px;">No fellow team members.</div>`;
+      return;
+    }
+    const statusColors = {available:"#10b981",busy:"#ef4444",limited:"#f59e0b",offline:"#94a3b8"};
+    const roleLabel = {support:"Support",order_manager:"Order Manager",refund_manager:"Refund Manager",vendor_manager:"Vendor Manager",email_manager:"Email Manager"};
+    if(grid) grid.innerHTML = items.map(m => {
+      const initials = (m.name||"?").split(" ").map(x=>x[0]).join("").slice(0,2).toUpperCase();
+      const wl = Math.max(0, Math.min(100, m.workload||0));
+      const wlColor = wl >= 90 ? "#ef4444" : wl >= 70 ? "#f59e0b" : "linear-gradient(90deg,#6366f1,#06b6d4)";
+      return `
+      <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px;${m.is_self ? "border-color:#a5b4fc;background:rgba(99,102,241,.04);" : ""}">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:9px;">
+          <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#6366f1,#a855f7);display:grid;place-items:center;color:#fff;font-weight:800;font-size:13px;">${esc(initials)}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:700;font-size:13.5px;color:#0b0f1a;">${esc(m.name||"—")}${m.is_self ? " <span style='color:#6366f1;font-size:10px;font-weight:800;'>(You)</span>" : ""}</div>
+            <div style="font-size:11.5px;color:#64748b;display:flex;align-items:center;gap:5px;">
+              <span style="width:6px;height:6px;border-radius:50%;background:${statusColors[m.status]||"#94a3b8"};display:inline-block;"></span>${esc(roleLabel[m.role]||m.role)}
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;font-size:10.5px;color:#64748b;margin-bottom:3px;"><span>Workload</span><span style="font-weight:700;">${wl}%</span></div>
+        <div style="height:5px;background:#eef2f7;border-radius:99px;overflow:hidden;"><div style="height:100%;width:${wl}%;background:${wlColor};transition:width .3s;"></div></div>
+      </div>`;
+    }).join("");
+  }catch(e){
+    if(grid) grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:#ef4444;padding:20px;font-size:13px;">${esc(e.message||e)}</div>`;
+  }
 }
 
 // ── My Emails ──
