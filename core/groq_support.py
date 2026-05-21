@@ -51,9 +51,13 @@ _REQUEST_TIMEOUT = 12  # seconds
 
 
 def _build_messages(question: str, history: list) -> list:
-    """Compose chat messages: system prompt + last few turns + current question."""
+    """Compose chat messages: system prompt + last few turns + current question.
+
+    Only the last 4 turns are forwarded to Groq even if the frontend keeps a
+    longer history in localStorage. This keeps input tokens (and thus cost)
+    bounded — support questions almost never need deeper context to answer."""
     msgs = [{"role": "system", "content": build_system_prompt()}]
-    for turn in (history or [])[-6:]:
+    for turn in (history or [])[-4:]:
         role = turn.get("role", "user")
         if role not in ("user", "assistant"):
             role = "user"
