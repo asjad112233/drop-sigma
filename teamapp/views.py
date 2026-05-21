@@ -400,9 +400,12 @@ def employee_emails_api(request):
 
     from emails.models import EmailThreadAssignment, EmailMessage
     from emails.views import get_thread_contact, extract_clean_email
+    from django.db.models import Q
 
     # `view_all_threads`: employee sees every thread in owner's stores, not
-    # just assigned ones. Without it, only their assigned threads.
+    # just assigned ones. Without it, only threads where they're the primary
+    # `assigned_to` OR a co-assignee — admin multi-assign was previously
+    # invisible to co-assignees because the query only filtered on assigned_to.
     if (member.permissions or {}).get("view_all_threads") and member.owner_id:
         assignments = EmailThreadAssignment.objects.filter(
             store__user=member.owner
@@ -415,7 +418,9 @@ def employee_emails_api(request):
             except (TypeError, ValueError):
                 pass
     else:
-        assignments = EmailThreadAssignment.objects.filter(assigned_to=member).select_related("store")
+        assignments = EmailThreadAssignment.objects.filter(
+            Q(assigned_to=member) | Q(co_assignees=member)
+        ).select_related("store").distinct()
     threads = []
 
     for ta in assignments:

@@ -2845,9 +2845,26 @@ async function _vpRefreshAccess(){
   }catch(_){}
 }
 
+/* Periodic refresh of the vendor's orders list so admin-side assignments
+   (a new order routed to this vendor, tracking approved/rejected, etc.)
+   show up without the vendor having to click Refresh. Cheap — the orders
+   endpoint is already DB-only and respects the active tab via the
+   existing front-end gating in loadVendorOrders. */
+let _vpOrdersRefreshTick = 0;
+function _vpRefreshVendorData(){
+  _vpOrdersRefreshTick++;
+  // Orders refresh every tick (5s). Tracking history runs every other tick.
+  try { if(typeof loadVendorOrders === "function") loadVendorOrders(); } catch(_){}
+  if(_vpOrdersRefreshTick % 2 === 0){
+    try { if(typeof loadTrackingHistory === "function" && document.querySelector('.vp-nav button[data-tab="tracking"]')?.classList.contains("active")) loadTrackingHistory(true); } catch(_){}
+  }
+}
+
 async function _vcPollTick(){
-  // Run permission refresh alongside the chat poll.
+  // 1. Permission delta — pick up admin Edit-Access changes.
   _vpRefreshAccess();
+  // 2. Vendor data — newly-assigned orders, approved/rejected tracking, etc.
+  if(!document.hidden) _vpRefreshVendorData();
   try{
     const chatBtn = document.querySelector('.vp-nav button[data-tab="chat"]');
     const chatActive = chatBtn && chatBtn.classList.contains("active");

@@ -1278,10 +1278,34 @@ async function _ecRefreshAccess(){
   }catch(_){}
 }
 
+/* Pull whatever sections the employee can see + refresh them. Runs every
+   poll tick (5s) so newly-assigned threads, orders, tasks etc. appear
+   without the user having to navigate away and back. Quietly skips work
+   when the loader function isn't defined yet (during early boot). */
+let _ecSectionRefreshTick = 0;
+function _ecRefreshAllSections(){
+  _ecSectionRefreshTick++;
+  // Stagger heavier loads so we don't fire all 7 fetches in one tick.
+  // Cheap ones run every tick; heavier ones every other tick.
+  try{ if(perm("view_orders")      && typeof loadMyOrders        === "function") loadMyOrders(); }catch(_){}
+  try{ if(perm("view_emails")      && typeof loadMyEmails        === "function") loadMyEmails(); }catch(_){}
+  try{ if(perm("approve_tracking") && typeof loadMyTrackingQueue === "function") loadMyTrackingQueue(); }catch(_){}
+  // Slower-changing data refreshes every other tick (~10s) to save cycles
+  if(_ecSectionRefreshTick % 2 === 0){
+    try{ if(perm("view_stores")    && typeof loadMyStores  === "function") loadMyStores(); }catch(_){}
+    try{ if(perm("view_vendors")   && typeof loadMyVendors === "function") loadMyVendors(); }catch(_){}
+    try{ if(perm("view_team")      && typeof loadMyTeam    === "function") loadMyTeam(); }catch(_){}
+    try{ if((perm("view_rules") || perm("manage_rules")) && typeof loadMyRules === "function") loadMyRules(); }catch(_){}
+  }
+}
+
 async function _ecPollTick(){
-  // Run access refresh alongside the chat poll — same cadence, one extra
-  // tiny request, so any admin-side permission change shows up within 8s.
+  // 1. Permission delta: pick up admin Edit-Access changes.
   _ecRefreshAccess();
+  // 2. Section data: pull fresh threads/orders/queue so admin-side
+  //    assignments (e.g. "assign this thread to X") light up the
+  //    employee's portal within ~5s without a page reload.
+  if(!document.hidden) _ecRefreshAllSections();
   try{
     const r = await fetch("/teamapp/chat/channels/");
     const d = await r.json();
