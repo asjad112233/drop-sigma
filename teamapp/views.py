@@ -917,6 +917,82 @@ def chat_messages_api(request):
     })
 
 
+def _audience_for(user):
+    """Decide which portal this user logs into so the notification surfaces
+    in the right bell. Vendor profile takes precedence (vendors can also be
+    employees on paper), then employee, then admin."""
+    try:
+        if hasattr(user, "vendor_profile") and user.vendor_profile is not None:
+            return "vendor"
+    except Exception:
+        pass
+    try:
+        if user.team_profile.filter(is_active=True).exists():
+            return "employee"
+    except Exception:
+        pass
+    return "admin"
+
+
+def _chat_action_url_for(user, channel):
+    """Where this user should land when they click the notification.
+    Each portal opens its own Team Chat tab/section, optionally scrolled
+    to the right channel via ?channel=<id>."""
+    audience = _audience_for(user)
+    cid = channel.id if channel else ""
+    if audience == "vendor":
+        return f"/vendor/?tab=chat&channel={cid}"
+    if audience == "employee":
+        return f"/employee/?channel={cid}"
+    return f"/dashboard/?section=chat&channel={cid}"
+
+
+def _notify_chat_message(msg):
+    """Drop a Notification row for everyone in the channel except the sender.
+    Silently swallows failures so a bad notification can't block a chat send."""
+    try:
+        from notifications.services import notify
+        ch = msg.channel
+        sender = msg.sender
+        sender_name = (sender.get_full_name() or sender.username or "Someone").strip()
+
+        # Resolve recipient set:
+        # • DMs → the other participant
+        # • Regular channel → all explicit channel members
+        if ch.is_dm:
+            recipients = list(ch.participants.exclude(id=sender.id))
+        else:
+            recipients = list(User.objects.filter(channel_memberships__channel=ch).exclude(id=sender.id).distinct())
+
+        # Compose a short body preview (strip HTML if any sneaked in)
+        body_preview = (msg.content or "").strip()
+        if len(body_preview) > 180:
+            body_preview = body_preview[:177] + "…"
+        if not body_preview and msg.image:
+            body_preview = "📎 sent an image"
+
+        if ch.is_dm:
+            title = f"{sender_name} sent you a message"
+            category = "chat"
+        else:
+            title = f"{sender_name} in #{ch.name}"
+            category = "chat"
+
+        for r in recipients:
+            notify(
+                recipient=r,
+                audience=_audience_for(r),
+                category=category,
+                priority="medium",
+                title=title,
+                body=body_preview,
+                action_url=_chat_action_url_for(r, ch),
+                action_label="Open chat",
+            )
+    except Exception:
+        pass
+
+
 @api_view(["POST"])
 def chat_send_api(request):
     if not request.user.is_authenticated:
@@ -943,6 +1019,7 @@ def chat_send_api(request):
         parent = ChatMessage.objects.filter(id=parent_id, channel=ch).first()
 
     msg = ChatMessage.objects.create(channel=ch, sender=request.user, content=content, parent=parent)
+    _notify_chat_message(msg)
     return Response({"success": True, "message": _serialize_message(msg, request.user.id)})
 
 
@@ -962,6 +1039,7 @@ def chat_upload_image_api(request):
     if not _user_can_access_channel(request.user, ch):
         return Response({"success": False, "message": "You are not a member of this channel."}, status=403)
     msg = ChatMessage.objects.create(channel=ch, sender=request.user, content="", image=image_file)
+    _notify_chat_message(msg)
     return Response({"success": True, "message": _serialize_message(msg, request.user.id)})
 
 

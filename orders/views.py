@@ -968,7 +968,13 @@ def update_order_status_api(request, order_id):
 
 @api_view(["GET"])
 def order_lookup_by_number_api(request):
-    """Look up an order by external_order_id, enforcing per-store access for team members."""
+    """Look up an order by external_order_id, scoped to the requester:
+      • Tenant (store owner)   → orders inside their own stores
+      • Vendor                 → orders where the vendor is assigned
+      • Team member (employee) → orders in their owner's stores, optionally
+                                 restricted by `allowed_stores` permission
+      • Superuser              → any order (admin support)
+    """
     if not request.user.is_authenticated:
         return Response({"success": False}, status=401)
 
@@ -976,39 +982,67 @@ def order_lookup_by_number_api(request):
     if not q:
         return Response({"success": False, "message": "q required."}, status=400)
 
-    # Find the order (any store)
-    try:
-        order = Order.objects.select_related("store").get(external_order_id=q)
-    except Order.DoesNotExist:
+    # Build base queryset on the external order id — there may be the same
+    # number across different tenant stores, so we pull matches and then
+    # filter by who's asking.
+    base_qs = Order.objects.select_related("store").filter(external_order_id=q)
+    if not base_qs.exists():
         return Response({"success": False, "error": "not_found",
                          "message": f"Order #{q} not found."}, status=404)
-    except Order.MultipleObjectsReturned:
-        order = Order.objects.select_related("store").filter(external_order_id=q).first()
 
-    # Admins/superusers always have access
-    if request.user.is_superuser or request.user.is_staff:
+    # ── Tenant scope (store owner) — most common path
+    tenant_qs = base_qs.filter(store__user=request.user)
+    if tenant_qs.exists():
+        order = tenant_qs.first()
         return Response({"success": True, "id": order.id,
                          "order_number": order.external_order_id,
                          "store_name": order.store.name})
 
-    # Team member — check allowed_stores
-    from teamapp.models import TeamMember
+    # ── Vendor scope — assigned orders only
     try:
-        member = TeamMember.objects.get(user=request.user, is_active=True)
-    except TeamMember.DoesNotExist:
-        return Response({"success": False, "error": "no_access",
-                         "message": "You don't have access to this order."}, status=403)
+        from vendors.models import Vendor as _Vendor
+        vp = _Vendor.objects.filter(user=request.user).first()
+        if vp:
+            vendor_qs = base_qs.filter(assigned_vendor=vp)
+            if vendor_qs.exists():
+                order = vendor_qs.first()
+                return Response({"success": True, "id": order.id,
+                                 "order_number": order.external_order_id,
+                                 "store_name": order.store.name})
+            # Match exists but not assigned to this vendor → access denied
+            return Response({"success": False, "error": "no_access",
+                             "message": f"Order #{q} is not assigned to you.",
+                             "store_name": base_qs.first().store.name}, status=403)
+    except Exception:
+        pass
 
-    allowed = member.permissions.get("allowed_stores", [])
-    # Empty list means no restriction was set (full access)
-    if allowed and str(order.store_id) not in [str(s) for s in allowed]:
-        return Response({"success": False, "error": "no_access",
-                         "message": f"You don't have access to orders from «{order.store.name}».",
-                         "store_name": order.store.name}, status=403)
+    # ── Team member (employee) scope — limited by owner + allowed_stores
+    from teamapp.models import TeamMember
+    member = TeamMember.objects.filter(user=request.user, is_active=True).first()
+    if member:
+        team_qs = base_qs.filter(store__user=member.owner) if member.owner_id else base_qs.none()
+        if team_qs.exists():
+            order = team_qs.first()
+            allowed = (member.permissions or {}).get("allowed_stores", [])
+            # Empty list = no restriction; otherwise must include this store.
+            if allowed and str(order.store_id) not in [str(s) for s in allowed]:
+                return Response({"success": False, "error": "no_access",
+                                 "message": f"You don't have access to orders from «{order.store.name}».",
+                                 "store_name": order.store.name}, status=403)
+            return Response({"success": True, "id": order.id,
+                             "order_number": order.external_order_id,
+                             "store_name": order.store.name})
 
-    return Response({"success": True, "id": order.id,
-                     "order_number": order.external_order_id,
-                     "store_name": order.store.name})
+    # ── Superuser fallback (support / impersonation) — any order
+    if request.user.is_superuser:
+        order = base_qs.first()
+        return Response({"success": True, "id": order.id,
+                         "order_number": order.external_order_id,
+                         "store_name": order.store.name})
+
+    return Response({"success": False, "error": "no_access",
+                     "message": "You don't have access to this order.",
+                     "store_name": base_qs.first().store.name}, status=403)
 
 
 # ════════════════════════════════════════════════════════════════════════════

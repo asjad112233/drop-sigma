@@ -2077,6 +2077,46 @@ async function vcOpenDm(userId, name){
   }catch(e){ console.error(e); }
 }
 
+// ── Open order from chat (vendor) ────────────────────────────────────────
+// Mirrors admin/employee behaviour: click a #1234 chip in a chat message,
+// look it up, and if this vendor is allowed to see it, jump to the order
+// detail. Otherwise show a friendly access toast.
+async function vcOpenOrderFromChat(orderNum){
+  try{
+    const r = await fetch(`/orders/api/lookup/?q=${encodeURIComponent(orderNum)}`);
+    const d = await r.json();
+    if(!d.success){
+      if(d.error === "no_access"){
+        _vcToast(`🔒 Order #${orderNum} is not assigned to you.`);
+      } else {
+        _vcToast(`⚠️ Order #${orderNum} not found.`);
+      }
+      return;
+    }
+    // Switch to orders tab and try to open the local row by external_order_id.
+    document.querySelector('.vp-nav button[data-tab="orders"]')?.click();
+    setTimeout(()=>{
+      const ord = (typeof vendorOrders !== "undefined" && Array.isArray(vendorOrders))
+        ? vendorOrders.find(o => String(o.order_number) === String(d.order_number))
+        : null;
+      if(ord && typeof showOrderDetail === "function"){
+        showOrderDetail(ord);
+      } else if(typeof loadVendorOrders === "function"){
+        // Order isn't in the current list — refresh, then try once more.
+        loadVendorOrders().then(()=>{
+          const ord2 = (typeof vendorOrders !== "undefined" && Array.isArray(vendorOrders))
+            ? vendorOrders.find(o => String(o.order_number) === String(d.order_number))
+            : null;
+          if(ord2 && typeof showOrderDetail === "function") showOrderDetail(ord2);
+          else _vcToast(`✓ Switched to Orders — search "#${orderNum}" to find it.`);
+        }).catch(()=>{});
+      }
+    }, 120);
+  }catch(e){
+    _vcToast(`⚠️ Could not open order: ${e.message || e}`);
+  }
+}
+
 async function vcOpenMentionDm(name){
   const key = name.toLowerCase();
   const firstName = key.split(" ")[0];
@@ -2375,7 +2415,7 @@ function _vcRenderMarkdown(text){
   s = s.replace(/~~([^~]+)~~/g, '<del>$1</del>');
   s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener" style="color:#7c3aed;">$1</a>');
   s = s.replace(/#(\d{4,})/g, (_,num)=>
-    `<button style="display:inline-flex;align-items:center;gap:5px;background:#f5f3ff;border:1.5px solid #ddd5f3;border-radius:8px;padding:2px 9px;font-size:13px;font-weight:700;color:#6d28d9;cursor:default;vertical-align:middle;"><i class='fa-solid fa-box' style='font-size:11px;'></i> #${num}</button>`
+    `<button onclick="vcOpenOrderFromChat('${num}')" style="display:inline-flex;align-items:center;gap:5px;background:#f5f3ff;border:1.5px solid #ddd5f3;border-radius:8px;padding:2px 9px;font-size:13px;font-weight:700;color:#6d28d9;cursor:pointer;vertical-align:middle;transition:background .15s;" onmouseenter="this.style.background='#ede9fe'" onmouseleave="this.style.background='#f5f3ff'"><i class='fa-solid fa-box' style='font-size:11px;'></i> #${num}</button>`
   );
   s = s.replace(/^[*\-] (.+)$/gm, '<li>$1</li>').replace(/(<li>.*<\/li>)/gs, '<ul style="margin:4px 0 4px 18px;padding:0;">$1</ul>');
   s = s.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
