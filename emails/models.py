@@ -329,6 +329,15 @@ class KnowledgeSnippet(models.Model):
         ('Support',   'Support'),
         ('AI',        'AI Behavior'),
         ('Guardrail', 'Guardrail'),
+        # v2 topic categories (kept distinct so legacy snippets stay readable)
+        ('Disputes',         'Disputes'),
+        ('Address',          'Address Updates'),
+        ('Cancellations',    'Cancellations'),
+        ('OutOfStock',       'Out of Stock'),
+        ('ShippingDelays',   'Shipping Delays'),
+        ('ProductDefects',   'Product Defects'),
+        ('WrongItem',        'Wrong Item Received'),
+        ('PaymentIssues',    'Payment Issues'),
     ]
 
     store    = models.ForeignKey(
@@ -341,6 +350,10 @@ class KnowledgeSnippet(models.Model):
 
     from_wizard = models.BooleanField(default=False)
     order_idx   = models.IntegerField(default=0)
+
+    # v2: per-snippet enable/disable. Topic-level toggle lives in
+    # AiTrainingProfile.toggles and overrides this when off.
+    is_enabled  = models.BooleanField(default=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

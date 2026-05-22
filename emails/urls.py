@@ -1,4 +1,5 @@
 from django.urls import path
+from . import views
 from .views import (
     gmail_oauth_start_api,
     gmail_oauth_callback,
@@ -93,6 +94,16 @@ urlpatterns = [
     path("api/ai-training/example/", ai_training_example_api, name="ai_training_example_api"),
     path("api/ai-training/categories/", category_training_list_api, name="category_training_list_api"),
     path("api/ai-training/categories/<slug:slug>/", category_training_detail_api, name="category_training_detail_api"),
+
+    # AI Training v2 — Q&A + Topics + Test
+    path("api/ai-training/v2/qa/",                       views.ai_v2_qa_list_api,        name="ai_v2_qa_list_api"),
+    path("api/ai-training/v2/qa/<int:qid>/",             views.ai_v2_qa_answer_api,      name="ai_v2_qa_answer_api"),
+    path("api/ai-training/v2/topics/",                   views.ai_v2_topics_api,         name="ai_v2_topics_api"),
+    path("api/ai-training/v2/topics/<str:key>/toggle/",  views.ai_v2_topic_toggle_api,   name="ai_v2_topic_toggle_api"),
+    path("api/ai-training/v2/snippets/",                 views.ai_v2_snippets_api,       name="ai_v2_snippets_api"),
+    path("api/ai-training/v2/test/",                     views.ai_v2_test_api,           name="ai_v2_test_api"),
+    path("api/ai-training/v2/overall/",                  views.ai_v2_overall_api,        name="ai_v2_overall_api"),
+
     path("api/suggest-reply/", auto_suggest_reply_api, name="auto_suggest_reply_api"),
 
     # =========================

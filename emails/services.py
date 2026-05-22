@@ -742,12 +742,20 @@ def _load_training_profile(store):
 
 
 def _load_snippets(store, limit=10):
-    """Load top-N knowledge snippets for the store."""
+    """Load top-N ENABLED knowledge snippets for the store.
+
+    Snippets toggled off in AI Training Studio (KnowledgeSnippet.is_enabled=False)
+    are excluded so admins can disable a snippet without deleting it.
+    """
     if not store:
         return []
     try:
         from .models import KnowledgeSnippet
-        return list(KnowledgeSnippet.objects.filter(store=store).order_by('order_idx', '-updated_at')[:limit])
+        return list(
+            KnowledgeSnippet.objects
+            .filter(store=store, is_enabled=True)
+            .order_by('order_idx', '-updated_at')[:limit]
+        )
     except Exception:
         return []
 

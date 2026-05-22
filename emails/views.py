@@ -1085,6 +1085,15 @@ def ai_training_profile_api(request):
         from django.utils import timezone as _tz
         profile.wizard_completed_at = _tz.now()
     if "extras"         in data: profile.extras         = dict(data["extras"] or {})
+
+    # Bidirectional sync: if business_name was updated via this endpoint
+    # (Business Profile tab), mirror into wizard_answers["53"] so the Q&A
+    # wizard sees it as answered and the score calc credits it.
+    if "business_name" in data:
+        existing = dict(profile.wizard_answers or {})
+        existing["53"] = (data["business_name"] or "").strip()
+        profile.wizard_answers = existing
+
     profile.save()
 
     # Sync the AI mode to all EmailAccount(s) under this store so the
@@ -1318,6 +1327,523 @@ def category_training_detail_api(request, slug):
         toggle = bool(toggle)
     state = save_category_state(profile, slug, answers=answers, auto_reply_enabled=toggle)
     return Response({"success": True, "state": state})
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# 🎓 AI Training Studio v2 — Q&A + Topics + Test + Score
+# Backed by the 52-question corpus + 10 advanced topics defined in
+# emails/ai_training_v2.py. Reuses AiTrainingProfile and KnowledgeSnippet.
+# ════════════════════════════════════════════════════════════════════════════
+
+
+def _v2_call_llm(system_prompt, user_prompt, max_tokens=600):
+    """Call LLM — tries Groq first (per codebase trend), falls back to Claude.
+    Returns plain-text reply or None if no provider is reachable."""
+    import os, requests, logging
+    log = logging.getLogger("emails.v2_llm")
+
+    # Try Groq (free, fast — preferred per current codebase)
+    groq_key = (os.getenv("GROQ_API_KEY") or "").strip()
+    if groq_key:
+        try:
+            r = requests.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"},
+                json={
+                    "model": "llama-3.3-70b-versatile",
+                    "messages": [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    "temperature": 0.4,
+                    "max_tokens": max_tokens,
+                },
+                timeout=20,
+            )
+            if r.status_code < 400:
+                return r.json()["choices"][0]["message"]["content"]
+            log.warning("Groq returned %s: %s", r.status_code, r.text[:200])
+        except Exception as e:
+            log.warning("Groq call failed: %s", e)
+
+    # Fallback to Claude (Anthropic)
+    anthropic_key = (os.getenv("ANTHROPIC_API_KEY") or "").strip()
+    if anthropic_key:
+        try:
+            from .services import call_claude
+            return call_claude(prompt=user_prompt, system=system_prompt, max_tokens=max_tokens)
+        except Exception as e:
+            log.warning("Claude call failed: %s", e)
+
+    return None
+
+
+def _v2_require_profile(request):
+    """Get-or-create AiTrainingProfile for current user's active store.
+    Returns (store, profile) or raises a Response-friendly tuple."""
+    from .models import AiTrainingProfile
+    store = _ai_get_user_store(request, request.GET.get("store_id") or request.data.get("store_id"))
+    if not store:
+        return None, None
+    profile, _ = AiTrainingProfile.objects.get_or_create(store=store)
+    return store, profile
+
+
+@csrf_exempt
+@api_view(["GET"])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def ai_v2_qa_list_api(request):
+    """Return all 52 questions grouped by section + tenant's current answers + progress."""
+    from .ai_training_v2 import QA_SECTIONS, qa_progress
+    store, profile = _v2_require_profile(request)
+    if not store:
+        return Response({"success": False, "message": "No active store."}, status=400)
+    answers_raw = profile.wizard_answers or {}
+    # Normalize answer keys to str for consistent lookup
+    answers = {str(k): v for k, v in answers_raw.items()}
+
+    # Fallback: if Q53 (business name) wasn't answered via the wizard but
+    # profile.business_name was set via the Business Profile tab, surface it
+    # in the wizard so progress + score credit it as answered.
+    if not (answers.get("53") or "").strip() and (profile.business_name or "").strip():
+        answers["53"] = profile.business_name.strip()
+
+    from .ai_training_v2 import OPTIONS_MAP
+    sections_out = []
+    for sec in QA_SECTIONS:
+        qs_out = []
+        for q in sec["questions"]:
+            meta = OPTIONS_MAP.get(q["id"], {})
+            qs_out.append({
+                "id":             q["id"],
+                "title":          q["title"],
+                "help":           q["help"],
+                "placeholder":    q["placeholder"],
+                "options":        meta.get("options", []),
+                "multi":          bool(meta.get("multi", False)),
+                "free_text_only": bool(meta.get("free_text_only", False)),
+                "answer":         (answers.get(str(q["id"])) or "").strip(),
+                "answered":       bool((answers.get(str(q["id"])) or "").strip()),
+            })
+        answered = sum(1 for q in qs_out if q["answered"])
+        sections_out.append({
+            "id":        sec["id"],
+            "name":      sec["name"],
+            "icon":      sec["icon"],
+            "questions": qs_out,
+            "answered":  answered,
+            "total":     len(qs_out),
+        })
+
+    return Response({
+        "success":  True,
+        "sections": sections_out,
+        "progress": qa_progress(profile),
+    })
+
+
+@csrf_exempt
+@api_view(["POST"])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def ai_v2_qa_answer_api(request, qid):
+    """Save the answer to a single question. Body: { answer: str }."""
+    from .ai_training_v2 import QA_BY_ID, qa_progress
+    try:
+        qid_int = int(qid)
+    except (TypeError, ValueError):
+        return Response({"success": False, "message": "Invalid question id."}, status=400)
+    if qid_int not in QA_BY_ID:
+        return Response({"success": False, "message": "Unknown question."}, status=404)
+
+    store, profile = _v2_require_profile(request)
+    if not store:
+        return Response({"success": False, "message": "No active store."}, status=400)
+
+    answer = (request.data.get("answer") or "").strip()
+    answers = dict(profile.wizard_answers or {})
+    answers[str(qid_int)] = answer
+    profile.wizard_answers = answers
+
+    # Bidirectional sync: Q53 = business name, mirror into the dedicated field
+    # so the Business Profile tab and snapshot/restore see it too.
+    update_fields = ["wizard_answers", "updated_at"]
+    if qid_int == 53:
+        profile.business_name = answer[:255]
+        update_fields.append("business_name")
+
+    profile.save(update_fields=update_fields)
+
+    return Response({
+        "success":  True,
+        "qid":      qid_int,
+        "answer":   answer,
+        "progress": qa_progress(profile),
+    })
+
+
+@csrf_exempt
+@api_view(["GET"])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def ai_v2_topics_api(request):
+    """Return all 10 topics with live confidence scores + enable state + snippet counts."""
+    from .ai_training_v2 import (
+        ADVANCED_TOPICS, get_topic_enabled,
+        calculate_topic_score, calculate_overall_score, qa_progress,
+    )
+    from .models import KnowledgeSnippet
+
+    store, profile = _v2_require_profile(request)
+    if not store:
+        return Response({"success": False, "message": "No active store."}, status=400)
+
+    topics_out = []
+    for t in ADVANCED_TOPICS:
+        snip_total   = KnowledgeSnippet.objects.filter(store=store, category=t["key"]).count()
+        snip_active  = KnowledgeSnippet.objects.filter(store=store, category=t["key"], is_enabled=True).count()
+        score = calculate_topic_score(store, t["key"], profile)
+        enabled = get_topic_enabled(profile, t["key"])
+        # Band: good >=70 (full Q&A is excellent), warn 35-69, danger <35
+        if score >= 70:
+            band, label = "good", "Excellent"
+        elif score >= 35:
+            band, label = "warn", "Good"
+        else:
+            band, label = "danger", "Needs training"
+        if not enabled:
+            label = "Disabled"
+        topics_out.append({
+            "key":            t["key"],
+            "name":           t["name"],
+            "icon":           t["icon"],
+            "desc":           t["desc"],
+            "qa_section":     t["qa_section"],
+            "score":          score,
+            "band":           band,
+            "label":          label,
+            "enabled":        enabled,
+            "snippet_total":  snip_total,
+            "snippet_active": snip_active,
+        })
+
+    return Response({
+        "success":    True,
+        "topics":     topics_out,
+        "overall":    calculate_overall_score(store, profile),
+        "qa_progress": qa_progress(profile),
+    })
+
+
+@csrf_exempt
+@api_view(["POST"])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def ai_v2_topic_toggle_api(request, key):
+    """Enable / disable one topic. Body: { enabled: bool }."""
+    from .ai_training_v2 import TOPIC_BY_KEY, set_topic_enabled, calculate_topic_score, get_topic_enabled
+    if key not in TOPIC_BY_KEY:
+        return Response({"success": False, "message": "Unknown topic."}, status=404)
+    store, profile = _v2_require_profile(request)
+    if not store:
+        return Response({"success": False, "message": "No active store."}, status=400)
+    enabled = request.data.get("enabled")
+    if enabled is None:
+        # Flip if not provided
+        enabled = not get_topic_enabled(profile, key)
+    set_topic_enabled(profile, key, bool(enabled))
+    return Response({
+        "success": True,
+        "key":     key,
+        "enabled": bool(enabled),
+        "score":   calculate_topic_score(store, key, profile),
+    })
+
+
+@csrf_exempt
+@api_view(["GET", "POST", "PUT", "DELETE"])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def ai_v2_snippets_api(request):
+    """List, create, update, delete snippets for the v2 module.
+
+    GET    ?topic=<key>     → list snippets (optional topic filter)
+    POST   { topic, title, text, is_enabled? } → create
+    PUT    { id, title?, text?, topic?, is_enabled? } → update
+    DELETE ?id=<id>         → delete
+    """
+    from .models import KnowledgeSnippet
+    from .ai_training_v2 import TOPIC_BY_KEY
+
+    store, profile = _v2_require_profile(request)
+    if not store:
+        return Response({"success": False, "message": "No active store."}, status=400)
+
+    if request.method == "GET":
+        topic = request.GET.get("topic")
+        qs = KnowledgeSnippet.objects.filter(store=store).order_by("-updated_at")
+        if topic:
+            qs = qs.filter(category=topic)
+        items = [{
+            "id":         s.id,
+            "topic":      s.category,
+            "title":      s.title,
+            "text":       s.text,
+            "is_enabled": s.is_enabled,
+            "from_wizard": s.from_wizard,
+            "updated_at": s.updated_at.isoformat(),
+        } for s in qs]
+        return Response({"success": True, "snippets": items, "count": len(items)})
+
+    if request.method == "POST":
+        topic = (request.data.get("topic") or "").strip()
+        title = (request.data.get("title") or "").strip()
+        text  = (request.data.get("text")  or "").strip()
+        if not title or not text:
+            return Response({"success": False, "message": "Title and text required."}, status=400)
+        if topic and topic not in TOPIC_BY_KEY and topic not in dict(KnowledgeSnippet.CATEGORY_CHOICES):
+            return Response({"success": False, "message": f"Unknown topic: {topic}"}, status=400)
+        s = KnowledgeSnippet.objects.create(
+            store=store,
+            category=topic or "FAQ",
+            title=title[:255],
+            text=text,
+            is_enabled=bool(request.data.get("is_enabled", True)),
+        )
+        return Response({"success": True, "id": s.id, "message": "Snippet saved."})
+
+    if request.method == "PUT":
+        sid = request.data.get("id")
+        if not sid:
+            return Response({"success": False, "message": "id required."}, status=400)
+        try:
+            s = KnowledgeSnippet.objects.get(id=sid, store=store)
+        except KnowledgeSnippet.DoesNotExist:
+            return Response({"success": False, "message": "Not found."}, status=404)
+        for field in ("title", "text"):
+            if field in request.data:
+                setattr(s, field, request.data.get(field) or "")
+        if "topic" in request.data:
+            s.category = request.data.get("topic") or s.category
+        if "is_enabled" in request.data:
+            s.is_enabled = bool(request.data.get("is_enabled"))
+        s.save()
+        return Response({"success": True, "id": s.id})
+
+    if request.method == "DELETE":
+        sid = request.GET.get("id") or request.data.get("id")
+        if not sid:
+            return Response({"success": False, "message": "id required."}, status=400)
+        deleted, _ = KnowledgeSnippet.objects.filter(id=sid, store=store).delete()
+        return Response({"success": True, "deleted": deleted})
+
+    return Response({"success": False, "message": "Method not allowed."}, status=405)
+
+
+@csrf_exempt
+@api_view(["POST"])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def ai_v2_test_api(request):
+    """Test the AI with a sample customer question.
+    Body: { question: str, topic?: str }
+    Returns: { reply, snippets_used, topic_guess, confidence }
+    """
+    from .ai_training_v2 import (
+        ADVANCED_TOPICS, TOPIC_BY_KEY, QA_BY_ID, QA_SECTIONS,
+        get_topic_enabled, calculate_topic_score, calculate_overall_score,
+    )
+    from .models import KnowledgeSnippet
+    from .services import (
+        extract_customer_refs, resolve_customer_context,
+        build_context_block_for_prompt, serialize_order_for_ai,
+    )
+
+    question = (request.data.get("question") or "").strip()
+    hint_topic = (request.data.get("topic") or "").strip()
+    sender_email = (request.data.get("sender_email") or "").strip()
+    if not question:
+        return Response({"success": False, "message": "question required."}, status=400)
+
+    store, profile = _v2_require_profile(request)
+    if not store:
+        return Response({"success": False, "message": "No active store."}, status=400)
+
+    # ── Look up customer-specific context (orders) by scanning the question ──
+    detected_refs = []
+    matched_orders = []
+    order_context_block = ""
+    try:
+        detected_refs = extract_customer_refs(f"{sender_email} {question}")
+        if detected_refs or sender_email:
+            resolved = resolve_customer_context(detected_refs, sender_email=sender_email, store=store)
+            orders = resolved.get("orders") or []
+            provided_emails = resolved.get("provided_emails") or []
+            matched_orders = [serialize_order_for_ai(o) for o in orders]
+            order_context_block = build_context_block_for_prompt(orders, provided_emails=provided_emails)
+    except Exception:
+        # Order lookup is best-effort — never let it block the AI reply
+        pass
+
+    # ── Build system prompt — pull every relevant Q&A + matching snippets ──
+    answers = profile.wizard_answers or {}
+    def _ans(qid):
+        return (answers.get(str(qid)) or answers.get(qid) or "").strip()
+
+    def _section_lines(section_id):
+        sec = next((s for s in QA_SECTIONS if s["id"] == section_id), None)
+        if not sec:
+            return []
+        out = []
+        for q in sec["questions"]:
+            a = _ans(q["id"])
+            if a:
+                out.append(f"- {q['title']}  →  {a}")
+        return out
+
+    # 1. Brand voice (always injected — controls tone of every reply)
+    brand_lines = _section_lines("brand_voice")
+
+    # 2. Business basics (always injected — gives AI grounding on store)
+    basics_lines = _section_lines("business_basics")
+
+    # 3. Topic-specific Q&A — pull the section that matches the detected topic
+    detected_topic = hint_topic or _guess_topic(question)
+    topic_section_id = TOPIC_BY_KEY.get(detected_topic, {}).get("qa_section")
+    topic_qa_lines = _section_lines(topic_section_id) if topic_section_id else []
+
+    # 4. Always include shipping + payment + returns (the "policy spine" of any reply)
+    spine_section_ids = {"shipping", "returns_refunds", "payment_pricing"}
+    if topic_section_id:
+        spine_section_ids.discard(topic_section_id)  # don't duplicate
+    spine_lines_by_section = []
+    for sid in ("shipping", "returns_refunds", "payment_pricing"):
+        if sid in spine_section_ids:
+            sec_lines = _section_lines(sid)
+            if sec_lines:
+                sec_name = next((s["name"] for s in QA_SECTIONS if s["id"] == sid), sid)
+                spine_lines_by_section.append((sec_name, sec_lines))
+
+    # 5. Snippets — pull active ones from the detected topic + Brand
+    snippets_qs = KnowledgeSnippet.objects.filter(store=store, is_enabled=True)
+    used = []
+    if detected_topic and detected_topic in TOPIC_BY_KEY:
+        if get_topic_enabled(profile, detected_topic):
+            for s in snippets_qs.filter(category=detected_topic).order_by("-updated_at")[:6]:
+                used.append(s)
+    if get_topic_enabled(profile, "Brand"):
+        for s in snippets_qs.filter(category="Brand").order_by("-updated_at")[:2]:
+            if s not in used:
+                used.append(s)
+
+    # ── Assemble system prompt ────────────────────────────────────────────
+    store_name = store.name or "the store"
+    sys = [
+        f"You are the customer-support agent for {store_name}, an online store.",
+        "Reply to the customer message using ONLY the brand voice and policies below.",
+        "If something isn't covered, politely say you'll check with the team — never invent.",
+        "Keep replies concise, warm, and on-brand. Address the customer by name if you can infer it.",
+    ]
+    if brand_lines:
+        sys.append("\n━━━ BRAND VOICE (match exactly) ━━━")
+        sys.extend(brand_lines)
+    if basics_lines:
+        sys.append("\n━━━ ABOUT THE STORE ━━━")
+        sys.extend(basics_lines)
+    if topic_qa_lines:
+        topic_section_name = next((s["name"] for s in QA_SECTIONS if s["id"] == topic_section_id), "Policies")
+        sys.append(f"\n━━━ RELEVANT POLICY · {topic_section_name.upper()} ━━━")
+        sys.extend(topic_qa_lines)
+    for sec_name, lines in spine_lines_by_section:
+        sys.append(f"\n━━━ {sec_name.upper()} ━━━")
+        sys.extend(lines)
+    if used:
+        sys.append("\n━━━ KNOWLEDGE SNIPPETS (apply when relevant) ━━━")
+        for s in used:
+            sys.append(f"[{s.category} · {s.title}]\n{s.text}")
+    # ── Inject customer's actual order data if we found a match ──
+    if order_context_block:
+        sys.append("\n" + order_context_block)
+        sys.append("\nIMPORTANT: When replying about this customer's order, cite the specific order ID, status, "
+                   "tracking number, and dates from the data block above. Do NOT invent details.")
+    sys.append("\nFinal rule: answer the customer's question directly using the policies above. Match the brand voice tone and sign-off exactly.")
+
+    system_prompt = "\n".join(sys)
+    reply = _v2_call_llm(system_prompt, question)
+    if reply is None:
+        return Response({"success": False, "message": "AI call failed — no provider available (set GROQ_API_KEY or ANTHROPIC_API_KEY)."}, status=500)
+
+    # Build a list of QA "sources" the AI was given (for the chips UI)
+    qa_sources = []
+    if brand_lines:    qa_sources.append({"name": "Brand voice",       "count": len(brand_lines)})
+    if basics_lines:   qa_sources.append({"name": "Business basics",   "count": len(basics_lines)})
+    if topic_qa_lines: qa_sources.append({"name": TOPIC_BY_KEY.get(detected_topic, {}).get("name", detected_topic),
+                                          "count": len(topic_qa_lines)})
+    for sec_name, lines in spine_lines_by_section:
+        qa_sources.append({"name": sec_name, "count": len(lines)})
+
+    return Response({
+        "success":      True,
+        "reply":        reply,
+        "topic_guess":  detected_topic or "Brand",
+        "snippets_used": [{
+            "id": s.id, "topic": s.category, "title": s.title,
+        } for s in used],
+        "qa_sources":     qa_sources,
+        "detected_refs":  detected_refs,
+        "matched_orders": matched_orders,
+        "overall_score":  calculate_overall_score(store, profile),
+    })
+
+
+_TOPIC_KEYWORDS = [
+    ("Disputes",       ["dispute", "paypal", "chargeback", "fraud", "scam", "complaint"]),
+    ("Address",        ["address", "wrong address", "change address", "shipping address", "zip", "postal"]),
+    ("Cancellations",  ["cancel", "cancellation", "abort", "stop my order"]),
+    ("Refund",         ["refund", "return", "money back", "send back", "exchange"]),
+    ("OutOfStock",     ["out of stock", "sold out", "back in stock", "restock", "availability"]),
+    ("ShippingDelays", ["where is my order", "delayed", "haven't received", "shipping update", "tracking", "late"]),
+    ("ProductDefects", ["broken", "damaged", "defective", "leaking", "not working", "faulty"]),
+    ("WrongItem",      ["wrong item", "wrong product", "different item", "received wrong"]),
+    ("PaymentIssues",  ["payment", "declined", "card", "charge", "billed", "failed payment"]),
+]
+
+
+def _guess_topic(question):
+    q = (question or "").lower()
+    for key, words in _TOPIC_KEYWORDS:
+        if any(w in q for w in words):
+            return key
+    return "Brand"
+
+
+@csrf_exempt
+@api_view(["GET"])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def ai_v2_overall_api(request):
+    """Lightweight endpoint for the hero dashboard score."""
+    from .ai_training_v2 import calculate_overall_score, qa_progress, ADVANCED_TOPICS, get_topic_enabled
+    from .models import KnowledgeSnippet
+
+    store, profile = _v2_require_profile(request)
+    if not store:
+        return Response({"success": False, "message": "No active store."}, status=400)
+
+    overall = calculate_overall_score(store, profile)
+    enabled_count = sum(1 for t in ADVANCED_TOPICS if get_topic_enabled(profile, t["key"]))
+    snip_count = KnowledgeSnippet.objects.filter(store=store, is_enabled=True).count()
+
+    return Response({
+        "success":         True,
+        "overall_score":   overall,
+        "topics_enabled":  enabled_count,
+        "topics_total":    len(ADVANCED_TOPICS),
+        "snippets_active": snip_count,
+        "qa_progress":     qa_progress(profile),
+        "updated_at":      profile.updated_at.isoformat() if profile.updated_at else None,
+    })
 
 
 @csrf_exempt
