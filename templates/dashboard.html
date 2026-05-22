@@ -9904,6 +9904,10 @@ function aitSwitchTab(name){
   const pane = document.querySelector(`#aiTrainingSection .ait-pane[data-aitpane="${name}"]`);
   if(tab)  tab.classList.add('active');
   if(pane) pane.classList.add('active');
+  /* When KB tab opens, make sure Default Request Snippets are rendered + fresh. */
+  if(name === 'kb' && typeof catTrainLoad === 'function'){
+    try { catTrainLoad(); } catch(_){}
+  }
 }
 
 /* ----- Mode card selection ----- */
@@ -10066,28 +10070,52 @@ async function aitLoadFromServer(){
    🎯 DEFAULT REQUEST SNIPPETS — 6 high-stakes category cards + Q&A modal
    ════════════════════════════════════════════════════════════════════ */
 const CAT_TRAIN_MIN_MATURITY = 60;
-window._catTrainState = window._catTrainState || {};
+/* Client-side defaults so cards ALWAYS render even before / without the API.
+   Server response (if successful) merges over these to fill in maturity. */
+const CAT_TRAIN_DEFAULTS = [
+  { slug:'refund',          label:'Refund',            icon:'💸', color:'#f59e0b',
+    description:'Refund requests — windows, methods, partial refunds, fees.' },
+  { slug:'cancel',          label:'Cancel',            icon:'❌', color:'#ef4444',
+    description:'Order cancellation — cutoff windows, partial cancels, refund timing.' },
+  { slug:'address_change',  label:'Address Change',    icon:'📍', color:'#06b6d4',
+    description:'Shipping address updates — cutoff timing, verification, intercept fees.' },
+  { slug:'missing_damaged', label:'Missing / Damaged', icon:'📦', color:'#8b5cf6',
+    description:'Lost-in-transit, damaged, wrong item — proof, claims, reship vs refund.' },
+  { slug:'return',          label:'Return',            icon:'↩️', color:'#10b981',
+    description:'Return policy — windows, return shipping, restocking fees, exchanges.' },
+  { slug:'dispute',         label:'Dispute',           icon:'🛡️', color:'#dc2626',
+    description:'Chargebacks, PayPal disputes, formal complaints — evidence, response, escalation.' },
+];
+window._catTrainState = window._catTrainState || { list: CAT_TRAIN_DEFAULTS.map(c => ({...c, maturity_score:0, completed_count:0, total_count:0, auto_reply_enabled:false})) };
 window._catTrainCurrent = null;
 window._catTrainSaveTimer = null;
 
 async function catTrainLoad(){
+  /* Render defaults immediately so cards appear even before the API replies. */
+  if(!(window._catTrainState.list || []).length){
+    window._catTrainState.list = CAT_TRAIN_DEFAULTS.map(c => ({...c, maturity_score:0, completed_count:0, total_count:0, auto_reply_enabled:false}));
+  }
+  catTrainRender();
+
   try {
     const resp = await fetch('/emails/api/ai-training/categories/').then(r => r.json());
-    if(resp?.success && Array.isArray(resp.categories)){
-      window._catTrainState.list = resp.categories;
+    if(resp?.success && Array.isArray(resp.categories) && resp.categories.length){
+      /* Merge server state on top of defaults (keeps cards intact if server is missing a slug). */
+      const byslug = Object.fromEntries(resp.categories.map(c => [c.slug, c]));
+      window._catTrainState.list = CAT_TRAIN_DEFAULTS.map(d => ({...d, ...(byslug[d.slug]||{})}));
       catTrainRender();
     }
-  } catch(e){ console.warn('catTrainLoad failed', e); }
+  } catch(e){
+    console.warn('catTrainLoad failed (cards remain on defaults)', e);
+  }
 }
 
 function catTrainRender(){
   const grid = document.getElementById('catsnipGrid');
   if(!grid) return;
-  const cats = window._catTrainState.list || [];
-  if(!cats.length){
-    grid.innerHTML = '<div style="grid-column:1/-1;padding:18px;text-align:center;color:var(--vf-muted);font-size:12.5px">Connect a store to enable Default Request Snippets.</div>';
-    return;
-  }
+  const cats = (window._catTrainState.list && window._catTrainState.list.length)
+    ? window._catTrainState.list
+    : CAT_TRAIN_DEFAULTS.map(c => ({...c, maturity_score:0, completed_count:0, total_count:0, auto_reply_enabled:false}));
   grid.innerHTML = cats.map(c => {
     const pct = c.maturity_score || 0;
     const matured = pct >= CAT_TRAIN_MIN_MATURITY;
@@ -11565,6 +11593,7 @@ function aisApplyToTraining(){
 
   const list = document.getElementById('aitSnippetList');
   if(list){
+    const created = [];
     Object.keys(snippetMap).forEach(fid => {
       if(!a[fid]) return;
       const m = snippetMap[fid];
@@ -11574,12 +11603,54 @@ function aisApplyToTraining(){
       node.dataset.fromWizard = '1';
       node.innerHTML = `<div class="pill ${m.cls}">${m.pill}</div><div class="ait-snippet-body"><div class="ait-snippet-title">${m.title} <span style="font-size:9.5px;color:#16a34a;font-weight:800;background:rgba(22,163,74,.12);padding:2px 7px;border-radius:99px;margin-left:6px;letter-spacing:.4px;text-transform:uppercase;">✓ From Setup</span></div><div class="ait-snippet-text">${safe}</div></div><div class="ait-snippet-actions"><button class="ait-icon-btn" title="Edit">✏️</button><button class="ait-icon-btn" title="Delete">🗑</button></div>`;
       list.insertBefore(node, list.firstChild);
+      created.push({ node, fid, title: m.title, text: a[fid], category: m.pill });
     });
     const count = list.querySelectorAll('.ait-snippet').length;
     const kbCount = document.getElementById('aitKbCount');
     const kbBadge = document.getElementById('aitKbBadge');
     if(kbCount) kbCount.textContent = count;
     if(kbBadge) kbBadge.textContent = count;
+    /* Persist each wizard-generated snippet to the server so they survive
+       a hard refresh. Fire and forget — DOM is already populated. */
+    try { aisPersistWizardSnippets(created); } catch(_) {}
+  }
+}
+
+/* POST each wizard-generated snippet to /api/ai-training/snippets/.
+   Without this step the snippets only exist in the DOM and vanish on
+   refresh (the same data lives in profile.business_name/niche/etc. which
+   ARE persisted, but the KB list itself isn't until each snippet is sent
+   to the server). */
+async function aisPersistWizardSnippets(items){
+  if(!Array.isArray(items) || !items.length) return;
+  /* Skip snippets that already exist on the server (idempotency: rerunning
+     the wizard shouldn't create duplicates). */
+  let existingTitles = new Set();
+  try {
+    const r = await fetch('/emails/api/ai-training/snippets/').then(r => r.json());
+    if(r?.success && Array.isArray(r.snippets)){
+      existingTitles = new Set(r.snippets.map(s => (s.title || '').toLowerCase().trim()));
+    }
+  } catch(_){}
+  for(const it of items){
+    const key = String(it.title || '').toLowerCase().trim();
+    if(existingTitles.has(key)) continue;
+    try {
+      const resp = await fetch('/emails/api/ai-training/snippets/', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json','X-CSRFToken': aitGetCSRF()},
+        body: JSON.stringify({
+          title: it.title,
+          text:  String(it.text || ''),
+          category: it.category,
+          from_wizard: true,
+          order_idx: 0,
+        })
+      }).then(r => r.json());
+      if(resp?.success && resp.snippet?.id && it.node){
+        it.node.dataset.snipId = String(resp.snippet.id);
+      }
+    } catch(e){ console.warn('aisPersistWizardSnippets: failed for', it.title, e); }
   }
 }
 
