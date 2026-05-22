@@ -1244,6 +1244,82 @@ def ai_training_snippet_detail_api(request, snippet_id):
     return Response({"success": True, "message": "Updated."})
 
 
+# ════════════════════════════════════════════════════════════════════════════
+# 🎯 DEFAULT REQUEST SNIPPETS — per-category Q&A wizards + auto-reply toggle
+# ════════════════════════════════════════════════════════════════════════════
+
+@csrf_exempt
+@api_view(["GET"])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def category_training_list_api(request):
+    """List all 6 default request categories with the current store's state.
+
+    Returns: {success, categories: [{slug,label,icon,description,
+              auto_reply_enabled, maturity_score, completed_count, total_count}]}
+    """
+    from .models import AiTrainingProfile
+    from .category_training import list_all_states
+
+    store = _ai_get_user_store(request, request.GET.get("store_id"))
+    if not store:
+        return Response({"success": False, "message": "No active store found."}, status=400)
+    profile, _ = AiTrainingProfile.objects.get_or_create(store=store)
+    return Response({"success": True, "categories": list_all_states(profile)})
+
+
+@csrf_exempt
+@api_view(["GET", "PUT"])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def category_training_detail_api(request, slug):
+    """GET the question schema + saved answers for one category.
+
+    PUT body: {answers?: {...}, auto_reply_enabled?: bool}
+    """
+    from .models import AiTrainingProfile
+    from .category_training import (
+        CATEGORY_META, CATEGORY_QUESTIONS,
+        get_category_state, save_category_state,
+    )
+
+    if slug not in CATEGORY_META:
+        return Response({"success": False, "message": "Unknown category."}, status=404)
+
+    store = _ai_get_user_store(
+        request,
+        (request.GET.get("store_id") if request.method == "GET" else
+         (request.data.get("store_id") if hasattr(request, "data") else None))
+    )
+    if not store:
+        return Response({"success": False, "message": "No active store found."}, status=400)
+    profile, _ = AiTrainingProfile.objects.get_or_create(store=store)
+
+    if request.method == "GET":
+        state = get_category_state(profile, slug)
+        return Response({
+            "success": True,
+            "meta": {
+                "slug":        slug,
+                "label":       CATEGORY_META[slug]["label"],
+                "icon":        CATEGORY_META[slug]["icon"],
+                "color":       CATEGORY_META[slug]["color"],
+                "description": CATEGORY_META[slug]["description"],
+            },
+            "questions": CATEGORY_QUESTIONS[slug],
+            "state":     state,
+        })
+
+    # PUT
+    data = request.data or {}
+    answers = data.get("answers") if isinstance(data.get("answers"), dict) else None
+    toggle = data.get("auto_reply_enabled")
+    if toggle is not None:
+        toggle = bool(toggle)
+    state = save_category_state(profile, slug, answers=answers, auto_reply_enabled=toggle)
+    return Response({"success": True, "state": state})
+
+
 @csrf_exempt
 @api_view(["POST"])
 @authentication_classes([])

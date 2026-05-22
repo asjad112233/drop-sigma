@@ -7469,6 +7469,79 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
         .ait-grid,.ait-play,.ait-example{grid-template-columns:1fr}
         .ait-modes{grid-template-columns:1fr}
       }
+
+      /* ───── Default Request Snippets (Refund/Cancel/Address/Missing/Return/Dispute) ───── */
+      .catsnip-wrap{margin-bottom:22px}
+      .catsnip-header{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:14px;flex-wrap:wrap}
+      .catsnip-header h4{margin:0;font-size:14px;font-weight:800;color:var(--vf-text);display:flex;align-items:center;gap:9px}
+      .catsnip-header h4::before{content:"⚡";font-size:18px}
+      .catsnip-header .catsnip-sub{font-size:12px;color:var(--vf-muted);max-width:520px;line-height:1.55;margin-top:4px;font-weight:500}
+      .catsnip-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+      .catsnip-card{background:var(--vf-surface,#fff);border:1px solid var(--vf-line,#e5eaf2);border-radius:14px;padding:14px 16px 12px;cursor:pointer;transition:.18s;position:relative;overflow:hidden}
+      .catsnip-card:hover{border-color:rgba(139,92,246,.55);transform:translateY(-2px);box-shadow:0 14px 28px rgba(15,23,42,.08)}
+      .catsnip-card::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--catColor,#8b5cf6);opacity:.85}
+      .catsnip-row{display:flex;align-items:center;gap:11px;margin-bottom:10px}
+      .catsnip-icon{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:19px;background:color-mix(in srgb,var(--catColor,#8b5cf6) 14%, transparent);border:1px solid color-mix(in srgb,var(--catColor,#8b5cf6) 30%, transparent);flex-shrink:0}
+      .catsnip-titlewrap{flex:1;min-width:0}
+      .catsnip-title{font-size:13.5px;font-weight:800;color:var(--vf-text);letter-spacing:-.1px;line-height:1.2}
+      .catsnip-desc{font-size:11px;color:var(--vf-muted);margin-top:3px;line-height:1.4;font-weight:500}
+      .catsnip-meta{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:6px}
+      .catsnip-maturity{flex:1;min-width:0}
+      .catsnip-maturity-label{font-size:9.5px;text-transform:uppercase;letter-spacing:.8px;color:var(--vf-muted);font-weight:800;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center}
+      .catsnip-maturity-label .pct{color:var(--vf-text);font-size:11px}
+      .catsnip-bar{width:100%;height:6px;background:var(--vf-surface-2,#f1f5f9);border-radius:99px;overflow:hidden}
+      .catsnip-bar > span{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--catColor,#8b5cf6),#06b6d4);transition:width .4s ease}
+      .catsnip-toggle{flex-shrink:0;display:flex;align-items:center;gap:8px}
+      .catsnip-toggle .lbl{font-size:10px;text-transform:uppercase;letter-spacing:.7px;font-weight:800;color:var(--vf-muted)}
+      .catsnip-switch{position:relative;width:38px;height:21px;background:var(--vf-surface-2,#f3f6fb);border:1px solid var(--vf-line,#e5eaf2);border-radius:99px;cursor:pointer;transition:.2s;flex-shrink:0}
+      .catsnip-switch::after{content:"";position:absolute;top:2px;left:2px;width:15px;height:15px;background:#fff;border-radius:50%;transition:.2s;box-shadow:0 2px 4px rgba(15,23,42,.18)}
+      .catsnip-switch.on{background:linear-gradient(135deg,#10b981,#059669);border-color:transparent}
+      .catsnip-switch.on::after{left:18px}
+      .catsnip-switch.disabled{opacity:.55;cursor:not-allowed}
+      .catsnip-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;font-size:11px;color:var(--vf-muted);font-weight:600}
+      .catsnip-foot .answered{display:flex;align-items:center;gap:5px}
+      .catsnip-foot .cta{color:#8b5cf6;font-weight:800;text-transform:uppercase;letter-spacing:.5px;font-size:10.5px}
+      .catsnip-tip{margin-top:14px;padding:11px 14px;background:linear-gradient(135deg,rgba(245,158,11,.07),rgba(239,68,68,.04));border:1px dashed rgba(245,158,11,.35);border-radius:11px;font-size:12px;color:var(--vf-muted);line-height:1.55;font-weight:500}
+      .catsnip-tip b{color:var(--vf-text)}
+      @media(max-width:980px){.catsnip-grid{grid-template-columns:repeat(2,1fr)}}
+      @media(max-width:640px){.catsnip-grid{grid-template-columns:1fr}}
+
+      /* ───── Category Q&A Modal ───── */
+      .catmodal-overlay{position:fixed;inset:0;background:rgba(7,11,28,.55);backdrop-filter:blur(6px);z-index:9999;display:none;align-items:center;justify-content:center;padding:28px}
+      .catmodal-overlay.open{display:flex}
+      .catmodal{background:var(--vf-surface,#fff);border-radius:18px;max-width:760px;width:100%;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 30px 80px rgba(15,23,42,.35);overflow:hidden}
+      body.vf-dark-mode .catmodal{background:#0c0f1f}
+      .catmodal-head{padding:22px 26px 16px;border-bottom:1px solid var(--vf-line,#e5eaf2);display:flex;align-items:flex-start;gap:14px}
+      .catmodal-head .icon{width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:22px;background:color-mix(in srgb,var(--catColor,#8b5cf6) 14%, transparent);border:1px solid color-mix(in srgb,var(--catColor,#8b5cf6) 30%, transparent);flex-shrink:0}
+      .catmodal-head .ti{flex:1;min-width:0}
+      .catmodal-head h3{margin:0;font-size:18px;font-weight:800;color:var(--vf-text);letter-spacing:-.3px}
+      .catmodal-head p{margin:5px 0 0;font-size:13px;color:var(--vf-muted);line-height:1.55}
+      .catmodal-head .x{background:transparent;border:0;font-size:24px;color:var(--vf-muted);cursor:pointer;padding:4px 8px;border-radius:8px;line-height:1}
+      .catmodal-head .x:hover{background:var(--vf-surface-2,#f4f6fb);color:var(--vf-text)}
+      .catmodal-progress{padding:14px 26px;background:var(--vf-surface-2,#f8fafc);border-bottom:1px solid var(--vf-line,#e5eaf2);display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+      .catmodal-progress .pct{font-size:22px;font-weight:900;color:var(--vf-text);letter-spacing:-.5px;min-width:64px}
+      .catmodal-progress .pct small{font-size:12px;font-weight:700;color:var(--vf-muted);margin-left:2px}
+      .catmodal-progress .bar{flex:1;min-width:160px;height:8px;background:var(--vf-surface,#fff);border:1px solid var(--vf-line,#e5eaf2);border-radius:99px;overflow:hidden}
+      .catmodal-progress .bar > span{display:block;height:100%;background:linear-gradient(90deg,var(--catColor,#8b5cf6),#06b6d4);transition:width .35s}
+      .catmodal-progress .lbl{font-size:11px;color:var(--vf-muted);font-weight:700;text-transform:uppercase;letter-spacing:.6px}
+      .catmodal-progress .answered{font-size:12.5px;color:var(--vf-text);font-weight:700}
+      .catmodal-body{flex:1;overflow:auto;padding:18px 26px 22px;display:flex;flex-direction:column;gap:18px}
+      .catq{padding:14px 16px;background:var(--vf-surface-2,#f8fafc);border:1px solid var(--vf-line,#e5eaf2);border-radius:13px}
+      .catq.answered{border-color:rgba(16,185,129,.4);background:linear-gradient(135deg,rgba(16,185,129,.05),rgba(6,182,212,.02))}
+      .catq-label{font-size:13px;font-weight:700;color:var(--vf-text);line-height:1.5;display:flex;gap:8px;align-items:flex-start}
+      .catq-label .num{flex-shrink:0;width:22px;height:22px;border-radius:50%;background:var(--catColor,#8b5cf6);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800}
+      .catq-help{font-size:11.5px;color:var(--vf-muted);margin-top:5px;margin-left:30px;line-height:1.5}
+      .catq-opts{margin-top:11px;display:flex;flex-direction:column;gap:7px}
+      .catq-opt{display:flex;align-items:center;gap:9px;padding:9px 12px;background:var(--vf-surface,#fff);border:1px solid var(--vf-line,#e5eaf2);border-radius:9px;cursor:pointer;font-size:12.5px;color:var(--vf-text);font-weight:500;transition:.15s}
+      .catq-opt:hover{border-color:#8b5cf6}
+      .catq-opt input{margin:0;accent-color:#8b5cf6}
+      .catq-opt.selected{background:linear-gradient(135deg,rgba(139,92,246,.09),rgba(6,182,212,.04));border-color:rgba(139,92,246,.5);font-weight:700}
+      .catq input[type="text"],.catq input[type="number"],.catq textarea{width:100%;margin-top:9px;padding:9px 11px;border:1px solid var(--vf-line,#e5eaf2);border-radius:9px;font-family:inherit;font-size:12.5px;background:var(--vf-surface,#fff);color:var(--vf-text);box-sizing:border-box;resize:vertical}
+      .catq input:focus,.catq textarea:focus{border-color:#8b5cf6;outline:none;box-shadow:0 0 0 3px rgba(139,92,246,.12)}
+      .catq textarea{min-height:64px;line-height:1.55}
+      .catmodal-foot{padding:14px 26px;background:var(--vf-surface,#fff);border-top:1px solid var(--vf-line,#e5eaf2);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+      .catmodal-foot .status{font-size:12px;color:var(--vf-muted);font-weight:600;display:flex;align-items:center;gap:7px}
+      .catmodal-foot .status .dot{width:7px;height:7px;border-radius:50%;background:#16a34a;box-shadow:0 0 7px #16a34a}
     </style>
 
     <section id="aiTrainingSection" class="section">
@@ -7663,6 +7736,21 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
 
       <!-- ===== TAB: KNOWLEDGE BASE ===== -->
       <div class="ait-pane" data-aitpane="kb">
+
+        <!-- Default Request Snippets — high-stakes categories pinned at top -->
+        <div class="ait-card catsnip-wrap">
+          <div class="catsnip-header">
+            <div>
+              <h4>Default Request Snippets</h4>
+              <div class="catsnip-sub">Six high-stakes request types. Train each one's policy via the Q&amp;A wizard, then flip <b>Auto-Reply ON</b> when you're confident — AI will handle those emails autonomously instead of escalating to draft.</div>
+            </div>
+          </div>
+          <div class="catsnip-grid" id="catsnipGrid">
+            <!-- 6 cards injected by catTrainRender() -->
+          </div>
+          <div class="catsnip-tip">💡 <b>How it works:</b> Click a card to open its Q&amp;A wizard. The more questions you answer, the higher the AI Maturity score. At <b>60%+ maturity</b> AND with the Auto-Reply toggle <b>ON</b>, this category will auto-send replies — otherwise it stays in Draft mode for human review.</div>
+        </div>
+
         <div class="ait-card">
           <div class="ait-card-head">
             <div>
@@ -7774,6 +7862,37 @@ Hi, I ordered the Korean glow serum 4 days ago, order #4521. Just received it bu
       </div>
     </section>
     <!-- ══════════════════ END AI TRAINING STUDIO SECTION ══════════════════ -->
+
+
+    <!-- ══════════════════ CATEGORY Q&A MODAL ══════════════════ -->
+    <div class="catmodal-overlay" id="catModalOverlay" onclick="if(event.target===this) catTrainCloseModal()">
+      <div class="catmodal" id="catModal" role="dialog" aria-modal="true">
+        <div class="catmodal-head">
+          <div class="icon" id="catModalIcon">💸</div>
+          <div class="ti">
+            <h3 id="catModalTitle">Refund</h3>
+            <p id="catModalDesc">Loading questions…</p>
+          </div>
+          <button class="x" type="button" onclick="catTrainCloseModal()" aria-label="Close">&times;</button>
+        </div>
+        <div class="catmodal-progress">
+          <div class="pct" id="catModalPct">0<small>%</small></div>
+          <div style="flex:1;min-width:160px">
+            <div class="lbl" id="catModalProgressLbl">AI Maturity Score</div>
+            <div class="bar"><span id="catModalBar" style="width:0%"></span></div>
+          </div>
+          <div class="answered" id="catModalAnswered">0 of 0 answered</div>
+        </div>
+        <div class="catmodal-body" id="catModalBody">
+          <!-- Questions rendered by catTrainOpenModal() -->
+        </div>
+        <div class="catmodal-foot">
+          <div class="status" id="catModalStatus"><span class="dot"></span>Auto-saves as you answer</div>
+          <button class="ait-btn primary" type="button" onclick="catTrainCloseModal()">Done</button>
+        </div>
+      </div>
+    </div>
+    <!-- ══════════════════ END CATEGORY Q&A MODAL ══════════════════ -->
 
 
     <!-- ══════════════════ AI SETUP WIZARD MODAL ══════════════════ -->
@@ -9943,6 +10062,302 @@ async function aitLoadFromServer(){
   } catch(e){ console.warn('aitLoadFromServer failed', e); }
 }
 
+/* ════════════════════════════════════════════════════════════════════
+   🎯 DEFAULT REQUEST SNIPPETS — 6 high-stakes category cards + Q&A modal
+   ════════════════════════════════════════════════════════════════════ */
+const CAT_TRAIN_MIN_MATURITY = 60;
+window._catTrainState = window._catTrainState || {};
+window._catTrainCurrent = null;
+window._catTrainSaveTimer = null;
+
+async function catTrainLoad(){
+  try {
+    const resp = await fetch('/emails/api/ai-training/categories/').then(r => r.json());
+    if(resp?.success && Array.isArray(resp.categories)){
+      window._catTrainState.list = resp.categories;
+      catTrainRender();
+    }
+  } catch(e){ console.warn('catTrainLoad failed', e); }
+}
+
+function catTrainRender(){
+  const grid = document.getElementById('catsnipGrid');
+  if(!grid) return;
+  const cats = window._catTrainState.list || [];
+  if(!cats.length){
+    grid.innerHTML = '<div style="grid-column:1/-1;padding:18px;text-align:center;color:var(--vf-muted);font-size:12.5px">Connect a store to enable Default Request Snippets.</div>';
+    return;
+  }
+  grid.innerHTML = cats.map(c => {
+    const pct = c.maturity_score || 0;
+    const matured = pct >= CAT_TRAIN_MIN_MATURITY;
+    const enabled = !!c.auto_reply_enabled;
+    const sw = enabled ? 'on' : '';
+    const swDisabled = matured ? '' : 'disabled';
+    const swTitle = matured
+      ? (enabled ? 'Auto-Reply is ON for this category' : 'Click to enable Auto-Reply')
+      : `Maturity must reach ${CAT_TRAIN_MIN_MATURITY}% before Auto-Reply can be enabled`;
+    return `
+      <div class="catsnip-card" style="--catColor:${c.color}" onclick="catTrainOpenModal('${c.slug}')">
+        <div class="catsnip-row">
+          <div class="catsnip-icon">${c.icon}</div>
+          <div class="catsnip-titlewrap">
+            <div class="catsnip-title">${c.label}</div>
+            <div class="catsnip-desc">${escapeHtml(c.description || '')}</div>
+          </div>
+        </div>
+        <div class="catsnip-meta">
+          <div class="catsnip-maturity">
+            <div class="catsnip-maturity-label">AI Maturity<span class="pct">${pct}%</span></div>
+            <div class="catsnip-bar"><span style="width:${pct}%"></span></div>
+          </div>
+        </div>
+        <div class="catsnip-foot">
+          <div class="answered">📝 ${c.completed_count||0}/${c.total_count||0} answered</div>
+          <div class="catsnip-toggle" onclick="event.stopPropagation();catTrainToggleAuto('${c.slug}', this)">
+            <span class="lbl">Auto-Reply</span>
+            <div class="catsnip-switch ${sw} ${swDisabled}" title="${swTitle}"></div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function catTrainToggleAuto(slug, wrap){
+  const cat = (window._catTrainState.list || []).find(c => c.slug === slug);
+  if(!cat) return;
+  const sw = wrap.querySelector('.catsnip-switch');
+  const matured = (cat.maturity_score || 0) >= CAT_TRAIN_MIN_MATURITY;
+  // If trying to turn ON but not matured yet, refuse and explain
+  const newVal = !cat.auto_reply_enabled;
+  if(newVal && !matured){
+    if(typeof showToast === 'function'){
+      showToast(`Reach ${CAT_TRAIN_MIN_MATURITY}% maturity for ${cat.label} before enabling Auto-Reply.`, 'warn');
+    } else {
+      alert(`Reach ${CAT_TRAIN_MIN_MATURITY}% maturity for ${cat.label} before enabling Auto-Reply.`);
+    }
+    return;
+  }
+  sw.classList.toggle('on', newVal);
+  cat.auto_reply_enabled = newVal;
+  try {
+    const r = await fetch(`/emails/api/ai-training/categories/${encodeURIComponent(slug)}/`, {
+      method:'PUT',
+      headers:{'Content-Type':'application/json','X-CSRFToken':aitGetCSRF()},
+      body: JSON.stringify({ auto_reply_enabled: newVal }),
+    }).then(r => r.json());
+    if(!r?.success){
+      sw.classList.toggle('on', !newVal);
+      cat.auto_reply_enabled = !newVal;
+    }
+  } catch(e){
+    sw.classList.toggle('on', !newVal);
+    cat.auto_reply_enabled = !newVal;
+  }
+}
+
+async function catTrainOpenModal(slug){
+  const overlay = document.getElementById('catModalOverlay');
+  const body = document.getElementById('catModalBody');
+  if(!overlay || !body) return;
+  body.innerHTML = '<div style="padding:32px;text-align:center;color:var(--vf-muted);font-size:13px">Loading…</div>';
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  try {
+    const resp = await fetch(`/emails/api/ai-training/categories/${encodeURIComponent(slug)}/`).then(r => r.json());
+    if(!resp?.success){
+      body.innerHTML = '<div style="padding:28px;text-align:center;color:#dc2626;font-size:13px">Failed to load this category. Please retry.</div>';
+      return;
+    }
+    window._catTrainCurrent = {
+      slug,
+      meta: resp.meta,
+      questions: resp.questions || [],
+      answers: { ...(resp.state?.answers || {}) },
+      state: resp.state || {},
+    };
+    /* Head meta */
+    const m = resp.meta || {};
+    const head = document.querySelector('#catModal .catmodal-head');
+    if(head) head.style.setProperty('--catColor', m.color || '#8b5cf6');
+    const progressBar = document.querySelector('#catModal .catmodal-progress .bar > span');
+    if(progressBar) progressBar.style.background = `linear-gradient(90deg, ${m.color||'#8b5cf6'}, #06b6d4)`;
+    document.getElementById('catModalIcon').textContent = m.icon || '⚙️';
+    document.getElementById('catModalTitle').textContent = m.label || slug;
+    document.getElementById('catModalDesc').textContent = m.description || '';
+    catTrainRenderQuestions();
+  } catch(e){
+    body.innerHTML = `<div style="padding:28px;text-align:center;color:#dc2626;font-size:13px">Error: ${escapeHtml(String(e))}</div>`;
+  }
+}
+
+function catTrainCloseModal(){
+  const overlay = document.getElementById('catModalOverlay');
+  if(overlay) overlay.classList.remove('open');
+  document.body.style.overflow = '';
+  window._catTrainCurrent = null;
+  /* Refresh the cards in the background so the maturity badge stays current. */
+  catTrainLoad();
+}
+
+function _catQAnswered(q, value){
+  if(value === undefined || value === null || value === '') return false;
+  if(q.type === 'multi') return Array.isArray(value) && value.length > 0;
+  if(q.type === 'text')  return String(value).trim().length >= 10;
+  if(q.type === 'number'){ const n = parseFloat(value); return !isNaN(n) && n >= 0; }
+  return String(value).trim().length > 0;
+}
+
+function catTrainComputeMaturity(){
+  const cur = window._catTrainCurrent;
+  if(!cur) return { score: 0, completed: 0, total: 0 };
+  let totalW = 0, earned = 0, done = 0;
+  cur.questions.forEach(q => {
+    const w = (typeof q.weight === 'number') ? q.weight : 1;
+    totalW += w;
+    if(_catQAnswered(q, cur.answers[q.id])){
+      earned += w; done++;
+    }
+  });
+  const score = totalW ? Math.round((earned / totalW) * 100) : 0;
+  return { score: Math.max(0, Math.min(100, score)), completed: done, total: cur.questions.length };
+}
+
+function catTrainRenderQuestions(){
+  const cur = window._catTrainCurrent;
+  const body = document.getElementById('catModalBody');
+  if(!cur || !body) return;
+  body.innerHTML = cur.questions.map((q, idx) => {
+    const val = cur.answers[q.id];
+    const answered = _catQAnswered(q, val);
+    let inner = '';
+    if(q.type === 'single'){
+      inner = '<div class="catq-opts">' + (q.options||[]).map(o => `
+        <label class="catq-opt ${val===o.value?'selected':''}">
+          <input type="radio" name="catq_${q.id}" value="${escapeHtml(o.value)}" ${val===o.value?'checked':''} onchange="catTrainOnAnswer('${q.id}', this.value)" />
+          <span>${escapeHtml(o.label)}</span>
+        </label>`).join('') + '</div>';
+    } else if(q.type === 'multi'){
+      const arr = Array.isArray(val) ? val : [];
+      inner = '<div class="catq-opts">' + (q.options||[]).map(o => `
+        <label class="catq-opt ${arr.includes(o.value)?'selected':''}">
+          <input type="checkbox" value="${escapeHtml(o.value)}" ${arr.includes(o.value)?'checked':''} onchange="catTrainOnMultiAnswer('${q.id}', this.value, this.checked)" />
+          <span>${escapeHtml(o.label)}</span>
+        </label>`).join('') + '</div>';
+    } else if(q.type === 'number'){
+      inner = `<input type="number" min="0" step="1" value="${val!==undefined&&val!==null?escapeHtml(String(val)):''}" placeholder="${escapeHtml(q.placeholder||'')}" oninput="catTrainOnAnswer('${q.id}', this.value)" />`;
+    } else { /* text */
+      inner = `<textarea placeholder="${escapeHtml(q.placeholder||'')}" oninput="catTrainOnAnswer('${q.id}', this.value)">${val!==undefined&&val!==null?escapeHtml(String(val)):''}</textarea>`;
+    }
+    const help = q.help ? `<div class="catq-help">${escapeHtml(q.help)}</div>` : '';
+    return `
+      <div class="catq ${answered?'answered':''}" data-qid="${q.id}">
+        <div class="catq-label"><span class="num">${idx+1}</span><span>${escapeHtml(q.label)}</span></div>
+        ${help}
+        ${inner}
+      </div>`;
+  }).join('');
+  catTrainUpdateProgress();
+}
+
+function catTrainUpdateProgress(){
+  const m = catTrainComputeMaturity();
+  const pct = m.score;
+  const pctEl = document.getElementById('catModalPct');
+  if(pctEl) pctEl.innerHTML = `${pct}<small>%</small>`;
+  const bar = document.getElementById('catModalBar');
+  if(bar) bar.style.width = pct + '%';
+  const ans = document.getElementById('catModalAnswered');
+  if(ans) ans.textContent = `${m.completed} of ${m.total} answered`;
+}
+
+function catTrainOnAnswer(qid, value){
+  const cur = window._catTrainCurrent;
+  if(!cur) return;
+  cur.answers[qid] = value;
+  const card = document.querySelector(`#catModalBody .catq[data-qid="${qid}"]`);
+  if(card){
+    const q = cur.questions.find(x => x.id === qid);
+    card.classList.toggle('answered', _catQAnswered(q, value));
+  }
+  /* Update visual selection for radio groups */
+  if(card){
+    card.querySelectorAll('.catq-opt').forEach(o => {
+      const inp = o.querySelector('input[type="radio"]');
+      if(inp) o.classList.toggle('selected', inp.checked);
+    });
+  }
+  catTrainUpdateProgress();
+  catTrainScheduleSave();
+}
+
+function catTrainOnMultiAnswer(qid, value, checked){
+  const cur = window._catTrainCurrent;
+  if(!cur) return;
+  const arr = Array.isArray(cur.answers[qid]) ? [...cur.answers[qid]] : [];
+  const i = arr.indexOf(value);
+  if(checked && i < 0) arr.push(value);
+  if(!checked && i >= 0) arr.splice(i, 1);
+  cur.answers[qid] = arr;
+  const card = document.querySelector(`#catModalBody .catq[data-qid="${qid}"]`);
+  if(card){
+    const q = cur.questions.find(x => x.id === qid);
+    card.classList.toggle('answered', _catQAnswered(q, arr));
+    card.querySelectorAll('.catq-opt').forEach(o => {
+      const inp = o.querySelector('input[type="checkbox"]');
+      if(inp) o.classList.toggle('selected', inp.checked);
+    });
+  }
+  catTrainUpdateProgress();
+  catTrainScheduleSave();
+}
+
+function catTrainScheduleSave(){
+  clearTimeout(window._catTrainSaveTimer);
+  const status = document.getElementById('catModalStatus');
+  if(status) status.innerHTML = '<span class="dot" style="background:#f59e0b;box-shadow:0 0 7px #f59e0b"></span>Saving…';
+  window._catTrainSaveTimer = setTimeout(catTrainPersistAnswers, 700);
+}
+
+async function catTrainPersistAnswers(){
+  const cur = window._catTrainCurrent;
+  if(!cur) return;
+  try {
+    const r = await fetch(`/emails/api/ai-training/categories/${encodeURIComponent(cur.slug)}/`, {
+      method:'PUT',
+      headers:{'Content-Type':'application/json','X-CSRFToken':aitGetCSRF()},
+      body: JSON.stringify({ answers: cur.answers }),
+    }).then(r => r.json());
+    if(r?.success && r.state){
+      cur.state = r.state;
+      const status = document.getElementById('catModalStatus');
+      if(status) status.innerHTML = '<span class="dot"></span>Saved · maturity '+r.state.maturity_score+'%';
+      /* Sync the parent list state so cards update on close */
+      const list = window._catTrainState.list || [];
+      const i = list.findIndex(c => c.slug === cur.slug);
+      if(i >= 0){
+        list[i] = { ...list[i], ...r.state };
+      }
+    } else {
+      const status = document.getElementById('catModalStatus');
+      if(status) status.innerHTML = '<span class="dot" style="background:#dc2626;box-shadow:0 0 7px #dc2626"></span>Save failed';
+    }
+  } catch(e){
+    const status = document.getElementById('catModalStatus');
+    if(status) status.innerHTML = '<span class="dot" style="background:#dc2626;box-shadow:0 0 7px #dc2626"></span>Save failed';
+  }
+}
+
+/* ESC closes modal */
+document.addEventListener('keydown', (e) => {
+  if(e.key === 'Escape'){
+    const o = document.getElementById('catModalOverlay');
+    if(o && o.classList.contains('open')) catTrainCloseModal();
+  }
+});
+
 function aitRenderServerSnippets(){
   /* Replace snippet list with server-loaded snippets if any */
   if(!window._aitServerSnippets || !window._aitServerSnippets.length) return;
@@ -10305,6 +10720,7 @@ function aitToast(msg, ms){
         aitRestoreState();
         aitWireAutoSave();
         aitUpdateKbCount();
+        if(typeof catTrainLoad === 'function') catTrainLoad();
       }
     };
   }
@@ -12677,6 +13093,7 @@ async function deleteStore(storeId, storeName){
       // (now-empty) DB rather than any in-memory state.
       try {
         if(typeof aitLoadFromServer === "function") aitLoadFromServer();
+        if(typeof catTrainLoad === "function") catTrainLoad();
       } catch(_) {}
 
       return;

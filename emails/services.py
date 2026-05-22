@@ -860,7 +860,7 @@ def _detect_customer_language(body):
 
 def build_training_system_prompt(profile, snippets, detected_context="",
                                   customer_lang_hint=None, after_hours=None,
-                                  admin_note_hint=None):
+                                  admin_note_hint=None, category_block=""):
     """
     Compose the full system prompt for Claude using the per-store
     AiTrainingProfile + KnowledgeSnippets + (optional) detected customer context.
@@ -899,6 +899,9 @@ def build_training_system_prompt(profile, snippets, detected_context="",
         system += "\n\nRELEVANT KNOWLEDGE BASE:"
         for i, s in enumerate(snippets[:8], start=1):
             system += f"\n[{i}] ({s.category}) {s.title}: {s.text}"
+
+    if category_block:
+        system += category_block
 
     if detected_context:
         system += f"\n\n{detected_context}"
@@ -1403,6 +1406,17 @@ def generate_ai_reply(email_obj, account=None):
     raw = getattr(email_obj, 'raw_data', None) or {}
     admin_note_hint = raw.get('admin_note') or None
 
+    # Category-specific trained policy (refund window, return shipping, etc.)
+    try:
+        from .category_training import build_prompt_block as _cat_block
+        category_block = _cat_block(
+            profile,
+            getattr(email_obj, 'body', '') or '',
+            getattr(email_obj, 'subject', '') or '',
+        )
+    except Exception:
+        category_block = ""
+
     # ── Path A: New training-profile flow ──────────────────────────────────
     if profile or snippets:
         system_prompt = build_training_system_prompt(
@@ -1410,6 +1424,7 @@ def generate_ai_reply(email_obj, account=None):
             customer_lang_hint=customer_lang_hint,
             after_hours=after_hours,
             admin_note_hint=admin_note_hint,
+            category_block=category_block,
         )
 
         # Compose the user-side message (subject + body), prefixed with prior thread history
@@ -1757,9 +1772,33 @@ def _gate_check(email_obj):
                 "reason": "Angry / hostile language detected",
                 "admin_note": f"⚠️ ESCALATE: customer used hostile language ({', '.join(matched_anger[:3])}). Review carefully before sending."}
 
-    # High-stakes (refund/cancel/return) → human approval
+    # High-stakes (refund/cancel/return) → human approval by default,
+    # UNLESS the tenant has explicitly turned on per-category auto-reply
+    # AND the category's training maturity score is above the threshold.
     matched_hs = [k for k in _HIGHSTAKES_KEYWORDS if k in body_l]
     if matched_hs:
+        # Try to unlock auto-send via Default Request Snippets training
+        try:
+            from .category_training import (
+                detect_category, get_category_state, MIN_MATURITY_FOR_AUTO_SEND,
+            )
+            store = getattr(email_obj, "store", None)
+            profile = _load_training_profile(store) if store else None
+            slug = detect_category(body_l) or detect_category(subject.lower())
+            if profile and slug:
+                cat_state = get_category_state(profile, slug)
+                if (cat_state.get("auto_reply_enabled")
+                        and cat_state.get("maturity_score", 0) >= MIN_MATURITY_FOR_AUTO_SEND):
+                    return {
+                        "action": "auto",
+                        "reason": f"Category '{slug}' auto-reply unlocked "
+                                  f"({cat_state['maturity_score']}% trained)",
+                        "admin_note": None,
+                    }
+        except Exception as _ct_err:
+            # Never let category-training lookup break the gate
+            print("CATEGORY-TRAINING gate lookup failed:", _ct_err)
+
         return {"action": "draft",
                 "reason": "High-stakes request (refund/cancel/return)",
                 "admin_note": f"⚠️ HIGH-STAKES: customer is asking for {matched_hs[0]}. AI drafted a cautious reply — please review."}

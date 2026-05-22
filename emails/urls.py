@@ -16,6 +16,8 @@ from .views import (
     ai_training_snippets_api,
     ai_training_snippet_detail_api,
     ai_training_example_api,
+    category_training_list_api,
+    category_training_detail_api,
     auto_suggest_reply_api,
     connect_email_account_api,
     connect_custom_email_api,
@@ -89,6 +91,8 @@ urlpatterns = [
     path("api/ai-training/snippets/", ai_training_snippets_api, name="ai_training_snippets_api"),
     path("api/ai-training/snippets/<int:snippet_id>/", ai_training_snippet_detail_api, name="ai_training_snippet_detail_api"),
     path("api/ai-training/example/", ai_training_example_api, name="ai_training_example_api"),
+    path("api/ai-training/categories/", category_training_list_api, name="category_training_list_api"),
+    path("api/ai-training/categories/<slug:slug>/", category_training_detail_api, name="category_training_detail_api"),
     path("api/suggest-reply/", auto_suggest_reply_api, name="auto_suggest_reply_api"),
 
     # =========================
