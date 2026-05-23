@@ -13149,7 +13149,7 @@ function buildProductItemHTML(item){
     .join(" | ");
   const uid = `img_${Math.random().toString(36).slice(2)}`;
   const imgHTML = imgSrc
-    ? `<img class="order-product-img" src="${escapeHtml(imgSrc)}" alt="${name}" loading="lazy" onerror="onProductImgError(this)">`
+    ? `<img class="order-product-img" src="${escapeHtml(imgSrc)}" alt="${name}" loading="lazy" onerror="onProductImgError(this)" onclick="event.stopPropagation();dsImgboxOpen('${escapeHtml(imgSrc)}','${name}')" title="Click to view full size">`
     : `<div class="order-product-img-placeholder">📦</div>`;
   return `<div class="order-product-item">${imgHTML}<div class="order-product-text"><b>${name}</b><span>Qty: ${qty}${meta ? " &nbsp;|&nbsp; " + meta : ""}</span></div></div>`;
 }
@@ -14184,7 +14184,7 @@ async function openOrderDetail(orderId){
       const imgSrc = item.image?.src || null;
       const meta = (item.meta_data||[]).filter(m=>m.display_key&&m.display_value&&!String(m.key||"").startsWith("_")).map(m=>`${escapeHtml(m.display_key)}: ${escapeHtml(String(m.display_value))}`).join(" · ");
       const thumb = imgSrc
-        ? `<img class="od-prod-thumb" src="${escapeHtml(imgSrc)}" onerror="this.style.display='none'" alt="">`
+        ? `<img class="od-prod-thumb" src="${escapeHtml(imgSrc)}" onerror="this.style.display='none'" alt="" onclick="event.stopPropagation();dsImgboxOpen('${escapeHtml(imgSrc)}','${escapeHtml(item.name||'Product')}')" title="Click to view full size">`
         : `<div class="od-prod-thumb">📦</div>`;
       return `<tr>
         <td><div class="od-prod-cell">${thumb}<div><div class="od-prod-name">${escapeHtml(item.name||"Product")}</div><div class="od-prod-sku">${meta||("Qty: "+(item.quantity||1))}</div></div></div></td>
@@ -25801,6 +25801,106 @@ document.addEventListener("keydown", e => {
     if(document.getElementById("aiPanel").classList.contains("open")) aiClose();
     else aiOpen();
   }
+});
+</script>
+
+<!-- ═══════════════ PRODUCT IMAGE LIGHTBOX (shared) ═══════════════ -->
+<style>
+  .ds-imgbox{position:fixed;inset:0;background:rgba(8,11,22,.85);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);display:none;align-items:center;justify-content:center;z-index:99999;animation:dsImgboxFade .22s ease-out;padding:24px}
+  .ds-imgbox.open{display:flex}
+  @keyframes dsImgboxFade{from{opacity:0}to{opacity:1}}
+  .ds-imgbox-wrap{position:relative;max-width:92vw;max-height:88vh;display:flex;flex-direction:column;align-items:center;gap:18px;animation:dsImgboxPop .28s cubic-bezier(.4,1.6,.5,1)}
+  @keyframes dsImgboxPop{from{transform:scale(.92);opacity:0}to{transform:scale(1);opacity:1}}
+  .ds-imgbox-img{max-width:92vw;max-height:74vh;border-radius:14px;box-shadow:0 30px 80px rgba(0,0,0,.55);display:block;background:#fff;object-fit:contain}
+  .ds-imgbox-caption{color:#fff;font-size:13px;font-weight:600;opacity:.85;text-align:center;max-width:560px;line-height:1.4;text-shadow:0 2px 6px rgba(0,0,0,.5)}
+  .ds-imgbox-toolbar{display:flex;gap:10px;align-items:center}
+  .ds-imgbox-btn{padding:11px 22px;background:linear-gradient(135deg,#6366f1,#a855f7);border:none;border-radius:11px;color:#fff;font-weight:700;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;box-shadow:0 8px 22px rgba(168,85,247,.45);transition:.18s;font-family:inherit}
+  .ds-imgbox-btn:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(168,85,247,.6)}
+  .ds-imgbox-btn.secondary{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);box-shadow:none}
+  .ds-imgbox-btn.secondary:hover{background:rgba(255,255,255,.18);box-shadow:none}
+  .ds-imgbox-close{position:absolute;top:-14px;right:-14px;width:38px;height:38px;border-radius:50%;background:#fff;border:none;cursor:pointer;color:#0f172a;font-size:15px;font-weight:700;box-shadow:0 6px 18px rgba(0,0,0,.4);transition:.18s;display:flex;align-items:center;justify-content:center}
+  .ds-imgbox-close:hover{transform:scale(1.1) rotate(90deg);background:#fee2e2;color:#dc2626}
+  .ds-imgbox-spinner{width:48px;height:48px;border:4px solid rgba(255,255,255,.15);border-top-color:#a855f7;border-radius:50%;animation:dsImgboxSpin .8s linear infinite;position:absolute;left:50%;top:35%;margin-left:-24px;display:none}
+  .ds-imgbox.loading .ds-imgbox-spinner{display:block}
+  .ds-imgbox.loading .ds-imgbox-img{opacity:.3}
+  @keyframes dsImgboxSpin{to{transform:rotate(360deg)}}
+  /* Clickable image affordance */
+  .order-product-img,.od-prod-thumb{cursor:zoom-in;transition:transform .18s,box-shadow .18s}
+  .order-product-img:hover,.od-prod-thumb:hover{transform:scale(1.05);box-shadow:0 6px 14px rgba(99,102,241,.3)}
+</style>
+
+<div class="ds-imgbox" id="dsImgbox" onclick="if(event.target===this)dsImgboxClose()">
+  <div class="ds-imgbox-wrap">
+    <div class="ds-imgbox-caption" id="dsImgboxCaption">Product image</div>
+    <div style="position:relative;">
+      <img class="ds-imgbox-img" id="dsImgboxImg" src="" alt="Product image" />
+      <div class="ds-imgbox-spinner"></div>
+      <button class="ds-imgbox-close" onclick="dsImgboxClose()" title="Close (Esc)"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="ds-imgbox-toolbar">
+      <button class="ds-imgbox-btn" onclick="dsImgboxDownload()" id="dsImgboxDlBtn"><i class="fa-solid fa-download"></i> Download</button>
+      <button class="ds-imgbox-btn secondary" onclick="dsImgboxOpenNew()"><i class="fa-solid fa-arrow-up-right-from-square"></i> Open in new tab</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* Shared product-image lightbox — opens on click, never auto-downloads */
+window.dsImgboxOpen = function(src, caption){
+  if(!src) return;
+  const box = document.getElementById('dsImgbox');
+  const img = document.getElementById('dsImgboxImg');
+  const cap = document.getElementById('dsImgboxCaption');
+  box.classList.add('open','loading');
+  img.onload = ()=> box.classList.remove('loading');
+  img.onerror = ()=> { box.classList.remove('loading'); cap.textContent = '⚠ Image could not be loaded'; };
+  img.src = src;
+  cap.textContent = caption || 'Product image';
+  // Persist on the modal for download/open-new-tab actions
+  box.dataset.src = src;
+  box.dataset.name = ((caption||'product').replace(/[^\w؀-ۿ一-鿿.\- ]/g,'').replace(/\s+/g,'_') || 'product') + '.jpg';
+  document.body.style.overflow = 'hidden';
+};
+window.dsImgboxClose = function(){
+  const box = document.getElementById('dsImgbox');
+  box.classList.remove('open','loading');
+  document.getElementById('dsImgboxImg').src = '';
+  document.body.style.overflow = '';
+};
+window.dsImgboxDownload = async function(){
+  const box = document.getElementById('dsImgbox');
+  const src = box.dataset.src;
+  const name = box.dataset.name || 'product.jpg';
+  if(!src) return;
+  const btn = document.getElementById('dsImgboxDlBtn');
+  const orig = btn.innerHTML;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Downloading…';
+  btn.disabled = true;
+  try {
+    const res = await fetch(src, {mode:'cors'});
+    if(!res.ok) throw new Error('fetch failed');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 4000);
+    btn.innerHTML = '<i class="fa-solid fa-check"></i> Saved';
+    setTimeout(()=>{ btn.innerHTML = orig; btn.disabled = false; }, 1400);
+  } catch(e){
+    // CORS-blocked CDNs (e.g. Shopify cdn.shopify.com) — fallback to new tab so user can right-click save
+    btn.innerHTML = orig; btn.disabled = false;
+    const a = document.createElement('a');
+    a.href = src; a.target = '_blank'; a.rel = 'noopener'; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+};
+window.dsImgboxOpenNew = function(){
+  const src = document.getElementById('dsImgbox').dataset.src;
+  if(src) window.open(src,'_blank','noopener');
+};
+document.addEventListener('keydown', e=>{
+  if(e.key === 'Escape' && document.getElementById('dsImgbox')?.classList.contains('open')) dsImgboxClose();
 });
 </script>
 

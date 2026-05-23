@@ -1280,7 +1280,7 @@ function renderVendorOrders(){
       prodHTML = o.line_items.slice(0,2).map(i=>{
         const metaChips = (i.meta_data||[]).slice(0,3).map(m=>`<span class="meta-chip">${esc(m.display_key)}: ${esc(m.display_value)}</span>`).join("");
         return `<div class="vp-product-chip" style="align-items:flex-start;">
-          ${i.image ? `<img src="${esc(i.image)}" onerror="this.style.display='none'" style="width:32px;height:32px;border-radius:8px;object-fit:cover;border:1px solid #e2e8f0;flex-shrink:0;" alt="">` : `<div class="ph">📦</div>`}
+          ${i.image ? `<img class="vp-zoom" src="${esc(i.image)}" onerror="this.style.display='none'" style="width:32px;height:32px;border-radius:8px;object-fit:cover;border:1px solid #e2e8f0;flex-shrink:0;" alt="" onclick="event.stopPropagation();dsImgboxOpen('${esc(i.image)}','${esc(i.name||'Product')}')" title="Click to view full size">` : `<div class="ph">📦</div>`}
           <div>
             <div style="font-size:12px;font-weight:700;">${esc(i.name)} <span style="color:#94a3b8;font-weight:600;">×${i.quantity}</span></div>
             ${metaChips ? `<div>${metaChips}</div>` : ""}
@@ -1487,7 +1487,7 @@ function openOrderDetail(orderId){
   const lineItems = order.line_items || [];
   const prodRows = lineItems.length ? lineItems.map(item => {
     const thumb = item.image
-      ? `<img class="vpd-thumb" src="${esc(item.image)}" onerror="this.style.display='none'" alt="">`
+      ? `<img class="vpd-thumb" src="${esc(item.image)}" onerror="this.style.display='none'" alt="" onclick="event.stopPropagation();dsImgboxOpen('${esc(item.image)}','${esc(item.name||'Product')}')" title="Click to view full size">`
       : `<div class="vpd-thumb-ph">📦</div>`;
     const metaChips = (item.meta_data||[]).map(m=>`<span class="meta-chip">${esc(m.display_key)}: ${esc(m.display_value)}</span>`).join("");
     const pidChip = item.product_id ? `<span class="meta-chip" style="background:#e0e7ff;color:#3730a3;">ID: ${esc(item.product_id)}</span>` : "";
@@ -1833,7 +1833,7 @@ async function loadMyPermanentProducts(){
     }
     list.innerHTML = `<div class="vp-perm-prod-grid">` + d.products.map(p=>{
       const img = p.image
-        ? `<img src="${esc(p.image)}" alt="${esc(p.product_name)}" onerror="this.style.display='none';this.nextElementSibling&&(this.nextElementSibling.style.display='flex')">`
+        ? `<img class="vp-zoom" src="${esc(p.image)}" alt="${esc(p.product_name)}" onerror="this.style.display='none';this.nextElementSibling&&(this.nextElementSibling.style.display='flex')" onclick="event.stopPropagation();dsImgboxOpen('${esc(p.image)}','${esc(p.product_name||'Product')}')" title="Click to view full size">`
         : `<div class="ph">📦</div>`;
       const date = p.assigned_at ? new Date(p.assigned_at).toLocaleDateString([], {day:"2-digit",month:"short",year:"numeric"}) : "—";
       return `<div class="vp-perm-prod">
@@ -3089,7 +3089,7 @@ function renderVpPricing(){
 
 function _renderQuotationCard(a){
   const imgHtml = a.product_image
-    ? `<img src="${esc(a.product_image)}" style="width:52px;height:52px;object-fit:cover;border-radius:12px;border:1px solid #e2e8f0;flex-shrink:0;">`
+    ? `<img class="vp-zoom" src="${esc(a.product_image)}" style="width:52px;height:52px;object-fit:cover;border-radius:12px;border:1px solid #e2e8f0;flex-shrink:0;" onclick="event.stopPropagation();dsImgboxOpen('${esc(a.product_image)}','${esc(a.product_name||'Product')}')" title="Click to view full size">`
     : `<div style="width:52px;height:52px;border-radius:12px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">📦</div>`;
 
   const totalQty = (a.lines||[]).reduce((s,l)=>s+(l.quantity_assigned||0),0);
@@ -3333,7 +3333,7 @@ function renderVpTracker(){
       </tr>`;
     }).join("");
     const trackerImgHtml = a.product_image
-      ? `<img src="${esc(a.product_image)}" style="width:52px;height:52px;object-fit:cover;border-radius:10px;border:1px solid #e2e8f0;flex-shrink:0;">`
+      ? `<img class="vp-zoom" src="${esc(a.product_image)}" style="width:52px;height:52px;object-fit:cover;border-radius:10px;border:1px solid #e2e8f0;flex-shrink:0;" onclick="event.stopPropagation();dsImgboxOpen('${esc(a.product_image)}','${esc(a.product_name||'Product')}')" title="Click to view full size">`
       : `<div style="width:52px;height:52px;border-radius:10px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">📦</div>`;
     const dr = a.days_remaining;
     const countdownHtml = a.estimated_days
@@ -3446,7 +3446,7 @@ function renderVpStockHistory(){
   for(var i=0;i<list.length;i++){
     var a=list[i];
     var imgHtml=a.product_image
-      ?'<img src="'+esc(a.product_image)+'" style="width:38px;height:38px;object-fit:cover;border-radius:9px;border:1px solid #e2e8f0;flex-shrink:0;" onerror="this.style.display=\'none\'">'
+      ?'<img class="vp-zoom" src="'+esc(a.product_image)+'" style="width:38px;height:38px;object-fit:cover;border-radius:9px;border:1px solid #e2e8f0;flex-shrink:0;" onerror="this.style.display=\'none\'" onclick="event.stopPropagation();dsImgboxOpen(\''+esc(a.product_image)+'\',\''+esc(a.product_name||"Product").replace(/\'/g,"&#39;")+'\')" title="Click to view full size">'
       :'<div style="width:38px;height:38px;border-radius:9px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">📦</div>';
     var dateStr=a.created_at?new Date(a.created_at).toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"}):"—";
     var approvedStr=a.approved_at?new Date(a.approved_at).toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"}):"—";
@@ -3469,6 +3469,103 @@ function renderVpStockHistory(){
   tbody.innerHTML=rows;
 }
 
+</script>
+
+<!-- ═══════════════ PRODUCT IMAGE LIGHTBOX (shared) ═══════════════ -->
+<style>
+  .ds-imgbox{position:fixed;inset:0;background:rgba(8,11,22,.85);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);display:none;align-items:center;justify-content:center;z-index:99999;animation:dsImgboxFade .22s ease-out;padding:24px}
+  .ds-imgbox.open{display:flex}
+  @keyframes dsImgboxFade{from{opacity:0}to{opacity:1}}
+  .ds-imgbox-wrap{position:relative;max-width:92vw;max-height:88vh;display:flex;flex-direction:column;align-items:center;gap:18px;animation:dsImgboxPop .28s cubic-bezier(.4,1.6,.5,1)}
+  @keyframes dsImgboxPop{from{transform:scale(.92);opacity:0}to{transform:scale(1);opacity:1}}
+  .ds-imgbox-img{max-width:92vw;max-height:74vh;border-radius:14px;box-shadow:0 30px 80px rgba(0,0,0,.55);display:block;background:#fff;object-fit:contain}
+  .ds-imgbox-caption{color:#fff;font-size:13px;font-weight:600;opacity:.85;text-align:center;max-width:560px;line-height:1.4;text-shadow:0 2px 6px rgba(0,0,0,.5)}
+  .ds-imgbox-toolbar{display:flex;gap:10px;align-items:center}
+  .ds-imgbox-btn{padding:11px 22px;background:linear-gradient(135deg,#6366f1,#a855f7);border:none;border-radius:11px;color:#fff;font-weight:700;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;box-shadow:0 8px 22px rgba(168,85,247,.45);transition:.18s;font-family:inherit}
+  .ds-imgbox-btn:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(168,85,247,.6)}
+  .ds-imgbox-btn.secondary{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);box-shadow:none}
+  .ds-imgbox-btn.secondary:hover{background:rgba(255,255,255,.18);box-shadow:none}
+  .ds-imgbox-close{position:absolute;top:-14px;right:-14px;width:38px;height:38px;border-radius:50%;background:#fff;border:none;cursor:pointer;color:#0f172a;font-size:15px;font-weight:700;box-shadow:0 6px 18px rgba(0,0,0,.4);transition:.18s;display:flex;align-items:center;justify-content:center}
+  .ds-imgbox-close:hover{transform:scale(1.1) rotate(90deg);background:#fee2e2;color:#dc2626}
+  .ds-imgbox-spinner{width:48px;height:48px;border:4px solid rgba(255,255,255,.15);border-top-color:#a855f7;border-radius:50%;animation:dsImgboxSpin .8s linear infinite;position:absolute;left:50%;top:35%;margin-left:-24px;display:none}
+  .ds-imgbox.loading .ds-imgbox-spinner{display:block}
+  .ds-imgbox.loading .ds-imgbox-img{opacity:.3}
+  @keyframes dsImgboxSpin{to{transform:rotate(360deg)}}
+  /* Clickable affordance for any image with this hook */
+  img.vp-zoom,.vpd-thumb{cursor:zoom-in;transition:transform .18s,box-shadow .18s}
+  img.vp-zoom:hover,.vpd-thumb:hover{transform:scale(1.05);box-shadow:0 6px 14px rgba(99,102,241,.3)}
+</style>
+
+<div class="ds-imgbox" id="dsImgbox" onclick="if(event.target===this)dsImgboxClose()">
+  <div class="ds-imgbox-wrap">
+    <div class="ds-imgbox-caption" id="dsImgboxCaption">Product image</div>
+    <div style="position:relative;">
+      <img class="ds-imgbox-img" id="dsImgboxImg" src="" alt="Product image" />
+      <div class="ds-imgbox-spinner"></div>
+      <button class="ds-imgbox-close" onclick="dsImgboxClose()" title="Close (Esc)"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="ds-imgbox-toolbar">
+      <button class="ds-imgbox-btn" onclick="dsImgboxDownload()" id="dsImgboxDlBtn"><i class="fa-solid fa-download"></i> Download</button>
+      <button class="ds-imgbox-btn secondary" onclick="dsImgboxOpenNew()"><i class="fa-solid fa-arrow-up-right-from-square"></i> Open in new tab</button>
+    </div>
+  </div>
+</div>
+
+<script>
+window.dsImgboxOpen = function(src, caption){
+  if(!src) return;
+  const box = document.getElementById('dsImgbox');
+  const img = document.getElementById('dsImgboxImg');
+  const cap = document.getElementById('dsImgboxCaption');
+  box.classList.add('open','loading');
+  img.onload = ()=> box.classList.remove('loading');
+  img.onerror = ()=> { box.classList.remove('loading'); cap.textContent = '⚠ Image could not be loaded'; };
+  img.src = src;
+  cap.textContent = caption || 'Product image';
+  box.dataset.src = src;
+  box.dataset.name = ((caption||'product').replace(/[^\w؀-ۿ一-鿿.\- ]/g,'').replace(/\s+/g,'_') || 'product') + '.jpg';
+  document.body.style.overflow = 'hidden';
+};
+window.dsImgboxClose = function(){
+  const box = document.getElementById('dsImgbox');
+  box.classList.remove('open','loading');
+  document.getElementById('dsImgboxImg').src = '';
+  document.body.style.overflow = '';
+};
+window.dsImgboxDownload = async function(){
+  const box = document.getElementById('dsImgbox');
+  const src = box.dataset.src;
+  const name = box.dataset.name || 'product.jpg';
+  if(!src) return;
+  const btn = document.getElementById('dsImgboxDlBtn');
+  const orig = btn.innerHTML;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Downloading…';
+  btn.disabled = true;
+  try {
+    const res = await fetch(src, {mode:'cors'});
+    if(!res.ok) throw new Error('fetch failed');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 4000);
+    btn.innerHTML = '<i class="fa-solid fa-check"></i> Saved';
+    setTimeout(()=>{ btn.innerHTML = orig; btn.disabled = false; }, 1400);
+  } catch(e){
+    btn.innerHTML = orig; btn.disabled = false;
+    const a = document.createElement('a');
+    a.href = src; a.target = '_blank'; a.rel = 'noopener'; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+};
+window.dsImgboxOpenNew = function(){
+  const src = document.getElementById('dsImgbox').dataset.src;
+  if(src) window.open(src,'_blank','noopener');
+};
+document.addEventListener('keydown', e=>{
+  if(e.key === 'Escape' && document.getElementById('dsImgbox')?.classList.contains('open')) dsImgboxClose();
+});
 </script>
 
 </body>
