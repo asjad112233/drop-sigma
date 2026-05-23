@@ -61,8 +61,8 @@ Include with:
 .ds-notif-day{padding:10px 20px 4px;font-size:10px;font-weight:800;color:#94a3b8;
   letter-spacing:.1em;text-transform:uppercase;}
 
-.ds-notif-item{display:flex;gap:12px;padding:12px 20px;border-bottom:1px solid #eef2f7;
-  cursor:pointer;transition:background .15s;position:relative;}
+.ds-notif-item{display:flex;gap:12px;padding:14px 24px 14px 20px;border-bottom:1px solid #eef2f7;
+  cursor:pointer;transition:background .15s;position:relative;min-height:78px;align-items:flex-start;}
 .ds-notif-item:hover{background:#f8fafc;}
 .ds-notif-item.unread{background:linear-gradient(90deg,rgba(99,102,241,.05),transparent);}
 .ds-notif-item.unread::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:#6366f1;}
@@ -88,16 +88,28 @@ Include with:
 .ds-notif-hd .ds-pri.urgent{background:#fee2e2;color:#b91c1c;}
 .ds-notif-hd .ds-pri.high{background:#fef3c7;color:#92400e;}
 .ds-notif-sub{font-size:11.5px;color:#5b6478;margin-top:3px;line-height:1.5;}
-.ds-notif-meta{display:flex;justify-content:space-between;align-items:center;margin-top:8px;}
-.ds-notif-time{font-size:10.5px;color:#94a3b8;font-weight:600;}
-.ds-notif-actions{display:flex;gap:6px;}
-.ds-notif-action{font-size:10.5px;font-weight:700;padding:4px 10px;border-radius:6px;transition:.15s;
-  text-decoration:none;cursor:pointer;font-family:inherit;border:none;}
-.ds-notif-action.primary{background:#0a0d1c;color:#fff;}
-.ds-notif-action.primary:hover{background:#000;}
+.ds-notif-meta{display:flex;justify-content:space-between;align-items:center;margin-top:10px;gap:10px;min-height:26px;}
+.ds-notif-time{font-size:10.5px;color:#94a3b8;font-weight:600;flex-shrink:0;}
+/* Anchor the action area to the bottom-right of the card consistently — even
+   when there's no button, the meta row keeps its min-height so all cards
+   visually align the same way. */
+.ds-notif-actions{display:flex;gap:6px;margin-left:auto;align-items:center;flex-shrink:0;}
+.ds-notif-action{font-size:11px;font-weight:700;padding:5px 12px;border-radius:7px;transition:.18s;
+  text-decoration:none;cursor:pointer;font-family:inherit;border:none;letter-spacing:.1px;
+  display:inline-flex;align-items:center;gap:5px;}
+.ds-notif-action.primary{background:linear-gradient(135deg,#6366f1,#a855f7);color:#fff;
+  box-shadow:0 4px 12px rgba(99,102,241,.32);}
+.ds-notif-action.primary:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(168,85,247,.45);}
+.ds-notif-action.primary:active{transform:translateY(0);}
 .ds-notif-action.ghost{background:#f1f5f9;color:#0a0d1c;}
 .ds-notif-action.ghost:hover{background:#e5e7eb;}
-.ds-notif-dot{position:absolute;top:18px;right:16px;width:7px;height:7px;border-radius:50%;background:#6366f1;
+/* Subtle hover affordance on the whole card — but make it clear that ONLY
+   the button navigates (the rest just marks-as-read). */
+.ds-notif-item{cursor:pointer;}
+.ds-notif-item:hover{background:#f8fafc;}
+/* Unread indicator dot — placed at top-right of the row, well away from the
+   button area at bottom-right so they never visually collide. */
+.ds-notif-dot{position:absolute;top:16px;right:14px;width:8px;height:8px;border-radius:50%;background:#6366f1;
   box-shadow:0 0 0 3px rgba(99,102,241,.18);}
 .ds-notif-item:not(.unread) .ds-notif-dot{display:none;}
 
@@ -233,22 +245,20 @@ Include with:
     $list.innerHTML = html;
     $list.querySelectorAll('[data-notif-id]').forEach(el => {
       el.addEventListener('click', (ev) => {
-        // If the click landed on the inner "Open" button, intercept and
-        // navigate SPA-style (showSection / switchTab) instead of the
-        // legacy <a href> full reload.
+        // Only the "Open" button navigates to the target entity. Clicking
+        // anywhere else on the card just marks the notification as read —
+        // the user is browsing, not necessarily ready to jump away.
         const actionBtn = ev.target.closest('.ds-notif-action');
         if(actionBtn){
           ev.preventDefault();
           ev.stopPropagation();
           const url = actionBtn.dataset.actionUrl || el.dataset.actionUrl || '';
-          onItemClick(el);
-          navigateToAction(url);
+          onItemClick(el);          // mark as read
+          navigateToAction(url);    // jump to order/task/chat/etc.
           return;
         }
-        // Click anywhere else on the row → also navigate (whole row is a target).
-        const rowUrl = el.dataset.actionUrl || '';
+        // Any other click on the card → mark-as-read only, no navigation.
         onItemClick(el);
-        if(rowUrl) navigateToAction(rowUrl);
       });
     });
   }
@@ -259,7 +269,7 @@ Include with:
     // Action button is a real button — we intercept click to do SPA navigation
     // via showSection() / switchTab() instead of triggering a full page reload.
     const actions = n.action_url
-      ? `<button type="button" class="ds-notif-action primary" data-action-url="${escHtml(n.action_url)}">${escHtml(n.action_label || 'Open')}</button>`
+      ? `<button type="button" class="ds-notif-action primary" data-action-url="${escHtml(n.action_url)}" title="Open ${escHtml(n.title)}">${escHtml(n.action_label || 'Open')} <i class="fa-solid fa-arrow-right" style="font-size:9px;"></i></button>`
       : '';
     return `
       <div class="ds-notif-item ${n.is_read ? '' : 'unread'}" data-notif-id="${n.id}" data-action-url="${escHtml(n.action_url || '')}">

@@ -3504,10 +3504,36 @@ body.vf-dark-mode .em-more-btn,body.vf-dark-mode .em-sync-btn{background:var(--v
 .em-tc-preview{font-size:11.5px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:6px;}
 .em-tc-chips{display:flex;align-items:center;gap:5px;flex-wrap:nowrap;}
 .em-tc-chip{display:inline-flex;align-items:center;gap:3px;padding:3px 7px;border-radius:999px;font-size:10.5px;font-weight:600;background:#f1f5f9;color:#64748b;white-space:nowrap;}
+/* Per-row bulk-select checkbox — only visible on hover or when row is selected.
+   This keeps the inbox visually clean for users not using bulk assign. */
+.em-tc-checkbox{display:flex;align-items:center;justify-content:center;width:22px;flex-shrink:0;
+  opacity:0;transition:opacity .15s;cursor:pointer;}
+.em-tc:hover .em-tc-checkbox,
+.em-tc-checked .em-tc-checkbox,
+.em-tc-checkbox input:checked{opacity:1;}
+.em-tc-checkbox input{width:16px;height:16px;cursor:pointer;accent-color:#6366f1;margin:0;}
+.em-tc-checked{background:linear-gradient(90deg,rgba(99,102,241,.07),transparent)!important;
+  border-left:3px solid #6366f1!important;}
 .em-tc-chip.ai{background:#ede9fe;color:#7c3aed;}
 .em-tc-chip.resolved{background:#dcfce7;color:#15803d;}
 .em-tc-chip.unread{background:#ef4444;color:#fff;font-weight:800;min-width:18px;justify-content:center;}
 .em-tc-chip.user{background:#dbeafe;color:#1d4ed8;padding:3px 8px;border-radius:999px;font-size:10px;font-weight:800;}
+/* Order-status chips on inbox rows (one per thread, replaces the old
+   "Unassigned" gap). Color buckets map to order lifecycle stages. */
+.em-tc-chip.order{font-weight:700;letter-spacing:.1px;max-width:200px;overflow:hidden;text-overflow:ellipsis;}
+.em-tc-chip.order.delivered{background:#dcfce7;color:#166534;}
+.em-tc-chip.order.shipped{background:#cffafe;color:#0e7490;}
+.em-tc-chip.order.processing{background:#fef3c7;color:#92400e;}
+.em-tc-chip.order.pending{background:#fef9c3;color:#854d0e;}
+.em-tc-chip.order.paid{background:#d1fae5;color:#065f46;}
+.em-tc-chip.order.cancelled{background:#fee2e2;color:#991b1b;}
+.em-tc-chip.order.refunded{background:#fce7f3;color:#9d174d;}
+.em-tc-chip.order.failed{background:#fee2e2;color:#7f1d1d;}
+.em-tc-chip.order.unfulfilled{background:#fef3c7;color:#854d0e;}
+.em-tc-chip.order.exception{background:#fee2e2;color:#7f1d1d;}
+.em-tc-chip.order.default{background:#e0e7ff;color:#3730a3;}
+/* "No order found" — dashed muted look so it's visually distinct */
+.em-tc-chip.order.none{background:#f8fafc;color:#94a3b8;border:1px dashed #cbd5e1;font-weight:600;}
 .em-tc-dots{position:absolute;top:10px;right:8px;width:24px;height:24px;border:none;background:transparent;color:#94a3b8;font-size:16px;cursor:pointer;border-radius:6px;display:flex;align-items:center;justify-content:center;line-height:1;opacity:0;transition:opacity .12s,background .12s;}
 .em-tc:hover .em-tc-dots{opacity:1;}
 .em-tc-dots:hover{background:#f1f5f9;color:#334155;}
@@ -5736,6 +5762,22 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
             <div class="em-tab" onclick="setEmailFilter2('drafted', this)">AI Draft</div>
             <div class="em-tab" onclick="setEmailFilter2('mine', this)">Assigned</div>
             <div class="em-tab" onclick="setEmailFilter2('resolved', this)">Resolved</div>
+          </div>
+
+          <!-- Bulk-select toolbar: appears when at least one thread is checked.
+               "Complete Email Assign" — assign one team member to many threads
+               at once, or bulk-unassign. -->
+          <div id="emBulkBar" style="display:none;align-items:center;gap:10px;padding:9px 14px;background:linear-gradient(135deg,#eef2ff,#f5f3ff);border:1px solid #c7d2fe;border-radius:11px;margin:0 4px 8px 4px;font-size:12.5px;">
+            <span style="font-weight:800;color:#3730a3;display:flex;align-items:center;gap:6px;">
+              <i class="fa-solid fa-check-double"></i>
+              <span id="emBulkCount">0</span> selected
+            </span>
+            <select id="emBulkMemberSelect" style="flex:1;padding:6px 10px;border-radius:8px;border:1px solid #c7d2fe;background:#fff;font-size:12px;font-weight:600;color:#0f172a;">
+              <option value="">— Select team member —</option>
+            </select>
+            <button onclick="emBulkAssign()" id="emBulkAssignBtn" style="padding:7px 14px;background:linear-gradient(135deg,#6366f1,#a855f7);border:none;border-radius:8px;color:#fff;font-weight:800;font-size:12px;cursor:pointer;box-shadow:0 4px 12px rgba(168,85,247,.35);">Assign</button>
+            <button onclick="emBulkUnassign()" style="padding:7px 12px;background:#fff;border:1px solid #e0e7ff;border-radius:8px;color:#475569;font-weight:700;font-size:11.5px;cursor:pointer;" title="Remove assignment from selected threads">Unassign</button>
+            <button onclick="emBulkClear()" style="padding:6px 9px;background:transparent;border:none;color:#94a3b8;cursor:pointer;font-size:14px;" title="Clear selection">✕</button>
           </div>
 
           <!-- Thread list -->
@@ -10162,6 +10204,18 @@ function handleEmailNavClick(ev){
 
 function showSection(section){
   fireLoader();
+  // Persist current section so hard refresh / re-entry returns to it.
+  // Login flow explicitly clears this so fresh logins always land on Overview.
+  try { if (section) localStorage.setItem('ds_currentSection', section); } catch(_){}
+  // Sync URL too — keeps the section visible in the address bar without
+  // triggering a page reload. Browser back/forward also works.
+  try {
+    const u = new URL(window.location.href);
+    if (u.searchParams.get('section') !== section){
+      u.searchParams.set('section', section);
+      window.history.replaceState({}, '', u.toString());
+    }
+  } catch(_){}
   if(section !== "emails"){
     stopLiveEmailSync(false);
   }
@@ -12981,6 +13035,15 @@ async function poxOpenVendorAssign(event, orderId){
   if(perm) perm.checked = false;
   if(btn){ btn.textContent = "Assign"; btn.disabled = false; }
 
+  // Find the current order in our local cache to pre-select existing vendor.
+  // Without this, the dropdown shows "Select vendor…" even if a vendor is
+  // already assigned — which made users think their previous assignment
+  // didn't save (it did; the UI just wasn't reflecting it).
+  const currentOrder = (currentOrders || []).find(o => o.id === orderId);
+  const currentVendorId = currentOrder
+    ? (currentOrder.assigned_vendor_id || currentOrder.vendor_id || currentOrder.assigned_vendor || null)
+    : null;
+
   // Always fetch fresh vendor list so newly added vendors show up
   sel.innerHTML = '<option value="">Loading…</option>';
   const rect = event.currentTarget.getBoundingClientRect();
@@ -12997,8 +13060,12 @@ async function poxOpenVendorAssign(event, orderId){
     allOrderVendors = Array.isArray(data) ? data : (data.vendors || data.data || []);
   }catch(_){}
 
-  sel.innerHTML = '<option value="">Select vendor…</option>' +
-    (allOrderVendors||[]).map(v=>`<option value="${v.id}">${escapeHtml(v.name||v.email||"Vendor")}</option>`).join("");
+  const currId = currentVendorId != null ? String(currentVendorId) : "";
+  sel.innerHTML = '<option value="">' + (currId ? "Change vendor…" : "Select vendor…") + '</option>' +
+    (allOrderVendors||[]).map(v=>`<option value="${v.id}"${String(v.id) === currId ? " selected" : ""}>${escapeHtml(v.name||v.email||"Vendor")}</option>`).join("");
+  // Reflect the current assignment in the button label too so the user
+  // can clearly see "I'm changing FROM X" rather than "first-time assign".
+  if(btn && currId){ btn.textContent = "Reassign"; }
   sel.focus();
   setTimeout(()=>document.addEventListener("click", _poxVaOutside), 20);
 }
@@ -14233,6 +14300,13 @@ async function openOrderDetail(orderId){
               <div><div class="od-info-label">Email</div><div class="od-info-value"><a href="mailto:${escapeHtml(o.customer_email||"")}">${escapeHtml(o.customer_email||"-")}</a></div></div>
               <div><div class="od-info-label">Phone</div><div class="od-info-value">${escapeHtml(o.customer_phone||"-")}</div></div>
             </div>
+            ${o.customer_email ? `
+            <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+              <button class="od-btn primary" onclick="openCustomerEmail('${escapeJs(o.customer_email)}','${escapeJs(o.customer_name||'')}','${escapeJs(o.external_order_id||'')}')" style="display:inline-flex;align-items:center;gap:7px;padding:8px 14px;font-size:12.5px;border-radius:9px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8V7l-3 2-3-2v1M3 7l9 6 9-6"/><rect x="3" y="5" width="18" height="14" rx="2"/></svg>
+                Open Email
+              </button>
+            </div>` : ""}
             ${(()=>{
               const a = o.shipping_address || {};
               const hasAny = a.line1 || a.line2 || a.city || a.state || a.postal_code || a.country;
@@ -14458,7 +14532,11 @@ async function openOrderDetail(orderId){
       </div>
     `;
 
-    loadTeamMembersForSelect();
+    // Pass the order's current assigned_to so the dropdown can pre-select it.
+    // This fixes the bug where users felt their assignment "didn't save" — the
+    // save worked, but the dropdown rendered "Select Team Member" instead of
+    // showing the persisted choice.
+    loadTeamMembersForSelect(o.assigned_to?.id || o.assigned_to_id || null);
     initCourierCombo("odCourierInput","odCourierUrl","odCustomUrlRow", o.tracking_company||"", o.tracking_url||"");
 
     // Kick off notes loading + auto-refresh
@@ -18078,6 +18156,128 @@ function setEmailFilter(status, el){
   renderEmails();
 }
 
+// ═══════════ Bulk email-thread assignment ═══════════
+// "Complete Email Assign" feature — multi-select threads via checkboxes,
+// pick one team member, assign all at once. Or bulk-unassign.
+const _emBulkSelected = new Set();    // Set of thread.contact emails
+
+function emBulkToggle(contact, checked){
+  if(checked) _emBulkSelected.add(contact);
+  else        _emBulkSelected.delete(contact);
+  _emBulkRefreshBar();
+}
+function emBulkClear(){
+  _emBulkSelected.clear();
+  // Uncheck all DOM checkboxes
+  document.querySelectorAll('.em-tc-checkbox input').forEach(c => c.checked = false);
+  document.querySelectorAll('.em-tc-checked').forEach(el => el.classList.remove('em-tc-checked'));
+  _emBulkRefreshBar();
+}
+function _emBulkRefreshBar(){
+  const bar = document.getElementById('emBulkBar');
+  const cnt = document.getElementById('emBulkCount');
+  if(!bar || !cnt) return;
+  cnt.textContent = String(_emBulkSelected.size);
+  bar.style.display = _emBulkSelected.size > 0 ? 'flex' : 'none';
+  // Populate the team-member select lazily on first show
+  if(_emBulkSelected.size > 0){
+    _emBulkPopulateMembers();
+  }
+}
+async function _emBulkPopulateMembers(){
+  const sel = document.getElementById('emBulkMemberSelect');
+  if(!sel || sel.dataset.loaded === '1') return;
+  try {
+    const r = await fetch('/teamapp/members/');
+    const d = await r.json();
+    if(d.success && Array.isArray(d.members)){
+      sel.innerHTML = '<option value="">— Select team member —</option>' +
+        d.members.map(m =>
+          `<option value="${m.id}">${escapeHtml(m.name)} (${escapeHtml(formatText(m.role))})</option>`
+        ).join('');
+      sel.dataset.loaded = '1';
+    }
+  } catch(_){}
+}
+async function emBulkAssign(){
+  const memberId = document.getElementById('emBulkMemberSelect')?.value;
+  if(!memberId){
+    await _alert('Pick a team member first.', 'Select Member', '⚠️');
+    return;
+  }
+  if(_emBulkSelected.size === 0) return;
+  const btn = document.getElementById('emBulkAssignBtn');
+  if(btn){ btn.textContent = 'Assigning…'; btn.disabled = true; }
+  try {
+    const r = await fetch('/emails/api/threads/bulk-assign/', {
+      method:'POST',
+      headers:{'Content-Type':'application/json', 'X-CSRFToken':getCSRFToken()},
+      credentials:'same-origin',
+      body: JSON.stringify({
+        store_id: selectedStoreId,
+        member_id: memberId,
+        contacts: Array.from(_emBulkSelected),
+      })
+    });
+    const d = await r.json();
+    if(!r.ok || !d.success){
+      await _alert(d.message || 'Bulk assign failed.', 'Error', '❌');
+      if(btn){ btn.textContent = 'Assign'; btn.disabled = false; }
+      return;
+    }
+    emBulkClear();
+    await loadEmails({silent:true, preserveSelection:true});
+  } catch(e){
+    await _alert('Network error: ' + e.message, 'Error', '❌');
+  } finally {
+    if(btn){ btn.textContent = 'Assign'; btn.disabled = false; }
+  }
+}
+async function emBulkUnassign(){
+  if(_emBulkSelected.size === 0) return;
+  if(!await _confirm(`Remove team-member assignment from ${_emBulkSelected.size} thread(s)?`, {title:'Bulk Unassign', icon:'👤'})) return;
+  try {
+    const r = await fetch('/emails/api/threads/bulk-assign/', {
+      method:'POST',
+      headers:{'Content-Type':'application/json', 'X-CSRFToken':getCSRFToken()},
+      credentials:'same-origin',
+      body: JSON.stringify({
+        store_id: selectedStoreId,
+        member_id: null,
+        contacts: Array.from(_emBulkSelected),
+      })
+    });
+    const d = await r.json();
+    if(!r.ok || !d.success){
+      await _alert(d.message || 'Bulk unassign failed.', 'Error', '❌');
+      return;
+    }
+    emBulkClear();
+    await loadEmails({silent:true, preserveSelection:true});
+  } catch(e){
+    await _alert('Network error: ' + e.message, 'Error', '❌');
+  }
+}
+
+// Map a free-text order status (carrier/platform-specific) to a chip class.
+// Returns one of: delivered / shipped / processing / pending / paid /
+// cancelled / refunded / failed / unfulfilled / exception / default.
+function _emTcOrderChipClass(rawLabel){
+  const s = String(rawLabel || "").toLowerCase().trim();
+  if(!s || s === "—" || s === "-") return "default";
+  if(/deliver/.test(s))                                            return "delivered";
+  if(/ship|out\s*for\s*delivery|in\s*transit|fulfilled|complete/.test(s)) return "shipped";
+  if(/process/.test(s))                                            return "processing";
+  if(/paid|payment\s*received/.test(s))                            return "paid";
+  if(/pending|on[\s\-]?hold|await/.test(s))                        return "pending";
+  if(/cancel/.test(s))                                             return "cancelled";
+  if(/refund/.test(s))                                             return "refunded";
+  if(/fail|declin/.test(s))                                        return "failed";
+  if(/unfulfil/.test(s))                                           return "unfulfilled";
+  if(/except|return|attention|stuck/.test(s))                      return "exception";
+  return "default";
+}
+
 function renderEmails(){
   const list = document.getElementById("emailsList");
   const search = (document.getElementById("emailSearch")?.value || "").toLowerCase();
@@ -18206,8 +18406,27 @@ function renderEmails(){
     // Only show unread count badge, not total message count
     const showUnreadBadge = visualUnread && unreadCount > 0;
 
+    // Order-status chip — replaces the old "Unassigned" gap when no team
+    // member is assigned, OR appears alongside the assignee chip. Shows the
+    // linked customer order's status, or "No order found" if there isn't one.
+    const orderInfo = thread.order_status;
+    let orderChip = "";
+    if (orderInfo){
+      const label = orderInfo.label || "";
+      const ordNum = orderInfo.order_number ? `#${orderInfo.order_number}` : "Order";
+      const cls = _emTcOrderChipClass(label);
+      const tip = `${ordNum} · ${label || "no status"}`;
+      orderChip = `<span class="em-tc-chip order ${cls}" title="${escapeHtml(tip)}">📦 ${escapeHtml(ordNum)} · ${escapeHtml(label || "—")}</span>`;
+    } else {
+      orderChip = `<span class="em-tc-chip order none" title="No order found for this customer">📦 No order found</span>`;
+    }
+
+    const isBulkSelected = _emBulkSelected.has(thread.contact);
     return `
-      <div class="em-tc ${active} ${unreadClass}" onclick="openThread('${escapeJs(thread.contact)}')">
+      <div class="em-tc ${active} ${unreadClass} ${isBulkSelected ? 'em-tc-checked' : ''}" onclick="openThread('${escapeJs(thread.contact)}')">
+        <label class="em-tc-checkbox" onclick="event.stopPropagation()" title="Select for bulk assign">
+          <input type="checkbox" ${isBulkSelected ? 'checked' : ''} onchange="emBulkToggle('${escapeJs(thread.contact)}', this.checked)">
+        </label>
         <div class="em-tc-av" style="background:${avatarColor}">${escapeHtml(initial)}</div>
         <div class="em-tc-body">
           <div class="em-tc-row1">
@@ -18219,6 +18438,7 @@ function renderEmails(){
           <div class="em-tc-chips">
             ${hasDraft ? `<span class="em-tc-chip ai">✦ AI Draft</span>` : ""}
             ${showUnreadBadge ? `<span class="em-tc-chip count unread" title="${unreadCount} unread message${unreadCount !== 1 ? 's' : ''}">${unreadCount}</span>` : ""}
+            ${orderChip}
             ${assigneeInitials ? `<span class="em-tc-chip user" title="${escapeHtml(assigneeName)}">${escapeHtml(assigneeInitials)}</span>` : ""}
             ${thread.is_resolved ? `<span class="em-tc-chip resolved">✓ Resolved</span>` : ""}
           </div>
@@ -18366,6 +18586,70 @@ async function unassignThread(){
       renderEmails();
     }
   }catch(e){}
+}
+
+/* Order detail → "Open Email" button entry point.
+   Behavior the user asked for:
+   1. If a chat thread exists for this customer email → open it directly.
+   2. If no thread exists → open the compose modal with the email pre-filled
+      AND show a banner "No prior chat / mail history" so the user knows
+      they're starting a fresh conversation.
+   `customerName` and `orderNum` are used to prefill subject and seed the
+   compose body for context.                                                  */
+async function openCustomerEmail(customerEmail, customerName, orderNum){
+  if(!customerEmail) return;
+  // Switch to the Emails section first (loads threads if not already loaded)
+  showSection('emails');
+
+  // Wait briefly for threads to populate, then look for an existing thread
+  // by customer email. Try up to ~1.5s of polling so this works whether
+  // threads were already cached or are being fetched fresh.
+  const targetEmail = String(customerEmail).trim().toLowerCase();
+  const tryFindThread = () => (allThreads || []).find(t =>
+    (t.contact || "").trim().toLowerCase() === targetEmail
+  );
+
+  let existing = tryFindThread();
+  if (!existing){
+    // Poll a few times in case loadEmails() hasn't completed yet
+    for (let i = 0; i < 6 && !existing; i++){
+      await new Promise(r => setTimeout(r, 250));
+      existing = tryFindThread();
+    }
+  }
+
+  // Close the order modal so the emails section is visible
+  try { closeOrderModal(); } catch(_){}
+
+  if (existing){
+    // Direct open — user lands inside the customer's chat
+    await openThread(existing.contact);
+    return;
+  }
+
+  // No prior chat — open compose with this customer pre-filled
+  openComposeModal();
+  const toEl = document.getElementById("composeTo");
+  const subjEl = document.getElementById("composeSubject");
+  const bodyEl = document.getElementById("composeBodyRich");
+  if (toEl) toEl.value = customerEmail;
+  if (subjEl && !subjEl.value){
+    subjEl.value = orderNum ? `Regarding your order #${orderNum}` : `Hello${customerName ? " " + customerName : ""}`;
+  }
+  if (bodyEl){
+    const greeting = customerName ? `Hi ${customerName.split(/\s+/)[0]},<br><br>` : "Hi there,<br><br>";
+    if (!bodyEl.innerHTML.trim()){
+      bodyEl.innerHTML = greeting + "<br>";
+    }
+  }
+  // Banner inside the compose modal noting this is a first contact.
+  const msg = document.getElementById("composeMessage");
+  if (msg){
+    msg.innerHTML = `<div style="background:#fef3c7;border:1px solid #fde68a;color:#92400e;padding:10px 14px;border-radius:10px;font-size:12.5px;font-weight:600;display:flex;align-items:center;gap:8px;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span>No prior chat or email history with this customer — this will start a new conversation.</span>
+    </div>`;
+  }
 }
 
 async function openThread(contact, options={}){
@@ -19202,7 +19486,7 @@ function getEmailStatusClass(status){
   return "orange";
 }
 
-async function loadTeamMembersForSelect(){
+async function loadTeamMembersForSelect(currentMemberId){
   const select = document.getElementById("assignMemberSelect");
   if(!select) return;
 
@@ -19215,10 +19499,14 @@ async function loadTeamMembersForSelect(){
       return;
     }
 
+    // Pre-select the currently-assigned member so the user can SEE that
+    // their previous choice persisted (was the root cause of "options not
+    // saving" feedback — it saved, but UI showed default).
+    const currId = currentMemberId != null ? String(currentMemberId) : "";
     select.innerHTML = `
-      <option value="">Select Team Member</option>
+      <option value="">${currId ? "— Unassign —" : "Select Team Member"}</option>
       ${data.members.map(m => `
-        <option value="${m.id}">${m.name} (${formatText(m.role)})</option>
+        <option value="${m.id}"${String(m.id) === currId ? " selected" : ""}>${m.name} (${formatText(m.role)})</option>
       `).join("")}
     `;
 
@@ -19237,20 +19525,22 @@ async function assignOrder(){
     return;
   }
 
+  // Empty selection = "Unassign" (only meaningful if there's currently
+  // someone assigned). Backend treats null member_id as unassign.
   if(!memberId){
-    msg.innerText = "Please select a team member.";
-    msg.style.color = "red";
-    return;
+    if(!await _confirm("Remove the current team member assignment from this order?", {title:"Unassign", icon:"👤", confirmText:"Unassign"})){
+      return;
+    }
   }
 
-  msg.innerText = "Assigning order...";
+  msg.innerText = memberId ? "Assigning order..." : "Unassigning...";
   msg.style.color = "#667085";
 
   try{
     const response = await fetch(`/orders/api/${currentOrderId}/assign/`, {
       method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({member_id: memberId})
+      headers: {"Content-Type": "application/json", "X-CSRFToken": getCSRFToken()},
+      body: JSON.stringify({member_id: memberId || null})
     });
 
     const data = await response.json();
@@ -19261,7 +19551,7 @@ async function assignOrder(){
       return;
     }
 
-    msg.innerText = data.message || "Order assigned successfully.";
+    msg.innerText = data.message || (memberId ? "Order assigned successfully." : "Order unassigned.");
     msg.style.color = "green";
 
     await loadOrders();
@@ -20210,7 +20500,25 @@ async function connectEmailAccount(){
 
 async function initDashboard(){
   const params = new URLSearchParams(window.location.search);
-  const section = params.get("section") || "overview";
+  // Fresh-login signal from server: wipe stored section so the user lands
+  // on Overview cleanly (server already passed ?section=overview).
+  if (params.get('login') === '1'){
+    try { localStorage.removeItem('ds_currentSection'); } catch(_){}
+    // Strip the marker from the URL so reload doesn't keep resetting it
+    try {
+      const u = new URL(window.location.href);
+      u.searchParams.delete('login');
+      window.history.replaceState({}, '', u.toString());
+    } catch(_){}
+  }
+  // Priority order:
+  //   1) ?section= in URL (deep link, hard refresh, browser back/forward)
+  //   2) localStorage 'ds_currentSection' (returning after closing tab)
+  //   3) 'overview' (default — used right after fresh login since the login
+  //      handler cleared localStorage above)
+  let savedSection = '';
+  try { savedSection = localStorage.getItem('ds_currentSection') || ''; } catch(_){}
+  const section = params.get("section") || savedSection || "overview";
   const emailTab = params.get("email_tab") || "inbox";
 
   if(params.get("store_id")){

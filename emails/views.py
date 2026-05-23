@@ -872,6 +872,61 @@ def email_threads_api(request):
     results = list(threads.values())
     results.sort(key=lambda x: x["latest_time"], reverse=True)
 
+    # ─── Link each thread to the latest order from that customer ──────────
+    # For every unique contact email in the result set, look up the most recent
+    # Order whose customer_email matches (scoped to current store/tenant). The
+    # inbox UI uses this to render an "order status" chip in place of the
+    # generic "Unassigned" badge, with "Not Found" when no order exists.
+    contact_emails = [(item["contact"] or "").strip().lower() for item in results if item.get("contact")]
+    contact_emails = list({c for c in contact_emails if c})
+    order_status_by_contact = {}
+    if contact_emails:
+        try:
+            from orders.models import Order
+            order_qs = Order.objects.filter(
+                customer_email__in=contact_emails,
+                store__user=request.user,
+            )
+            if store_id:
+                order_qs = order_qs.filter(store_id=store_id)
+            # Latest order per email — Python-side reduce is simplest given
+            # we already have a bounded set of emails (one per thread).
+            latest_by_email = {}
+            for o in order_qs.order_by("-created_at").values(
+                "id", "external_order_id", "customer_email",
+                "payment_status", "fulfillment_status",
+                "tracking_status", "live_tracking_status",
+            ):
+                ekey = (o["customer_email"] or "").strip().lower()
+                if ekey and ekey not in latest_by_email:
+                    latest_by_email[ekey] = o
+            for ekey, o in latest_by_email.items():
+                # Pick the most-actionable status to surface as a single chip
+                # (live > fulfillment > payment). Front-end renders the label
+                # with a color hint based on `status_kind`.
+                live = (o.get("live_tracking_status") or "").strip()
+                fulf = (o.get("fulfillment_status") or "").strip()
+                pay  = (o.get("payment_status") or "").strip()
+                if live:
+                    label, kind = live, "tracking"
+                elif fulf:
+                    label, kind = fulf, "fulfillment"
+                elif pay:
+                    label, kind = pay, "payment"
+                else:
+                    label, kind = "—", "none"
+                order_status_by_contact[ekey] = {
+                    "order_id": o["id"],
+                    "order_number": o.get("external_order_id") or "",
+                    "label": label,
+                    "kind": kind,
+                    "payment_status": pay,
+                    "fulfillment_status": fulf,
+                    "tracking_status": live or (o.get("tracking_status") or ""),
+                }
+        except Exception:
+            order_status_by_contact = {}
+
     for item in results:
         item["latest_time"] = item["latest_time"].isoformat()
         key = (item["contact"] or "").lower()
@@ -879,6 +934,8 @@ def email_threads_api(request):
         res = resolved_map.get(key, {})
         item["is_resolved"] = res.get("is_resolved", False)
         item["resolved_at"] = res.get("resolved_at")
+        # NEW: latest order for this customer (or null = "Not Found")
+        item["order_status"] = order_status_by_contact.get(key)
 
     return Response({
         "success": True,
@@ -2203,6 +2260,77 @@ def assign_thread_multi_api(request):
         "success": True,
         "assigned_to": assignees_data[0] if assignees_data else None,
         "co_assignees": assignees_data,
+    })
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# BULK email-thread assignment — pick one team member, apply to many threads.
+# Used by the "Complete Email Assign" / multi-select toolbar in the inbox.
+# ════════════════════════════════════════════════════════════════════════════
+@api_view(["POST"])
+def bulk_assign_threads_api(request):
+    """Assign ONE team member (or unassign) to MULTIPLE email threads at once.
+
+    POST body:
+        {
+          "store_id":  <int>,
+          "member_id": <int|null>,   # null/empty → bulk unassign
+          "contacts":  ["a@x.com", "b@y.com", ...]   # emails identifying threads
+        }
+    Returns counts of created / updated assignments.
+    """
+    from teamapp.models import TeamMember
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
+
+    store_id  = request.data.get("store_id")
+    member_id = request.data.get("member_id")
+    contacts  = request.data.get("contacts") or []
+
+    if not store_id:
+        return Response({"success": False, "message": "store_id is required."}, status=400)
+    if not isinstance(contacts, list) or not contacts:
+        return Response({"success": False, "message": "contacts (non-empty list) is required."}, status=400)
+
+    # Tenant scope: the store must belong to the requester
+    store = get_object_or_404(Store, id=store_id, user=request.user)
+
+    member = None
+    if member_id not in (None, "", 0, "0", "null"):
+        # The member must belong to the same tenant — keeps cross-tenant
+        # leaks impossible even with a forged member_id.
+        member = TeamMember.objects.filter(id=member_id, owner=request.user).first()
+        if not member:
+            return Response({"success": False, "message": "Team member not found."}, status=404)
+
+    created = updated = 0
+    for raw in contacts:
+        contact = (raw or "").strip().lower()
+        if not contact:
+            continue
+        assignment, was_created = EmailThreadAssignment.objects.get_or_create(
+            store=store, contact=contact
+        )
+        assignment.assigned_to = member  # member or None (unassign)
+        assignment.save()
+        # If unassigning, also clear any co-assignees so the UI doesn't show
+        # stale chips. Bulk "assign" leaves co-assignees intact.
+        if member is None:
+            assignment.co_assignees.clear()
+        if was_created:
+            created += 1
+        else:
+            updated += 1
+
+    return Response({
+        "success": True,
+        "created": created,
+        "updated": updated,
+        "total":   created + updated,
+        "assigned_to": (
+            {"id": member.id, "name": member.name, "role": member.role}
+            if member else None
+        ),
     })
 
 

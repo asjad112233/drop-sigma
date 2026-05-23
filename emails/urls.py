@@ -29,6 +29,7 @@ from .views import (
     download_attachment_api,
     assign_thread_api,
     assign_thread_multi_api,
+    bulk_assign_threads_api,
     unassign_thread_api,
     email_templates_api,
     email_template_detail_api,
@@ -80,6 +81,7 @@ urlpatterns = [
     path("api/thread/", email_thread_detail_api, name="email_thread_detail_api"),
     path("api/threads/assign/", assign_thread_api, name="assign_thread_api"),
     path("api/threads/assign-multi/", assign_thread_multi_api, name="assign_thread_multi_api"),
+    path("api/threads/bulk-assign/", bulk_assign_threads_api, name="bulk_assign_threads_api"),
     path("api/threads/unassign/", unassign_thread_api, name="unassign_thread_api"),
 
     # =========================

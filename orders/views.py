@@ -417,11 +417,20 @@ def assign_order_api(request, order_id):
         return Response({"success": False, "message": "Not allowed."}, status=403)
     member_id = request.data.get("member_id")
 
-    if not member_id:
+    # Null / empty member_id → UNASSIGN the order
+    if member_id in (None, "", 0, "0", "null"):
+        previous_name = order.assigned_to.name if order.assigned_to else None
+        order.assigned_to = None
+        order.save()
+        if previous_name:
+            log_activity(order, "unassigned",
+                         f"Unassigned from {previous_name}",
+                         actor="Admin")
         return Response({
-            "success": False,
-            "message": "member_id is required"
-        }, status=400)
+            "success": True,
+            "message": "Order unassigned." if previous_name else "Order has no team-member assignment.",
+            "assigned_to": None,
+        })
 
     # Scope the target member to the relevant tenant (owner of the order's
     # store), not necessarily the requester — covers the employee case where

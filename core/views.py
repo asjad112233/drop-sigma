@@ -360,7 +360,13 @@ def admin_login_page(request):
                 pass
         if user and user.is_staff:
             login(request, user)
-            return redirect(request.GET.get("next", "/dashboard/"))
+            # Force fresh logins to land on Overview (?section=overview overrides
+            # any localStorage-saved section from a previous session). Respect
+            # ?next= only if it's an explicit deep link.
+            next_url = request.GET.get("next")
+            if next_url and next_url != "/dashboard/":
+                return redirect(next_url)
+            return redirect("/dashboard/?section=overview&login=1")
         elif user and not user.is_staff:
             error = "You don't have admin access."
         else:

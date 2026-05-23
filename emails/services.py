@@ -219,14 +219,42 @@ def extract_customer_refs(text):
         _add("email", m.group(0))
 
     # Phone numbers (loose — 7+ digits, may have +, spaces, dashes, parens)
+    # NOTE: we collect phones BEFORE bare numbers below so we can skip any
+    # bare digit candidate that's actually part of a phone we already matched.
+    phone_digit_runs = set()
     for m in re.finditer(r"\+?\d[\d\s\-().]{7,}\d", text):
         digits = re.sub(r"\D", "", m.group(0))
         if 7 <= len(digits) <= 15:
             _add("phone", m.group(0).strip())
+            # Track each digit substring so the bare-number pass below
+            # doesn't double-count a phone fragment as an order id.
+            phone_digit_runs.add(digits)
 
     # Tracking numbers — usually preceded by "tracking" keyword
     for m in re.finditer(r"tracking\s*(?:#|no\.?|number|id)?\s*[:#]?\s*([A-Z0-9]{8,30})\b", text, re.IGNORECASE):
         _add("tracking", m.group(1))
+
+    # Bare order numbers — customers often type just the digits (e.g. "37284")
+    # without "#" or "order" prefix. We accept 4–8 digit standalone numbers and
+    # let resolve_customer_context() filter out non-matches via DB lookup. This
+    # is safe because non-existent IDs simply return no orders.
+    #
+    # Guards to keep false positives down:
+    #   - Skip digits that appear inside a phone we already matched
+    #   - Skip 4-digit numbers that look like years (1900–2099)
+    #   - Don't double-add if already captured by the prefixed patterns above
+    already = {r["value"] for r in refs if r["type"] == "order_id"}
+    for m in re.finditer(r"(?<!\d)(\d{4,8})(?!\d)", text):
+        num = m.group(1)
+        if num in already:
+            continue
+        # Skip year-like 4-digit numbers (1900..2099)
+        if len(num) == 4 and 1900 <= int(num) <= 2099:
+            continue
+        # Skip if this digit run is inside any matched phone
+        if any(num in p for p in phone_digit_runs):
+            continue
+        _add("order_id", num)
 
     return refs
 
