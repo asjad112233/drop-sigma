@@ -4168,9 +4168,15 @@ def thread_labels_api(request):
 def threads_stats_api(request):
     """Return counts for the contextual sidebar badges.
     GET /emails/api/threads/stats/?store_id=N
+
+    CRITICAL: counts MUST match exactly what applyEmailFolderFilter
+    shows on the frontend, or users see "5 in Refunds" but the folder
+    appears empty. Per-thread counts are computed using the LATEST
+    message of each thread (matching the frontend's `latest_category`
+    and `latest_archived` predicates), not any-message-ever.
     """
     from .models import EmailMessage, EmailThreadAssignment, EmailLabel, EmailThreadLabel
-    from django.db.models import Count
+    from django.db.models import Count, Max
     if not request.user.is_authenticated:
         return Response({"success": False, "message": "Authentication required"}, status=401)
 
@@ -4179,30 +4185,106 @@ def threads_stats_api(request):
     if store_id:
         em_qs = em_qs.filter(store_id=store_id)
 
-    # Build counts off distinct contact/sender — threads, not messages.
-    # We use sender as thread key (matches what email_threads_api derives).
-    def _thread_keys(qs):
-        return set(
-            qs.values_list("sender", flat=True).distinct()
-        )
+    # ── Build a (sender → latest message) map so we can ask
+    #    questions about each THREAD using its latest message only ──
+    # We pull just the fields we need to keep this query light. The
+    # senders set is small (one per thread) so Python-side aggregation
+    # is fine.
+    latest_per_sender = {}
+    for m in em_qs.only(
+        "id", "sender", "category", "ai_status", "ai_draft", "status",
+        "is_read", "raw_data", "created_at",
+    ).order_by("-created_at"):
+        key = (m.sender or "").strip().lower()
+        if not key:
+            continue
+        if key not in latest_per_sender:
+            latest_per_sender[key] = m
 
-    inbox_keys   = _thread_keys(em_qs)
-    unread_keys  = _thread_keys(em_qs.filter(is_read=False))
-    needs_keys   = _thread_keys(em_qs.filter(ai_status="needs_human"))
-    drafts_keys  = _thread_keys(em_qs.filter(ai_draft__isnull=False).exclude(ai_draft=""))
-    sent_keys    = _thread_keys(em_qs.filter(status="replied"))
-
-    # Resolved is on the assignment, not the message
+    # ── Resolved set comes from EmailThreadAssignment; we use it to
+    #    exclude resolved threads from the active counts (same as
+    #    inbox UI), but also to compute the Resolved badge.
     ta_qs = EmailThreadAssignment.objects.filter(store__user=request.user)
     if store_id:
         ta_qs = ta_qs.filter(store_id=store_id)
-    resolved_count = ta_qs.filter(is_resolved=True).count()
-
-    # Per-label counts
-    label_qs = EmailLabel.objects.filter(owner=request.user).order_by("position", "name")
-    link_counts_qs = EmailThreadLabel.objects.filter(
-        store__user=request.user,
+    resolved_contacts = set(
+        ta_qs.filter(is_resolved=True).values_list("contact", flat=True)
     )
+    resolved_contacts = {(c or "").strip().lower() for c in resolved_contacts}
+
+    # ── Helper: a thread is "archived" iff its latest message has
+    #    raw_data.archived = True. Frontend uses the same predicate. ──
+    def _is_archived(msg):
+        raw = msg.raw_data if isinstance(msg.raw_data, dict) else {}
+        return bool(raw.get("archived"))
+
+    # ── Walk the per-thread map and bucket each thread once ──
+    counts = {
+        "inbox": 0, "unread": 0, "needs_human": 0,
+        "drafts": 0, "ai_drafts": 0, "sent": 0, "scheduled": 0,
+        "refunds": 0, "returns": 0, "dispute": 0, "spam": 0,
+        "archive": 0, "resolved": 0,
+    }
+
+    for contact, m in latest_per_sender.items():
+        cat = (m.category or "").lower()
+        archived = _is_archived(m)
+        is_resolved = contact in resolved_contacts
+
+        # Archive folder: latest message archived → only here, nowhere else.
+        if archived:
+            counts["archive"] += 1
+            continue
+
+        # Resolved folder: assignment resolved → only here.
+        if is_resolved:
+            counts["resolved"] += 1
+            continue
+
+        # Inbox = everything not archived (matches frontend).
+        counts["inbox"] += 1
+
+        # Unread folder: any unread message in the thread. We need to
+        # check ALL messages of this contact, not just the latest. Done
+        # cheaply with one query below — for now just key the latest.
+        if not m.is_read:
+            counts["unread"] += 1
+
+        # Needs Human: any message in the thread tagged needs_human.
+        if m.ai_status == "needs_human":
+            counts["needs_human"] += 1
+
+        # Drafts/Sent: same — count threads whose latest message reflects state
+        if (m.ai_draft or "").strip():
+            counts["drafts"] += 1
+            counts["ai_drafts"] += 1
+
+        if m.status == "replied":
+            counts["sent"] += 1
+
+        # Categories — match the frontend's `latest_category` predicate.
+        # Frontend uses .includes(kw) on the category string. Mirror that.
+        if cat:
+            if "refund"  in cat: counts["refunds"]  += 1
+            if "return"  in cat: counts["returns"]  += 1
+            if "dispute" in cat: counts["dispute"]  += 1
+            if "spam"    in cat: counts["spam"]     += 1
+
+    # ── Refine unread count to consider WHOLE-THREAD unread (any
+    #    message, not just latest), since frontend uses unread_count.
+    unread_contacts = set()
+    for sender in em_qs.filter(is_read=False).values_list("sender", flat=True):
+        k = (sender or "").strip().lower()
+        if k and k not in resolved_contacts:
+            # Only if the thread is not currently archived
+            latest = latest_per_sender.get(k)
+            if latest and not _is_archived(latest):
+                unread_contacts.add(k)
+    counts["unread"] = len(unread_contacts)
+
+    # ── Per-label counts (already correct — keyed by store+contact) ──
+    label_qs = EmailLabel.objects.filter(owner=request.user).order_by("position", "name")
+    link_counts_qs = EmailThreadLabel.objects.filter(store__user=request.user)
     if store_id:
         link_counts_qs = link_counts_qs.filter(store_id=store_id)
     label_counts_map = {
@@ -4216,21 +4298,7 @@ def threads_stats_api(request):
 
     return Response({
         "success": True,
-        "counts": {
-            "inbox":       len(inbox_keys),
-            "unread":      len(unread_keys),
-            "needs_human": len(needs_keys),
-            "drafts":      len(drafts_keys),
-            "ai_drafts":   len(drafts_keys),
-            "sent":        len(sent_keys),
-            "scheduled":   0,   # not implemented yet
-            "refunds":     em_qs.filter(category__icontains="refund").values("sender").distinct().count(),
-            "returns":     em_qs.filter(category__icontains="return").values("sender").distinct().count(),
-            "dispute":     em_qs.filter(category__icontains="dispute").values("sender").distinct().count(),
-            "spam":        em_qs.filter(category__icontains="spam").values("sender").distinct().count(),
-            "archive":     em_qs.filter(raw_data__archived=True).values("sender").distinct().count(),
-            "resolved":    resolved_count,
-        },
+        "counts": counts,
         "labels": labels,
     })
 
