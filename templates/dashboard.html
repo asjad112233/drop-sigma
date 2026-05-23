@@ -13723,7 +13723,7 @@ async function deleteStore(storeId, storeName){
       // Clear every AI-training key the dashboard caches in localStorage.
       // Without this the Studio reloads from the BROWSER cache and shows
       // pre-delete data even after the DB has been wiped — that's the
-      // "kuch delete nahi hua" the user kept reporting.
+      // "nothing got deleted" complaint the user kept reporting.
       if(data.ai_training_reset){
         try {
           localStorage.removeItem("dropsigma_ai_training_state_v1"); // AIT_STATE_KEY
@@ -17788,7 +17788,7 @@ async function renderManageMemberList(){
     await loadEmailTeamMembers();
   }
   if(!emailTeamMembers.length){
-    list.innerHTML = '<div class="em-manage-empty">Koi team member nahi mila</div>';
+    list.innerHTML = '<div class="em-manage-empty">No team members found</div>';
     return;
   }
 
