@@ -583,22 +583,25 @@ class FolderAssignment(models.Model):
     updated_at   = models.DateTimeField(auto_now=True)
 
     class Meta:
-        # One active rule per (store, folder/label) combination
+        # MULTIPLE members per folder/label allowed — only block exact
+        # duplicates (same store + same folder/label + same member).
         constraints = [
             models.UniqueConstraint(
-                fields=['store', 'folder'],
+                fields=['store', 'folder', 'assigned_to'],
                 condition=models.Q(label__isnull=True) & ~models.Q(folder=""),
-                name='uniq_active_folder_assign',
+                name='uniq_folder_member',
             ),
             models.UniqueConstraint(
-                fields=['store', 'label'],
+                fields=['store', 'label', 'assigned_to'],
                 condition=models.Q(label__isnull=False),
-                name='uniq_active_label_assign',
+                name='uniq_label_member',
             ),
         ]
         indexes = [
             models.Index(fields=['store', 'is_active']),
             models.Index(fields=['assigned_to', 'is_active']),
+            models.Index(fields=['store', 'folder']),
+            models.Index(fields=['store', 'label']),
         ]
 
     def __str__(self):

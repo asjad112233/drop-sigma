@@ -4226,8 +4226,11 @@ def _matches_folder(email_obj, folder, store=None):
 def auto_assign_for_folder_rules(email_obj):
     """Called from the email-save pipeline. For every active FolderAssignment
     rule whose predicate matches this email, ensure an EmailThreadAssignment
-    exists pointing the thread to the assigned team member.
-    Safe to call multiple times — uses get_or_create semantics."""
+    exists with the rule's member in either `assigned_to` (if empty) or
+    `co_assignees` (otherwise). Now supports MULTIPLE members per
+    folder/label — every matching rule's member becomes a co-assignee so
+    they all see the thread in their employee portal. Safe to call
+    multiple times."""
     if not email_obj or not getattr(email_obj, "store_id", None):
         return 0
     from .models import FolderAssignment, EmailThreadAssignment, EmailThreadLabel
@@ -4236,25 +4239,18 @@ def auto_assign_for_folder_rules(email_obj):
     if not contact:
         return 0
 
-    matched_members = set()
+    # Collect every member who should see this thread, from any matching
+    # rule (folder OR label-based). Using a dict so we keep TeamMember
+    # instances (cheaper for co_assignees.add()) and dedupe by id.
+    matched_members = {}    # member_id → TeamMember
 
-    # Folder-based rules
     folder_rules = FolderAssignment.objects.filter(
         store=store, is_active=True, label__isnull=True,
     ).exclude(folder="").select_related("assigned_to")
     for rule in folder_rules:
         if _matches_folder(email_obj, rule.folder, store=store):
-            matched_members.add(rule.assigned_to_id)
-            assignment, _created = EmailThreadAssignment.objects.get_or_create(
-                store=store, contact=contact,
-            )
-            if assignment.assigned_to_id != rule.assigned_to_id:
-                # Don't overwrite an explicit human assignment — only set if empty
-                if assignment.assigned_to_id is None:
-                    assignment.assigned_to = rule.assigned_to
-                    assignment.save(update_fields=["assigned_to"])
+            matched_members[rule.assigned_to_id] = rule.assigned_to
 
-    # Label-based rules — fire only if the thread already has the label
     label_rules = FolderAssignment.objects.filter(
         store=store, is_active=True, label__isnull=False,
     ).select_related("assigned_to", "label")
@@ -4264,13 +4260,22 @@ def auto_assign_for_folder_rules(email_obj):
         ).values_list("label_id", flat=True))
         for rule in label_rules:
             if rule.label_id in thread_label_ids:
-                matched_members.add(rule.assigned_to_id)
-                assignment, _created = EmailThreadAssignment.objects.get_or_create(
-                    store=store, contact=contact,
-                )
-                if assignment.assigned_to_id is None:
-                    assignment.assigned_to = rule.assigned_to
-                    assignment.save(update_fields=["assigned_to"])
+                matched_members[rule.assigned_to_id] = rule.assigned_to
+
+    if not matched_members:
+        return 0
+
+    assignment, _created = EmailThreadAssignment.objects.get_or_create(
+        store=store, contact=contact,
+    )
+    # If no human has assigned this thread yet, take the FIRST matched
+    # member as primary assignee. Otherwise leave the explicit assignment.
+    if assignment.assigned_to_id is None:
+        primary = next(iter(matched_members.values()))
+        assignment.assigned_to = primary
+        assignment.save(update_fields=["assigned_to"])
+    # Add every matched rule-member as a co-assignee (idempotent).
+    assignment.co_assignees.add(*matched_members.values())
 
     return len(matched_members)
 
@@ -4317,38 +4322,78 @@ def folder_assignments_api(request):
         return Response({"success": False, "message": "folder or label_id required."}, status=400)
     store = get_object_or_404(Store, id=store_id, user=request.user)
 
+    # ── Resolve label (if any) up-front so both POST and DELETE use it ──
+    label = None
+    if label_id:
+        label = EmailLabel.objects.filter(id=label_id, owner=request.user).first()
+        if not label:
+            return Response({"success": False, "message": "Label not found."}, status=404)
+        folder = ""  # mutual exclusion — label rules don't use folder field
+
     if request.method == "POST":
-        member_id = request.data.get("member_id")
-        if not member_id:
-            return Response({"success": False, "message": "member_id required."}, status=400)
-        member = TeamMember.objects.filter(id=member_id, owner=request.user).first()
-        if not member:
-            return Response({"success": False, "message": "Team member not found."}, status=404)
-
-        label = None
-        if label_id:
-            label = EmailLabel.objects.filter(id=label_id, owner=request.user).first()
-            if not label:
-                return Response({"success": False, "message": "Label not found."}, status=404)
-            folder = ""  # ensure mutual exclusion
-
-        # Upsert the rule
-        if label:
-            rule, _created = FolderAssignment.objects.update_or_create(
-                store=store, label=label, defaults={
-                    "folder": "", "assigned_to": member, "is_active": True,
-                    "created_by": request.user,
-                },
-            )
+        # Accept either:
+        #   • member_id   (single)    — additive: add this member to the rule set
+        #   • member_ids  (list)      — replace semantics: set the entire rule set
+        single   = request.data.get("member_id")
+        multi    = request.data.get("member_ids")
+        replace_mode = isinstance(multi, list)
+        if replace_mode:
+            requested_ids = [int(x) for x in multi if str(x).strip().isdigit()]
+        elif single:
+            requested_ids = [int(single)] if str(single).strip().isdigit() else []
         else:
-            rule, _created = FolderAssignment.objects.update_or_create(
-                store=store, folder=folder, label=None, defaults={
-                    "assigned_to": member, "is_active": True,
-                    "created_by": request.user,
-                },
+            return Response({"success": False, "message": "member_id or member_ids required."}, status=400)
+
+        # Validate that all members belong to this tenant
+        valid_members = list(TeamMember.objects.filter(id__in=requested_ids, owner=request.user))
+        valid_ids = {m.id for m in valid_members}
+        invalid = [i for i in requested_ids if i not in valid_ids]
+        if invalid and not valid_members:
+            return Response({"success": False, "message": "Team member(s) not found."}, status=404)
+
+        # Existing rules for this target
+        existing_qs = (FolderAssignment.objects.filter(store=store, label=label)
+                       if label else
+                       FolderAssignment.objects.filter(store=store, folder=folder, label__isnull=True))
+        existing_member_ids = set(existing_qs.values_list("assigned_to_id", flat=True))
+
+        # Reconcile: ADDITIVE in single-id mode, REPLACE in list mode
+        if replace_mode:
+            target_ids = valid_ids
+        else:
+            target_ids = existing_member_ids | valid_ids
+
+        to_add    = target_ids - existing_member_ids
+        to_remove = existing_member_ids - target_ids if replace_mode else set()
+
+        # Add new rule rows
+        for mid in to_add:
+            member = next((m for m in valid_members if m.id == mid), None)
+            if not member:
+                continue
+            FolderAssignment.objects.get_or_create(
+                store=store,
+                folder=folder, label=label,
+                assigned_to=member,
+                defaults={"is_active": True, "created_by": request.user},
             )
 
-        # ── One-shot: assign all CURRENT matching threads to this member ──
+        # Remove rule rows for unchecked members (replace mode only)
+        if to_remove:
+            existing_qs.filter(assigned_to_id__in=to_remove).delete()
+
+        # Compute the final member set for the bulk-assign step + response
+        final_members = list(TeamMember.objects.filter(id__in=target_ids))
+        if not final_members:
+            return Response({
+                "success": True,
+                "assigned_now": 0,
+                "total_matching": 0,
+                "members": [],
+                "message": "Rule cleared. Future emails won't auto-assign here.",
+            })
+
+        # ── Bulk-assign all CURRENT matching threads ──
         em_qs = EmailMessage.objects.filter(store=store)
         if label:
             label_contacts = list(EmailThreadLabel.objects.filter(
@@ -4374,29 +4419,43 @@ def folder_assignments_api(request):
                 em_qs = em_qs.filter(category__icontains=folder.rstrip("s"))
 
         contacts = set(em_qs.values_list("sender", flat=True))
-        contacts = [c for c in contacts if c]
+        contacts = [(c or "").lower() for c in contacts if c]
+        primary = final_members[0]            # first member = primary assignee
+        co_members = final_members[1:]         # rest become co-assignees
         assigned_count = 0
         for c in contacts:
             assignment, _was_created = EmailThreadAssignment.objects.get_or_create(
-                store=store, contact=(c or "").lower(),
+                store=store, contact=c,
             )
-            # Only override empty assignments; leave human-set ones alone
+            changed = False
             if assignment.assigned_to_id is None:
-                assignment.assigned_to = member
-                assignment.save(update_fields=["assigned_to"])
+                assignment.assigned_to = primary
+                changed = True
                 assigned_count += 1
+            if changed:
+                assignment.save(update_fields=["assigned_to"])
+            # Add every rule-member as a co-assignee (idempotent)
+            if final_members:
+                assignment.co_assignees.add(*final_members)
 
         return Response({
             "success": True,
-            "rule_id": rule.id,
+            "members": [{"id": m.id, "name": m.name, "role": m.role} for m in final_members],
             "assigned_now": assigned_count,
             "total_matching": len(contacts),
-            "message": f"Rule saved. {assigned_count} thread(s) assigned now; future matching emails will auto-assign.",
+            "message": (
+                f"Rule saved. {len(final_members)} member(s) will see emails in this "
+                f"folder. {assigned_count} thread(s) assigned now."
+            ),
         })
 
-    # DELETE
-    if label_id:
-        FolderAssignment.objects.filter(store=store, label_id=label_id).delete()
-    else:
-        FolderAssignment.objects.filter(store=store, folder=folder, label__isnull=True).delete()
+    # DELETE — accept member_id to remove just one member from the rule set,
+    # or no member_id to clear the entire rule.
+    member_id = request.data.get("member_id")
+    base_qs = (FolderAssignment.objects.filter(store=store, label=label)
+               if label else
+               FolderAssignment.objects.filter(store=store, folder=folder, label__isnull=True))
+    if member_id:
+        base_qs = base_qs.filter(assigned_to_id=member_id)
+    base_qs.delete()
     return Response({"success": True, "removed": True})

@@ -18956,10 +18956,14 @@ async function loadEmails(options={}){
       return;
     }
 
-    if(visibleThreads.length > 0){
-      await openThread(visibleThreads[0].contact);
-    }else{
+    // RULE: No auto-open of the first thread on a fresh folder/section visit.
+    // If a thread is currently open AND still visible → keep it.
+    // Otherwise → blank panel; user has to click a thread to view it.
+    if (currentThreadContact && visibleThreads.some(t => t.contact === currentThreadContact)){
+      // keep current selection — do nothing
+    } else {
       clearEmailDetail();
+      currentThreadContact = null;
     }
   }catch(error){
     if(list){ list.dataset.fp = ""; list.innerHTML = `<div class="empty">Error loading threads: ${error.message}</div>`; }
@@ -27619,8 +27623,42 @@ function filterByLabel(labelId){
    FOLDER SWITCHING — Inbox / Unread / Needs Human / Drafts / etc.
    Each folder maps to a client-side predicate over allThreads.
    ────────────────────────────────────────────────────────────────────── */
+/* Per-folder last-opened-thread memory.
+   Key: 'folder:<name>'  or  'label:<id>'
+   Value: contact email of the thread that was last open in that view.
+   Restored when the user switches back to that folder. First-time entry
+   into a folder shows a BLANK chat (no auto-open). */
+const _emFolderLastContact = {};
+function _emFolderKey(){
+  return emailLabelFilter ? ('label:' + emailLabelFilter)
+                          : ('folder:' + (emailFolder || 'inbox'));
+}
+function _emRememberOpenThread(contact){
+  if(!contact) return;
+  try { _emFolderLastContact[_emFolderKey()] = contact; } catch(_){}
+}
+window._emRememberOpenThread = _emRememberOpenThread;
+
+/* Wrap openThread so every manual click records the contact against the
+   currently-active folder. The wrapper runs once on script load — even
+   if openThread is replaced later, our wrapper stays in effect. */
+(function _ecWrapOpenThread(){
+  const orig = window.openThread;
+  if (typeof orig !== 'function' || orig._ecWrapped) return;
+  const wrapped = function(contact, options){
+    if (contact) _emRememberOpenThread(contact);
+    return orig.apply(this, arguments);
+  };
+  wrapped._ecWrapped = true;
+  window.openThread = wrapped;
+})();
+
 function setEmailFolder(folder, opts){
   opts = opts || {};
+  // Remember which thread was open in the CURRENT folder before switching
+  if (typeof currentThreadContact !== 'undefined' && currentThreadContact){
+    _emRememberOpenThread(currentThreadContact);
+  }
   emailFolder = folder;
   // Clear the label filter when switching folders (unless caller asked to keep)
   if (!opts.keepLabel) emailLabelFilter = null;
@@ -27652,7 +27690,80 @@ function setEmailFolder(folder, opts){
   } else {
     try { renderEmails(); } catch(_){}
   }
+  // After rendering, pick the right thread to display in the chat panel:
+  //   1. If this folder has a remembered last-opened thread AND it still
+  //      exists in the filtered list → re-open it.
+  //   2. Else open the FIRST thread of the new filtered list.
+  //   3. If list is empty → clear the chat panel so the previous folder's
+  //      thread doesn't visually linger.
+  try { _emAutoOpenForCurrentFolder(); } catch(_){}
 }
+
+/* When the user switches folders:
+   - If they had previously opened a thread in THIS folder, re-open it.
+   - Otherwise → BLANK chat panel (no auto-open of the first thread).
+   - Also clears the panel if the previous folder's thread isn't valid
+     in the new folder. */
+function _emAutoOpenForCurrentFolder(){
+  // Needs Human has its own renderer that lists from the server.
+  if (emailFolder === 'needs_human') return;
+  // Compute the filtered list same way renderEmails() does.
+  let list = [];
+  try {
+    list = (typeof getVisibleThreads === 'function')
+            ? getVisibleThreads(allThreads || [])
+            : (allThreads || []);
+    if (typeof applyEmailFolderFilter === 'function'){
+      list = applyEmailFolderFilter(list);
+    }
+  } catch(_){ list = allThreads || []; }
+
+  const remembered = _emFolderLastContact[_emFolderKey()];
+  // Re-open ONLY if a remembered thread exists AND it's in the current view
+  if (remembered && list.some(t => t.contact === remembered)){
+    if (remembered !== currentThreadContact && typeof openThread === 'function'){
+      openThread(remembered);
+    }
+    return;
+  }
+
+  // No remembered thread (first visit) OR previous one is no longer in
+  // this folder → clear the chat panel so nothing auto-opens.
+  _emClearChatPanel();
+}
+window._emAutoOpenForCurrentFolder = _emAutoOpenForCurrentFolder;
+
+/* Wipe the chat-panel display (used on first-time folder visits + when
+   the remembered thread isn't valid in the current folder). */
+function _emClearChatPanel(){
+  currentThreadContact = null;
+  currentThreadEmails = [];
+  // Reset header texts
+  const subj = document.getElementById('emailDetailSubject');
+  const meta = document.getElementById('emailDetailMeta');
+  if (subj) subj.innerText = 'Select a thread';
+  if (meta) meta.innerText = 'Thread details will show here.';
+  // Reset chips: assignee + order + labels + needs-human banner
+  try {
+    const oc = document.getElementById('emOrderChip');
+    if (oc){ oc.className = 'em-order-chip none'; oc.querySelector('#emOrderChipText') && (oc.querySelector('#emOrderChipText').textContent = 'No order found'); oc.onclick = null; }
+  } catch(_){}
+  const tl = document.getElementById('emThreadLabels'); if (tl) tl.innerHTML = '';
+  const nh = document.getElementById('emNeedsHumanBanner'); if (nh){ nh.style.display='none'; nh.innerHTML=''; }
+  const assigneeChipName = document.getElementById('assigneeChipName');
+  if (assigneeChipName) assigneeChipName.textContent = 'Unassigned';
+  const assigneeChip = document.getElementById('assigneeChip');
+  if (assigneeChip){
+    assigneeChip.classList.remove('open');
+    assigneeChip.classList.add('unassigned');
+  }
+  // Clear the chat body
+  const body = document.getElementById('chatBody') || document.getElementById('emailDetailBody');
+  if (body) body.innerHTML = '';
+  // Remove "active" highlight from any selected thread row in the list
+  document.querySelectorAll('#emailsList .em-tc.active').forEach(el => el.classList.remove('active'));
+}
+window._emClearChatPanel = _emClearChatPanel;
 
 /* Filter helper used by renderEmails() — apply current folder + label filter. */
 function applyEmailFolderFilter(threads){
@@ -28198,6 +28309,8 @@ function _ecCollectTargetContacts(target){
 }
 
 // Cache of active folder/label rules — refreshed by _ecLoadFolderRules()
+// Each rule is one member's assignment to a (folder OR label). Multiple
+// rules can exist for the same (folder/label) — one per assigned member.
 let _ecFolderRules = [];
 async function _ecLoadFolderRules(){
   try {
@@ -28207,11 +28320,12 @@ async function _ecLoadFolderRules(){
   } catch(_){ _ecFolderRules = []; }
 }
 window._ecLoadFolderRules = _ecLoadFolderRules;
-function _ecFindRule(target){
+// Returns ALL rules that match the given target (folder or label).
+function _ecFindRules(target){
   if (target.kind === 'label'){
-    return _ecFolderRules.find(r => String(r.label_id) === String(target.labelId));
+    return _ecFolderRules.filter(r => String(r.label_id) === String(target.labelId));
   }
-  return _ecFolderRules.find(r => !r.label_id && r.folder === target.folder);
+  return _ecFolderRules.filter(r => !r.label_id && r.folder === target.folder);
 }
 
 function openSidebarItemMenu(ev, target){
@@ -28219,13 +28333,26 @@ function openSidebarItemMenu(ev, target){
   closeSidebarItemMenu();
   const pop = document.createElement('div');
   pop.id = 'ecItemMenu';
-  pop.style.cssText = 'position:fixed;background:#fff;border:1px solid #e5eaf2;border-radius:11px;box-shadow:0 14px 38px rgba(15,23,42,.22);padding:6px;width:240px;z-index:99999;';
+  pop.style.cssText = 'position:fixed;background:#fff;border:1px solid #e5eaf2;border-radius:11px;box-shadow:0 14px 38px rgba(15,23,42,.22);padding:6px;width:260px;z-index:99999;';
   const labelTxt = target.label || target.folder || '';
-  const rule = _ecFindRule(target);
-  const assignmentRow = rule ? `
-    <div style="padding:8px 10px;background:#eef2ff;border:1px solid #c7d2fe;border-radius:8px;margin:0 0 6px;font-size:11.5px;color:#4338ca;display:flex;align-items:center;gap:7px;">
-      <span style="width:18px;height:18px;border-radius:5px;background:linear-gradient(135deg,#6366f1,#a855f7);color:#fff;display:grid;place-items:center;font-size:9px;font-weight:800;flex-shrink:0;">${escapeHtml((rule.member_name||'?').split(/\\s+/).map(s=>s[0]).slice(0,2).join('').toUpperCase())}</span>
-      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><b>${escapeHtml(rule.member_name)}</b> owns this folder</span>
+  const rules = _ecFindRules(target);
+  // Render all assigned members as an avatar stack + names
+  const assignmentRow = rules.length ? `
+    <div style="padding:8px 10px;background:#eef2ff;border:1px solid #c7d2fe;border-radius:8px;margin:0 0 6px;">
+      <div style="font-size:10px;font-weight:800;color:#6366f1;letter-spacing:.5px;text-transform:uppercase;margin-bottom:5px;">
+        ${rules.length} member${rules.length>1?'s':''} assigned
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        ${rules.map(r => {
+          const initials = (r.member_name||'?').split(/\\s+/).map(s=>s[0]).slice(0,2).join('').toUpperCase();
+          return `
+            <div style="display:flex;align-items:center;gap:7px;font-size:11.5px;color:#4338ca;">
+              <span style="width:18px;height:18px;border-radius:5px;background:linear-gradient(135deg,#6366f1,#a855f7);color:#fff;display:grid;place-items:center;font-size:9px;font-weight:800;flex-shrink:0;">${escapeHtml(initials)}</span>
+              <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(r.member_name)}</span>
+              <button data-remove-member="${r.member_id}" class="ec-member-remove" title="Remove ${escapeHtml(r.member_name)}" style="background:transparent;border:none;cursor:pointer;color:#a5a8b2;font-size:13px;line-height:1;padding:2px 5px;border-radius:4px;font-family:inherit;">✕</button>
+            </div>`;
+        }).join('')}
+      </div>
     </div>` : '';
   pop.innerHTML = `
     <div style="padding:6px 10px 8px;font-size:10.5px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #f1f5f9;margin-bottom:4px;display:flex;align-items:center;gap:6px;">
@@ -28235,20 +28362,37 @@ function openSidebarItemMenu(ev, target){
     ${assignmentRow}
     <button class="ec-menu-item" data-act="assign">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 11l-3-3m0 0l3-3m-3 3h-6"/></svg>
-      <span>${rule ? 'Change team member' : 'Assign to team'}</span>
+      <span>${rules.length ? 'Manage assignees' : 'Assign to team'}</span>
       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" style="margin-left:auto;opacity:.5;"><polyline points="9 18 15 12 9 6"/></svg>
     </button>
-    ${rule ? `
-    <button class="ec-menu-item" data-act="unassign">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      <span>Remove rule</span>
-    </button>` : ''}
     <button class="ec-menu-item ec-menu-danger" data-act="empty">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
       <span>Empty Chat</span>
     </button>
   `;
   document.body.appendChild(pop);
+
+  // Wire per-member remove buttons
+  pop.querySelectorAll('[data-remove-member]').forEach(b => {
+    b.onclick = async (e) => {
+      e.stopPropagation();
+      const memberId = b.dataset.removeMember;
+      const body = { store_id: selectedStoreId, member_id: memberId };
+      if (target.kind === 'label') body.label_id = target.labelId;
+      else                          body.folder   = target.folder;
+      try {
+        await fetch('/emails/api/folders/assignments/', {
+          method:'DELETE', credentials:'same-origin',
+          headers:{'Content-Type':'application/json','X-CSRFToken':getCSRFToken()},
+          body: JSON.stringify(body),
+        });
+        await _ecLoadFolderRules();
+        closeSidebarItemMenu();
+        // Re-open with refreshed rules
+        openSidebarItemMenu(ev, target);
+      } catch(_){}
+    };
+  });
 
   // Position: anchor next to the trigger, clamped to viewport
   const rect = ev.currentTarget.getBoundingClientRect();
@@ -28272,39 +28416,7 @@ function openSidebarItemMenu(ev, target){
     e.stopPropagation();
     await ecOpenAssignSubmenu(e, target);
   };
-  const unassignBtn = pop.querySelector('[data-act="unassign"]');
-  if (unassignBtn){
-    unassignBtn.onclick = async (e) => {
-      e.stopPropagation();
-      closeSidebarItemMenu();
-      const ok = await _confirm(
-        'Remove the team-member assignment from this folder? Future emails will no longer auto-assign.',
-        { title: 'Remove rule', icon: '👤', confirmText: 'Remove', cancelText: 'Cancel' }
-      );
-      if (!ok) return;
-      const body = { store_id: selectedStoreId };
-      if (target.kind === 'label') body.label_id = target.labelId;
-      else                          body.folder   = target.folder;
-      try {
-        const r = await fetch('/emails/api/folders/assignments/', {
-          method:'DELETE', credentials:'same-origin',
-          headers:{'Content-Type':'application/json','X-CSRFToken':getCSRFToken()},
-          body: JSON.stringify(body),
-        });
-        const d = await r.json();
-        if (!d.success){
-          await _alert(d.message || 'Failed to remove rule.', 'Error', '❌');
-          return;
-        }
-        await _ecLoadFolderRules();
-        if (typeof _alert === 'function'){
-          await _alert('Rule removed. Future emails won\'t auto-assign.', 'Done', '✓');
-        }
-      } catch(e){
-        await _alert('Network error: ' + e.message, 'Error', '❌');
-      }
-    };
-  }
+  // (Per-member remove is wired above via [data-remove-member] buttons.)
 
   setTimeout(()=>document.addEventListener('click', _ecMenuOutside), 30);
   window.addEventListener('resize', closeSidebarItemMenu, { once:true });
@@ -28357,34 +28469,48 @@ async function ecEmptyTarget(target){
   }
 }
 
-/* Open submenu showing team members; clicking one bulk-assigns the
-   target's threads to that member. They'll then see those threads in
-   their employee portal automatically (existing EmailThreadAssignment
-   flow). */
+/* Multi-select assignee submenu — checkbox list of all team members,
+   pre-checked for members currently on the folder/label rule. Clicking
+   Apply sends the FULL set to the backend (replace semantics). The
+   backend reconciles: adds missing, removes unchecked, saves the rule. */
 async function ecOpenAssignSubmenu(ev, target){
-  // Remove any existing submenu
   document.getElementById('ecAssignSubmenu')?.remove();
   const members = await _ecFetchTeam();
+  // Pre-checked set from the current rules
+  const currentRules = _ecFindRules(target);
+  const checked = new Set(currentRules.map(r => String(r.member_id)));
+
   const sub = document.createElement('div');
   sub.id = 'ecAssignSubmenu';
-  sub.style.cssText = 'position:fixed;background:#fff;border:1px solid #e5eaf2;border-radius:11px;box-shadow:0 14px 38px rgba(15,23,42,.22);padding:6px;width:230px;max-height:320px;overflow-y:auto;z-index:100000;';
+  sub.style.cssText = 'position:fixed;background:#fff;border:1px solid #e5eaf2;border-radius:11px;box-shadow:0 14px 38px rgba(15,23,42,.22);padding:6px;width:260px;max-height:360px;overflow-y:auto;z-index:100000;display:flex;flex-direction:column;';
   if (!members.length){
     sub.innerHTML = `<div style="padding:14px;text-align:center;font-size:12px;color:#94a3b8;font-style:italic;">No team members yet</div>`;
   } else {
     sub.innerHTML = `
-      <div style="padding:6px 10px 6px;font-size:10.5px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #f1f5f9;margin-bottom:4px;">ASSIGN TO</div>
-      ${members.map(m => {
-        const initials = (m.name||'?').split(/\s+/).map(s=>s[0]).slice(0,2).join('').toUpperCase();
-        return `
-          <button class="ec-menu-item" data-mid="${m.id}">
-            <span style="width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,#6366f1,#a855f7);color:#fff;display:grid;place-items:center;font-size:10px;font-weight:800;flex-shrink:0;">${escapeHtml(initials)}</span>
-            <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(m.name)}<br><span style="font-size:10.5px;color:#94a3b8;font-weight:500;">${escapeHtml(formatText ? formatText(m.role) : (m.role||''))}</span></span>
-          </button>`;
-      }).join('')}
+      <div style="padding:6px 10px 6px;font-size:10.5px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #f1f5f9;margin-bottom:4px;">ASSIGN TO (pick one or many)</div>
+      <div id="ecAssignList" style="flex:1;overflow-y:auto;max-height:240px;">
+        ${members.map(m => {
+          const initials = (m.name||'?').split(/\s+/).map(s=>s[0]).slice(0,2).join('').toUpperCase();
+          const isChecked = checked.has(String(m.id));
+          return `
+            <label class="ec-assign-row" data-mid="${m.id}" style="display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:7px;cursor:pointer;transition:background .12s;">
+              <input type="checkbox" data-mid="${m.id}" ${isChecked?'checked':''} style="width:14px;height:14px;accent-color:#6366f1;cursor:pointer;flex-shrink:0;margin:0;">
+              <span style="width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,#6366f1,#a855f7);color:#fff;display:grid;place-items:center;font-size:10px;font-weight:800;flex-shrink:0;">${escapeHtml(initials)}</span>
+              <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12.5px;font-weight:600;color:#1a1c2e;">
+                ${escapeHtml(m.name)}
+                <span style="display:block;font-size:10.5px;color:#94a3b8;font-weight:500;">${escapeHtml(formatText ? formatText(m.role) : (m.role||''))}</span>
+              </span>
+            </label>`;
+        }).join('')}
+      </div>
+      <div style="border-top:1px solid #f1f5f9;padding:8px 6px 4px;margin-top:4px;display:flex;gap:6px;">
+        <button id="ecAssignCancel" style="flex:1;background:#f1f5f9;color:#475569;border:none;padding:7px;border-radius:7px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit;">Cancel</button>
+        <button id="ecAssignApply" style="flex:1;background:linear-gradient(135deg,#6366f1,#a855f7);color:#fff;border:none;padding:7px;border-radius:7px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit;">Apply</button>
+      </div>
     `;
   }
   document.body.appendChild(sub);
-  // Position next to the main menu
+  // Position next to the main menu (clamped to viewport)
   const mainPop = document.getElementById('ecItemMenu');
   if (mainPop){
     const r = mainPop.getBoundingClientRect();
@@ -28397,46 +28523,54 @@ async function ecOpenAssignSubmenu(ev, target){
     sub.style.left = left + 'px';
     sub.style.top  = top  + 'px';
   }
-  // Wire member clicks
-  sub.querySelectorAll('[data-mid]').forEach(b => {
-    b.onclick = async (e) => {
-      e.stopPropagation();
-      const memberId = b.dataset.mid;
-      closeSidebarItemMenu();
-      // Persistent rule — saves the folder/label → member mapping AND
-      // assigns all current matching threads. Future matching emails will
-      // auto-assign via auto_assign_for_folder_rules() in the email-save
-      // pipeline.
-      const body = { store_id: selectedStoreId, member_id: memberId };
-      if (target.kind === 'label') body.label_id = target.labelId;
-      else                          body.folder   = target.folder;
-      try {
-        const r = await fetch('/emails/api/folders/assignments/', {
-          method:'POST', credentials:'same-origin',
-          headers:{'Content-Type':'application/json','X-CSRFToken':getCSRFToken()},
-          body: JSON.stringify(body),
-        });
-        const d = await r.json();
-        if (!d.success){
-          await _alert(d.message || 'Assignment failed.', 'Error', '❌');
-          return;
-        }
-        if (typeof loadEmails === 'function') await loadEmails({silent:true, preserveSelection:true});
-        if (typeof loadEmailThreadStats === 'function') await loadEmailThreadStats();
-        if (typeof _ecLoadFolderRules === 'function') await _ecLoadFolderRules();
-        if (typeof _alert === 'function'){
-          const member = (members || []).find(m => String(m.id) === String(memberId));
-          const memberName = member ? member.name : 'team member';
+  // Hover style for rows
+  sub.querySelectorAll('.ec-assign-row').forEach(row => {
+    row.onmouseover = () => row.style.background = '#f8fafc';
+    row.onmouseout  = () => row.style.background = '';
+  });
+
+  // Cancel
+  sub.querySelector('#ecAssignCancel')?.addEventListener('click', (e)=>{
+    e.stopPropagation(); closeSidebarItemMenu();
+  });
+
+  // Apply — send replace-mode set
+  sub.querySelector('#ecAssignApply')?.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    const memberIds = Array.from(sub.querySelectorAll('input[type=checkbox]:checked')).map(c => c.dataset.mid);
+    closeSidebarItemMenu();
+    const body = { store_id: selectedStoreId, member_ids: memberIds };
+    if (target.kind === 'label') body.label_id = target.labelId;
+    else                          body.folder   = target.folder;
+    try {
+      const r = await fetch('/emails/api/folders/assignments/', {
+        method:'POST', credentials:'same-origin',
+        headers:{'Content-Type':'application/json','X-CSRFToken':getCSRFToken()},
+        body: JSON.stringify(body),
+      });
+      const d = await r.json();
+      if (!d.success){
+        await _alert(d.message || 'Assignment failed.', 'Error', '❌');
+        return;
+      }
+      if (typeof loadEmails === 'function') await loadEmails({silent:true, preserveSelection:true});
+      if (typeof loadEmailThreadStats === 'function') await loadEmailThreadStats();
+      if (typeof _ecLoadFolderRules === 'function') await _ecLoadFolderRules();
+      if (typeof _alert === 'function'){
+        const count = (d.members || []).length;
+        if (count === 0){
+          await _alert('Rule cleared. Future emails won\'t auto-assign.', 'Done', '✓');
+        } else {
           await _alert(
-            `Rule saved.\n\n${d.assigned_now} thread(s) assigned to ${memberName} right now. Any future emails landing in this folder will also auto-assign to them.`,
-            'Persistent rule active',
+            `${count} member(s) assigned. ${d.assigned_now} thread(s) updated now. Future matching emails will auto-assign to all ${count} member(s).`,
+            'Rule saved',
             '✓'
           );
         }
-      } catch(e){
-        await _alert('Network error: ' + e.message, 'Error', '❌');
       }
-    };
+    } catch(e){
+      await _alert('Network error: ' + e.message, 'Error', '❌');
+    }
   });
 }
 window.ecOpenAssignSubmenu = ecOpenAssignSubmenu;
