@@ -3799,7 +3799,6 @@ function getEmpCsrf(){
     </div>
     <div class="ds-imgbox-toolbar">
       <button class="ds-imgbox-btn" onclick="dsImgboxDownload()" id="dsImgboxDlBtn"><i class="fa-solid fa-download"></i> Download</button>
-      <button class="ds-imgbox-btn secondary" onclick="dsImgboxOpenNew()"><i class="fa-solid fa-arrow-up-right-from-square"></i> Open in new tab</button>
     </div>
   </div>
 </div>
@@ -3810,13 +3809,14 @@ window.dsImgboxOpen = function(src, caption){
   const box = document.getElementById('dsImgbox');
   const img = document.getElementById('dsImgboxImg');
   const cap = document.getElementById('dsImgboxCaption');
+  const name = ((caption||'product').replace(/[^\w؀-ۿ一-鿿.\- ]/g,'').replace(/\s+/g,'_') || 'product') + '.jpg';
+  const proxyBase = '/api/download-image/?url=' + encodeURIComponent(src) + '&name=' + encodeURIComponent(name);
   box.classList.add('open','loading');
   img.onload = ()=> box.classList.remove('loading');
   img.onerror = ()=> { box.classList.remove('loading'); cap.textContent = '⚠ Image could not be loaded'; };
-  img.src = src;
+  img.src = proxyBase + '&inline=1';
   cap.textContent = caption || 'Product image';
-  box.dataset.src = src;
-  box.dataset.name = ((caption||'product').replace(/[^\w؀-ۿ一-鿿.\- ]/g,'').replace(/\s+/g,'_') || 'product') + '.jpg';
+  box.dataset.proxy = proxyBase;
   document.body.style.overflow = 'hidden';
 };
 window.dsImgboxClose = function(){
@@ -3827,16 +3827,12 @@ window.dsImgboxClose = function(){
 };
 window.dsImgboxDownload = async function(){
   const box = document.getElementById('dsImgbox');
-  const src = box.dataset.src;
-  const name = box.dataset.name || 'product.jpg';
-  if(!src) return;
+  const proxyUrl = box.dataset.proxy;
+  if(!proxyUrl) return;
   const btn = document.getElementById('dsImgboxDlBtn');
   const orig = btn.innerHTML;
   btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Downloading…';
   btn.disabled = true;
-  // Route through server-side proxy — bypasses CDN CORS blocks so the file
-  // ALWAYS downloads (never redirects to the source website).
-  const proxyUrl = '/api/download-image/?url=' + encodeURIComponent(src) + '&name=' + encodeURIComponent(name);
   try {
     const res = await fetch(proxyUrl, {credentials:'same-origin'});
     if(!res.ok){
@@ -3846,7 +3842,8 @@ window.dsImgboxDownload = async function(){
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = name;
+    const m = /name=([^&]+)/.exec(proxyUrl);
+    a.href = url; a.download = m ? decodeURIComponent(m[1]) : 'product.jpg';
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(()=>URL.revokeObjectURL(url), 4000);
     btn.innerHTML = '<i class="fa-solid fa-check"></i> Saved';
@@ -3855,10 +3852,6 @@ window.dsImgboxDownload = async function(){
     btn.innerHTML = orig; btn.disabled = false;
     window.location.href = proxyUrl;
   }
-};
-window.dsImgboxOpenNew = function(){
-  const src = document.getElementById('dsImgbox').dataset.src;
-  if(src) window.open(src,'_blank','noopener');
 };
 document.addEventListener('keydown', e=>{
   if(e.key === 'Escape' && document.getElementById('dsImgbox')?.classList.contains('open')) dsImgboxClose();

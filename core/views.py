@@ -1201,11 +1201,19 @@ def download_image_proxy(request):
     # Use image/* even for octet-stream upstream so the browser handles it as an image
     out_ctype = ctype if ctype.startswith("image/") else f"image/{ext}"
     resp = StreamingHttpResponse(_stream(), content_type=out_ctype)
+    # ?inline=1 → display in the page (used by the lightbox so the source CDN
+    # URL never appears in the rendered <img src=…>). Default = force download.
+    inline_mode = request.GET.get("inline") in ("1", "true", "yes")
+    disposition = "inline" if inline_mode else "attachment"
     # RFC 5987 encoded filename for non-ASCII safety
     from urllib.parse import quote
     resp["Content-Disposition"] = (
-        f'attachment; filename="{filename}"; filename*=UTF-8\'\'{quote(filename)}'
+        f'{disposition}; filename="{filename}"; filename*=UTF-8\'\'{quote(filename)}'
     )
     resp["X-Content-Type-Options"] = "nosniff"
-    resp["Cache-Control"] = "private, no-store"
+    # Allow modest caching for inline display so re-renders are fast, but never
+    # cache attachments (privacy of the download action).
+    resp["Cache-Control"] = "private, max-age=600" if inline_mode else "private, no-store"
+    # Prevent referrer leakage so the upstream CDN can never tell who clicked
+    resp["Referrer-Policy"] = "no-referrer"
     return resp
