@@ -17,9 +17,16 @@
     .sidebar button{display:block;width:100%;text-align:left;color:#cbd5e1;background:none;border:0;padding:12px;border-radius:10px;margin-bottom:8px;cursor:pointer}
     .sidebar button.active,.sidebar button:hover{background:#1e293b;color:white}
     .main{padding:24px;height:100vh;overflow:auto;box-sizing:border-box}
-    .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px}
+    .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;padding-right:64px}
     .topbar h1{margin:0;font-size:30px}
     .topbar p{margin-top:6px;color:#667085}
+    /* Reserve space at the far right of every section header so action
+       buttons like "+ Add Store", "+ Compose Email", "+ Add Vendor" never
+       sit under the floating notification bell (top:14px / right:20px). */
+    .section .topbar > :last-child,
+    .section .topbar .actions,
+    #emailsSection .em-hdr-right,
+    #emailsSection .em-hdr-left + .em-hdr-right{margin-right:8px;}
     .btn{padding:11px 16px;border:none;border-radius:12px;background:#2563eb;color:white;font-weight:bold;cursor:pointer}
     .btn:disabled{opacity:.65;cursor:not-allowed}
     .btn.dark{background:#111827}.btn.red{background:#dc2626}.btn.green{background:#16a34a}
@@ -2158,7 +2165,7 @@ body.vf-dark-mode .sidebar button[id^='nav'].active .sb-nav-icon{color:#93c5fd!i
 .vs-table-card tbody td{padding:12px 16px!important;font-size:13px!important;color:var(--vf-text)!important;border-bottom:1px solid var(--vf-line)!important;vertical-align:middle!important;background:transparent!important;}
 .vs-table-card tbody tr:last-child td{border-bottom:none!important;}
 .vs-table-card tbody tr:hover td{background:rgba(53,207,255,.04)!important;}
-.topbar{align-items:flex-start!important;gap:16px!important;margin-bottom:22px!important}.topbar h1{font-size:38px!important;line-height:1.05!important;letter-spacing:-1.2px!important;color:var(--vf-text)!important;margin:0!important}.topbar p{font-size:15px!important;line-height:1.55!important;color:var(--vf-muted)!important;margin:8px 0 0!important}.actions{gap:10px!important;margin-top:0!important}
+.topbar{align-items:flex-start!important;gap:16px!important;margin-bottom:22px!important;padding-right:64px!important}.topbar h1{font-size:38px!important;line-height:1.05!important;letter-spacing:-1.2px!important;color:var(--vf-text)!important;margin:0!important}.topbar p{font-size:15px!important;line-height:1.55!important;color:var(--vf-muted)!important;margin:8px 0 0!important}.actions{gap:10px!important;margin-top:0!important}
 .btn{border:1px solid var(--vf-line)!important;border-radius:16px!important;background:var(--vf-surface-2)!important;color:var(--vf-text)!important;font-weight:900!important;box-shadow:0 8px 22px rgba(15,23,42,.06)!important;transition:.18s ease!important}.btn:hover{transform:translateY(-2px)!important;filter:none!important}.btn:not(.dark):not(.red):not(.green){background:linear-gradient(135deg,var(--vf-cyan),var(--vf-purple))!important;color:#fff!important;border-color:transparent!important}.btn.dark{background:#111827!important;color:#fff!important}.btn.red{background:#dc2626!important;color:#fff!important}.btn.green{background:#16a34a!important;color:#fff!important}
 input,select,textarea{border-radius:16px!important;border:1px solid var(--vf-line)!important;background:var(--vf-surface)!important;color:var(--vf-text)!important;outline:none!important;box-sizing:border-box!important}input:focus,select:focus,textarea:focus{border-color:#60a5fa!important;box-shadow:0 0 0 3px rgba(37,99,235,.12)!important}body.vf-dark-mode input,body.vf-dark-mode select,body.vf-dark-mode textarea{background:rgba(255,255,255,.08)!important;color:#fff!important;border-color:rgba(255,255,255,.14)!important}body.vf-dark-mode option{color:#111!important}
 .cards,.grid,.vendor-grid{gap:16px!important}.cards{grid-template-columns:repeat(6,minmax(140px,1fr))!important;margin-bottom:22px!important}.card,.vendor-stat,.assign-box,.empty,.modal,.email-card,.chat-email-list,.chat-window,.chat-sidebar.card,.vendor-table-wrap,.order-bulk-bar,table{background:var(--vf-surface)!important;border:1px solid var(--vf-line)!important;color:var(--vf-text)!important;box-shadow:var(--vf-shadow)!important}.card,.vendor-stat{border-radius:26px!important;padding:20px!important;transition:.18s ease!important;backdrop-filter:blur(18px)!important}.card:hover,.vendor-stat:hover{transform:translateY(-3px)!important;border-color:rgba(53,207,255,.35)!important}.card h3{color:var(--vf-text)!important;font-size:19px!important;letter-spacing:-.3px!important}.card span,.card .sub,.sub{color:var(--vf-muted)!important}.card b,.vendor-stat b{font-size:30px!important;letter-spacing:-.8px!important;color:var(--vf-text)!important}.grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}.vendor-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important}
@@ -3270,8 +3277,14 @@ body.vf-dark-mode .pox-cb{background:rgba(255,255,255,.08);border-color:rgba(255
 /* Topbar action buttons */
 .em-sync-btn{width:38px;height:38px;border-radius:9px;border:1px solid #e2e8f0;background:#fff;color:#64748b;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .em-sync-btn:hover{background:#f8fafc;color:#0f172a;}
-.em-new-btn{height:38px;padding:0 14px;border-radius:9px;background:#10b981;color:#fff;border:none;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;flex-shrink:0;}
+.em-new-btn{height:38px;padding:0 14px;border-radius:9px;background:#10b981;color:#fff;border:none;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;flex-shrink:0;transition:opacity .15s, filter .15s;}
 .em-new-btn:hover{background:#059669;}
+/* Disabled look — still clickable so we can show the "connect first" hint */
+.em-new-btn.em-btn-disabled{opacity:.55;cursor:not-allowed;filter:grayscale(.4);}
+.em-new-btn.em-btn-disabled:hover{filter:grayscale(.4) brightness(1.04);}
+/* Pulse animation used to draw attention to the Connect Email button */
+@keyframes emPulseAttention{0%,100%{box-shadow:0 0 0 0 rgba(99,102,241,.6);}50%{box-shadow:0 0 0 8px rgba(99,102,241,0);}}
+.em-pulse-attention{animation:emPulseAttention 1.2s ease-out 2;}
 .em-more-wrap{position:relative;flex-shrink:0;}
 .em-more-btn{width:38px;height:38px;border-radius:9px;border:1px solid #e2e8f0;background:#fff;color:#64748b;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
 .em-more-btn:hover{background:#f8fafc;color:#0f172a;}
@@ -3518,22 +3531,28 @@ body.vf-dark-mode .em-more-btn,body.vf-dark-mode .em-sync-btn{background:var(--v
 .em-tc-chip.resolved{background:#dcfce7;color:#15803d;}
 .em-tc-chip.unread{background:#ef4444;color:#fff;font-weight:800;min-width:18px;justify-content:center;}
 .em-tc-chip.user{background:#dbeafe;color:#1d4ed8;padding:3px 8px;border-radius:999px;font-size:10px;font-weight:800;}
-/* Order-status chips on inbox rows (one per thread, replaces the old
-   "Unassigned" gap). Color buckets map to order lifecycle stages. */
-.em-tc-chip.order{font-weight:700;letter-spacing:.1px;max-width:200px;overflow:hidden;text-overflow:ellipsis;}
-.em-tc-chip.order.delivered{background:#dcfce7;color:#166534;}
-.em-tc-chip.order.shipped{background:#cffafe;color:#0e7490;}
-.em-tc-chip.order.processing{background:#fef3c7;color:#92400e;}
-.em-tc-chip.order.pending{background:#fef9c3;color:#854d0e;}
-.em-tc-chip.order.paid{background:#d1fae5;color:#065f46;}
-.em-tc-chip.order.cancelled{background:#fee2e2;color:#991b1b;}
-.em-tc-chip.order.refunded{background:#fce7f3;color:#9d174d;}
-.em-tc-chip.order.failed{background:#fee2e2;color:#7f1d1d;}
-.em-tc-chip.order.unfulfilled{background:#fef3c7;color:#854d0e;}
-.em-tc-chip.order.exception{background:#fee2e2;color:#7f1d1d;}
-.em-tc-chip.order.default{background:#e0e7ff;color:#3730a3;}
-/* "No order found" — dashed muted look so it's visually distinct */
-.em-tc-chip.order.none{background:#f8fafc;color:#94a3b8;border:1px dashed #cbd5e1;font-weight:600;}
+/* Thread header order chip — sits next to the Unassigned/Assignee chip in
+   the email-thread header, showing the latest order this customer placed
+   (or "No order found" if none exists). Replaces the old per-row chip
+   that used to clutter the inbox list. */
+.em-order-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:999px;
+  font-size:11.5px;font-weight:700;letter-spacing:.1px;cursor:default;transition:.18s;
+  max-width:240px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
+.em-order-chip.clickable{cursor:pointer;}
+.em-order-chip.clickable:hover{transform:translateY(-1px);box-shadow:0 4px 10px rgba(15,23,42,.12);}
+.em-order-chip.delivered{background:#dcfce7;color:#166534;}
+.em-order-chip.shipped{background:#cffafe;color:#0e7490;}
+.em-order-chip.processing{background:#fef3c7;color:#92400e;}
+.em-order-chip.pending{background:#fef9c3;color:#854d0e;}
+.em-order-chip.paid{background:#d1fae5;color:#065f46;}
+.em-order-chip.cancelled{background:#fee2e2;color:#991b1b;}
+.em-order-chip.refunded{background:#fce7f3;color:#9d174d;}
+.em-order-chip.failed{background:#fee2e2;color:#7f1d1d;}
+.em-order-chip.unfulfilled{background:#fef3c7;color:#854d0e;}
+.em-order-chip.exception{background:#fee2e2;color:#7f1d1d;}
+.em-order-chip.default{background:#e0e7ff;color:#3730a3;}
+/* "No order found" — dashed muted look (no green/red, just neutral) */
+.em-order-chip.none{background:#f8fafc;color:#94a3b8;border:1px dashed #cbd5e1;font-weight:600;cursor:default;}
 .em-tc-dots{position:absolute;top:10px;right:8px;width:24px;height:24px;border:none;background:transparent;color:#94a3b8;font-size:16px;cursor:pointer;border-radius:6px;display:flex;align-items:center;justify-content:center;line-height:1;opacity:0;transition:opacity .12s,background .12s;}
 .em-tc:hover .em-tc-dots{opacity:1;}
 .em-tc-dots:hover{background:#f1f5f9;color:#334155;}
@@ -4164,7 +4183,38 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
 </head>
 <style>
 #gLoader{position:fixed;top:0;left:0;height:3px;width:0%;z-index:99999;background:#2563eb;pointer-events:none;transition:width .35s ease;}
+/* ════════ Email-sync overlay (shown after connecting a mailbox) ════════ */
+#emailSyncOverlay{position:fixed;inset:0;background:rgba(8,11,22,.78);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);display:none;align-items:center;justify-content:center;z-index:100000;animation:esFade .25s ease-out;}
+#emailSyncOverlay.open{display:flex;}
+@keyframes esFade{from{opacity:0}to{opacity:1}}
+#emailSyncOverlay .es-card{background:#fff;border-radius:22px;padding:38px 44px 30px;width:420px;max-width:92vw;text-align:center;box-shadow:0 32px 80px rgba(0,0,0,.45);animation:esPop .35s cubic-bezier(.4,1.6,.5,1);}
+@keyframes esPop{from{transform:scale(.9);opacity:0}to{transform:scale(1);opacity:1}}
+#emailSyncOverlay .es-ring{position:relative;width:88px;height:88px;margin:0 auto 22px;}
+#emailSyncOverlay .es-spinner{width:88px;height:88px;animation:esSpin 1.4s linear infinite;}
+#emailSyncOverlay .es-spinner circle{stroke:url(#esGradient);stroke-linecap:round;stroke-dasharray:90 30;}
+@keyframes esSpin{to{transform:rotate(360deg)}}
+#emailSyncOverlay .es-icon{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:30px;animation:esFloat 2.4s ease-in-out infinite;}
+@keyframes esFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+#emailSyncOverlay .es-title{font-size:19px;font-weight:900;color:#0a0d1c;letter-spacing:-.3px;margin-bottom:6px;}
+#emailSyncOverlay .es-sub{font-size:13px;color:#64748b;font-weight:600;margin-bottom:24px;}
+#emailSyncOverlay .es-steps{display:flex;flex-direction:column;gap:8px;text-align:left;margin-bottom:20px;}
+#emailSyncOverlay .es-step{padding:9px 14px;border-radius:9px;background:#f8fafc;font-size:12.5px;font-weight:700;color:#94a3b8;display:flex;align-items:center;gap:9px;transition:.3s;}
+#emailSyncOverlay .es-step::before{content:'';width:14px;height:14px;border-radius:50%;border:2px solid #cbd5e1;flex-shrink:0;transition:.3s;}
+#emailSyncOverlay .es-step.active{background:linear-gradient(135deg,#eef2ff,#f5f3ff);color:#4338ca;}
+#emailSyncOverlay .es-step.active::before{border-color:#6366f1;border-top-color:transparent;animation:esStepSpin .7s linear infinite;}
+@keyframes esStepSpin{to{transform:rotate(360deg)}}
+#emailSyncOverlay .es-step.done{background:#dcfce7;color:#15803d;}
+#emailSyncOverlay .es-step.done::before{content:'✓';border:none;background:#10b981;color:#fff;font-size:10px;font-weight:900;display:flex;align-items:center;justify-content:center;line-height:1;animation:none;}
+#emailSyncOverlay .es-progress{height:4px;background:#f1f5f9;border-radius:99px;overflow:hidden;}
+#emailSyncOverlay .es-progress-bar{height:100%;width:0%;background:linear-gradient(90deg,#6366f1,#a855f7);border-radius:99px;transition:width .5s cubic-bezier(.4,.6,.3,1);box-shadow:0 0 12px rgba(168,85,247,.4);}
+#emailSyncOverlay.done .es-card{animation:esDonePulse .5s ease;}
+@keyframes esDonePulse{0%{transform:scale(1)}50%{transform:scale(1.02)}100%{transform:scale(1)}}
 </style>
+<svg width="0" height="0" style="position:absolute;"><defs>
+  <linearGradient id="esGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+    <stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#a855f7"/>
+  </linearGradient>
+</defs></svg>
 <body>
 <div id="gLoader"></div>
 <form id="csrfHiddenForm" style="display:none;">{% csrf_token %}</form>
@@ -5680,7 +5730,7 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
           <div class="em-hdr-right">
             <span id="liveSyncBadge" class="live-sync-badge" onclick="toggleLiveSync()" title="Click to pause/resume live sync" style="cursor:pointer;">Live Sync ON</span>
             <button class="em-sync-btn" title="Sync inbox now" onclick="syncInboxNow()">↻</button>
-            <button class="em-new-btn" onclick="openComposeModal()">+ New Email</button>
+            <button class="em-new-btn" id="emComposeBtn" onclick="openComposeModalGated()" title="Compose a new email">+ Compose Email</button>
             <!-- Inbox / Templates / Settings tabs moved into the sidebar
                  (under the Emails group), matching the Vendors pattern.
                  Keeping the hidden Inbox button so emNavInboxCount badge
@@ -5697,25 +5747,15 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
       <!-- INBOX TAB -->
       <div id="emTabInbox" class="em-tab-view">
 
-      <!-- STATS -->
-      <div class="em-stats">
-        <div class="em-stat"><div class="em-stat-lbl">Total Emails</div><div class="em-stat-val" id="emailTotal">0</div></div>
-        <div class="em-stat accent"><div class="em-stat-lbl">New</div><div class="em-stat-val" id="emailNew">0</div></div>
-        <div class="em-stat blue"><div class="em-stat-lbl">AI Drafts</div><div class="em-stat-val" id="emailDrafted">0</div></div>
-        <div class="em-stat green"><div class="em-stat-lbl">Replied</div><div class="em-stat-val" id="emailReplied">0</div></div>
-        <div class="em-stat green"><div class="em-stat-lbl">Resolved</div><div class="em-stat-val" id="emailClosed">0</div></div>
-        <div class="em-stat"><div class="em-stat-lbl">Inboxes</div><div class="em-stat-val" id="emailStoreId">0</div></div>
-        <button type="button" class="em-hdr-collapse-btn" id="emHdrCollapseBtn"
-                onclick="toggleEmailHeaderCollapse()"
-                title="Collapse header for more space"
-                aria-label="Collapse header"><span style="font-size:13px;line-height:1;">▴</span> <span id="emHdrCollapseBtnLbl">Collapse</span></button>
+      <!-- Hidden stat sinks — kept so existing updateEmailStats() code can keep
+           writing values without crashing, but the visual bar above the inbox
+           was removed per design feedback (it cluttered the chat-style UI). -->
+      <div style="display:none;">
+        <span id="emailTotal">0</span><span id="emailNew">0</span>
+        <span id="emailDrafted">0</span><span id="emailReplied">0</span>
+        <span id="emailClosed">0</span><span id="emailStoreId">0</span>
+        <span id="emHdrCollapseBtnLbl"></span>
       </div>
-
-      <!-- Slim re-opener strip — only visible when header is collapsed -->
-      <button type="button" class="em-hdr-reopen" id="emHdrReopen"
-              onclick="toggleEmailHeaderCollapse()"
-              title="Show header"
-              aria-label="Show header">▾ Show header</button>
 
       <!-- WORKSPACE -->
       <div class="em-workspace">
@@ -5810,6 +5850,14 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
                     <div class="em-ap-divider"></div>
                     <div class="em-ap-item em-ap-remove" onclick="event.stopPropagation();unassignThread();">✕ Remove assignment</div>
                   </div>
+                </div>
+
+                <!-- Linked order chip — shows the latest order for this customer
+                     (or "No order found" if none exists in any connected store).
+                     Populated by renderOrderStatusChip() whenever a thread opens. -->
+                <div class="em-order-chip none" id="emOrderChip" title="No order linked to this customer">
+                  <span style="font-size:13px;">📦</span>
+                  <span id="emOrderChipText">No order found</span>
                 </div>
 
                 <!-- Status pill with dropdown -->
@@ -10204,6 +10252,10 @@ function handleEmailNavClick(ev){
 
 function showSection(section){
   fireLoader();
+  // Set a body attribute so CSS can apply per-section adjustments
+  // (currently used to lift the Drop Sigma AI floater off the chat
+  // send-button when the user is inside Emails).
+  try { document.body.setAttribute('data-active-section', section || ''); } catch(_){}
   // Persist current section so hard refresh / re-entry returns to it.
   // Login flow explicitly clears this so fresh logins always land on Overview.
   try { if (section) localStorage.setItem('ds_currentSection', section); } catch(_){}
@@ -18259,6 +18311,34 @@ async function emBulkUnassign(){
   }
 }
 
+/* Render the linked-order chip in the thread header (next to the assignee
+   chip). Pulls thread.order_status that the threads API populates via the
+   email→order join. If no order matches the customer, shows a muted dashed
+   "No order found" pill. Clicking the chip opens that order's detail. */
+function renderOrderStatusChip(threadInfo){
+  const chip  = document.getElementById('emOrderChip');
+  const label = document.getElementById('emOrderChipText');
+  if(!chip || !label) return;
+  // Strip all variant classes; we'll re-add exactly one below.
+  chip.classList.remove('delivered','shipped','processing','pending','paid','cancelled','refunded','failed','unfulfilled','exception','default','none','clickable');
+  chip.onclick = null;
+  const info = threadInfo && threadInfo.order_status;
+  if(!info){
+    chip.classList.add('none');
+    label.textContent = 'No order found';
+    chip.title = 'No order linked to this customer';
+    return;
+  }
+  const variant = _emTcOrderChipClass(info.label || '');
+  chip.classList.add(variant, 'clickable');
+  const num = info.order_number ? `#${info.order_number}` : 'Order';
+  label.textContent = `${num} · ${info.label || '—'}`;
+  chip.title = `Open order ${num} — status: ${info.label || 'no status'}`;
+  if(info.order_id){
+    chip.onclick = () => { try { openOrderDetail(info.order_id); } catch(_){} };
+  }
+}
+
 // Map a free-text order status (carrier/platform-specific) to a chip class.
 // Returns one of: delivered / shipped / processing / pending / paid /
 // cancelled / refunded / failed / unfulfilled / exception / default.
@@ -18406,21 +18486,6 @@ function renderEmails(){
     // Only show unread count badge, not total message count
     const showUnreadBadge = visualUnread && unreadCount > 0;
 
-    // Order-status chip — replaces the old "Unassigned" gap when no team
-    // member is assigned, OR appears alongside the assignee chip. Shows the
-    // linked customer order's status, or "No order found" if there isn't one.
-    const orderInfo = thread.order_status;
-    let orderChip = "";
-    if (orderInfo){
-      const label = orderInfo.label || "";
-      const ordNum = orderInfo.order_number ? `#${orderInfo.order_number}` : "Order";
-      const cls = _emTcOrderChipClass(label);
-      const tip = `${ordNum} · ${label || "no status"}`;
-      orderChip = `<span class="em-tc-chip order ${cls}" title="${escapeHtml(tip)}">📦 ${escapeHtml(ordNum)} · ${escapeHtml(label || "—")}</span>`;
-    } else {
-      orderChip = `<span class="em-tc-chip order none" title="No order found for this customer">📦 No order found</span>`;
-    }
-
     const isBulkSelected = _emBulkSelected.has(thread.contact);
     return `
       <div class="em-tc ${active} ${unreadClass} ${isBulkSelected ? 'em-tc-checked' : ''}" onclick="openThread('${escapeJs(thread.contact)}')">
@@ -18438,7 +18503,6 @@ function renderEmails(){
           <div class="em-tc-chips">
             ${hasDraft ? `<span class="em-tc-chip ai">✦ AI Draft</span>` : ""}
             ${showUnreadBadge ? `<span class="em-tc-chip count unread" title="${unreadCount} unread message${unreadCount !== 1 ? 's' : ''}">${unreadCount}</span>` : ""}
-            ${orderChip}
             ${assigneeInitials ? `<span class="em-tc-chip user" title="${escapeHtml(assigneeName)}">${escapeHtml(assigneeInitials)}</span>` : ""}
             ${thread.is_resolved ? `<span class="em-tc-chip resolved">✓ Resolved</span>` : ""}
           </div>
@@ -18589,68 +18653,109 @@ async function unassignThread(){
 }
 
 /* Order detail → "Open Email" button entry point.
-   Behavior the user asked for:
+   Behavior:
    1. If a chat thread exists for this customer email → open it directly.
    2. If no thread exists → open the compose modal with the email pre-filled
       AND show a banner "No prior chat / mail history" so the user knows
       they're starting a fresh conversation.
-   `customerName` and `orderNum` are used to prefill subject and seed the
-   compose body for context.                                                  */
+
+   Previous version had race conditions: showSection('emails') kicked off
+   loadEmails() but we didn't actually wait for the fetch to resolve before
+   searching allThreads, so the search often ran against stale data. This
+   version awaits loadEmails() explicitly and force-closes the order modal
+   before any other navigation so nothing visually overlaps.                */
 async function openCustomerEmail(customerEmail, customerName, orderNum){
-  if(!customerEmail) return;
-  // Switch to the Emails section first (loads threads if not already loaded)
+  if(!customerEmail){
+    console.warn('[openCustomerEmail] missing customer email');
+    return;
+  }
+  const targetEmail = String(customerEmail).trim().toLowerCase();
+
+  // 1) Definitively close the order detail modal first — display:none + clear
+  //    its overlay class. Some animations leave the modal open if we just
+  //    call closeOrderModal() without explicit teardown.
+  try { closeOrderModal(); } catch(_){}
+  try {
+    const om = document.getElementById('orderDetailModal');
+    if (om){ om.style.display = 'none'; om.classList.remove('open'); }
+  } catch(_){}
+
+  // 2) Switch to Emails section. showSection() triggers loadEmails() which
+  //    populates allThreads; we await it explicitly so the search below sees
+  //    fresh data.
   showSection('emails');
 
-  // Wait briefly for threads to populate, then look for an existing thread
-  // by customer email. Try up to ~1.5s of polling so this works whether
-  // threads were already cached or are being fetched fresh.
-  const targetEmail = String(customerEmail).trim().toLowerCase();
+  // 3) Make sure threads are loaded. loadEmails() is the async fetch that
+  //    fills `allThreads`. If allThreads is already populated we still
+  //    re-fetch silently to catch any new threads the customer may have
+  //    started since the page first loaded.
+  try {
+    if (typeof loadEmails === 'function'){
+      await loadEmails({ silent: true, preserveSelection: true });
+    }
+  } catch(err){
+    console.warn('[openCustomerEmail] loadEmails failed', err);
+  }
+
   const tryFindThread = () => (allThreads || []).find(t =>
     (t.contact || "").trim().toLowerCase() === targetEmail
   );
 
+  // 4) Look up existing thread; poll briefly in case the fetch resolution
+  //    is racing the next microtask.
   let existing = tryFindThread();
-  if (!existing){
-    // Poll a few times in case loadEmails() hasn't completed yet
-    for (let i = 0; i < 6 && !existing; i++){
-      await new Promise(r => setTimeout(r, 250));
-      existing = tryFindThread();
-    }
+  for (let i = 0; i < 5 && !existing; i++){
+    await new Promise(r => setTimeout(r, 200));
+    existing = tryFindThread();
   }
 
-  // Close the order modal so the emails section is visible
-  try { closeOrderModal(); } catch(_){}
-
   if (existing){
-    // Direct open — user lands inside the customer's chat
-    await openThread(existing.contact);
+    // Existing chat → drop the user into it
+    try { await openThread(existing.contact); } catch(err){
+      console.warn('[openCustomerEmail] openThread failed', err);
+    }
     return;
   }
 
-  // No prior chat — open compose with this customer pre-filled
-  openComposeModal();
-  const toEl = document.getElementById("composeTo");
-  const subjEl = document.getElementById("composeSubject");
-  const bodyEl = document.getElementById("composeBodyRich");
-  if (toEl) toEl.value = customerEmail;
-  if (subjEl && !subjEl.value){
-    subjEl.value = orderNum ? `Regarding your order #${orderNum}` : `Hello${customerName ? " " + customerName : ""}`;
-  }
-  if (bodyEl){
-    const greeting = customerName ? `Hi ${customerName.split(/\s+/)[0]},<br><br>` : "Hi there,<br><br>";
-    if (!bodyEl.innerHTML.trim()){
-      bodyEl.innerHTML = greeting + "<br>";
+  // 5) No prior thread → open compose with prefilled fields.
+  // Guard: if no email account is connected, route to the gated handler.
+  if (!connectedStoreEmail && (!connectedStoreAccounts || connectedStoreAccounts.length === 0)){
+    if (typeof _alert === 'function'){
+      await _alert('You need to connect your email account before composing a new message. Go to Emails → Add Email.', 'Connect Email First', '📧');
+    } else {
+      alert('Please connect your email first.');
     }
+    return;
   }
-  // Banner inside the compose modal noting this is a first contact.
-  const msg = document.getElementById("composeMessage");
+
+  openComposeModal();
+  // Small delay so the modal's mount transition finishes before we write
+  // into its inputs — otherwise some browsers race the focus + value set.
+  await new Promise(r => setTimeout(r, 60));
+
+  const toEl   = document.getElementById('composeTo');
+  const subjEl = document.getElementById('composeSubject');
+  const bodyEl = document.getElementById('composeBodyRich');
+  if (toEl)   toEl.value = customerEmail;
+  if (subjEl && !subjEl.value){
+    subjEl.value = orderNum
+      ? `Regarding your order #${orderNum}`
+      : (customerName ? `Hello ${customerName}` : 'Hello');
+  }
+  if (bodyEl && !bodyEl.innerHTML.trim()){
+    const first = customerName ? customerName.split(/\s+/)[0] : '';
+    bodyEl.innerHTML = (first ? `Hi ${first},` : 'Hi there,') + '<br><br><br>';
+  }
+  // First-contact banner — explains why compose opened instead of a chat
+  const msg = document.getElementById('composeMessage');
   if (msg){
-    msg.innerHTML = `<div style="background:#fef3c7;border:1px solid #fde68a;color:#92400e;padding:10px 14px;border-radius:10px;font-size:12.5px;font-weight:600;display:flex;align-items:center;gap:8px;">
+    msg.innerHTML = `<div style="background:#fef3c7;border:1px solid #fde68a;color:#92400e;padding:10px 14px;border-radius:10px;font-size:12.5px;font-weight:600;display:flex;align-items:center;gap:8px;margin-bottom:8px;">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
       <span>No prior chat or email history with this customer — this will start a new conversation.</span>
     </div>`;
   }
 }
+window.openCustomerEmail = openCustomerEmail;
 
 async function openThread(contact, options={}){
   currentThreadContact = contact;
@@ -18693,6 +18798,7 @@ async function openThread(contact, options={}){
 
     document.getElementById("emailDetailSubject").innerText = threadInfo.latest_subject || lastMsg.subject || "Customer Thread";
     document.getElementById("emailDetailMeta").innerText = `${contact} · ${currentThreadEmails.length} messages`;
+    renderOrderStatusChip(threadInfo);
 
     // Skip re-rendering the chat body when nothing meaningful changed since
     // the last paint. Without this, the 3-sec poller would replace innerHTML
@@ -19584,6 +19690,57 @@ let _cmpLinkedOrderId = null;
 const _CMP_MAX_TOTAL_BYTES = 20 * 1024 * 1024;  // 20 MB total
 const _CMP_ALLOWED_EXT = ["pdf","png","jpg","jpeg","gif","webp","svg","docx","doc","xlsx","xls","csv","txt","zip","rtf"];
 
+/* Gate that the "Compose Email" header button uses. We only let the user
+   open the compose modal if at least one Gmail account is connected for the
+   active store — otherwise we redirect them to the Add Email flow. */
+async function openComposeModalGated(){
+  const hasConnected = !!connectedStoreEmail
+    || (Array.isArray(connectedStoreAccounts) && connectedStoreAccounts.length > 0);
+  if (!hasConnected){
+    if (typeof _confirm === 'function'){
+      const ok = await _confirm(
+        'You need to connect a Gmail account before composing emails. Connect one now?',
+        { title: 'Connect Email First', icon: '📧', confirmText: 'Connect', cancelText: 'Not now' }
+      );
+      if (ok){
+        // Try to open the "Add Email" modal if it exists; otherwise just
+        // surface a visual hint to the connect button.
+        if (typeof openAddEmailModal === 'function') openAddEmailModal();
+        else {
+          const addBtn = document.querySelector('[onclick*="openAddEmailModal"], [onclick*="connectGmailOAuth"], #addEmailBtn');
+          if (addBtn){ addBtn.scrollIntoView({behavior:'smooth', block:'center'}); addBtn.classList.add('em-pulse-attention'); setTimeout(()=>addBtn.classList.remove('em-pulse-attention'), 2400); }
+        }
+      }
+    } else {
+      alert('Please connect your email first.');
+    }
+    return;
+  }
+  openComposeModal();
+}
+window.openComposeModalGated = openComposeModalGated;
+
+/* Keep the "Compose Email" button's enabled/disabled state in sync with
+   whether any Gmail is connected. Called whenever the connected-email
+   state changes. */
+function refreshComposeBtnState(){
+  const btn = document.getElementById('emComposeBtn');
+  if(!btn) return;
+  const hasConnected = !!connectedStoreEmail
+    || (Array.isArray(connectedStoreAccounts) && connectedStoreAccounts.length > 0);
+  if (hasConnected){
+    btn.classList.remove('em-btn-disabled');
+    btn.title = 'Compose a new email';
+    btn.disabled = false;
+  } else {
+    btn.classList.add('em-btn-disabled');
+    btn.title = 'Connect your Gmail account first to compose emails';
+    // Keep clickable so we can show the "connect first" prompt.
+    btn.disabled = false;
+  }
+}
+window.refreshComposeBtnState = refreshComposeBtnState;
+
 function openComposeModal(){
   document.getElementById("composeModal").style.display = "block";
   document.getElementById("composeMessage").innerText = "";
@@ -20418,6 +20575,9 @@ async function loadConnectedEmailAccount(){
   // Refresh picker pill with updated inbox info
   populateEmailInboxPicker();
   updateActiveStoreLabels();
+  // Sync the "Compose Email" button's enabled/disabled visual with whether
+  // an email account is now connected.
+  try { refreshComposeBtnState(); } catch(_){}
 }
 
 async function connectGmailOAuth(){
@@ -20476,12 +20636,10 @@ async function connectEmailAccount(){
       document.getElementById("connectEmailAddress").value = "";
       document.getElementById("connectEmailPassword").value = "";
 
-      await loadConnectedEmailAccount();
-      await loadEmails({silent:true, preserveSelection:false});
-
-      setTimeout(() => {
-        closeConnectEmailModal();
-      }, 800);
+      // Hide the connect modal immediately and show the polished "Syncing
+      // your emails…" popup while we pull the inbox in the background.
+      closeConnectEmailModal();
+      await runEmailSyncFlow(payload.email);
 
     }else{
       msg.innerText = data.message || `Email connection failed. Status: ${response.status}`;
@@ -20497,6 +20655,109 @@ async function connectEmailAccount(){
   btn.disabled = false;
 }
 
+/* ════════════════════════════════════════════════════════════════════════
+   POST-CONNECT EMAIL SYNC FLOW
+   - Shows a polished "Syncing your emails…" loader the user can't miss
+   - Hits loadConnectedEmailAccount() then loadEmails() in sequence
+   - Closes the loader with a brief success state, then drops into the inbox
+   - Used by BOTH password/app-password connect AND OAuth return
+   ════════════════════════════════════════════════════════════════════════ */
+function showEmailSyncOverlay(email){
+  // Build it lazily once
+  let overlay = document.getElementById('emailSyncOverlay');
+  if (!overlay){
+    overlay = document.createElement('div');
+    overlay.id = 'emailSyncOverlay';
+    overlay.innerHTML = `
+      <div class="es-card">
+        <div class="es-ring">
+          <svg viewBox="0 0 50 50" class="es-spinner"><circle cx="25" cy="25" r="20" stroke-width="3" fill="none"/></svg>
+          <div class="es-icon">📧</div>
+        </div>
+        <div class="es-title">Syncing your emails…</div>
+        <div class="es-sub" id="esEmailLabel">Connecting to your mailbox</div>
+        <div class="es-steps" id="esSteps">
+          <div class="es-step active" data-step="auth">Authenticating</div>
+          <div class="es-step" data-step="fetch">Fetching recent threads</div>
+          <div class="es-step" data-step="merge">Merging into your inbox</div>
+        </div>
+        <div class="es-progress"><div class="es-progress-bar" id="esProgressBar"></div></div>
+      </div>`;
+    document.body.appendChild(overlay);
+  }
+  overlay.classList.add('open');
+  document.getElementById('esEmailLabel').textContent = email
+    ? `Connecting to ${email}`
+    : 'Connecting to your mailbox';
+  // Reset state
+  overlay.querySelectorAll('.es-step').forEach(s => s.classList.remove('active','done'));
+  overlay.querySelector('[data-step="auth"]').classList.add('active');
+  const bar = document.getElementById('esProgressBar');
+  if (bar){ bar.style.width = '12%'; }
+  document.body.style.overflow = 'hidden';
+}
+function _esStep(name, pct){
+  const overlay = document.getElementById('emailSyncOverlay');
+  if(!overlay) return;
+  const steps = overlay.querySelectorAll('.es-step');
+  steps.forEach(s => {
+    if (s.dataset.step === name){ s.classList.add('active'); s.classList.remove('done'); }
+    else if (s.classList.contains('active') && !s.classList.contains('done')){
+      // mark prior active as done
+      s.classList.remove('active'); s.classList.add('done');
+    }
+  });
+  const bar = document.getElementById('esProgressBar');
+  if (bar) bar.style.width = pct + '%';
+}
+function hideEmailSyncOverlay(success){
+  const overlay = document.getElementById('emailSyncOverlay');
+  if(!overlay) return;
+  if (success){
+    // Final state: all steps done, then fade out
+    overlay.querySelectorAll('.es-step').forEach(s => { s.classList.remove('active'); s.classList.add('done'); });
+    const bar = document.getElementById('esProgressBar');
+    if (bar) bar.style.width = '100%';
+    overlay.classList.add('done');
+    setTimeout(() => {
+      overlay.classList.remove('open','done');
+      document.body.style.overflow = '';
+    }, 700);
+  } else {
+    overlay.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+}
+async function runEmailSyncFlow(email){
+  showEmailSyncOverlay(email);
+  try {
+    // Step 1: confirm the account is registered server-side
+    _esStep('auth', 35);
+    try { await loadConnectedEmailAccount(); } catch(_){}
+    // Step 2: ask the server to pull fresh emails
+    _esStep('fetch', 65);
+    try {
+      if (typeof syncInboxNow === 'function'){
+        await syncInboxNow({ silent: true });
+      }
+    } catch(_){}
+    // Step 3: refresh the thread list in the UI
+    _esStep('merge', 88);
+    try {
+      if (typeof loadEmails === 'function'){
+        await loadEmails({ silent: true, preserveSelection: false });
+      }
+    } catch(_){}
+    // Done — switch to Emails section so the user lands in the inbox
+    try { showSection('emails'); } catch(_){}
+    hideEmailSyncOverlay(true);
+  } catch(err){
+    console.warn('[runEmailSyncFlow]', err);
+    hideEmailSyncOverlay(false);
+  }
+}
+window.runEmailSyncFlow = runEmailSyncFlow;
+
 
 async function initDashboard(){
   const params = new URLSearchParams(window.location.search);
@@ -20510,6 +20771,19 @@ async function initDashboard(){
       u.searchParams.delete('login');
       window.history.replaceState({}, '', u.toString());
     } catch(_){}
+  }
+  // Gmail OAuth returned successfully — show the polished sync overlay
+  // immediately so the user sees their mailbox being pulled in. This makes
+  // the connect → ready transition feel instant and professional.
+  if (params.get('gmail_connected') === '1'){
+    try {
+      const u = new URL(window.location.href);
+      u.searchParams.delete('gmail_connected');
+      window.history.replaceState({}, '', u.toString());
+    } catch(_){}
+    // Defer until showSection('emails') has rendered so the overlay sits
+    // on top of the right context.
+    setTimeout(() => { try { runEmailSyncFlow(''); } catch(_){} }, 350);
   }
   // Priority order:
   //   1) ?section= in URL (deep link, hard refresh, browser back/forward)
@@ -25627,7 +25901,27 @@ function renderAdminHistory(){
      Drop Sigma AI — in-app Support Assistant (floating bottom-right)
      ═══════════════════════════════════════════════════════════════ -->
 <style>
-.ai-fab{position:fixed;bottom:24px;right:24px;z-index:10000;display:flex;align-items:center;gap:10px;padding:14px 20px 14px 16px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;border-radius:50px;cursor:pointer;box-shadow:0 14px 35px rgba(99,102,241,.45);font-family:inherit;font-size:14px;font-weight:800;letter-spacing:-.2px;transition:all .2s;animation:_aiFabPulse 2.5s ease-in-out infinite;}
+.ai-fab{position:fixed;bottom:24px;right:24px;z-index:10000;display:flex;align-items:center;gap:10px;padding:14px 20px 14px 16px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;border-radius:50px;cursor:pointer;box-shadow:0 14px 35px rgba(99,102,241,.45);font-family:inherit;font-size:14px;font-weight:800;letter-spacing:-.2px;transition:all .25s cubic-bezier(.4,.6,.3,1);animation:_aiFabPulse 2.5s ease-in-out infinite;}
+/* When the Emails section is active, lift the floater up high enough so it
+   never overlaps the chat reply / Send button at the bottom of the panel. */
+body[data-active-section="emails"] .ai-fab,
+body[data-active-section="emails"] .ai-panel{bottom:96px;}
+/* Shrink the floater on small viewports so it never crowds the content
+   below it on any section. */
+@media(max-width:760px){
+  .ai-fab{padding:11px 16px 11px 12px;font-size:12.5px;}
+  .ai-fab .ti{display:none;}
+  body[data-active-section="emails"] .ai-fab,
+  body[data-active-section="emails"] .ai-panel{bottom:110px;}
+}
+/* Reserve room at the bottom of every scrollable section so the floater
+   never visually sits on top of any content — Drop Sigma AI ke neechay
+   kuch b ni hona chahiye. The selectors target the main scrollable area
+   per section. The exclusion uses :where() to keep specificity flat. */
+.section.active > :where(.section-scroll, .ov-grid, .pox-wrap, .stores-grid,
+.vendors-grid, .tasks-list, .stock-wrap, .ai-training-wrap, .team-grid){
+  padding-bottom:96px!important;
+}
 .ai-fab:hover{transform:translateY(-3px) scale(1.03);box-shadow:0 20px 45px rgba(99,102,241,.55);}
 .ai-fab .icon{width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-size:16px;position:relative;flex-shrink:0;}
 .ai-fab .icon::after{content:"";position:absolute;top:-2px;right:-2px;width:10px;height:10px;border-radius:50%;background:#10b981;border:2px solid #6366f1;}

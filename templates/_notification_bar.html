@@ -332,19 +332,74 @@ Include with:
     // ─── Admin portal (dashboard.html) ───────────────────────────────────
     if(typeof window.showSection === 'function' && path === '/dashboard/'){
       let section = qs.get('section');
-      let itemId  = qs.get('order_id') || qs.get('email_id') || qs.get('task_id');
+      // Collect every kind of entity ID a notification might carry. Whichever
+      // matches the destination section is what we drill into below.
+      const orderId   = qs.get('order_id')   || null;
+      const emailId   = qs.get('email_id')   || null;
+      const taskId    = qs.get('task_id')    || null;
+      const contact   = qs.get('contact')    || qs.get('thread_contact') || null;
+      const chatPeer  = qs.get('chat_with')  || qs.get('peer_id')  || null;
+      const vendorId  = qs.get('vendor_id')  || null;
+      const storeId   = qs.get('store_id')   || null;
+      let itemId      = orderId || emailId || taskId || contact || vendorId || storeId || chatPeer;
+
       if(!section){
         const parsed = fromHash(hash);
         section = parsed.section;
         itemId  = itemId || parsed.itemId;
       }
       if(section){
-        // Stash extra context so the section can pre-open a detail modal.
-        window._notifContext = { section, itemId, raw: url };
+        // Stash everything the section needs to open the SPECIFIC entity.
+        window._notifContext = {
+          section, itemId, raw: url,
+          orderId, emailId, taskId, contact, chatPeer, vendorId, storeId,
+        };
         // Keep the URL bar honest (close the panel + reflect new state).
         try { history.pushState({}, '', `/dashboard/?section=${section}`); } catch(_){}
         $panel.classList.remove('open');
         try { window.showSection(section); } catch(_){}
+
+        // ── DEEP-LINK: open the specific entity right after the section
+        //    switches. Give the section ~150ms to render + load its data,
+        //    then call the appropriate openX() function. Each handler is
+        //    guarded so missing entities don't break the navigation.
+        setTimeout(() => {
+          try {
+            // Orders → open the order detail modal
+            if (section === 'orders' && orderId && typeof openOrderDetail === 'function'){
+              openOrderDetail(orderId);
+            }
+            // Emails → open the customer's thread by contact
+            else if (section === 'emails' && contact && typeof openThread === 'function'){
+              openThread(contact);
+            }
+            // Emails by email_id → look up the contact, then open that thread
+            else if (section === 'emails' && emailId){
+              const found = (window.allEmails || []).find(e => String(e.id) === String(emailId));
+              const c = found ? (found.contact || found.sender || found.from_email) : null;
+              if (c && typeof openThread === 'function') openThread(c);
+            }
+            // Tasks → focus on the specific task (uses task highlighter if available)
+            else if (section === 'tasks' && taskId){
+              if (typeof openTaskDetail === 'function') openTaskDetail(taskId);
+              else if (typeof focusTask === 'function') focusTask(taskId);
+            }
+            // Team chat → open conversation with a specific peer
+            else if (section === 'chat' && chatPeer){
+              if (typeof openChatWith === 'function') openChatWith(chatPeer);
+              else if (typeof openDM === 'function') openDM(chatPeer);
+            }
+            // Vendors → open vendor detail
+            else if (section === 'vendors' && vendorId){
+              if (typeof openVendorDetail === 'function') openVendorDetail(vendorId);
+            }
+            // Stores → open store detail / connection modal
+            else if (section === 'stores' && storeId){
+              if (typeof openStoreDetail === 'function') openStoreDetail(storeId);
+              else if (typeof scsOpen === 'function') scsOpen(parseInt(storeId, 10), '');
+            }
+          } catch(err){ console.warn('[notif deep-link]', err); }
+        }, 220);
         return;
       }
     }
