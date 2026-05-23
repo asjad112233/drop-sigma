@@ -28,6 +28,9 @@ urlpatterns = [
 
     # Support AI — in-app help assistant
     path("support-ai/ask/", csrf_exempt(views.support_ai_ask), name="support_ai_ask"),
+
+    # Product-image download proxy (force-download bypassing CDN CORS blocks)
+    path("api/download-image/", views.download_image_proxy, name="download_image_proxy"),
     path("upgrade/", views.upgrade_view, name="upgrade"),
     path("checkout/", views.checkout_view, name="checkout"),
     path("checkout/free/", views.checkout_free, name="checkout_free"),

@@ -25876,9 +25876,16 @@ window.dsImgboxDownload = async function(){
   const orig = btn.innerHTML;
   btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Downloading…';
   btn.disabled = true;
+  // Route through our server-side proxy so the file ALWAYS downloads (bypasses
+  // Shopify/WooCommerce CDN CORS blocks). The proxy returns the image with
+  // Content-Disposition: attachment so the browser forces a real download.
+  const proxyUrl = '/api/download-image/?url=' + encodeURIComponent(src) + '&name=' + encodeURIComponent(name);
   try {
-    const res = await fetch(src, {mode:'cors'});
-    if(!res.ok) throw new Error('fetch failed');
+    const res = await fetch(proxyUrl, {credentials:'same-origin'});
+    if(!res.ok){
+      const errTxt = await res.text().catch(()=> '');
+      throw new Error('proxy ' + res.status + ' ' + errTxt.slice(0,80));
+    }
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -25888,11 +25895,10 @@ window.dsImgboxDownload = async function(){
     btn.innerHTML = '<i class="fa-solid fa-check"></i> Saved';
     setTimeout(()=>{ btn.innerHTML = orig; btn.disabled = false; }, 1400);
   } catch(e){
-    // CORS-blocked CDNs (e.g. Shopify cdn.shopify.com) — fallback to new tab so user can right-click save
+    // Last-resort fallback: navigate directly to the proxy URL (the
+    // Content-Disposition header still forces download, no redirect)
     btn.innerHTML = orig; btn.disabled = false;
-    const a = document.createElement('a');
-    a.href = src; a.target = '_blank'; a.rel = 'noopener'; a.download = name;
-    document.body.appendChild(a); a.click(); a.remove();
+    window.location.href = proxyUrl;
   }
 };
 window.dsImgboxOpenNew = function(){

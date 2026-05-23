@@ -1055,3 +1055,157 @@ def support_ai_ask(request):
         "deep_link_url": payload.get("deep_link_url") or "",
         "_source":       payload.get("_source") or "",
     })
+
+
+# ════════════════════════════════════════════════════════════════════════
+# Product-image download proxy
+# ────────────────────────────────────────────────────────────────────────
+# Many e-commerce CDNs (Shopify, WooCommerce-hosted, AliExpress, Cloudinary,
+# etc.) block cross-origin fetch() in the browser, so client-side "fetch +
+# blob + a.download" silently falls back to opening the URL in a new tab —
+# which means the user has to right-click → save. This proxy fetches the
+# image server-side and streams it back with Content-Disposition: attachment,
+# so the browser ALWAYS triggers a real file download.
+#
+# Security:
+#   - Authenticated users only
+#   - HTTPS / HTTP only (no file://, no ftp://, etc.)
+#   - SSRF guard: block private/loopback/link-local IPs
+#   - Size cap: 25 MB
+#   - Whitelist of common image content-types — anything else is rejected
+# ════════════════════════════════════════════════════════════════════════
+@login_required(login_url="/login/")
+def download_image_proxy(request):
+    """Force-download a remote image via the server (bypasses CORS).
+
+    GET /api/download-image/?url=<encoded_url>&name=<optional_filename>
+    """
+    import ipaddress, os.path, re
+    from urllib.parse import urlparse, unquote
+    from django.http import HttpResponse, HttpResponseBadRequest, StreamingHttpResponse
+
+    raw_url = (request.GET.get("url") or "").strip()
+    if not raw_url:
+        return HttpResponseBadRequest("Missing url parameter")
+
+    # ── Validate URL ─────────────────────────────────────────────────
+    try:
+        parsed = urlparse(raw_url)
+    except Exception:
+        return HttpResponseBadRequest("Invalid URL")
+    if parsed.scheme not in ("http", "https"):
+        return HttpResponseBadRequest("Only http/https URLs are allowed")
+    if not parsed.netloc:
+        return HttpResponseBadRequest("URL missing host")
+
+    # ── SSRF guard: refuse private / loopback / link-local hosts ────
+    host = parsed.hostname or ""
+    try:
+        # Reject obvious local hostnames
+        if host.lower() in {"localhost", "127.0.0.1", "0.0.0.0", "metadata.google.internal"}:
+            return HttpResponseBadRequest("Disallowed host")
+        # If it parses as an IP, ensure it's public
+        try:
+            ip = ipaddress.ip_address(host)
+            if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast:
+                return HttpResponseBadRequest("Disallowed host")
+        except ValueError:
+            pass  # Hostname (not raw IP) — fine
+    except Exception:
+        return HttpResponseBadRequest("Invalid host")
+
+    # ── Fetch ────────────────────────────────────────────────────────
+    try:
+        import requests
+        upstream = requests.get(
+            raw_url,
+            stream=True,
+            timeout=20,
+            allow_redirects=True,
+            headers={"User-Agent": "DropSigma-ImageProxy/1.0"},
+        )
+    except Exception as e:
+        return HttpResponse(f"Could not fetch image: {e}", status=502)
+
+    if upstream.status_code >= 400:
+        return HttpResponse(
+            f"Upstream returned HTTP {upstream.status_code}",
+            status=502,
+        )
+
+    # ── Validate content-type (must be an image) ─────────────────────
+    ctype = (upstream.headers.get("Content-Type") or "").split(";")[0].strip().lower()
+    allowed_types = {
+        "image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp",
+        "image/avif", "image/bmp", "image/svg+xml", "image/tiff",
+        # Some CDNs serve images as octet-stream — accept if URL ends with image ext
+        "application/octet-stream",
+    }
+    if ctype not in allowed_types:
+        return HttpResponse(f"Not an image (content-type: {ctype})", status=415)
+
+    # ── Size guard ───────────────────────────────────────────────────
+    MAX_BYTES = 25 * 1024 * 1024  # 25 MB
+    declared = upstream.headers.get("Content-Length")
+    try:
+        if declared and int(declared) > MAX_BYTES:
+            return HttpResponse("Image too large", status=413)
+    except Exception:
+        pass
+
+    # ── Pick a clean filename ────────────────────────────────────────
+    requested_name = (request.GET.get("name") or "").strip()
+    # Try to infer extension from content-type, fall back to URL path
+    ext_map = {
+        "image/jpeg": "jpg", "image/jpg": "jpg", "image/png": "png",
+        "image/gif": "gif", "image/webp": "webp", "image/avif": "avif",
+        "image/bmp": "bmp", "image/svg+xml": "svg", "image/tiff": "tiff",
+    }
+    ext = ext_map.get(ctype, "")
+    if not ext:
+        # Pull extension from URL path
+        path_ext = os.path.splitext(unquote(parsed.path))[1].lstrip(".").lower()
+        if path_ext in {"jpg", "jpeg", "png", "gif", "webp", "avif", "bmp", "svg", "tiff"}:
+            ext = "jpeg" if path_ext == "jpg" else path_ext
+            ext = "jpg" if ext == "jpeg" else ext
+        else:
+            ext = "jpg"  # safe default
+    # Sanitize requested name
+    if requested_name:
+        # Strip filesystem-unsafe chars, allow unicode word chars + dash/underscore/dot/space
+        safe = re.sub(r"[^\w؀-ۿ一-鿿\-_. ]", "", requested_name)
+        safe = re.sub(r"\s+", "_", safe).strip("._-") or "product"
+        # If user didn't include an extension, append the inferred one
+        if "." not in safe or not safe.rsplit(".", 1)[1].lower() in {"jpg","jpeg","png","gif","webp","avif","bmp","svg","tiff"}:
+            safe = f"{safe}.{ext}"
+        filename = safe[:120]  # cap length
+    else:
+        # Derive from URL filename
+        url_base = os.path.basename(unquote(parsed.path)) or "product"
+        url_base = re.sub(r"[^\w؀-ۿ一-鿿\-_. ]", "", url_base) or "product"
+        if "." not in url_base:
+            url_base = f"{url_base}.{ext}"
+        filename = url_base[:120]
+
+    # ── Stream back with download header ─────────────────────────────
+    def _stream():
+        bytes_seen = 0
+        for chunk in upstream.iter_content(chunk_size=64 * 1024):
+            if not chunk:
+                continue
+            bytes_seen += len(chunk)
+            if bytes_seen > MAX_BYTES:
+                break
+            yield chunk
+
+    # Use image/* even for octet-stream upstream so the browser handles it as an image
+    out_ctype = ctype if ctype.startswith("image/") else f"image/{ext}"
+    resp = StreamingHttpResponse(_stream(), content_type=out_ctype)
+    # RFC 5987 encoded filename for non-ASCII safety
+    from urllib.parse import quote
+    resp["Content-Disposition"] = (
+        f'attachment; filename="{filename}"; filename*=UTF-8\'\'{quote(filename)}'
+    )
+    resp["X-Content-Type-Options"] = "nosniff"
+    resp["Cache-Control"] = "private, no-store"
+    return resp
