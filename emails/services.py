@@ -2556,6 +2556,19 @@ def _save_one_gmail_message(account, store, msg_id, access_token):
         auto_assign_for_folder_rules(email_obj)
     except Exception:
         pass
+    # Log "Incoming message" on the thread history timeline.
+    try:
+        from .views import log_thread_activity, get_thread_contact
+        contact = (get_thread_contact(email_obj) or "").strip().lower()
+        preview = (body or "").strip().split("\n")[0][:120]
+        log_thread_activity(
+            store, contact, "incoming",
+            description=f"New message — {preview}" if preview else "New message received",
+            meta={"subject": subject, "from": sender},
+            message=email_obj,
+        )
+    except Exception:
+        pass
     return email_obj
 
 

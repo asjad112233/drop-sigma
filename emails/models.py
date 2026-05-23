@@ -607,3 +607,71 @@ class FolderAssignment(models.Model):
     def __str__(self):
         target = f"label#{self.label_id}" if self.label_id else self.folder
         return f"{target} → {self.assigned_to_id}"
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Per-thread activity log.
+#
+# Records every meaningful action taken on an email thread so the chat
+# header's "History" panel can show a complete audit trail: who
+# assigned it, who replied, when it was archived, what folder/label
+# changes were applied, etc. Keyed by (store, contact) to match the
+# rest of the thread system.
+# ─────────────────────────────────────────────────────────────────────
+class EmailThreadActivity(models.Model):
+    EVENT_CHOICES = [
+        ("created",         "Thread created"),
+        ("incoming",        "Incoming message"),
+        ("reply_sent",      "Reply sent"),
+        ("ai_draft",        "AI draft generated"),
+        ("ai_auto_reply",   "AI auto-reply sent"),
+        ("assigned",        "Assigned to member"),
+        ("unassigned",      "Unassigned"),
+        ("co_assigned",     "Co-assignee added"),
+        ("co_unassigned",   "Co-assignee removed"),
+        ("label_added",     "Label added"),
+        ("label_removed",   "Label removed"),
+        ("folder_moved",    "Moved to folder"),
+        ("archived",        "Archived"),
+        ("restored",        "Restored from archive"),
+        ("resolved",        "Marked resolved"),
+        ("unresolved",      "Re-opened"),
+        ("read",            "Marked read"),
+        ("unread",          "Marked unread"),
+        ("needs_human",     "Escalated to Needs Human"),
+        ("handled",         "Marked as handled"),
+        ("note",            "Note added"),
+    ]
+
+    store    = models.ForeignKey(Store, on_delete=models.CASCADE, related_name="thread_activities")
+    contact  = models.CharField(max_length=255, db_index=True)
+    event    = models.CharField(max_length=32, choices=EVENT_CHOICES, db_index=True)
+    # Human-readable summary shown in the history panel
+    description = models.CharField(max_length=500, blank=True)
+    # Free-form extra payload — folder name, label name, AI reason, etc.
+    meta     = models.JSONField(default=dict, blank=True)
+
+    # WHO did this. Falls back to the tenant user when no team member
+    # is involved (e.g. owner-initiated actions or system events).
+    actor_user   = models.ForeignKey("auth.User", on_delete=models.SET_NULL,
+                                     null=True, blank=True, related_name="email_activities_done")
+    actor_member = models.ForeignKey("teamapp.TeamMember", on_delete=models.SET_NULL,
+                                     null=True, blank=True, related_name="email_activities_done")
+    # Cached display name in case the user/member is later deleted
+    actor_label  = models.CharField(max_length=120, blank=True)
+
+    # Optional pointer to the specific message that triggered the event
+    message  = models.ForeignKey(EmailMessage, on_delete=models.SET_NULL,
+                                 null=True, blank=True, related_name="activities")
+
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["store", "contact", "-created_at"]),
+            models.Index(fields=["store", "event"]),
+        ]
+
+    def __str__(self):
+        return f"{self.event} @ {self.contact} ({self.created_at:%Y-%m-%d %H:%M})"

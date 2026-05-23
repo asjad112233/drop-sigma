@@ -53,6 +53,10 @@ from .views import (
     thread_ai_status_api,
     empty_folder_api,
     folder_assignments_api,
+    move_thread_to_folder_api,
+    restore_archived_threads_api,
+    permanent_delete_threads_api,
+    thread_history_api,
 )
 
 urlpatterns = [
@@ -155,6 +159,11 @@ urlpatterns = [
     path("api/<int:email_id>/ai-status/",   thread_ai_status_api,        name="thread_ai_status_api"),
     path("api/folders/empty/",              empty_folder_api,            name="empty_folder_api"),
     path("api/folders/assignments/",        folder_assignments_api,      name="folder_assignments_api"),
+    path("api/threads/move-folder/",        move_thread_to_folder_api,   name="move_thread_to_folder_api"),
+    # Archive-folder bulk actions
+    path("api/threads/restore/",            restore_archived_threads_api, name="restore_archived_threads_api"),
+    path("api/threads/permanent-delete/",   permanent_delete_threads_api, name="permanent_delete_threads_api"),
+    path("api/threads/history/",            thread_history_api,           name="thread_history_api"),
 
     # Gmail OAuth2
     path("oauth/start/", gmail_oauth_start_api, name="gmail_oauth_start"),

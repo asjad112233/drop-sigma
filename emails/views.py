@@ -240,6 +240,70 @@ def get_thread_contact(email_obj):
     return sender
 
 
+# ─────────────────────────────────────────────────────────────────────
+# Thread-activity logger.
+#
+# `log_thread_activity` is the single chokepoint every action endpoint
+# uses to record what happened on a thread. Fails closed (best-effort)
+# so a logging failure never breaks the underlying action.
+#
+# Determines actor by inspecting the request: if there's a team-member
+# session marker we use that, otherwise we fall back to request.user.
+# ─────────────────────────────────────────────────────────────────────
+def log_thread_activity(store, contact, event, description="", meta=None,
+                         actor_user=None, actor_member=None, message=None,
+                         request=None):
+    """Record a single activity row for a thread. Never raises."""
+    try:
+        from .models import EmailThreadActivity
+        contact = (contact or "").strip().lower()
+        if not (store and contact and event):
+            return None
+
+        # Auto-derive actor from request if not explicitly passed
+        if request is not None and actor_user is None and actor_member is None:
+            try:
+                # Team-member sessions stash a member id on the session
+                tm_id = request.session.get("team_member_id") if hasattr(request, "session") else None
+                if tm_id:
+                    from teamapp.models import TeamMember
+                    actor_member = TeamMember.objects.filter(id=tm_id).first()
+                elif hasattr(request, "user") and request.user.is_authenticated:
+                    actor_user = request.user
+            except Exception:
+                pass
+
+        # Cache a human-readable label so the history still reads well
+        # if the user/member is later deleted.
+        label = ""
+        if actor_member is not None:
+            label = getattr(actor_member, "name", None) or getattr(actor_member, "email", "") or f"Member #{actor_member.id}"
+        elif actor_user is not None:
+            label = (
+                getattr(actor_user, "get_full_name", lambda: "")() or
+                getattr(actor_user, "username", "") or
+                getattr(actor_user, "email", "") or
+                f"User #{actor_user.id}"
+            )
+        else:
+            label = "System"
+
+        return EmailThreadActivity.objects.create(
+            store=store,
+            contact=contact,
+            event=event,
+            description=description or "",
+            meta=meta or {},
+            actor_user=actor_user,
+            actor_member=actor_member,
+            actor_label=label,
+            message=message,
+        )
+    except Exception:
+        # Logging must never break the action itself
+        return None
+
+
 @csrf_exempt
 @api_view(["POST"])
 @authentication_classes([])
@@ -758,28 +822,68 @@ def toggle_email_read_api(request, email_id):
         except Exception:
             pass
 
+    try:
+        contact = (get_thread_contact(email) or "").strip().lower()
+        log_thread_activity(
+            email.store, contact,
+            "read" if new_state else "unread",
+            description="Marked as read" if new_state else "Marked as unread",
+            message=email,
+            request=request,
+        )
+    except Exception:
+        pass
+
     return Response({"success": True, "is_read": email.is_read})
 
 
 @csrf_exempt
 @api_view(["POST"])
 def archive_email_thread_api(request, email_id):
-    """Mark a thread as archived. Sets status='archived' on the latest message,
-    and records the archive timestamp on the EmailThreadAssignment if one exists."""
+    """Mark the ENTIRE thread as archived. Sets status='archived' AND
+    raw_data.archived=True on every message in the thread — the latter
+    is what the sidebar's Archive folder filter checks (latest_archived).
+    Also marks the thread assignment resolved so it disappears from
+    active queues."""
     if not request.user.is_authenticated:
         return Response({"success": False, "message": "Authentication required"}, status=401)
     # Per-user scope.
     email = get_object_or_404(EmailMessage, id=email_id, store__user=request.user)
-    email.status = "archived"
-    email.save(update_fields=["status"])
-    # Also flag the thread assignment if present, so it disappears from active queues.
     try:
-        contact = get_thread_contact(email)
-        EmailThreadAssignment.objects.filter(
-            store=email.store, contact__iexact=contact
-        ).update(is_resolved=True)
+        contact = (get_thread_contact(email) or "").strip().lower()
     except Exception:
-        pass
+        contact = ""
+
+    # Pull every message in the thread for this contact + flip the
+    # raw_data.archived flag so the Archive folder picks them up.
+    msgs = EmailMessage.objects.filter(store=email.store)
+    if contact:
+        msgs = msgs.filter(sender__icontains=contact)
+    else:
+        msgs = msgs.filter(id=email.id)
+
+    for m in msgs:
+        raw = m.raw_data or {}
+        raw["archived"] = True
+        m.raw_data = raw
+        m.status = "archived"
+        m.save(update_fields=["raw_data", "status"])
+
+    # Also flag the thread assignment so it disappears from active queues.
+    if contact:
+        try:
+            EmailThreadAssignment.objects.filter(
+                store=email.store, contact__iexact=contact
+            ).update(is_resolved=True)
+        except Exception:
+            pass
+
+    log_thread_activity(
+        email.store, contact, "archived",
+        description="Thread archived",
+        request=request,
+    )
+
     return Response({"success": True, "message": "Thread archived."})
 
 
@@ -835,9 +939,15 @@ def email_threads_api(request):
             threads[contact] = {
                 "contact": contact,
                 "name": getattr(email_obj, "sender_name", None) or contact,
+                # latest_id surfaces the latest message's primary key so the
+                # frontend bulk-action toolbar can hit per-message endpoints
+                # (toggle-read, archive) without a second round-trip.
+                "latest_id": email_obj.id,
                 "latest_subject": email_obj.subject or "No subject",
                 "latest_body": email_obj.body or "",
                 "latest_status": email_obj.status,
+                "latest_category": (email_obj.category or "general"),
+                "latest_archived": bool(((email_obj.raw_data or {}) if isinstance(email_obj.raw_data, dict) else {}).get("archived")),
                 "latest_time": email_obj.created_at,
                 "total_messages": 0,
                 "new_count": 0,
@@ -864,9 +974,12 @@ def email_threads_api(request):
 
         if email_obj.created_at > threads[contact]["latest_time"]:
             threads[contact]["name"] = getattr(email_obj, "sender_name", None) or contact
+            threads[contact]["latest_id"] = email_obj.id
             threads[contact]["latest_subject"] = email_obj.subject or "No subject"
             threads[contact]["latest_body"] = email_obj.body or ""
             threads[contact]["latest_status"] = email_obj.status
+            threads[contact]["latest_category"] = (email_obj.category or "general")
+            threads[contact]["latest_archived"] = bool(((email_obj.raw_data or {}) if isinstance(email_obj.raw_data, dict) else {}).get("archived"))
             threads[contact]["latest_time"] = email_obj.created_at
 
     results = list(threads.values())
@@ -2234,6 +2347,33 @@ def send_email_reply_api(request, email_id):
             contact=contact_email
         ).update(is_resolved=True, resolved_at=timezone.now())
 
+    # Log the reply on the thread timeline
+    try:
+        contact_for_log = (get_thread_contact(email) or "").strip().lower()
+        preview = (reply_text or "").strip().split("\n")[0][:120]
+        log_thread_activity(
+            email.store, contact_for_log, "reply_sent",
+            description=f"Reply sent — {preview}" if preview else "Reply sent",
+            meta={
+                "subject": f"Re: {email.subject}",
+                "from": from_email,
+                "to": email.sender,
+                "has_attachments": bool(files),
+                "had_internal_note": bool(internal_note),
+            },
+            message=reply_obj,
+            request=request,
+        )
+        if internal_note:
+            log_thread_activity(
+                email.store, contact_for_log, "note",
+                description=f"Internal note added: {internal_note[:120]}",
+                message=email,
+                request=request,
+            )
+    except Exception:
+        pass
+
     return Response({
         "success": True,
         "message": "Email reply sent successfully.",
@@ -2289,9 +2429,48 @@ def assign_thread_multi_api(request):
     members = list(TeamMember.objects.filter(id__in=member_ids))
 
     assignment, _ = EmailThreadAssignment.objects.get_or_create(store=store, contact=contact)
+    # Diff against existing co-assignees so we log who was added/removed
+    prev_member_ids = set(assignment.co_assignees.values_list("id", flat=True))
+    new_member_ids  = set(m.id for m in members)
+    added_members   = [m for m in members if m.id not in prev_member_ids]
+    removed_member_ids = prev_member_ids - new_member_ids
+
     assignment.assigned_to = members[0] if members else None
     assignment.save()
     assignment.co_assignees.set(members)
+
+    # Activity log entries
+    if members:
+        names_str = ", ".join(m.name for m in members)
+        log_thread_activity(
+            store, contact, "assigned",
+            description=f"Assigned to {names_str}",
+            meta={"member_ids": list(new_member_ids), "member_names": [m.name for m in members]},
+            request=request,
+        )
+    elif prev_member_ids:
+        log_thread_activity(
+            store, contact, "unassigned",
+            description="All assignees removed",
+            request=request,
+        )
+    # Granular co-assignee changes (only meaningful when set differs)
+    for m in added_members[1:]:  # skip primary which is already logged
+        log_thread_activity(
+            store, contact, "co_assigned",
+            description=f"{m.name} added as co-assignee",
+            meta={"member_id": m.id, "member_name": m.name},
+            request=request,
+        )
+    if removed_member_ids:
+        from teamapp.models import TeamMember as _TM
+        for rm in _TM.objects.filter(id__in=removed_member_ids):
+            log_thread_activity(
+                store, contact, "co_unassigned",
+                description=f"{rm.name} removed from thread",
+                meta={"member_id": rm.id, "member_name": rm.name},
+                request=request,
+            )
 
     assignees_data = [{"id": m.id, "name": m.name, "email": m.email, "role": m.role} for m in members]
     return Response({
@@ -2359,6 +2538,21 @@ def bulk_assign_threads_api(request):
             created += 1
         else:
             updated += 1
+        # History log
+        if member:
+            log_thread_activity(
+                store, contact, "assigned",
+                description=f"Assigned to {member.name} (bulk)",
+                meta={"member_id": member.id, "member_name": member.name, "bulk": True},
+                request=request,
+            )
+        else:
+            log_thread_activity(
+                store, contact, "unassigned",
+                description="Unassigned (bulk)",
+                meta={"bulk": True},
+                request=request,
+            )
 
     return Response({
         "success": True,
@@ -2394,6 +2588,13 @@ def assign_thread_api(request):
         defaults={"assigned_to": member}
     )
 
+    log_thread_activity(
+        store, contact, "assigned",
+        description=f"Assigned to {member.name}",
+        meta={"member_id": member.id, "member_name": member.name, "member_role": member.role},
+        request=request,
+    )
+
     return Response({
         "success": True,
         "assigned_to": {
@@ -2416,7 +2617,23 @@ def unassign_thread_api(request):
     if not store_id or not contact:
         return Response({"success": False, "message": "store_id and contact are required."}, status=400)
 
+    # Capture who was previously assigned so the log reads usefully
+    prev = EmailThreadAssignment.objects.filter(store_id=store_id, contact=contact).select_related("assigned_to").first()
+    prev_name = prev.assigned_to.name if (prev and prev.assigned_to) else ""
+
     EmailThreadAssignment.objects.filter(store_id=store_id, contact=contact).delete()
+
+    try:
+        store_obj = Store.objects.get(id=store_id)
+        log_thread_activity(
+            store_obj, contact, "unassigned",
+            description=f"Unassigned{' from ' + prev_name if prev_name else ''}",
+            meta={"previous_member": prev_name},
+            request=request,
+        )
+    except Store.DoesNotExist:
+        pass
+
     return Response({"success": True})
 
 # ─────────────────────────────────────────────
@@ -3893,22 +4110,57 @@ def thread_labels_api(request):
         valid_ids = set(EmailLabel.objects.filter(
             id__in=label_ids, owner=request.user
         ).values_list("id", flat=True))
+
+        # Compute diff against current set so we can log meaningful events
+        prev_ids = set(EmailThreadLabel.objects.filter(
+            store=store, contact=contact
+        ).values_list("label_id", flat=True))
+        added_ids   = valid_ids - prev_ids
+        removed_ids = prev_ids - valid_ids
+        # Map ids → names for human-readable history entries
+        name_map = dict(EmailLabel.objects.filter(
+            id__in=(added_ids | removed_ids)
+        ).values_list("id", "name"))
+
         # Wipe existing links for this thread, then recreate from valid_ids
         EmailThreadLabel.objects.filter(store=store, contact=contact).delete()
         EmailThreadLabel.objects.bulk_create([
             EmailThreadLabel(store=store, contact=contact, label_id=lid, assigned_by=request.user)
             for lid in valid_ids
         ])
+
+        for lid in added_ids:
+            log_thread_activity(
+                store, contact, "label_added",
+                description=f"Added label “{name_map.get(lid, lid)}”",
+                meta={"label_id": lid, "label_name": name_map.get(lid, "")},
+                request=request,
+            )
+        for lid in removed_ids:
+            log_thread_activity(
+                store, contact, "label_removed",
+                description=f"Removed label “{name_map.get(lid, lid)}”",
+                meta={"label_id": lid, "label_name": name_map.get(lid, "")},
+                request=request,
+            )
         return Response({"success": True, "label_ids": sorted(valid_ids)})
 
     # DELETE — single label
     label_id = request.data.get("label_id")
     if not label_id:
         return Response({"success": False, "message": "label_id is required."}, status=400)
+    # Capture name for log before delete
+    lbl_name = EmailLabel.objects.filter(id=label_id, owner=request.user).values_list("name", flat=True).first() or str(label_id)
     EmailThreadLabel.objects.filter(
         store=store, contact=contact, label_id=label_id,
         label__owner=request.user,
     ).delete()
+    log_thread_activity(
+        store, contact, "label_removed",
+        description=f"Removed label “{lbl_name}”",
+        meta={"label_id": label_id, "label_name": lbl_name},
+        request=request,
+    )
     return Response({"success": True})
 
 
@@ -3976,7 +4228,7 @@ def threads_stats_api(request):
             "returns":     em_qs.filter(category__icontains="return").values("sender").distinct().count(),
             "dispute":     em_qs.filter(category__icontains="dispute").values("sender").distinct().count(),
             "spam":        em_qs.filter(category__icontains="spam").values("sender").distinct().count(),
-            "archive":     0,
+            "archive":     em_qs.filter(raw_data__archived=True).values("sender").distinct().count(),
             "resolved":    resolved_count,
         },
         "labels": labels,
@@ -4459,3 +4711,323 @@ def folder_assignments_api(request):
         base_qs = base_qs.filter(assigned_to_id=member_id)
     base_qs.delete()
     return Response({"success": True, "removed": True})
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# MOVE THREAD TO FOLDER — manually re-categorize a thread into any of the
+# built-in folders (Refunds, Returns, Dispute, Spam, Needs Human, Resolved,
+# Archive, Inbox). Used by the Label dropdown + thread-row 3-dot menu.
+# ════════════════════════════════════════════════════════════════════════════
+@api_view(["POST"])
+def move_thread_to_folder_api(request):
+    """POST {store_id, contact, folder}
+       folder ∈ {inbox, needs_human, ai_drafts, refunds, returns, dispute,
+                 spam, archive, resolved, unresolved}
+    """
+    from django.utils import timezone as _tz
+    from .models import EmailMessage, EmailThreadAssignment
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
+
+    store_id = request.data.get("store_id")
+    contact  = (request.data.get("contact") or "").strip().lower()
+    folder   = (request.data.get("folder") or "").strip().lower()
+    if not (store_id and contact and folder):
+        return Response({"success": False, "message": "store_id, contact, folder required."}, status=400)
+
+    store = get_object_or_404(Store, id=store_id, user=request.user)
+
+    # Sender field can be either "john@x.com" or "John Doe <john@x.com>".
+    # Substring (icontains) on the bare email matches both forms.
+    msgs = EmailMessage.objects.filter(store=store, sender__icontains=contact)
+    if not msgs.exists():
+        return Response({"success": False, "message": "No messages for that contact."}, status=404)
+
+    updated = 0
+    # Categories that map directly to EmailMessage.category
+    category_map = {
+        "refunds": "refund",
+        "returns": "return",
+        "dispute": "dispute",
+        "spam":    "spam",
+    }
+    # Every branch below updates the WHOLE THREAD (all messages from this
+    # contact), not just the latest message — per user requirement that
+    # "Complete Thread assign ho" when moving to a folder/label.
+    if folder in category_map:
+        updated = msgs.update(category=category_map[folder])
+
+    elif folder == "needs_human":
+        # Mark EVERY message in the thread as needs_human + ensure the
+        # escalation reason is populated wherever it's empty.
+        updated = msgs.update(
+            ai_status="needs_human",
+            escalated_at=_tz.now(),
+        )
+        # Fill reason/category only on messages that don't already have one
+        msgs.filter(ai_escalation_reason="").update(
+            ai_escalation_reason="Manually moved to Needs Human by team.",
+        )
+        msgs.filter(ai_escalation_category="").update(
+            ai_escalation_category="manual_request",
+        )
+
+    elif folder == "resolved":
+        # EmailThreadAssignment is already per-thread (per contact) so
+        # marking it resolved applies to the entire thread.
+        ta, _ = EmailThreadAssignment.objects.get_or_create(store=store, contact=contact)
+        ta.is_resolved = True
+        ta.resolved_at = _tz.now()
+        ta.save(update_fields=["is_resolved", "resolved_at"])
+        updated = msgs.count()
+
+    elif folder == "unresolved":
+        EmailThreadAssignment.objects.filter(store=store, contact=contact).update(
+            is_resolved=False, resolved_at=None,
+        )
+        updated = msgs.count()
+
+    elif folder == "inbox":
+        # Move the WHOLE thread back to default state — clear category on
+        # every message + reset ai_status everywhere + clear resolved flag.
+        msgs.update(category="general", ai_status="auto_handled")
+        EmailThreadAssignment.objects.filter(store=store, contact=contact).update(
+            is_resolved=False, resolved_at=None,
+        )
+        # Also un-archive every message in the thread
+        for m in msgs:
+            raw = m.raw_data or {}
+            if raw.get("archived"):
+                raw["archived"] = False
+                m.raw_data = raw
+                m.save(update_fields=["raw_data"])
+        updated = msgs.count()
+
+    elif folder == "archive":
+        # Archive EVERY message in the thread (raw_data flag).
+        for m in msgs:
+            raw = m.raw_data or {}
+            raw["archived"] = True
+            m.raw_data = raw
+            m.save(update_fields=["raw_data"])
+            updated += 1
+
+    elif folder == "ai_drafts":
+        # Reset ai_status on EVERY message in the thread so the whole
+        # thread surfaces in AI Drafts again.
+        updated = msgs.update(ai_status="auto_handled")
+
+    else:
+        return Response({"success": False, "message": f"Unsupported folder: {folder}"}, status=400)
+
+    # Friendly folder labels for the history timeline
+    folder_label_map = {
+        "needs_human": "Needs Human",
+        "refunds":     "Refunds",
+        "returns":     "Returns",
+        "dispute":     "Dispute",
+        "spam":        "Spam",
+        "archive":     "Archive",
+        "resolved":    "Resolved",
+        "unresolved":  "Re-opened",
+        "inbox":       "Inbox",
+        "ai_drafts":   "AI Drafts",
+    }
+    log_event = "folder_moved"
+    if folder == "archive":      log_event = "archived"
+    elif folder == "resolved":   log_event = "resolved"
+    elif folder == "unresolved": log_event = "unresolved"
+    elif folder == "needs_human": log_event = "needs_human"
+    log_thread_activity(
+        store, contact, log_event,
+        description=f"Moved to {folder_label_map.get(folder, folder.title())}",
+        meta={"folder": folder, "folder_label": folder_label_map.get(folder, folder)},
+        request=request,
+    )
+
+    return Response({"success": True, "folder": folder, "updated": updated})
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Archive-folder bulk actions: restore + permanent delete.
+# Both accept POST {store_id, contacts: [email,…]} and operate on the
+# WHOLE thread (every message from each contact). Restore un-archives
+# (raw_data.archived=False + reset assignment) so threads pop back into
+# their natural folder. Permanent delete actually destroys the message
+# rows + the thread assignment + thread labels — no undo.
+# ─────────────────────────────────────────────────────────────────────
+@csrf_exempt
+@api_view(["POST"])
+def restore_archived_threads_api(request):
+    """POST {store_id, contacts:[email,...]} — un-archive every message
+    in each listed thread and clear the resolved flag so they reappear
+    in their original folder (Inbox / Refunds / etc.)."""
+    from .models import EmailMessage, EmailThreadAssignment
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
+
+    store_id = request.data.get("store_id")
+    contacts = request.data.get("contacts") or []
+    if not store_id or not isinstance(contacts, list) or not contacts:
+        return Response({"success": False, "message": "store_id + contacts[] required."}, status=400)
+
+    store = get_object_or_404(Store, id=store_id, user=request.user)
+    contacts = [(c or "").strip().lower() for c in contacts if c]
+
+    restored_threads = 0
+    restored_msgs = 0
+    for contact in contacts:
+        msgs = EmailMessage.objects.filter(store=store, sender__icontains=contact)
+        if not msgs.exists():
+            continue
+        for m in msgs:
+            raw = m.raw_data or {}
+            touched = False
+            if raw.get("archived"):
+                raw["archived"] = False
+                m.raw_data = raw
+                touched = True
+            # If status was forced to "archived", reset to "new" so the
+            # message reappears in active queues.
+            if m.status == "archived":
+                m.status = "new"
+                touched = True
+            if touched:
+                m.save(update_fields=["raw_data", "status"])
+            restored_msgs += 1
+        # Clear the resolved flag on the thread assignment too
+        EmailThreadAssignment.objects.filter(
+            store=store, contact__iexact=contact
+        ).update(is_resolved=False, resolved_at=None)
+        restored_threads += 1
+        log_thread_activity(
+            store, contact, "restored",
+            description="Thread restored from archive",
+            request=request,
+        )
+
+    return Response({
+        "success": True,
+        "restored_threads": restored_threads,
+        "restored_messages": restored_msgs,
+    })
+
+
+@csrf_exempt
+@api_view(["POST"])
+def permanent_delete_threads_api(request):
+    """POST {store_id, contacts:[email,...]} — PERMANENTLY destroy every
+    message in each listed thread + thread assignment + label links.
+    No undo. Intended only for the Archive folder bulk action."""
+    from .models import EmailMessage, EmailThreadAssignment, EmailThreadLabel, EmailAttachment
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
+
+    store_id = request.data.get("store_id")
+    contacts = request.data.get("contacts") or []
+    if not store_id or not isinstance(contacts, list) or not contacts:
+        return Response({"success": False, "message": "store_id + contacts[] required."}, status=400)
+
+    store = get_object_or_404(Store, id=store_id, user=request.user)
+    contacts = [(c or "").strip().lower() for c in contacts if c]
+
+    deleted_threads = 0
+    deleted_msgs = 0
+    for contact in contacts:
+        msgs = EmailMessage.objects.filter(store=store, sender__icontains=contact)
+        n = msgs.count()
+        if not n:
+            continue
+        # Cascade: attachments → messages → thread assignment → thread labels
+        try:
+            EmailAttachment.objects.filter(email__in=msgs).delete()
+        except Exception:
+            pass
+        deleted_msgs += n
+        msgs.delete()
+        try:
+            EmailThreadAssignment.objects.filter(store=store, contact__iexact=contact).delete()
+        except Exception:
+            pass
+        try:
+            EmailThreadLabel.objects.filter(store=store, contact__iexact=contact).delete()
+        except Exception:
+            pass
+        deleted_threads += 1
+
+    return Response({
+        "success": True,
+        "deleted_threads": deleted_threads,
+        "deleted_messages": deleted_msgs,
+    })
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Thread-history (audit log) API — powers the "History" item in the
+# chat-header 3-dot menu. Returns every recorded activity for a given
+# (store, contact) thread, newest first.
+# ─────────────────────────────────────────────────────────────────────
+@api_view(["GET"])
+def thread_history_api(request):
+    """GET ?store_id=&contact= → {success, items:[…]}"""
+    from .models import EmailThreadActivity
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
+
+    store_id = request.GET.get("store_id")
+    contact  = (request.GET.get("contact") or "").strip().lower()
+    if not (store_id and contact):
+        return Response({"success": False, "message": "store_id + contact required."}, status=400)
+
+    store = get_object_or_404(Store, id=store_id, user=request.user)
+
+    qs = EmailThreadActivity.objects.filter(
+        store=store, contact=contact
+    ).select_related("actor_user", "actor_member").order_by("-created_at")[:500]
+
+    # Map event → emoji icon for the timeline
+    icon_map = {
+        "created":        "✨",
+        "incoming":       "📥",
+        "reply_sent":     "📤",
+        "ai_draft":       "✦",
+        "ai_auto_reply":  "🤖",
+        "assigned":       "👤",
+        "unassigned":     "🚫",
+        "co_assigned":    "👥",
+        "co_unassigned":  "👥",
+        "label_added":    "🏷️",
+        "label_removed":  "🏷️",
+        "folder_moved":   "📂",
+        "archived":       "🗄️",
+        "restored":       "↩️",
+        "resolved":       "✓",
+        "unresolved":     "↻",
+        "read":           "📬",
+        "unread":         "✉️",
+        "needs_human":    "⚠️",
+        "handled":        "✓",
+        "note":           "📝",
+    }
+
+    items = []
+    for a in qs:
+        actor = a.actor_label or "System"
+        role = ""
+        if a.actor_member_id:
+            role = getattr(a.actor_member, "role", "") or "Team Member"
+        elif a.actor_user_id:
+            role = "Owner"
+        items.append({
+            "id": a.id,
+            "event": a.event,
+            "event_label": dict(EmailThreadActivity.EVENT_CHOICES).get(a.event, a.event),
+            "icon": icon_map.get(a.event, "•"),
+            "description": a.description or "",
+            "meta": a.meta or {},
+            "actor": actor,
+            "actor_role": role,
+            "created_at": a.created_at.isoformat(),
+        })
+
+    return Response({"success": True, "items": items, "count": len(items)})

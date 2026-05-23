@@ -3372,6 +3372,154 @@ body.vf-dark-mode .em-foot-sync,body.vf-dark-mode .em-foot-switch{background:var
 .em-list{overflow-y:auto;overflow-x:hidden;padding:6px;flex:1;min-height:0;}
 .em-list::-webkit-scrollbar{width:5px;}
 .em-list::-webkit-scrollbar-thumb{background:rgba(15,19,32,.1);border-radius:3px;}
+/* Bulk-action FLOATING bar — appears at bottom-center of viewport
+   when ≥1 thread is checked. Dark slate look. JS appends to <body>
+   so position:fixed escapes any transformed ancestor.
+   Width sizes to its CONTENT (no max-width:100vw spreading). */
+.em-bulkbar-floating{
+  display:none !important;
+  position:fixed;
+  left:50%;
+  bottom:24px;
+  transform:translateX(-50%) translateY(8px);
+  z-index:9000;
+  align-items:center;
+  gap:8px;
+  padding:8px 12px;
+  background:linear-gradient(135deg,#1e293b,#0f172a);
+  border:1px solid rgba(99,102,241,.35);
+  border-radius:12px;
+  box-shadow:0 18px 50px rgba(15,23,42,.55), 0 0 0 1px rgba(255,255,255,.04) inset;
+  font-size:12.5px;
+  color:#e2e8f0;
+  font-family:inherit;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .18s ease, transform .22s cubic-bezier(.34,1.56,.64,1);
+  width:max-content;            /* shrink to content; never stretch */
+  max-width:calc(100vw - 24px);
+  flex-wrap:nowrap;
+  white-space:nowrap;
+  box-sizing:border-box;
+}
+.em-bulkbar-floating.is-open{
+  display:inline-flex !important;
+  opacity:1;
+  pointer-events:auto;
+  transform:translateX(-50%) translateY(0);
+}
+
+.em-bulkbar-count{
+  display:inline-flex;align-items:center;
+  gap:5px;
+  padding:6px 11px;
+  background:linear-gradient(135deg,#6366f1,#7c3aed);
+  color:#fff;font-weight:800;font-size:11.5px;
+  border-radius:7px;
+  box-shadow:0 4px 12px rgba(99,102,241,.45);
+  flex-shrink:0;letter-spacing:.2px;line-height:1;
+}
+.em-bulkbar-count > span{display:inline-block;}
+
+.em-bulkbar-select{
+  padding:6px 10px;
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:7px;
+  color:#e2e8f0;
+  font-size:11.5px;font-weight:600;
+  font-family:inherit;
+  cursor:pointer;
+  flex-shrink:0;
+  outline:none;
+  transition:all .15s ease;
+  line-height:1.2;
+  /* Use auto width so the select hugs its content + arrow */
+  width:auto;
+  appearance:none;
+  -webkit-appearance:none;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%2394a3b8' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-repeat:no-repeat;
+  background-position:right 8px center;
+  padding-right:22px;
+}
+.em-bulkbar-select-md{min-width:150px;max-width:180px;}
+.em-bulkbar-select-sm{min-width:120px;max-width:160px;}
+.em-bulkbar-select:hover{background-color:rgba(255,255,255,.1);border-color:rgba(99,102,241,.45);}
+.em-bulkbar-select:focus{border-color:#6366f1;box-shadow:0 0 0 2px rgba(99,102,241,.25);}
+.em-bulkbar-select option{background:#1e293b;color:#e2e8f0;}
+
+.em-bulkbar-btn{
+  padding:6px 11px;
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:7px;
+  color:#e2e8f0;
+  font-weight:700;font-size:11.5px;
+  cursor:pointer;font-family:inherit;line-height:1;
+  display:inline-flex;align-items:center;gap:5px;
+  transition:all .15s ease;
+  flex-shrink:0;
+  white-space:nowrap;
+}
+.em-bulkbar-btn:hover{background:rgba(255,255,255,.12);border-color:rgba(99,102,241,.5);color:#fff;transform:translateY(-1px);}
+.em-bulkbar-btn:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+
+.em-bulkbar-btn-icon{padding:6px 9px;font-size:13px;}
+
+.em-bulkbar-btn-primary{
+  background:linear-gradient(135deg,#6366f1,#a855f7);
+  color:#fff;border-color:transparent;
+  box-shadow:0 4px 12px rgba(168,85,247,.4);
+}
+.em-bulkbar-btn-primary:hover{
+  background:linear-gradient(135deg,#4f46e5,#9333ea);
+  color:#fff;border-color:transparent;
+  box-shadow:0 6px 16px rgba(168,85,247,.5);
+}
+
+.em-bulkbar-btn-danger{
+  background:rgba(239,68,68,.12);
+  color:#fca5a5;
+  border-color:rgba(239,68,68,.3);
+}
+.em-bulkbar-btn-danger:hover{
+  background:rgba(239,68,68,.22);
+  color:#fecaca;
+  border-color:rgba(239,68,68,.5);
+}
+
+.em-bulkbar-btn-ghost{
+  background:transparent;
+  border-color:rgba(255,255,255,.08);
+  color:#94a3b8;
+}
+.em-bulkbar-btn-ghost:hover{
+  background:rgba(255,255,255,.06);
+  color:#e2e8f0;
+  border-color:rgba(255,255,255,.15);
+}
+
+.em-bulkbar-divider{
+  width:1px;height:18px;
+  background:rgba(255,255,255,.12);
+  flex-shrink:0;
+}
+
+@media (max-width:900px){
+  .em-bulkbar-floating{
+    bottom:14px;
+    padding:7px 9px;
+    gap:6px;
+    border-radius:10px;
+    overflow-x:auto;
+    scrollbar-width:thin;
+  }
+  .em-bulkbar-floating::-webkit-scrollbar{height:4px;}
+  .em-bulkbar-floating::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:3px;}
+  .em-bulkbar-select-md{min-width:130px;max-width:150px;}
+  .em-bulkbar-select-sm{min-width:110px;max-width:130px;}
+}
 /* Conv header */
 .em-conv-hdr{padding:12px 16px;border-bottom:1px solid #e2e8f0;flex-shrink:0;}
 .em-conv-title-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
@@ -3518,16 +3666,32 @@ body.vf-dark-mode .em-more-btn,body.vf-dark-mode .em-sync-btn{background:var(--v
 .em-tc-preview{font-size:11.5px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:6px;}
 .em-tc-chips{display:flex;align-items:center;gap:5px;flex-wrap:nowrap;}
 .em-tc-chip{display:inline-flex;align-items:center;gap:3px;padding:3px 7px;border-radius:999px;font-size:10.5px;font-weight:600;background:#f1f5f9;color:#64748b;white-space:nowrap;}
-/* Per-row bulk-select checkbox — only visible on hover or when row is selected.
-   This keeps the inbox visually clean for users not using bulk assign. */
-.em-tc-checkbox{display:flex;align-items:center;justify-content:center;width:22px;flex-shrink:0;
-  opacity:0;transition:opacity .15s;cursor:pointer;}
-.em-tc:hover .em-tc-checkbox,
-.em-tc-checked .em-tc-checkbox,
-.em-tc-checkbox input:checked{opacity:1;}
-.em-tc-checkbox input{width:16px;height:16px;cursor:pointer;accent-color:#6366f1;margin:0;}
-.em-tc-checked{background:linear-gradient(90deg,rgba(99,102,241,.07),transparent)!important;
-  border-left:3px solid #6366f1!important;}
+/* Per-row bulk-select checkbox — always visible (was opacity:0 by default
+   which made multi-select discovery / state impossible to see without
+   moving the cursor over each row). */
+.em-tc-checkbox{display:flex!important;align-items:center;justify-content:center;
+  width:22px;flex-shrink:0;
+  opacity:1!important;cursor:pointer;
+  transition:transform .12s;}
+.em-tc-checkbox input{
+  width:16px;height:16px;cursor:pointer;margin:0;
+  accent-color:#6366f1;
+  appearance:auto;-webkit-appearance:checkbox;
+  /* Soft border so the empty box is visible against the white row bg */
+  border:1.5px solid #cbd5e1;border-radius:4px;
+}
+.em-tc-checkbox input:checked{accent-color:#6366f1;border-color:#6366f1;}
+/* Subtle scale on hover for affordance */
+.em-tc:hover .em-tc-checkbox{transform:scale(1.05);}
+
+/* Selected row — distinct indigo wash + thick left bar so multi-select
+   state is unmistakable. */
+.em-tc-checked{
+  background:linear-gradient(90deg, rgba(99,102,241,0.16), rgba(99,102,241,0.06))!important;
+  border-left:4px solid #6366f1!important;
+  box-shadow:inset 0 0 0 1px rgba(99,102,241,0.18)!important;
+}
+.em-tc-checked .em-tc-name{color:#4338ca!important;font-weight:700!important;}
 .em-tc-chip.ai{background:#ede9fe;color:#7c3aed;}
 .em-tc-chip.resolved{background:#dcfce7;color:#15803d;}
 .em-tc-chip.unread{background:#ef4444;color:#fff;font-weight:800;min-width:18px;justify-content:center;}
@@ -5296,17 +5460,34 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
     .em-thread-label .x:hover{background:rgba(0,0,0,.2);opacity:1;}
 
     /* Needs-Human escalation banner inside thread */
-    .em-needs-human-banner{background:linear-gradient(135deg,#fef3c7,#fee2e2);border:1px solid #fca5a5;border-radius:12px;padding:14px 18px;margin:12px 0 8px;display:flex;align-items:flex-start;gap:12px;}
-    .em-needs-human-banner .icon{font-size:22px;flex-shrink:0;}
-    .em-needs-human-banner .body{flex:1;}
-    .em-needs-human-banner .title{font-size:13.5px;font-weight:900;color:#7f1d1d;margin-bottom:2px;}
-    .em-needs-human-banner .reason{font-size:12.5px;color:#7f1d1d;line-height:1.5;}
-    .em-needs-human-banner .cat{display:inline-block;font-size:10px;font-weight:800;padding:1.5px 7px;border-radius:5px;background:#fff;color:#b91c1c;margin-top:6px;text-transform:uppercase;letter-spacing:.06em;}
-    .em-needs-human-banner .actions{display:flex;gap:6px;margin-top:10px;}
-    .em-needs-human-banner button{background:#fff;color:#7f1d1d;border:1px solid #fca5a5;padding:5px 11px;border-radius:7px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;transition:.15s;}
+    /* Needs-Human alert strip — sits at the very top of the chat panel,
+       full-width edge-to-edge (NOT inset). Compact single-row layout. */
+    #emNeedsHumanBanner{margin:0!important;padding:0!important;}
+    .em-needs-human-banner{
+      display:flex;align-items:center;gap:10px;
+      padding:7px 14px;
+      background:linear-gradient(90deg, #fef3c7 0%, #fee2e2 100%);
+      border-bottom:1px solid #fca5a5;
+      font-size:12px;line-height:1.35;
+      color:#7f1d1d;
+    }
+    .em-needs-human-banner .icon{font-size:14px;flex-shrink:0;}
+    .em-needs-human-banner .body{flex:1;min-width:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+    .em-needs-human-banner .title{font-size:12px;font-weight:800;color:#7f1d1d;flex-shrink:0;}
+    .em-needs-human-banner .reason{font-size:11.5px;color:#7f1d1d;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;}
+    .em-needs-human-banner .cat{font-size:9.5px;font-weight:800;padding:1px 6px;border-radius:4px;background:#fff;color:#b91c1c;text-transform:uppercase;letter-spacing:.04em;flex-shrink:0;}
+    .em-needs-human-banner .actions{display:flex;gap:5px;flex-shrink:0;}
+    .em-needs-human-banner button{background:#fff;color:#7f1d1d;border:1px solid #fca5a5;padding:3px 9px;border-radius:5px;font-size:10.5px;font-weight:700;cursor:pointer;font-family:inherit;transition:.15s;line-height:1.2;}
     .em-needs-human-banner button:hover{background:#fef2f2;}
     .em-needs-human-banner button.primary{background:#dc2626;color:#fff;border-color:#dc2626;}
     .em-needs-human-banner button.primary:hover{background:#b91c1c;}
+    .em-needs-human-banner .nhb-close{
+      background:transparent!important;border:none!important;color:#7f1d1d;
+      width:22px;height:22px;padding:0;border-radius:5px;
+      display:inline-flex;align-items:center;justify-content:center;font-size:14px;line-height:1;
+      cursor:pointer;
+    }
+    .em-needs-human-banner .nhb-close:hover{background:rgba(127,29,29,.12)!important;}
 
     /* Active-label filter chip in inbox header */
     .em-label-filter-chip{display:inline-flex;align-items:center;gap:6px;padding:3px 9px 3px 11px;border-radius:99px;font-size:11px;font-weight:800;color:#fff;}
@@ -6676,20 +6857,69 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
             <span id="emTabUnreadCount">0</span>
           </div>
 
-          <!-- Bulk-select toolbar: appears when at least one thread is checked.
-               "Complete Email Assign" — assign one team member to many threads
-               at once, or bulk-unassign. -->
-          <div id="emBulkBar" style="display:none;align-items:center;gap:10px;padding:9px 14px;background:linear-gradient(135deg,#eef2ff,#f5f3ff);border:1px solid #c7d2fe;border-radius:11px;margin:0 4px 8px 4px;font-size:12.5px;">
-            <span style="font-weight:800;color:#3730a3;display:flex;align-items:center;gap:6px;">
-              <i class="fa-solid fa-check-double"></i>
-              <span id="emBulkCount">0</span> selected
+          <!-- Bulk-action floating bar: surfaces at the BOTTOM of the
+               viewport when ≥1 thread is checked. Dark slate look that
+               floats above the inbox so it never crowds the row layout.
+               NOTE: JS moves this node to <body> on first show so
+               position:fixed escapes any ancestor transforms. -->
+          <div id="emBulkBar" class="em-bulkbar-floating">
+            <span class="em-bulkbar-count">
+              <span id="emBulkCount">0</span><span>selected</span>
             </span>
-            <select id="emBulkMemberSelect" style="flex:1;padding:6px 10px;border-radius:8px;border:1px solid #c7d2fe;background:#fff;font-size:12px;font-weight:600;color:#0f172a;">
-              <option value="">— Select team member —</option>
-            </select>
-            <button onclick="emBulkAssign()" id="emBulkAssignBtn" style="padding:7px 14px;background:linear-gradient(135deg,#6366f1,#a855f7);border:none;border-radius:8px;color:#fff;font-weight:800;font-size:12px;cursor:pointer;box-shadow:0 4px 12px rgba(168,85,247,.35);">Assign</button>
-            <button onclick="emBulkUnassign()" style="padding:7px 12px;background:#fff;border:1px solid #e0e7ff;border-radius:8px;color:#475569;font-weight:700;font-size:11.5px;cursor:pointer;" title="Remove assignment from selected threads">Unassign</button>
-            <button onclick="emBulkClear()" style="padding:6px 9px;background:transparent;border:none;color:#94a3b8;cursor:pointer;font-size:14px;" title="Clear selection">✕</button>
+
+            <!-- Regular bulk actions (hidden when in Archive folder) -->
+            <div class="em-bulkbar-group" data-group="normal" style="display:contents;">
+              <select id="emBulkMemberSelect" class="em-bulkbar-select em-bulkbar-select-md" title="Assign to team member">
+                <option value="">Team member…</option>
+              </select>
+              <button onclick="emBulkAssign()" id="emBulkAssignBtn" class="em-bulkbar-btn em-bulkbar-btn-primary" title="Assign selected threads">
+                <i class="fa-solid fa-user-plus"></i><span>Assign</span>
+              </button>
+              <button onclick="emBulkUnassign()" class="em-bulkbar-btn" title="Remove assignment from selected">
+                Unassign
+              </button>
+
+              <span class="em-bulkbar-divider"></span>
+
+              <select id="emBulkFolderSelect" onchange="emBulkMoveToFolder()" class="em-bulkbar-select em-bulkbar-select-sm" title="Move to folder">
+                <option value="">Move to…</option>
+                <option value="needs_human">⚠ Needs Human</option>
+                <option value="refunds">💵 Refunds</option>
+                <option value="returns">📦 Returns</option>
+                <option value="dispute">⚖ Dispute</option>
+                <option value="spam">🛡 Spam</option>
+                <option value="archive">🗄 Archive</option>
+                <option value="resolved">✓ Resolved</option>
+                <option value="inbox">↩ Back to Inbox</option>
+              </select>
+
+              <button onclick="emBulkMark('read')"   class="em-bulkbar-btn" title="Mark selected as read">
+                <i class="fa-solid fa-envelope-open"></i><span>Mark Read</span>
+              </button>
+              <button onclick="emBulkMark('unread')" class="em-bulkbar-btn" title="Mark selected as unread">
+                <i class="fa-solid fa-envelope"></i><span>Mark Unread</span>
+              </button>
+
+              <span class="em-bulkbar-divider"></span>
+
+              <button onclick="emBulkDelete()" class="em-bulkbar-btn em-bulkbar-btn-danger" title="Archive selected threads">
+                <i class="fa-solid fa-trash"></i><span>Delete</span>
+              </button>
+            </div>
+
+            <!-- Archive-folder bulk actions (only shown when in Archive). -->
+            <div class="em-bulkbar-group" data-group="archive" style="display:none;">
+              <button onclick="emBulkRestore()" class="em-bulkbar-btn em-bulkbar-btn-primary" title="Restore selected threads back to inbox">
+                <i class="fa-solid fa-rotate-left"></i><span>Restore Chat</span>
+              </button>
+              <button onclick="emBulkPermanentDelete()" class="em-bulkbar-btn em-bulkbar-btn-danger" title="Permanently delete — cannot be undone">
+                <i class="fa-solid fa-trash-can"></i><span>Permanent Delete</span>
+              </button>
+            </div>
+
+            <button onclick="emBulkClear()" class="em-bulkbar-btn em-bulkbar-btn-ghost" title="Clear selection">
+              <i class="fa-solid fa-xmark"></i><span>Clear</span>
+            </button>
           </div>
 
           <!-- Thread list -->
@@ -6702,6 +6932,10 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
         <!-- RIGHT: Conversation panel -->
         <div class="em-panel" id="emConvPanel">
 
+          <!-- ── Needs-Human escalation banner — full-width strip ABOVE
+                  the chat header so it never crowds the chip row. -->
+          <div id="emNeedsHumanBanner" style="display:none;"></div>
+
           <!-- Conversation header (compact) -->
           <div class="em-conv-hdr">
             <div class="em-conv-title-row">
@@ -6710,8 +6944,6 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
                 <div class="em-conv-sub" id="emailDetailMeta">Thread details will show here.</div>
                 <!-- Chips of currently-applied labels on this thread -->
                 <div class="em-thread-labels" id="emThreadLabels" style="margin-top:6px;"></div>
-                <!-- Needs-Human escalation banner (shown when thread is needs_human) -->
-                <div id="emNeedsHumanBanner" style="display:none;"></div>
               </div>
               <div class="em-conv-controls">
 
@@ -6753,6 +6985,7 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
                   <button class="em-icon-btn-sm" id="emMoreBtn" title="More options" onclick="toggleEmailMoreMenu(event)">···</button>
                   <div id="emMoreMenu" style="display:none;position:absolute;right:0;top:100%;margin-top:6px;background:#fff;border:1px solid var(--vf-line);border-radius:12px;padding:6px;min-width:200px;box-shadow:0 10px 30px rgba(15,23,42,.12);z-index:200;">
                     <button class="em-sp-item" style="width:100%;text-align:left;background:none;border:none;font-family:inherit;font-size:13px;padding:8px 12px;border-radius:8px;cursor:pointer;color:#1e293b;" onclick="emMoreAction('refresh')">🔄 Refresh thread</button>
+                    <button class="em-sp-item" style="width:100%;text-align:left;background:none;border:none;font-family:inherit;font-size:13px;padding:8px 12px;border-radius:8px;cursor:pointer;color:#1e293b;" onclick="emMoreAction('history')">🕘 View history</button>
                     <button class="em-sp-item" style="width:100%;text-align:left;background:none;border:none;font-family:inherit;font-size:13px;padding:8px 12px;border-radius:8px;cursor:pointer;color:#1e293b;" onclick="emMoreAction('copy')">📋 Copy thread link</button>
                     <button class="em-sp-item" style="width:100%;text-align:left;background:none;border:none;font-family:inherit;font-size:13px;padding:8px 12px;border-radius:8px;cursor:pointer;color:#1e293b;" onclick="emMoreAction('toggle_read')">📬 Toggle read/unread</button>
                     <button class="em-sp-item" style="width:100%;text-align:left;background:none;border:none;font-family:inherit;font-size:13px;padding:8px 12px;border-radius:8px;cursor:pointer;color:#1e293b;" onclick="emMoreAction('print')">🖨️ Print thread</button>
@@ -10800,6 +11033,51 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
   </div>
 </div>
 
+
+<!-- ──────────────────────────────────────────────────────────────────
+     Thread History modal — full activity timeline for a single thread
+     (assignments, replies, folder moves, labels, etc.). Opened from the
+     chat-header 3-dot menu → "View history". -->
+<div id="threadHistoryModal" class="modal-bg" style="display:none;" onclick="if(event.target===this)closeThreadHistoryModal()">
+  <div class="modal" style="max-width:640px;width:92vw;max-height:88vh;display:flex;flex-direction:column;padding:0;">
+    <div style="padding:18px 22px 14px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;gap:12px;flex-shrink:0;">
+      <div style="width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,#6366f1,#7c3aed);display:grid;place-items:center;flex-shrink:0;box-shadow:0 6px 16px rgba(99,102,241,.35);">
+        <i class="fa-solid fa-clock-rotate-left" style="color:#fff;font-size:16px;"></i>
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:15px;font-weight:800;color:#0f172a;">Thread History</div>
+        <div style="font-size:12px;color:#64748b;margin-top:2px;" id="thHistorySub">Complete audit trail of every action on this conversation</div>
+      </div>
+      <button onclick="closeThreadHistoryModal()" style="background:none;border:none;font-size:20px;color:#64748b;cursor:pointer;padding:4px 8px;border-radius:6px;" title="Close">×</button>
+    </div>
+    <div id="thHistoryBody" style="overflow-y:auto;padding:18px 22px 22px;flex:1;min-height:0;">
+      <div style="text-align:center;color:#94a3b8;padding:40px 0;font-size:13px;">Loading history…</div>
+    </div>
+  </div>
+</div>
+
+<style>
+/* Thread history timeline */
+.th-tl{position:relative;padding-left:30px;}
+.th-tl::before{content:'';position:absolute;left:13px;top:6px;bottom:6px;width:2px;background:linear-gradient(180deg,#e0e7ff,#f1f5f9);border-radius:2px;}
+.th-tl-item{position:relative;padding:10px 0 14px;}
+.th-tl-icon{position:absolute;left:-30px;top:8px;width:28px;height:28px;border-radius:50%;background:#fff;border:2px solid #e0e7ff;display:flex;align-items:center;justify-content:center;font-size:13px;box-shadow:0 2px 6px rgba(15,23,42,.06);z-index:2;}
+.th-tl-item.tl-reply .th-tl-icon{background:#dcfce7;border-color:#86efac;}
+.th-tl-item.tl-assign .th-tl-icon{background:#dbeafe;border-color:#93c5fd;}
+.th-tl-item.tl-archive .th-tl-icon{background:#fee2e2;border-color:#fca5a5;}
+.th-tl-item.tl-folder .th-tl-icon{background:#f3e8ff;border-color:#d8b4fe;}
+.th-tl-item.tl-label .th-tl-icon{background:#fef3c7;border-color:#fcd34d;}
+.th-tl-item.tl-needs_human .th-tl-icon{background:#ffedd5;border-color:#fb923c;}
+.th-tl-item.tl-restored .th-tl-icon{background:#ccfbf1;border-color:#5eead4;}
+.th-tl-card{background:#fafbff;border:1px solid #e2e8f0;border-radius:10px;padding:10px 13px;}
+.th-tl-row1{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12.5px;}
+.th-tl-event{font-weight:700;color:#0f172a;}
+.th-tl-by{color:#475569;font-weight:600;}
+.th-tl-role{font-size:10.5px;background:#e0e7ff;color:#4338ca;padding:1px 6px;border-radius:6px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;}
+.th-tl-time{font-size:11px;color:#94a3b8;margin-left:auto;flex-shrink:0;}
+.th-tl-desc{font-size:12px;color:#475569;margin-top:4px;line-height:1.5;word-break:break-word;}
+.th-tl-empty{text-align:center;color:#94a3b8;padding:40px 0;font-size:13px;}
+</style>
 
 <div id="connectEmailModal" class="modal-bg">
   <div class="modal" style="max-width:500px;">
@@ -19106,22 +19384,75 @@ function toggleThreadMenu(event, contact){
   closeThreadMenus();
   const menu = document.createElement("div");
   menu.className = "thread-menu show";
+  // Every button explicitly closes the menu FIRST so it never lingers
+  // after the action runs. Belt-and-suspenders pattern — even if the
+  // global document click-closer fails (e.g. an inner stopPropagation),
+  // the menu still goes away.
   menu.innerHTML = `
-    <button onclick="markThreadAsRead('${escapeJs(contact)}')">Mark as Read</button>
-    <button onclick="markThreadAsUnread('${escapeJs(contact)}')">Mark Unread</button>
-    <button class="delete" onclick="deleteThread('${escapeJs(contact)}')">Delete Chat</button>
+    <button onclick="closeThreadMenus();markThreadAsRead('${escapeJs(contact)}')">Mark as Read</button>
+    <button onclick="closeThreadMenus();markThreadAsUnread('${escapeJs(contact)}')">Mark Unread</button>
+    <button onclick="_openLabelPickerForRow(event, '${escapeJs(contact)}')">🏷️ Assign label / Move to folder</button>
+    <button class="delete" onclick="closeThreadMenus();deleteThread('${escapeJs(contact)}')">Delete Chat</button>
   `;
   document.body.appendChild(menu);
   const rect = event.currentTarget.getBoundingClientRect();
   menu.style.top = `${rect.bottom + 6}px`;
-  menu.style.left = `${Math.max(8, rect.right - 170)}px`;
+  menu.style.left = `${Math.max(8, rect.right - 220)}px`;
 }
+
+/* Helper used by the thread-row 3-dot "Assign label / Move to folder"
+   action. Opens the same picker that the chat header uses, but for an
+   arbitrary thread (passed as contact). */
+function _openLabelPickerForRow(event, contact){
+  event.stopPropagation();
+  // CAPTURE the rect BEFORE we close the menu. event.currentTarget is
+  // the button inside .thread-menu which we're about to remove —
+  // anchoring against it after removal returns zeroed coordinates
+  // (which is why the picker was opening at top-left). Instead, use the
+  // original .em-tc-dots button on the inbox row (still in the DOM
+  // after the menu closes).
+  const menuRect = event.currentTarget.getBoundingClientRect();
+  // Try to find the 3-dot dots button this menu was opened from
+  let dotsBtn = null;
+  document.querySelectorAll('#emailsList .em-tc').forEach(row => {
+    const onclick = row.getAttribute('onclick') || '';
+    if (onclick.includes("'" + contact + "'") || onclick.includes('"' + contact + '"')){
+      dotsBtn = row.querySelector('.em-tc-dots');
+    }
+  });
+  closeThreadMenus();
+  // Synthesize a fake event with a stable rect — prefer the dots
+  // button (still in DOM), else fall back to the captured menu rect.
+  const fakeEvent = {
+    stopPropagation: () => {},
+    currentTarget: {
+      getBoundingClientRect: () => (dotsBtn ? dotsBtn.getBoundingClientRect() : menuRect),
+    },
+  };
+  openThreadLabelPicker(fakeEvent, contact);
+}
+window._openLabelPickerForRow = _openLabelPickerForRow;
 
 function closeThreadMenus(){
   document.querySelectorAll(".thread-menu").forEach(menu => menu.remove());
 }
 
-document.addEventListener("click", closeThreadMenus);
+// Close on ANY outside click (capture-phase so stopPropagation deeper
+// in the tree can't prevent dismissal) — but skip clicks INSIDE a
+// .thread-menu (those are action buttons that handle their own close).
+document.addEventListener("click", (e) => {
+  const t = e.target;
+  if (t && t.closest && t.closest('.thread-menu')) return;
+  // Don't close on the dot-button that opened a menu (its handler
+  // toggles + re-opens).
+  if (t && t.closest && t.closest('.em-tc-dots')) return;
+  closeThreadMenus();
+}, true);
+
+// Escape always closes
+document.addEventListener("keydown", (e) => {
+  if (e.key === 'Escape') closeThreadMenus();
+});
 document.addEventListener("click", function(e){
   // Close email section popovers ONLY when the click landed outside the
   // popover's own container — relying on inline event.stopPropagation()
@@ -19168,8 +19499,28 @@ function _emBulkRefreshBar(){
   const bar = document.getElementById('emBulkBar');
   const cnt = document.getElementById('emBulkCount');
   if(!bar || !cnt) return;
+  // Portal: append the bar directly to <body> so position:fixed is
+  // anchored to the viewport, not whichever transformed/filtered
+  // ancestor the inbox panel sits inside. Without this, position:fixed
+  // gets scoped to that ancestor and stretches the bar to its width.
+  if(bar.parentNode !== document.body){
+    document.body.appendChild(bar);
+  }
   cnt.textContent = String(_emBulkSelected.size);
-  bar.style.display = _emBulkSelected.size > 0 ? 'flex' : 'none';
+  // Toggle the .is-open class — CSS handles the slide-up animation and
+  // sets display:flex. Old inline style.display approach didn't trigger
+  // the transform/opacity transitions.
+  if(_emBulkSelected.size > 0) bar.classList.add('is-open');
+  else                          bar.classList.remove('is-open');
+
+  // Folder-aware action groups: in the Archive folder only Restore +
+  // Permanent Delete make sense; everywhere else show the full toolbar.
+  const inArchive = (typeof emailFolder !== 'undefined' && emailFolder === 'archive');
+  const normalGrp  = bar.querySelector('[data-group="normal"]');
+  const archiveGrp = bar.querySelector('[data-group="archive"]');
+  if(normalGrp)  normalGrp.style.display  = inArchive ? 'none' : 'contents';
+  if(archiveGrp) archiveGrp.style.display = inArchive ? 'contents' : 'none';
+
   // Populate the team-member select lazily on first show
   if(_emBulkSelected.size > 0){
     _emBulkPopulateMembers();
@@ -19247,6 +19598,351 @@ async function emBulkUnassign(){
     await loadEmails({silent:true, preserveSelection:true});
   } catch(e){
     await _alert('Network error: ' + e.message, 'Error', '❌');
+  }
+}
+
+/* Bulk move-to-folder. The folder <select> calls this on change.
+   Iterates every selected contact and hits move-folder one by one
+   (server endpoint is per-contact). Resets dropdown + clears
+   selection + refreshes inbox afterwards. */
+async function emBulkMoveToFolder(){
+  const sel = document.getElementById('emBulkFolderSelect');
+  const folder = sel?.value;
+  if(!folder){ return; }
+  if(_emBulkSelected.size === 0){ sel.value = ''; return; }
+  const labelText = sel.options[sel.selectedIndex]?.text || folder;
+  const ok = await _confirm(
+    `Move ${_emBulkSelected.size} thread(s) to "${labelText}"?`,
+    {title:'Bulk Move', icon:'📂'}
+  );
+  if(!ok){ sel.value = ''; return; }
+
+  const contacts = Array.from(_emBulkSelected);
+  let success = 0, fail = 0;
+  // Disable while in-flight so the user doesn't double-trigger.
+  sel.disabled = true;
+  try {
+    const results = await Promise.all(contacts.map(async (contact) => {
+      try {
+        const r = await fetch('/emails/api/threads/move-folder/', {
+          method:'POST',
+          headers:{'Content-Type':'application/json', 'X-CSRFToken':getCSRFToken()},
+          credentials:'same-origin',
+          body: JSON.stringify({
+            store_id: selectedStoreId,
+            contact: contact,
+            folder: folder,
+          })
+        });
+        const d = await r.json().catch(()=>({}));
+        return r.ok && d.success !== false;
+      } catch(_){ return false; }
+    }));
+    results.forEach(ok2 => ok2 ? success++ : fail++);
+  } finally {
+    sel.disabled = false;
+    sel.value = '';
+  }
+
+  emBulkClear();
+  await loadEmails({silent:true, preserveSelection:false});
+  try { if(typeof loadEmailThreadStats === "function") loadEmailThreadStats(); } catch(_){}
+
+  if(fail > 0){
+    await _alert(`Moved ${success} thread(s). ${fail} failed.`, 'Bulk Move', success > 0 ? '⚠️' : '❌');
+  }
+}
+
+/* Bulk mark read / unread. The toggle-read endpoint flips the flag
+   on a single message — we need to fetch the latest message-id of each
+   selected thread first, then PATCH it to match the desired state.
+   `state` ∈ {'read','unread'}. */
+async function emBulkMark(state){
+  if(_emBulkSelected.size === 0) return;
+  if(state !== 'read' && state !== 'unread') return;
+
+  const want = (state === 'read');
+  // We need a map of contact → latest email_id. The threads payload
+  // exposes this via `latest_id` (added server-side specifically for
+  // the bulk-action toolbar).
+  const contacts = Array.from(_emBulkSelected);
+  const ids = [];
+  const cache = (typeof allThreads !== 'undefined' && allThreads) ? allThreads : [];
+  contacts.forEach(c => {
+    const t = cache.find(x => (x.contact||'').toLowerCase() === c.toLowerCase());
+    if(t && t.latest_id){
+      ids.push({id: t.latest_id, isRead: !!t.is_read});
+    }
+  });
+
+  if(ids.length === 0){
+    await _alert('Could not resolve selected threads.', 'Bulk Mark', '⚠️');
+    return;
+  }
+
+  // Toggle-read endpoint flips; we only call it when the current state
+  // doesn't match what we want.
+  const todo = ids.filter(x => x.isRead !== want);
+  if(todo.length === 0){
+    await _alert(`All selected threads are already ${state}.`, 'Bulk Mark', 'ℹ️');
+    return;
+  }
+
+  let success = 0, fail = 0;
+  const results = await Promise.all(todo.map(async (item) => {
+    try {
+      const r = await fetch(`/emails/api/${item.id}/toggle-read/`, {
+        method:'POST',
+        headers:{'Content-Type':'application/json', 'X-CSRFToken':getCSRFToken()},
+        credentials:'same-origin',
+        body: '{}'
+      });
+      const d = await r.json().catch(()=>({}));
+      return r.ok && d.success !== false;
+    } catch(_){ return false; }
+  }));
+  results.forEach(ok => ok ? success++ : fail++);
+
+  emBulkClear();
+  await loadEmails({silent:true, preserveSelection:false});
+  try { if(typeof loadEmailThreadStats === "function") loadEmailThreadStats(); } catch(_){}
+
+  if(fail > 0){
+    await _alert(`Marked ${success} thread(s) as ${state}. ${fail} failed.`, 'Bulk Mark', '⚠️');
+  }
+}
+
+/* Bulk "delete" — actually archives the whole thread for each
+   selected contact (we don't permanently destroy; archive removes it
+   from active queues but they remain accessible via the Archive
+   folder). Uses the move-folder endpoint with folder='archive' which
+   sets raw_data.archived=True on EVERY message in the thread — that's
+   the flag the sidebar's Archive view filters on. */
+async function emBulkDelete(){
+  if(_emBulkSelected.size === 0) return;
+  const ok = await _confirm(
+    `Archive ${_emBulkSelected.size} thread(s)? They will be moved to the Archive folder.`,
+    {title:'Bulk Delete', icon:'🗑️', danger:true, confirmText:'Archive'}
+  );
+  if(!ok) return;
+
+  const contacts = Array.from(_emBulkSelected);
+
+  let success = 0, fail = 0;
+  const results = await Promise.all(contacts.map(async (contact) => {
+    try {
+      const r = await fetch('/emails/api/threads/move-folder/', {
+        method:'POST',
+        headers:{'Content-Type':'application/json', 'X-CSRFToken':getCSRFToken()},
+        credentials:'same-origin',
+        body: JSON.stringify({
+          store_id: selectedStoreId,
+          contact: contact,
+          folder: 'archive',
+        })
+      });
+      const d = await r.json().catch(()=>({}));
+      return r.ok && d.success !== false;
+    } catch(_){ return false; }
+  }));
+  results.forEach(ok2 => ok2 ? success++ : fail++);
+
+  emBulkClear();
+  await loadEmails({silent:true, preserveSelection:false});
+  try { if(typeof loadEmailThreadStats === "function") loadEmailThreadStats(); } catch(_){}
+
+  if(fail > 0){
+    await _alert(`Archived ${success} thread(s). ${fail} failed.`, 'Bulk Delete', '⚠️');
+  }
+}
+
+/* ────────────────────────────────────────────────────────────────
+   Thread History modal — fetches the per-thread activity log and
+   renders it as a timeline (newest first). Opened from the chat
+   header's 3-dot menu → "View history".
+   ──────────────────────────────────────────────────────────────── */
+function closeThreadHistoryModal(){
+  const m = document.getElementById('threadHistoryModal');
+  if(m) m.style.display = 'none';
+}
+async function openThreadHistoryModal(){
+  const modal = document.getElementById('threadHistoryModal');
+  const body  = document.getElementById('thHistoryBody');
+  const sub   = document.getElementById('thHistorySub');
+  if(!modal || !body) return;
+
+  if(!currentThreadContact){
+    await _alert('Open a thread first.', 'Thread History', 'ℹ️');
+    return;
+  }
+
+  modal.style.display = 'flex';
+  if(sub){
+    sub.textContent = `Activity for ${currentThreadContact}`;
+  }
+  body.innerHTML = `<div class="th-tl-empty">Loading history…</div>`;
+
+  try {
+    const url = `/emails/api/threads/history/?store_id=${encodeURIComponent(selectedStoreId)}&contact=${encodeURIComponent(currentThreadContact)}`;
+    const r = await fetch(url, {credentials:'same-origin'});
+    const d = await r.json();
+    if(!r.ok || !d.success){
+      body.innerHTML = `<div class="th-tl-empty">Could not load history.</div>`;
+      return;
+    }
+    const items = d.items || [];
+    if(items.length === 0){
+      body.innerHTML = `
+        <div class="th-tl-empty">
+          <div style="font-size:36px;margin-bottom:8px;">🕘</div>
+          <div style="color:#0f172a;font-weight:700;margin-bottom:4px;">No history yet</div>
+          <div style="font-size:12px;">Actions on this thread will appear here as they happen.</div>
+        </div>`;
+      return;
+    }
+    body.innerHTML = `<div class="th-tl">${items.map(_renderHistoryItem).join('')}</div>`;
+  } catch(e){
+    body.innerHTML = `<div class="th-tl-empty">Network error — ${escapeHtml(e.message)}</div>`;
+  }
+}
+
+function _renderHistoryItem(it){
+  const when = new Date(it.created_at);
+  const dateStr = when.toLocaleDateString([], {month:'short', day:'numeric', year:'numeric'});
+  const timeStr = when.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+
+  // Map event → category class for accent colour on the timeline dot
+  const klassMap = {
+    reply_sent:    'tl-reply',
+    ai_auto_reply: 'tl-reply',
+    ai_draft:      'tl-reply',
+    assigned:      'tl-assign',
+    unassigned:    'tl-assign',
+    co_assigned:   'tl-assign',
+    co_unassigned: 'tl-assign',
+    archived:      'tl-archive',
+    folder_moved:  'tl-folder',
+    label_added:   'tl-label',
+    label_removed: 'tl-label',
+    needs_human:   'tl-needs_human',
+    restored:      'tl-restored',
+  };
+  const klass = klassMap[it.event] || '';
+
+  const eventLabel = escapeHtml(it.event_label || it.event);
+  const actor      = escapeHtml(it.actor || 'System');
+  const role       = it.actor_role ? `<span class="th-tl-role">${escapeHtml(it.actor_role)}</span>` : '';
+  const desc       = it.description ? `<div class="th-tl-desc">${escapeHtml(it.description)}</div>` : '';
+
+  return `
+    <div class="th-tl-item ${klass}">
+      <div class="th-tl-icon">${escapeHtml(it.icon || '•')}</div>
+      <div class="th-tl-card">
+        <div class="th-tl-row1">
+          <span class="th-tl-event">${eventLabel}</span>
+          <span style="color:#cbd5e1;">·</span>
+          <span class="th-tl-by">${actor}</span>
+          ${role}
+          <span class="th-tl-time">${escapeHtml(dateStr)} · ${escapeHtml(timeStr)}</span>
+        </div>
+        ${desc}
+      </div>
+    </div>`;
+}
+
+
+/* Archive-folder ONLY — restore selected threads. Un-archives every
+   message in each thread so they pop back into their natural folder
+   (Inbox / Refunds / etc.). Single bulk endpoint handles all threads
+   in one request. */
+async function emBulkRestore(){
+  if(_emBulkSelected.size === 0) return;
+  const ok = await _confirm(
+    `Restore ${_emBulkSelected.size} thread(s) back to the inbox?`,
+    {title:'Restore Chat', icon:'↩️', confirmText:'Restore'}
+  );
+  if(!ok) return;
+
+  const contacts = Array.from(_emBulkSelected);
+  try {
+    const r = await fetch('/emails/api/threads/restore/', {
+      method:'POST',
+      headers:{'Content-Type':'application/json', 'X-CSRFToken':getCSRFToken()},
+      credentials:'same-origin',
+      body: JSON.stringify({
+        store_id: selectedStoreId,
+        contacts: contacts,
+      })
+    });
+    const d = await r.json().catch(()=>({}));
+    if(!r.ok || d.success === false){
+      await _alert(d.message || 'Restore failed.', 'Restore Chat', '❌');
+      return;
+    }
+    emBulkClear();
+    await loadEmails({silent:true, preserveSelection:false});
+    try { if(typeof loadEmailThreadStats === "function") loadEmailThreadStats(); } catch(_){}
+  } catch(e){
+    await _alert('Network error: ' + e.message, 'Restore Chat', '❌');
+  }
+}
+
+/* Archive-folder ONLY — PERMANENTLY destroy selected threads.
+   Cascades messages + attachments + thread assignment + labels. NO
+   UNDO. Two-step confirmation since this is destructive. */
+async function emBulkPermanentDelete(){
+  if(_emBulkSelected.size === 0) return;
+  // First-tier warning
+  const ok1 = await _confirm(
+    `Permanently delete ${_emBulkSelected.size} thread(s)?`,
+    {
+      title: 'Permanent Delete',
+      icon: '⚠️',
+      details: 'This action CANNOT be undone. All messages, attachments, assignments, and labels for these threads will be erased.',
+      danger: true,
+      confirmText: 'Yes, continue',
+    }
+  );
+  if(!ok1) return;
+  // Second-tier — typed/explicit confirmation
+  const ok2 = await _confirm(
+    `Final confirmation — permanently destroy ${_emBulkSelected.size} thread(s)?`,
+    {
+      title: 'Confirm Permanent Delete',
+      icon: '🗑️',
+      danger: true,
+      confirmText: 'Delete Forever',
+    }
+  );
+  if(!ok2) return;
+
+  const contacts = Array.from(_emBulkSelected);
+  try {
+    const r = await fetch('/emails/api/threads/permanent-delete/', {
+      method:'POST',
+      headers:{'Content-Type':'application/json', 'X-CSRFToken':getCSRFToken()},
+      credentials:'same-origin',
+      body: JSON.stringify({
+        store_id: selectedStoreId,
+        contacts: contacts,
+      })
+    });
+    const d = await r.json().catch(()=>({}));
+    if(!r.ok || d.success === false){
+      await _alert(d.message || 'Permanent delete failed.', 'Permanent Delete', '❌');
+      return;
+    }
+    emBulkClear();
+    await loadEmails({silent:true, preserveSelection:false});
+    try { if(typeof loadEmailThreadStats === "function") loadEmailThreadStats(); } catch(_){}
+    // If the currently-open thread was one of the deleted ones, clear the chat panel
+    if(typeof currentThreadContact !== 'undefined' &&
+       contacts.some(c => c.toLowerCase() === (currentThreadContact||'').toLowerCase())){
+      currentThreadContact = null;
+      try { if(typeof _emClearChatPanel === 'function') _emClearChatPanel(); } catch(_){}
+    }
+  } catch(e){
+    await _alert('Network error: ' + e.message, 'Permanent Delete', '❌');
   }
 }
 
@@ -20482,14 +21178,21 @@ function toggleEmailMoreMenu(ev){
     }, 10);
   }
 }
-function closeThreadMenus(){
+// NOTE: this used to be named closeThreadMenus() and was SHADOWING the
+// real one that removes inbox-row 3-dot popups. Renamed to its actual
+// purpose: closing the chat-header "···" More menu.
+function closeEmMoreMenu(){
   document.getElementById("emMoreMenu")?.style && (document.getElementById("emMoreMenu").style.display = "none");
 }
 async function emMoreAction(action){
-  closeThreadMenus();
+  closeEmMoreMenu();
   if(!currentEmailId){ await _alert("Open a thread first.", "Notice", "ℹ️"); return; }
   if(action === "refresh"){
     await loadEmails({silent:false, preserveSelection:true});
+    return;
+  }
+  if(action === "history"){
+    if(typeof openThreadHistoryModal === 'function') openThreadHistoryModal();
     return;
   }
   if(action === "copy"){
@@ -27601,22 +28304,42 @@ async function openLabelContextMenu(event, labelId){
   }
 }
 function filterByLabel(labelId){
+  // Remember the current thread for the old folder/label key before
+  // changing context (so the per-folder memory still works).
+  if (typeof currentThreadContact !== 'undefined' && currentThreadContact
+      && typeof _emRememberOpenThread === 'function'){
+    _emRememberOpenThread(currentThreadContact);
+  }
   if(emailLabelFilter === labelId){
     emailLabelFilter = null;
   } else {
     emailLabelFilter = labelId;
-    // also reset folder so the filter is the dominant view
-    setEmailFolder('inbox', {silent:true});
+    // Reset folder filter — label view should show ALL labeled threads
+    // regardless of which folder they belong to (Needs Human, Refunds,
+    // Returns, anything). Don't call setEmailFolder() because it would
+    // wipe emailLabelFilter; just clear emailFolder + the active class.
+    emailFolder = 'inbox';
+    document.querySelectorAll('.sidebar-email .ec-item').forEach(b => {
+      b.classList.remove('active');
+    });
   }
+  // Highlight the active label row + de-highlight folders
+  document.querySelectorAll('.sidebar-email .ec-label-row').forEach(b => {
+    b.classList.toggle('active', emailLabelFilter && Number(b.dataset.id) === emailLabelFilter);
+  });
   // URL sync for shareable deep-links
   try {
     const u = new URL(window.location.href);
     if(emailLabelFilter) u.searchParams.set('label', String(emailLabelFilter));
     else                 u.searchParams.delete('label');
+    u.searchParams.delete('folder');
     window.history.replaceState({}, '', u.toString());
   } catch(_){}
   renderEmailLabelsList();
   try { renderEmails(); } catch(_){}
+  // Apply the per-folder/label memory rule: restore previously-opened
+  // thread if any, else show blank chat panel.
+  try { _emAutoOpenForCurrentFolder(); } catch(_){}
 }
 
 /* ──────────────────────────────────────────────────────────────────────
@@ -27659,6 +28382,10 @@ function setEmailFolder(folder, opts){
   if (typeof currentThreadContact !== 'undefined' && currentThreadContact){
     _emRememberOpenThread(currentThreadContact);
   }
+  // Clear bulk selection on folder switch — selection from one folder
+  // shouldn't carry into another (and the visible toolbar group needs
+  // to match the new folder anyway).
+  try { if(typeof emBulkClear === 'function') emBulkClear(); } catch(_){}
   emailFolder = folder;
   // Clear the label filter when switching folders (unless caller asked to keep)
   if (!opts.keepLabel) emailLabelFilter = null;
@@ -27768,6 +28495,14 @@ window._emClearChatPanel = _emClearChatPanel;
 /* Filter helper used by renderEmails() — apply current folder + label filter. */
 function applyEmailFolderFilter(threads){
   let list = threads || [];
+  // ── Label view trumps folder ──
+  // When a label is active, show EVERY thread carrying that label —
+  // regardless of folder (Needs Human, Refunds, Returns, etc.). This
+  // makes labels work like cross-cutting tags that aggregate manually-
+  // assigned threads from anywhere in the system.
+  if (emailLabelFilter){
+    return list.filter(t => Array.isArray(t.label_ids) && t.label_ids.includes(emailLabelFilter));
+  }
   // 1) folder predicate
   switch(emailFolder){
     case 'unread':
@@ -27790,21 +28525,36 @@ function applyEmailFolderFilter(threads){
     case 'returns':
     case 'dispute':
     case 'spam':
-      // category match — best-effort, falls back to subject keyword
-      list = list.filter(t => {
+      // Match by the latest message's category (set by AI classifier
+      // OR by manual "Move to folder" actions). Falls back to subject
+      // keyword for older threads where category wasn't populated.
+      {
         const kw = emailFolder.replace(/s$/,'');
-        const subj = (t.latest_subject||'').toLowerCase();
-        return subj.includes(kw);
-      });
+        list = list.filter(t => {
+          const cat = (t.latest_category || '').toLowerCase();
+          if (cat && cat.includes(kw)) return true;
+          // Hide threads whose latest category was manually moved elsewhere
+          if (cat && cat !== 'general' && !cat.includes(kw)) return false;
+          const subj = (t.latest_subject||'').toLowerCase();
+          return subj.includes(kw);
+        });
+      }
+      break;
+    case 'archive':
+      // Threads explicitly archived via the "Move to folder → Archive" action
+      list = list.filter(t => !!t.latest_archived);
       break;
     case 'inbox':
+      // Inbox = everything EXCEPT archived (archived threads only show
+      // in the Archive folder).
+      list = list.filter(t => !t.latest_archived);
+      break;
     default:
+      // For any unknown folder, hide archived items by default
+      list = list.filter(t => !t.latest_archived);
       break;
   }
-  // 2) label filter
-  if(emailLabelFilter){
-    list = list.filter(t => Array.isArray(t.label_ids) && t.label_ids.includes(emailLabelFilter));
-  }
+  // (Label filter handled at the top — label view trumps folder.)
   return list;
 }
 
@@ -27833,55 +28583,36 @@ async function loadEmailThreadStats(){
 /* ──────────────────────────────────────────────────────────────────────
    NEEDS-HUMAN VIEW
    ────────────────────────────────────────────────────────────────────── */
-async function renderNeedsHumanView(){
-  const list = document.getElementById('emailsList');
-  if(!list) return;
-  list.innerHTML = '<div class="empty" style="padding:30px;text-align:center;color:#94a3b8;">Loading needs-human threads…</div>';
-  try {
-    const r = await fetch('/emails/api/threads/needs-human/?store_id=' + encodeURIComponent(selectedStoreId), {credentials:'same-origin'});
-    const d = await r.json();
-    if(!d.success || !d.threads.length){
-      list.innerHTML = `<div class="empty" style="padding:40px 24px;text-align:center;color:#94a3b8;">
-        <div style="font-size:32px;margin-bottom:10px;">🎉</div>
-        <div style="font-weight:700;color:#475569;">No threads need human attention</div>
-        <div style="font-size:12px;margin-top:4px;">All emails are being handled automatically.</div>
-      </div>`;
-      return;
-    }
-    list.innerHTML = d.threads.map(t => {
-      const cat = (t.ai_category||'').replace(/_/g,' ').toUpperCase() || 'NEEDS REVIEW';
-      const conf = (t.ai_confidence != null) ? `<span style="margin-left:8px;font-size:10.5px;color:#94a3b8;font-weight:600;">AI confidence: ${Math.round(t.ai_confidence * 100)}%</span>` : '';
-      return `
-      <div class="em-tc" onclick="openThread('${escapeJs(t.contact)}')" style="cursor:pointer;">
-        <div class="em-tc-av" style="background:#fee2e2;color:#b91c1c;">⚠</div>
-        <div class="em-tc-body">
-          <div class="em-tc-row1">
-            <span class="em-tc-name">${escapeHtml(t.contact)}</span>
-            <span class="em-tc-time">${t.escalated_at ? new Date(t.escalated_at).toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : ''}</span>
-          </div>
-          <div class="em-tc-subject">${escapeHtml(t.subject || 'No subject')}</div>
-          <div class="em-needs-human-banner" style="margin:8px 0 4px;">
-            <div class="icon">⚠️</div>
-            <div class="body">
-              <div class="title">This email needs human attention</div>
-              <div class="reason">${escapeHtml(t.ai_reason || 'AI could not generate a reply.')}</div>
-              <span class="cat">${escapeHtml(cat)}</span>${conf}
-            </div>
-          </div>
-        </div>
-      </div>`;
-    }).join('');
-  } catch(e){
-    list.innerHTML = `<div class="empty" style="padding:30px;color:#dc2626;">Failed to load: ${escapeHtml(e.message)}</div>`;
-  }
+/* Needs Human view uses the SAME row layout as the regular inbox —
+   the per-row "needs attention" banner was visual noise. The
+   escalation reason still surfaces in the chat panel's top banner
+   when the user opens a needs-human thread. */
+function renderNeedsHumanView(){
+  try { renderEmails(); } catch(_){}
 }
 
 /* ──────────────────────────────────────────────────────────────────────
    THREAD HEADER — Label assignment dropdown
    ────────────────────────────────────────────────────────────────────── */
-function openThreadLabelPicker(event){
+/* Static list of folder destinations a thread can be manually moved into.
+   Used by both the thread-header Label button and the inbox-row 3-dot. */
+const TH_FOLDERS = [
+  { key: 'refunds',     name: 'Refunds',     emoji: '💵', color: '#10b981' },
+  { key: 'returns',     name: 'Returns',     emoji: '📦', color: '#3b82f6' },
+  { key: 'dispute',     name: 'Dispute',     emoji: '⚖️', color: '#f43f5e' },
+  { key: 'spam',        name: 'Spam',        emoji: '🛡', color: '#ec4899' },
+  { key: 'needs_human', name: 'Needs Human', emoji: '⚠',  color: '#d85a30' },
+  { key: 'resolved',    name: 'Resolved',    emoji: '✓',  color: '#16a34a' },
+  { key: 'archive',     name: 'Archive',     emoji: '🗄', color: '#64748b' },
+  { key: 'inbox',       name: 'Back to Inbox', emoji: '↩', color: '#6366f1' },
+];
+
+/* `contactOverride` lets the thread-row 3-dot menu open the picker for a
+   specific thread (not the currently-open one). */
+function openThreadLabelPicker(event, contactOverride){
   event.stopPropagation();
-  if(!currentThreadContact) return;
+  const contact = contactOverride || currentThreadContact;
+  if(!contact) return;
   // Close every other thread-header popover so only ONE is open at a time.
   if (typeof _closeAllThreadHeaderPops === 'function'){
     _closeAllThreadHeaderPops('label');
@@ -27890,23 +28621,28 @@ function openThreadLabelPicker(event){
   if(!pop){
     pop = document.createElement('div');
     pop.id = 'thLblPicker';
-    // position:fixed so it lives in the viewport coordinate system —
-    // never gets clipped by overflow:hidden ancestors and never scrolls
-    // off-screen with the page.
-    pop.style.cssText = 'position:fixed;background:#fff;border:1px solid #e5eaf2;border-radius:11px;box-shadow:0 14px 38px rgba(15,23,42,.18);padding:8px;width:260px;max-width:calc(100vw - 16px);z-index:99999;display:none;';
+    pop.style.cssText = 'position:fixed;background:#fff;border:1px solid #e5eaf2;border-radius:11px;box-shadow:0 14px 38px rgba(15,23,42,.22);padding:8px;width:280px;max-width:calc(100vw - 16px);z-index:99999;display:none;';
     document.body.appendChild(pop);
   }
-  const threadObj = (allThreads || []).find(t => t.contact === currentThreadContact);
+  pop.dataset.contact = contact;
+  const threadObj = (allThreads || []).find(t => t.contact === contact);
   const current = new Set((threadObj && threadObj.label_ids) || []);
   pop.innerHTML = `
-    <input type="text" id="thLblSearch" placeholder="Search labels…" oninput="filterLabelPickerList(this.value)" style="width:100%;padding:7px 9px;border:1px solid #e5eaf2;border-radius:7px;font-size:12px;outline:none;font-family:inherit;margin-bottom:6px;box-sizing:border-box;">
-    <div id="thLblList" style="max-height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:1px;">
+    <input type="text" id="thLblSearch" placeholder="Search labels & folders…" oninput="filterLabelPickerList(this.value)" style="width:100%;padding:7px 9px;border:1px solid #e5eaf2;border-radius:7px;font-size:12px;outline:none;font-family:inherit;margin-bottom:6px;box-sizing:border-box;">
+    <div id="thLblList" style="max-height:320px;overflow-y:auto;display:flex;flex-direction:column;gap:1px;">
+      <div class="th-lbl-section" style="padding:6px 8px 4px;font-size:9.5px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;">Move to folder</div>
+      ${TH_FOLDERS.map(f => `
+        <button class="th-lbl-row th-folder-btn" data-name="${escapeHtml(f.name.toLowerCase())}" data-folder="${f.key}" style="display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:6px;cursor:pointer;background:transparent;border:none;font-family:inherit;text-align:left;width:100%;font-size:12.5px;font-weight:500;color:#1e293b;transition:background .12s;">
+          <span style="width:18px;height:18px;border-radius:5px;background:${escapeHtml(f.color)}1a;color:${escapeHtml(f.color)};display:grid;place-items:center;font-size:11px;flex-shrink:0;">${f.emoji}</span>
+          <span style="flex:1;">${escapeHtml(f.name)}</span>
+        </button>`).join('')}
+      <div class="th-lbl-section" style="padding:10px 8px 4px;font-size:9.5px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;border-top:1px solid #f1f5f9;margin-top:6px;">Labels</div>
       ${emailLabels.length === 0
-        ? '<div style="padding:14px;color:#94a3b8;font-size:12px;text-align:center;">No labels yet</div>'
+        ? '<div style="padding:10px;color:#94a3b8;font-size:11.5px;text-align:center;font-style:italic;">No labels yet</div>'
         : emailLabels.map(l => `
-            <label class="th-lbl-row" data-name="${escapeHtml(l.name.toLowerCase())}" style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:12.5px;color:#475569;">
+            <label class="th-lbl-row" data-name="${escapeHtml(l.name.toLowerCase())}" style="display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:6px;cursor:pointer;font-size:12.5px;color:#475569;">
               <input type="checkbox" data-id="${l.id}" ${current.has(l.id)?'checked':''} style="width:14px;height:14px;accent-color:${l.color};cursor:pointer;">
-              <span class="ec-label-dot" style="background:${escapeHtml(l.color)};width:9px;height:9px;border-radius:3px;flex-shrink:0;"></span>
+              <span class="ec-label-dot" style="background:${escapeHtml(l.color)};width:10px;height:10px;border-radius:3px;flex-shrink:0;"></span>
               <span style="flex:1;">${escapeHtml(l.icon||'')} ${escapeHtml(l.name)}</span>
             </label>`).join('')
       }
@@ -27915,6 +28651,17 @@ function openThreadLabelPicker(event){
       <button onclick="openLabelModal()" style="flex:1;background:#eef2ff;color:#4338ca;border:none;padding:6px;border-radius:7px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit;">+ Create new label</button>
       <button onclick="applyThreadLabels()" style="flex:1;background:linear-gradient(135deg,#6366f1,#a855f7);color:#fff;border:none;padding:6px;border-radius:7px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit;">Apply</button>
     </div>`;
+
+  // Wire folder buttons — instant move + close picker
+  pop.querySelectorAll('.th-folder-btn').forEach(b => {
+    b.onmouseover = () => b.style.background = '#f8fafc';
+    b.onmouseout  = () => b.style.background = '';
+    b.onclick = async (e) => {
+      e.stopPropagation();
+      const folder = b.dataset.folder;
+      await moveThreadToFolder(contact, folder);
+    };
+  });
   // Make visible (off-screen first) so we can measure its actual size.
   pop.style.left = '-9999px';
   pop.style.top  = '-9999px';
@@ -27950,10 +28697,26 @@ function openThreadLabelPicker(event){
     r.onmouseout  = () => r.style.background = '';
   });
   // Close on scroll/resize (avoid stale positioning)
+  // Auto-close on resize only — scrolling INSIDE the picker shouldn't
+  // close it. (Earlier we listened to all scrolls which made the picker
+  // dismiss the instant the user scrolled the labels list.)
   window.addEventListener('resize', _thLblClose, { once:true });
-  document.addEventListener('scroll', _thLblClose, { once:true, capture:true });
+  // Close on PAGE scroll, but ignore scrolls happening inside the picker.
+  document.addEventListener('scroll', _thLblScrollClose, { capture:true });
 }
 function _thLblClose(){ closeThreadLabelPicker(); }
+function _thLblScrollClose(e){
+  const pop = document.getElementById('thLblPicker');
+  if (!pop || pop.style.display === 'none'){
+    document.removeEventListener('scroll', _thLblScrollClose, { capture:true });
+    return;
+  }
+  // Ignore scrolls that originated inside the picker itself (the inner
+  // labels list has overflow-y:auto and the user is allowed to scroll it).
+  if (e && e.target && pop.contains(e.target)) return;
+  closeThreadLabelPicker();
+  document.removeEventListener('scroll', _thLblScrollClose, { capture:true });
+}
 function _thLblOutside(e){
   const p = document.getElementById('thLblPicker');
   if(p && !p.contains(e.target)) closeThreadLabelPicker();
@@ -27962,6 +28725,7 @@ function closeThreadLabelPicker(){
   const p = document.getElementById('thLblPicker');
   if(p) p.style.display = 'none';
   document.removeEventListener('click', _thLblOutside);
+  document.removeEventListener('scroll', _thLblScrollClose, { capture:true });
 }
 function filterLabelPickerList(q){
   const ql = (q || '').toLowerCase().trim();
@@ -27970,24 +28734,53 @@ function filterLabelPickerList(q){
   });
 }
 async function applyThreadLabels(){
-  if(!currentThreadContact) return;
+  // Picker may have been opened for a thread other than the currently-
+  // open one (via the inbox-row 3-dot). Use the dataset.contact the
+  // picker stored at open time.
+  const pop = document.getElementById('thLblPicker');
+  const contact = (pop && pop.dataset.contact) || currentThreadContact;
+  if(!contact) return;
   const ids = Array.from(document.querySelectorAll('#thLblList input[type=checkbox]:checked')).map(c => parseInt(c.dataset.id,10));
   const r = await fetch('/emails/api/threads/labels/', {
     method:'POST', credentials:'same-origin',
     headers:{'Content-Type':'application/json','X-CSRFToken':getCSRFToken()},
-    body: JSON.stringify({store_id: selectedStoreId, contact: currentThreadContact, label_ids: ids}),
+    body: JSON.stringify({store_id: selectedStoreId, contact: contact, label_ids: ids}),
   });
   const d = await r.json();
   if(d.success){
-    // Update local cache
-    const t = (allThreads||[]).find(t => t.contact === currentThreadContact);
+    const t = (allThreads||[]).find(t => t.contact === contact);
     if(t) t.label_ids = ids;
     renderEmailLabelsList();
-    renderThreadLabelsInHeader();
+    if (contact === currentThreadContact) renderThreadLabelsInHeader();
     closeThreadLabelPicker();
-    loadEmailThreadStats();   // refresh counts
+    loadEmailThreadStats();
   }
 }
+
+/* Move a thread to a folder (Refunds / Returns / Dispute / Spam /
+   Needs Human / Resolved / Archive / Inbox). Used by both the Label
+   dropdown's folder section AND the thread-row 3-dot menu. */
+async function moveThreadToFolder(contact, folder){
+  if(!contact || !folder) return;
+  try {
+    const r = await fetch('/emails/api/threads/move-folder/', {
+      method:'POST', credentials:'same-origin',
+      headers:{'Content-Type':'application/json','X-CSRFToken':getCSRFToken()},
+      body: JSON.stringify({store_id: selectedStoreId, contact: contact, folder: folder}),
+    });
+    const d = await r.json();
+    if (!d.success){
+      await _alert(d.message || 'Move failed.', 'Error', '❌');
+      return;
+    }
+    closeThreadLabelPicker();
+    if (typeof loadEmails === 'function') await loadEmails({silent:true, preserveSelection:true});
+    if (typeof loadEmailThreadStats === 'function') await loadEmailThreadStats();
+  } catch(e){
+    await _alert('Network error: ' + e.message, 'Error', '❌');
+  }
+}
+window.moveThreadToFolder = moveThreadToFolder;
 function renderThreadLabelsInHeader(){
   const wrap = document.getElementById('emThreadLabels');
   if(!wrap) return;
@@ -28012,18 +28805,19 @@ function renderNeedsHumanBannerForThread(threadInfo){
     return;
   }
   const cat = (threadInfo.ai_escalation_category || '').replace(/_/g,' ').toUpperCase() || 'NEEDS REVIEW';
-  const reason = threadInfo.ai_escalation_reason || 'AI did not draft a reply for this thread — manual response required.';
+  const reason = threadInfo.ai_escalation_reason || 'AI did not draft a reply — manual response required.';
   wrap.innerHTML = `
     <div class="em-needs-human-banner">
       <div class="icon">⚠️</div>
       <div class="body">
-        <div class="title">This email needs human attention</div>
-        <div class="reason">${escapeHtml(reason)}</div>
+        <span class="title">Needs human attention</span>
         <span class="cat">${escapeHtml(cat)}</span>
-        <div class="actions">
-          <button class="primary" onclick="markThreadAiStatus('auto_handled')">Mark as handled</button>
-          <button onclick="generateEmailDraft()">Generate AI</button>
-        </div>
+        <span class="reason" title="${escapeHtml(reason)}">${escapeHtml(reason)}</span>
+      </div>
+      <div class="actions">
+        <button class="primary" onclick="markThreadAiStatus('auto_handled')">Mark handled</button>
+        <button onclick="generateEmailDraft()">Generate AI</button>
+        <button class="nhb-close" onclick="markThreadAiStatus('auto_handled')" title="Dismiss">✕</button>
       </div>
     </div>`;
   wrap.style.display = 'block';
