@@ -119,6 +119,33 @@ class EmailMessage(models.Model):
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default="new")
     ai_draft = models.TextField(blank=True, null=True)
 
+    # ─── AI-handling status (separate from operational `status`) ───────────
+    # `auto_handled`     — AI drafted a high-confidence reply, ready to send
+    # `review_suggested` — Draft generated but AI is unsure; humans should glance
+    # `needs_human`      — Either AI explicitly escalated OR the catch-all rule
+    #                       fired (no draft was produced for any reason)
+    AI_STATUS_CHOICES = (
+        ("auto_handled",     "Auto Handled"),
+        ("review_suggested", "Review Suggested"),
+        ("needs_human",      "Needs Human"),
+    )
+    AI_ESCALATION_CATEGORIES = (
+        ("low_confidence",  "Low Confidence"),
+        ("missing_context", "Missing Context"),
+        ("ambiguous",       "Ambiguous"),
+        ("sensitive",       "Sensitive"),
+        ("policy_conflict", "Policy Conflict"),
+        ("language",        "Language"),
+        ("manual_request",  "Manual Request"),
+        ("ai_failure",      "AI Failure"),  # catch-all when no draft generated
+    )
+    ai_status              = models.CharField(max_length=20, choices=AI_STATUS_CHOICES, default="auto_handled")
+    ai_confidence_score    = models.DecimalField(max_digits=4, decimal_places=3, null=True, blank=True)
+    ai_escalation_reason   = models.TextField(blank=True, default="")
+    ai_escalation_category = models.CharField(max_length=30, choices=AI_ESCALATION_CATEGORIES, blank=True, default="")
+    escalated_at           = models.DateTimeField(null=True, blank=True)
+    resolved_by_human_at   = models.DateTimeField(null=True, blank=True)
+
     raw_data = models.JSONField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -415,3 +442,165 @@ class AiReplyFeedback(models.Model):
 
     def __str__(self):
         return f"[{self.feedback_type}] Store={self.store_id} #{self.id}"
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# CUSTOM LABELS — tenants create their own email labels (colored chips) and
+# assign them to threads. Scoped per-tenant (User) since multiple stores share
+# the same user/owner. is_shared distinguishes team-wide vs personal labels.
+# ════════════════════════════════════════════════════════════════════════════
+class EmailLabel(models.Model):
+    """User-defined email label. Tenant-scoped via `owner`."""
+    owner       = models.ForeignKey(
+        'auth.User', on_delete=models.CASCADE,
+        related_name='email_labels'
+    )
+    name        = models.CharField(max_length=50)
+    color       = models.CharField(max_length=12, default="#6366f1")  # hex
+    icon        = models.CharField(max_length=8, blank=True, default="")  # emoji char
+    is_shared   = models.BooleanField(default=True)                       # team-wide
+    position    = models.IntegerField(default=0)                          # for ordering
+    created_by  = models.ForeignKey(
+        'auth.User', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='created_email_labels'
+    )
+    created_at  = models.DateTimeField(auto_now_add=True)
+    updated_at  = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['position', 'name']
+        unique_together = [('owner', 'name')]
+
+    def __str__(self):
+        return f"{self.name} ({self.owner_id})"
+
+
+class EmailThreadLabel(models.Model):
+    """Junction: which thread (by contact email) has which label.
+    Threads are identified by (store, contact) — matching EmailThreadAssignment.
+    """
+    store       = models.ForeignKey('stores.Store', on_delete=models.CASCADE,
+                                    related_name='thread_labels')
+    contact     = models.EmailField()
+    label       = models.ForeignKey(EmailLabel, on_delete=models.CASCADE,
+                                    related_name='thread_links')
+    assigned_by = models.ForeignKey(
+        'auth.User', on_delete=models.SET_NULL,
+        null=True, blank=True
+    )
+    assigned_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = [('store', 'contact', 'label')]
+        indexes = [
+            models.Index(fields=['store', 'contact']),
+            models.Index(fields=['label']),
+        ]
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# AI FALLBACK LOG — every time the catch-all rule fires (no draft generated
+# for any reason), log it for debugging. Separate from user-facing reasons.
+# ════════════════════════════════════════════════════════════════════════════
+class AiFallbackLog(models.Model):
+    """Logs why the AI failed to generate a draft (technical reasons)."""
+    REASONS = (
+        ("api_timeout",       "API Timeout"),
+        ("empty_response",    "Empty Response"),
+        ("malformed_output",  "Malformed Output"),
+        ("refused",           "AI Refused"),
+        ("content_filter",    "Content Filter"),
+        ("token_limit",       "Token Limit"),
+        ("network_error",     "Network Error"),
+        ("low_confidence",    "Low Confidence"),
+        ("missing_context",   "Missing Context"),
+        ("sensitive_keyword", "Sensitive Keyword"),
+        ("manual_request",    "Customer Requested Human"),
+        ("policy_conflict",   "Policy Conflict"),
+        ("other",             "Other"),
+    )
+    email_message  = models.ForeignKey(
+        'emails.EmailMessage', on_delete=models.CASCADE,
+        related_name='fallback_logs'
+    )
+    store          = models.ForeignKey('stores.Store', on_delete=models.CASCADE,
+                                       related_name='ai_fallback_logs')
+    reason         = models.CharField(max_length=30, choices=REASONS)
+    technical_note = models.TextField(blank=True, default="")
+    created_at     = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['store', 'created_at']),
+            models.Index(fields=['reason']),
+        ]
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# FOLDER ASSIGNMENT — persistent rule that auto-assigns matching threads
+# to a team member. Two kinds:
+#   1) Built-in folder (inbox / unread / needs_human / refunds / etc.)
+#   2) Custom label (FK to EmailLabel)
+# When a new incoming email lands AND it matches an active rule, an
+# EmailThreadAssignment is auto-created so the team member sees it in
+# their employee portal automatically.
+# ════════════════════════════════════════════════════════════════════════════
+class FolderAssignment(models.Model):
+    FOLDER_CHOICES = (
+        ("inbox",       "Inbox"),
+        ("unread",      "Unread"),
+        ("needs_human", "Needs Human"),
+        ("ai_drafts",   "AI Drafts"),
+        ("scheduled",   "Scheduled"),
+        ("sent",        "Sent"),
+        ("resolved",    "Resolved"),
+        ("refunds",     "Refunds"),
+        ("returns",     "Returns"),
+        ("dispute",     "Dispute"),
+        ("spam",        "Spam"),
+        ("archive",     "Archive"),
+    )
+    store        = models.ForeignKey(
+        'stores.Store', on_delete=models.CASCADE,
+        related_name='folder_assignments'
+    )
+    # Exactly one of (folder, label) is set on a given row.
+    folder       = models.CharField(max_length=20, choices=FOLDER_CHOICES, blank=True, default="")
+    label        = models.ForeignKey(
+        EmailLabel, on_delete=models.CASCADE,
+        null=True, blank=True, related_name='folder_assignments'
+    )
+    assigned_to  = models.ForeignKey(
+        'teamapp.TeamMember', on_delete=models.CASCADE,
+        related_name='folder_assignments'
+    )
+    is_active    = models.BooleanField(default=True)
+    created_by   = models.ForeignKey(
+        'auth.User', on_delete=models.SET_NULL, null=True, blank=True
+    )
+    created_at   = models.DateTimeField(auto_now_add=True)
+    updated_at   = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        # One active rule per (store, folder/label) combination
+        constraints = [
+            models.UniqueConstraint(
+                fields=['store', 'folder'],
+                condition=models.Q(label__isnull=True) & ~models.Q(folder=""),
+                name='uniq_active_folder_assign',
+            ),
+            models.UniqueConstraint(
+                fields=['store', 'label'],
+                condition=models.Q(label__isnull=False),
+                name='uniq_active_label_assign',
+            ),
+        ]
+        indexes = [
+            models.Index(fields=['store', 'is_active']),
+            models.Index(fields=['assigned_to', 'is_active']),
+        ]
+
+    def __str__(self):
+        target = f"label#{self.label_id}" if self.label_id else self.folder
+        return f"{target} → {self.assigned_to_id}"

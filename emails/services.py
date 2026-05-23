@@ -2003,6 +2003,35 @@ def process_ai_reply_mode(email_obj, account):
     else:
         email_obj.status = "drafted"
 
+    # ─── CATCH-ALL GUARD ──────────────────────────────────────────────────
+    # If after EVERYTHING above we still don't have a draft, route this
+    # email to "Needs Human" so nothing slips through. This is the safety
+    # net the spec mandates as non-negotiable.
+    try:
+        from .views import enforce_needs_human_if_no_draft
+        if not (email_obj.ai_draft or "").strip() and email_obj.status not in {"replied", "closed"}:
+            reason_key = "empty_response"
+            note = ""
+            if gate and gate.get("action") == "skip":
+                reason_key = "policy_conflict"
+                note = "Gate skipped (newsletter/bot/etc): " + (gate.get("reason") or "")
+            enforce_needs_human_if_no_draft(email_obj, technical_reason=reason_key, note=note)
+        else:
+            # Mirror confidence score on the message for the Needs-Human badge
+            try:
+                raw_now = getattr(email_obj, "raw_data", None) or {}
+                conf = raw_now.get("ai_reply_confidence")
+                if conf is not None:
+                    from decimal import Decimal
+                    email_obj.ai_confidence_score = Decimal(str(round(float(conf), 3)))
+                    # If confidence below threshold and not auto-sent, surface as review_suggested
+                    if not result.get("sent") and float(conf) < confidence_threshold:
+                        email_obj.ai_status = "review_suggested"
+            except Exception:
+                pass
+    except Exception as _e:
+        print("AI CATCH-ALL guard failed (not fatal):", _e)
+
     return result
 
 
@@ -2520,6 +2549,13 @@ def _save_one_gmail_message(account, store, msg_id, access_token):
     save_attachments(email_obj, msg)
     process_ai_reply_mode(email_obj, account)
     email_obj.save()
+    # Apply any persistent folder/label assignment rules so the team
+    # member who owns this folder/label sees it in their portal.
+    try:
+        from .views import auto_assign_for_folder_rules
+        auto_assign_for_folder_rules(email_obj)
+    except Exception:
+        pass
     return email_obj
 
 
@@ -2789,6 +2825,12 @@ def sync_gmail_inbox(store_id=2):
                         save_attachments(email_obj, msg)
                         process_ai_reply_mode(email_obj, account)
                         email_obj.save()
+                        # Apply persistent folder/label rules
+                        try:
+                            from .views import auto_assign_for_folder_rules
+                            auto_assign_for_folder_rules(email_obj)
+                        except Exception:
+                            pass
                         total_saved += 1
                     else:
                         EmailMessage.objects.filter(store=store, gmail_uid=gmail_uid).update(is_read=is_read)

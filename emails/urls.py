@@ -44,6 +44,15 @@ from .views import (
     latest_email_event_api,
     toggle_email_read_api,
     archive_email_thread_api,
+    # Labels + Needs Human
+    labels_list_api,
+    label_detail_api,
+    thread_labels_api,
+    threads_stats_api,
+    needs_human_threads_api,
+    thread_ai_status_api,
+    empty_folder_api,
+    folder_assignments_api,
 )
 
 urlpatterns = [
@@ -136,6 +145,16 @@ urlpatterns = [
 
     # Auto Email Toggle
     path("api/auto-email/", auto_email_toggle_api, name="auto_email_toggle_api"),
+
+    # ─── Custom labels + Needs-Human queue ───────────────────────────────
+    path("api/labels/",                     labels_list_api,             name="labels_list_api"),
+    path("api/labels/<int:label_id>/",      label_detail_api,            name="label_detail_api"),
+    path("api/threads/labels/",             thread_labels_api,           name="thread_labels_api"),
+    path("api/threads/stats/",              threads_stats_api,           name="threads_stats_api"),
+    path("api/threads/needs-human/",        needs_human_threads_api,     name="needs_human_threads_api"),
+    path("api/<int:email_id>/ai-status/",   thread_ai_status_api,        name="thread_ai_status_api"),
+    path("api/folders/empty/",              empty_folder_api,            name="empty_folder_api"),
+    path("api/folders/assignments/",        folder_assignments_api,      name="folder_assignments_api"),
 
     # Gmail OAuth2
     path("oauth/start/", gmail_oauth_start_api, name="gmail_oauth_start"),

@@ -937,6 +937,44 @@ def email_threads_api(request):
         # NEW: latest order for this customer (or null = "Not Found")
         item["order_status"] = order_status_by_contact.get(key)
 
+    # ─── Attach custom labels per thread + latest ai_status ───────────────
+    # When store_id is provided (the normal case from the dashboard) we key
+    # the maps simply by contact since the contact is already unique within
+    # one store.
+    try:
+        from .models import EmailThreadLabel, EmailMessage as _EM
+        labels_by_contact = {}
+        ai_status_by_contact = {}
+        if store_id:
+            for row in EmailThreadLabel.objects.filter(
+                store_id=store_id, store__user=request.user,
+            ).values("contact", "label_id"):
+                k = (row["contact"] or "").lower()
+                labels_by_contact.setdefault(k, []).append(row["label_id"])
+            for row in _EM.objects.filter(
+                store_id=store_id, store__user=request.user,
+            ).order_by("-created_at").values(
+                "sender", "ai_status", "ai_escalation_category", "ai_escalation_reason"
+            )[:5000]:
+                k = (row["sender"] or "").lower()
+                if k not in ai_status_by_contact:
+                    ai_status_by_contact[k] = {
+                        "ai_status":              row["ai_status"] or "auto_handled",
+                        "ai_escalation_category": row["ai_escalation_category"] or "",
+                        "ai_escalation_reason":   row["ai_escalation_reason"] or "",
+                    }
+        for item in results:
+            key = (item["contact"] or "").lower()
+            item["label_ids"] = labels_by_contact.get(key, [])
+            extras = ai_status_by_contact.get(key) or {}
+            item["ai_status"]              = extras.get("ai_status", "auto_handled")
+            item["ai_escalation_category"] = extras.get("ai_escalation_category", "")
+            item["ai_escalation_reason"]   = extras.get("ai_escalation_reason", "")
+    except Exception:
+        for item in results:
+            item.setdefault("label_ids", [])
+            item.setdefault("ai_status", "auto_handled")
+
     return Response({
         "success": True,
         "count": len(results),
@@ -3716,3 +3754,649 @@ def gmail_push_webhook(request):
 
     _record_webhook_event(event)
     return Response({"ok": True}, status=200)
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# CUSTOM LABELS API — tenants create/edit/delete labels and assign them to
+# threads. Tenant scoping uses request.user (label.owner == user). Threads are
+# identified by (store, contact) — same key EmailThreadAssignment uses.
+# ════════════════════════════════════════════════════════════════════════════
+def _label_to_dict(lbl):
+    return {
+        "id":         lbl.id,
+        "name":       lbl.name,
+        "color":      lbl.color,
+        "icon":       lbl.icon or "",
+        "is_shared":  lbl.is_shared,
+        "position":   lbl.position,
+        "created_at": lbl.created_at.isoformat() if lbl.created_at else None,
+    }
+
+
+@api_view(["GET", "POST"])
+def labels_list_api(request):
+    """
+    GET  → list all labels for this tenant (with per-label thread counts)
+    POST → create new label  {name, color, icon?, is_shared?}
+    """
+    from .models import EmailLabel, EmailThreadLabel
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
+
+    if request.method == "GET":
+        qs = EmailLabel.objects.filter(owner=request.user).order_by("position", "name")
+        # Per-tenant thread counts (counts threads where store.user == request.user)
+        from django.db.models import Count, Q
+        counts_qs = EmailThreadLabel.objects.filter(
+            store__user=request.user
+        ).values("label_id").annotate(c=Count("id"))
+        counts = {row["label_id"]: row["c"] for row in counts_qs}
+        return Response({
+            "success": True,
+            "labels": [
+                {**_label_to_dict(l), "thread_count": counts.get(l.id, 0)}
+                for l in qs
+            ],
+        })
+
+    # POST — create
+    name  = (request.data.get("name") or "").strip()[:50]
+    color = (request.data.get("color") or "#6366f1").strip()[:12]
+    icon  = (request.data.get("icon") or "").strip()[:8]
+    is_shared = bool(request.data.get("is_shared", True))
+
+    if not name:
+        return Response({"success": False, "message": "Name is required."}, status=400)
+
+    if EmailLabel.objects.filter(owner=request.user, name__iexact=name).exists():
+        return Response({"success": False, "message": "A label with that name already exists."}, status=409)
+
+    # Place new label at the end of the list
+    next_pos = (EmailLabel.objects.filter(owner=request.user).order_by("-position").first().position + 1
+                if EmailLabel.objects.filter(owner=request.user).exists() else 0)
+
+    label = EmailLabel.objects.create(
+        owner=request.user,
+        name=name, color=color, icon=icon, is_shared=is_shared,
+        position=next_pos, created_by=request.user,
+    )
+    return Response({"success": True, "label": _label_to_dict(label)})
+
+
+@api_view(["PATCH", "DELETE"])
+def label_detail_api(request, label_id):
+    """
+    PATCH  → update name/color/icon/is_shared/position
+    DELETE → delete label + cascade thread links
+    """
+    from .models import EmailLabel
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
+
+    label = EmailLabel.objects.filter(id=label_id, owner=request.user).first()
+    if not label:
+        return Response({"success": False, "message": "Label not found."}, status=404)
+
+    if request.method == "PATCH":
+        name = request.data.get("name")
+        if name is not None:
+            name = str(name).strip()[:50]
+            if not name:
+                return Response({"success": False, "message": "Name cannot be empty."}, status=400)
+            # uniqueness check (excluding self)
+            if EmailLabel.objects.filter(owner=request.user, name__iexact=name).exclude(id=label.id).exists():
+                return Response({"success": False, "message": "A label with that name already exists."}, status=409)
+            label.name = name
+        if request.data.get("color") is not None:
+            label.color = str(request.data.get("color"))[:12]
+        if request.data.get("icon") is not None:
+            label.icon = str(request.data.get("icon"))[:8]
+        if request.data.get("is_shared") is not None:
+            label.is_shared = bool(request.data.get("is_shared"))
+        if request.data.get("position") is not None:
+            try:
+                label.position = int(request.data.get("position"))
+            except Exception:
+                pass
+        label.save()
+        return Response({"success": True, "label": _label_to_dict(label)})
+
+    # DELETE — also report how many threads were affected
+    link_count = label.thread_links.count()
+    label.delete()
+    return Response({"success": True, "removed_thread_links": link_count})
+
+
+@api_view(["POST", "DELETE"])
+def thread_labels_api(request):
+    """
+    POST   /api/threads/labels/   {store_id, contact, label_ids: [...]}  → set labels (full replace)
+    DELETE /api/threads/labels/   {store_id, contact, label_id}          → remove one label
+    """
+    from .models import EmailLabel, EmailThreadLabel
+    from stores.models import Store
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
+
+    store_id = request.data.get("store_id")
+    contact  = (request.data.get("contact") or "").strip().lower()
+    if not store_id or not contact:
+        return Response({"success": False, "message": "store_id and contact are required."}, status=400)
+
+    store = get_object_or_404(Store, id=store_id, user=request.user)
+
+    if request.method == "POST":
+        label_ids = request.data.get("label_ids") or []
+        if not isinstance(label_ids, list):
+            return Response({"success": False, "message": "label_ids must be a list."}, status=400)
+        # Only labels owned by the current tenant are eligible
+        valid_ids = set(EmailLabel.objects.filter(
+            id__in=label_ids, owner=request.user
+        ).values_list("id", flat=True))
+        # Wipe existing links for this thread, then recreate from valid_ids
+        EmailThreadLabel.objects.filter(store=store, contact=contact).delete()
+        EmailThreadLabel.objects.bulk_create([
+            EmailThreadLabel(store=store, contact=contact, label_id=lid, assigned_by=request.user)
+            for lid in valid_ids
+        ])
+        return Response({"success": True, "label_ids": sorted(valid_ids)})
+
+    # DELETE — single label
+    label_id = request.data.get("label_id")
+    if not label_id:
+        return Response({"success": False, "message": "label_id is required."}, status=400)
+    EmailThreadLabel.objects.filter(
+        store=store, contact=contact, label_id=label_id,
+        label__owner=request.user,
+    ).delete()
+    return Response({"success": True})
+
+
+@api_view(["GET"])
+def threads_stats_api(request):
+    """Return counts for the contextual sidebar badges.
+    GET /emails/api/threads/stats/?store_id=N
+    """
+    from .models import EmailMessage, EmailThreadAssignment, EmailLabel, EmailThreadLabel
+    from django.db.models import Count
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
+
+    store_id = request.GET.get("store_id")
+    em_qs = EmailMessage.objects.filter(store__user=request.user)
+    if store_id:
+        em_qs = em_qs.filter(store_id=store_id)
+
+    # Build counts off distinct contact/sender — threads, not messages.
+    # We use sender as thread key (matches what email_threads_api derives).
+    def _thread_keys(qs):
+        return set(
+            qs.values_list("sender", flat=True).distinct()
+        )
+
+    inbox_keys   = _thread_keys(em_qs)
+    unread_keys  = _thread_keys(em_qs.filter(is_read=False))
+    needs_keys   = _thread_keys(em_qs.filter(ai_status="needs_human"))
+    drafts_keys  = _thread_keys(em_qs.filter(ai_draft__isnull=False).exclude(ai_draft=""))
+    sent_keys    = _thread_keys(em_qs.filter(status="replied"))
+
+    # Resolved is on the assignment, not the message
+    ta_qs = EmailThreadAssignment.objects.filter(store__user=request.user)
+    if store_id:
+        ta_qs = ta_qs.filter(store_id=store_id)
+    resolved_count = ta_qs.filter(is_resolved=True).count()
+
+    # Per-label counts
+    label_qs = EmailLabel.objects.filter(owner=request.user).order_by("position", "name")
+    link_counts_qs = EmailThreadLabel.objects.filter(
+        store__user=request.user,
+    )
+    if store_id:
+        link_counts_qs = link_counts_qs.filter(store_id=store_id)
+    label_counts_map = {
+        row["label_id"]: row["c"]
+        for row in link_counts_qs.values("label_id").annotate(c=Count("id"))
+    }
+    labels = [
+        {**_label_to_dict(l), "thread_count": label_counts_map.get(l.id, 0)}
+        for l in label_qs
+    ]
+
+    return Response({
+        "success": True,
+        "counts": {
+            "inbox":       len(inbox_keys),
+            "unread":      len(unread_keys),
+            "needs_human": len(needs_keys),
+            "drafts":      len(drafts_keys),
+            "ai_drafts":   len(drafts_keys),
+            "sent":        len(sent_keys),
+            "scheduled":   0,   # not implemented yet
+            "refunds":     em_qs.filter(category__icontains="refund").values("sender").distinct().count(),
+            "returns":     em_qs.filter(category__icontains="return").values("sender").distinct().count(),
+            "dispute":     em_qs.filter(category__icontains="dispute").values("sender").distinct().count(),
+            "spam":        em_qs.filter(category__icontains="spam").values("sender").distinct().count(),
+            "archive":     0,
+            "resolved":    resolved_count,
+        },
+        "labels": labels,
+    })
+
+
+@api_view(["GET"])
+def needs_human_threads_api(request):
+    """List all threads where any message has ai_status=needs_human."""
+    from .models import EmailMessage, EmailThreadLabel
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
+
+    store_id = request.GET.get("store_id")
+    qs = EmailMessage.objects.filter(
+        store__user=request.user, ai_status="needs_human",
+    ).select_related("store").order_by("-escalated_at", "-created_at")
+    if store_id:
+        qs = qs.filter(store_id=store_id)
+
+    seen = set()
+    threads = []
+    for m in qs[:200]:
+        key = (m.store_id, (m.sender or "").lower())
+        if key in seen:
+            continue
+        seen.add(key)
+        threads.append({
+            "id":                m.id,
+            "store_id":          m.store_id,
+            "contact":           m.sender or "",
+            "subject":           m.subject or "",
+            "preview":           (m.body or "")[:160],
+            "ai_status":         m.ai_status,
+            "ai_category":       m.ai_escalation_category or "",
+            "ai_reason":         m.ai_escalation_reason or "",
+            "ai_confidence":     float(m.ai_confidence_score) if m.ai_confidence_score is not None else None,
+            "escalated_at":      m.escalated_at.isoformat() if m.escalated_at else None,
+            "created_at":        m.created_at.isoformat() if m.created_at else None,
+        })
+    return Response({"success": True, "count": len(threads), "threads": threads})
+
+
+@api_view(["PATCH"])
+def thread_ai_status_api(request, email_id):
+    """Update the ai_status on a single message (or mark thread as resolved-by-human).
+    PATCH body: {ai_status: 'auto_handled'|'review_suggested'|'needs_human',
+                 ai_escalation_reason?, ai_escalation_category?}
+    Setting ai_status to anything other than 'needs_human' clears resolved_by_human_at.
+    """
+    from django.utils import timezone as _tz
+    from .models import EmailMessage
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
+
+    msg = EmailMessage.objects.filter(id=email_id, store__user=request.user).first()
+    if not msg:
+        return Response({"success": False, "message": "Email not found."}, status=404)
+
+    new_status = (request.data.get("ai_status") or "").strip()
+    if new_status not in {"auto_handled", "review_suggested", "needs_human"}:
+        return Response({"success": False, "message": "Invalid ai_status."}, status=400)
+
+    msg.ai_status = new_status
+    if new_status == "needs_human":
+        msg.escalated_at = _tz.now()
+        if request.data.get("ai_escalation_reason"):
+            msg.ai_escalation_reason = str(request.data.get("ai_escalation_reason"))[:1000]
+        if request.data.get("ai_escalation_category"):
+            msg.ai_escalation_category = str(request.data.get("ai_escalation_category"))[:30]
+    else:
+        # Moving OUT of needs_human → mark resolved by a human if it was here
+        if msg.resolved_by_human_at is None:
+            msg.resolved_by_human_at = _tz.now()
+    msg.save(update_fields=[
+        "ai_status", "ai_escalation_reason", "ai_escalation_category",
+        "escalated_at", "resolved_by_human_at",
+    ])
+    return Response({"success": True, "ai_status": msg.ai_status})
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# NEEDS-HUMAN CATCH-ALL GUARD
+# Call this from anywhere in the AI pipeline AFTER processing an email. If the
+# message has no draft, it is forced into needs_human with a default reason.
+# Also writes an AiFallbackLog entry so the team can debug AI failures.
+# ════════════════════════════════════════════════════════════════════════════
+def enforce_needs_human_if_no_draft(email_obj, technical_reason="empty_response", note=""):
+    """Idempotent — safe to call multiple times. Returns True if the catch-all
+    triggered (i.e. status was changed to needs_human)."""
+    from django.utils import timezone as _tz
+    from .models import AiFallbackLog
+    if not email_obj:
+        return False
+    # If a draft exists OR this message was explicitly auto-handled by a human
+    # (status replied/closed), there's nothing to do.
+    has_draft = bool((email_obj.ai_draft or "").strip())
+    if has_draft and email_obj.ai_status != "needs_human":
+        return False
+    if email_obj.status in {"replied", "closed"}:
+        return False
+    if email_obj.ai_status == "needs_human":
+        return False  # already routed
+
+    email_obj.ai_status = "needs_human"
+    if not email_obj.ai_escalation_category:
+        email_obj.ai_escalation_category = "ai_failure"
+    if not email_obj.ai_escalation_reason:
+        email_obj.ai_escalation_reason = (
+            "AI could not generate a reply for this email — manual response required."
+        )
+    if email_obj.escalated_at is None:
+        email_obj.escalated_at = _tz.now()
+    try:
+        email_obj.save(update_fields=[
+            "ai_status", "ai_escalation_category", "ai_escalation_reason", "escalated_at",
+        ])
+    except Exception:
+        email_obj.save()  # fallback for objects not yet persisted
+    # Best-effort log entry
+    try:
+        AiFallbackLog.objects.create(
+            email_message=email_obj,
+            store=email_obj.store,
+            reason=technical_reason if technical_reason in dict(AiFallbackLog.REASONS) else "other",
+            technical_note=(note or "")[:2000],
+        )
+    except Exception:
+        pass
+    return True
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# EMPTY FOLDER / LABEL — clears all threads matching a sidebar folder.
+# Powers the "Empty Chat" action in the sidebar 3-dot menus.
+# Destructive: deletes EmailMessage rows whose sender matches a contact in
+# the matching set (so the thread disappears from the inbox).
+# ════════════════════════════════════════════════════════════════════════════
+@api_view(["POST"])
+def empty_folder_api(request):
+    """POST {store_id, folder?, label_id?}
+       folder ∈ {inbox, unread, needs_human, ai_drafts, scheduled, sent,
+                 resolved, refunds, returns, dispute, spam, archive}
+       label_id → empties all threads with that label.
+    """
+    from django.db.models import Q
+    from .models import EmailMessage, EmailThreadAssignment, EmailThreadLabel
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
+
+    store_id = request.data.get("store_id")
+    folder   = (request.data.get("folder") or "").strip().lower()
+    label_id = request.data.get("label_id")
+    if not store_id:
+        return Response({"success": False, "message": "store_id is required."}, status=400)
+    if not folder and not label_id:
+        return Response({"success": False, "message": "folder or label_id required."}, status=400)
+
+    store = get_object_or_404(Store, id=store_id, user=request.user)
+
+    em_qs = EmailMessage.objects.filter(store=store)
+
+    # Filter to the matching set per folder
+    if folder == "inbox":
+        pass  # all
+    elif folder == "unread":
+        em_qs = em_qs.filter(is_read=False)
+    elif folder == "needs_human":
+        em_qs = em_qs.filter(ai_status="needs_human")
+    elif folder in ("drafts", "ai_drafts"):
+        em_qs = em_qs.exclude(Q(ai_draft__isnull=True) | Q(ai_draft=""))
+    elif folder == "sent":
+        em_qs = em_qs.filter(status="replied")
+    elif folder == "resolved":
+        # Resolved is on the assignment, not the message
+        resolved_contacts = list(EmailThreadAssignment.objects.filter(
+            store=store, is_resolved=True,
+        ).values_list("contact", flat=True))
+        em_qs = em_qs.filter(sender__in=resolved_contacts)
+    elif folder in ("refunds", "returns", "dispute", "spam"):
+        em_qs = em_qs.filter(category__icontains=folder.rstrip("s"))
+    elif folder == "archive":
+        # No reliable archive flag yet — treat as no-op (return 0)
+        em_qs = em_qs.none()
+
+    # Label-based filtering: collect all contacts that have the label
+    if label_id:
+        label_contacts = list(EmailThreadLabel.objects.filter(
+            store=store, label_id=label_id, label__owner=request.user,
+        ).values_list("contact", flat=True))
+        em_qs = em_qs.filter(sender__in=label_contacts)
+
+    # Count first, then delete
+    affected_contacts = set(em_qs.values_list("sender", flat=True))
+    msg_count = em_qs.count()
+    em_qs.delete()
+
+    # Also clean up assignments + labels for affected contacts (so they
+    # don't haunt the UI after the messages are gone)
+    EmailThreadAssignment.objects.filter(store=store, contact__in=affected_contacts).delete()
+    EmailThreadLabel.objects.filter(store=store, contact__in=affected_contacts).delete()
+
+    return Response({
+        "success": True,
+        "deleted_messages": msg_count,
+        "deleted_threads": len(affected_contacts),
+    })
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# PERSISTENT FOLDER/LABEL → TEAM-MEMBER ASSIGNMENT
+# When set, ALL current matching threads get assigned + ANY new email that
+# matches the rule auto-creates an EmailThreadAssignment (handled by the
+# auto_assign_for_folder_rules() helper called from email-save pipelines).
+# ════════════════════════════════════════════════════════════════════════════
+def _matches_folder(email_obj, folder, store=None):
+    """Predicate: does this EmailMessage belong in the named folder?"""
+    if not email_obj or not folder:
+        return False
+    folder = folder.lower()
+    if folder == "inbox":
+        return True
+    if folder == "unread":
+        return not bool(getattr(email_obj, "is_read", False))
+    if folder == "needs_human":
+        return getattr(email_obj, "ai_status", "") == "needs_human"
+    if folder in ("drafts", "ai_drafts"):
+        return bool((getattr(email_obj, "ai_draft", "") or "").strip())
+    if folder == "sent":
+        return getattr(email_obj, "status", "") == "replied"
+    if folder in ("refunds", "returns", "dispute", "spam"):
+        kw = folder.rstrip("s")
+        cat = (getattr(email_obj, "category", "") or "").lower()
+        return kw in cat
+    if folder == "resolved":
+        # Requires a separate query — handled by caller when needed.
+        from .models import EmailThreadAssignment
+        contact = (getattr(email_obj, "sender", "") or "").strip().lower()
+        if not contact or not store:
+            return False
+        return EmailThreadAssignment.objects.filter(
+            store=store, contact=contact, is_resolved=True,
+        ).exists()
+    return False
+
+
+def auto_assign_for_folder_rules(email_obj):
+    """Called from the email-save pipeline. For every active FolderAssignment
+    rule whose predicate matches this email, ensure an EmailThreadAssignment
+    exists pointing the thread to the assigned team member.
+    Safe to call multiple times — uses get_or_create semantics."""
+    if not email_obj or not getattr(email_obj, "store_id", None):
+        return 0
+    from .models import FolderAssignment, EmailThreadAssignment, EmailThreadLabel
+    store = email_obj.store
+    contact = (getattr(email_obj, "sender", "") or "").strip().lower()
+    if not contact:
+        return 0
+
+    matched_members = set()
+
+    # Folder-based rules
+    folder_rules = FolderAssignment.objects.filter(
+        store=store, is_active=True, label__isnull=True,
+    ).exclude(folder="").select_related("assigned_to")
+    for rule in folder_rules:
+        if _matches_folder(email_obj, rule.folder, store=store):
+            matched_members.add(rule.assigned_to_id)
+            assignment, _created = EmailThreadAssignment.objects.get_or_create(
+                store=store, contact=contact,
+            )
+            if assignment.assigned_to_id != rule.assigned_to_id:
+                # Don't overwrite an explicit human assignment — only set if empty
+                if assignment.assigned_to_id is None:
+                    assignment.assigned_to = rule.assigned_to
+                    assignment.save(update_fields=["assigned_to"])
+
+    # Label-based rules — fire only if the thread already has the label
+    label_rules = FolderAssignment.objects.filter(
+        store=store, is_active=True, label__isnull=False,
+    ).select_related("assigned_to", "label")
+    if label_rules:
+        thread_label_ids = set(EmailThreadLabel.objects.filter(
+            store=store, contact=contact,
+        ).values_list("label_id", flat=True))
+        for rule in label_rules:
+            if rule.label_id in thread_label_ids:
+                matched_members.add(rule.assigned_to_id)
+                assignment, _created = EmailThreadAssignment.objects.get_or_create(
+                    store=store, contact=contact,
+                )
+                if assignment.assigned_to_id is None:
+                    assignment.assigned_to = rule.assigned_to
+                    assignment.save(update_fields=["assigned_to"])
+
+    return len(matched_members)
+
+
+@api_view(["GET", "POST", "DELETE"])
+def folder_assignments_api(request):
+    """
+    GET  → list active rules for the active store
+    POST → create/update a rule  {store_id, folder?|label_id?, member_id}
+           Side effect: bulk-assign all current matching threads to the member.
+    DELETE → remove rule           {store_id, folder?|label_id?}
+    """
+    from .models import FolderAssignment, EmailLabel, EmailThreadAssignment, EmailMessage, EmailThreadLabel
+    from teamapp.models import TeamMember
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
+
+    if request.method == "GET":
+        store_id = request.GET.get("store_id")
+        qs = FolderAssignment.objects.filter(store__user=request.user, is_active=True).select_related("assigned_to", "label")
+        if store_id:
+            qs = qs.filter(store_id=store_id)
+        return Response({
+            "success": True,
+            "rules": [{
+                "id":          r.id,
+                "store_id":    r.store_id,
+                "folder":      r.folder or "",
+                "label_id":    r.label_id,
+                "label_name":  r.label.name if r.label_id else "",
+                "member_id":   r.assigned_to_id,
+                "member_name": r.assigned_to.name,
+                "member_role": r.assigned_to.role,
+                "created_at":  r.created_at.isoformat() if r.created_at else None,
+            } for r in qs]
+        })
+
+    store_id = request.data.get("store_id")
+    folder   = (request.data.get("folder") or "").strip().lower()
+    label_id = request.data.get("label_id")
+    if not store_id:
+        return Response({"success": False, "message": "store_id is required."}, status=400)
+    if not folder and not label_id:
+        return Response({"success": False, "message": "folder or label_id required."}, status=400)
+    store = get_object_or_404(Store, id=store_id, user=request.user)
+
+    if request.method == "POST":
+        member_id = request.data.get("member_id")
+        if not member_id:
+            return Response({"success": False, "message": "member_id required."}, status=400)
+        member = TeamMember.objects.filter(id=member_id, owner=request.user).first()
+        if not member:
+            return Response({"success": False, "message": "Team member not found."}, status=404)
+
+        label = None
+        if label_id:
+            label = EmailLabel.objects.filter(id=label_id, owner=request.user).first()
+            if not label:
+                return Response({"success": False, "message": "Label not found."}, status=404)
+            folder = ""  # ensure mutual exclusion
+
+        # Upsert the rule
+        if label:
+            rule, _created = FolderAssignment.objects.update_or_create(
+                store=store, label=label, defaults={
+                    "folder": "", "assigned_to": member, "is_active": True,
+                    "created_by": request.user,
+                },
+            )
+        else:
+            rule, _created = FolderAssignment.objects.update_or_create(
+                store=store, folder=folder, label=None, defaults={
+                    "assigned_to": member, "is_active": True,
+                    "created_by": request.user,
+                },
+            )
+
+        # ── One-shot: assign all CURRENT matching threads to this member ──
+        em_qs = EmailMessage.objects.filter(store=store)
+        if label:
+            label_contacts = list(EmailThreadLabel.objects.filter(
+                store=store, label=label, label__owner=request.user,
+            ).values_list("contact", flat=True))
+            em_qs = em_qs.filter(sender__in=label_contacts)
+        else:
+            from django.db.models import Q
+            if folder == "unread":
+                em_qs = em_qs.filter(is_read=False)
+            elif folder == "needs_human":
+                em_qs = em_qs.filter(ai_status="needs_human")
+            elif folder in ("drafts", "ai_drafts"):
+                em_qs = em_qs.exclude(Q(ai_draft__isnull=True) | Q(ai_draft=""))
+            elif folder == "sent":
+                em_qs = em_qs.filter(status="replied")
+            elif folder == "resolved":
+                resolved_contacts = list(EmailThreadAssignment.objects.filter(
+                    store=store, is_resolved=True,
+                ).values_list("contact", flat=True))
+                em_qs = em_qs.filter(sender__in=resolved_contacts)
+            elif folder in ("refunds", "returns", "dispute", "spam"):
+                em_qs = em_qs.filter(category__icontains=folder.rstrip("s"))
+
+        contacts = set(em_qs.values_list("sender", flat=True))
+        contacts = [c for c in contacts if c]
+        assigned_count = 0
+        for c in contacts:
+            assignment, _was_created = EmailThreadAssignment.objects.get_or_create(
+                store=store, contact=(c or "").lower(),
+            )
+            # Only override empty assignments; leave human-set ones alone
+            if assignment.assigned_to_id is None:
+                assignment.assigned_to = member
+                assignment.save(update_fields=["assigned_to"])
+                assigned_count += 1
+
+        return Response({
+            "success": True,
+            "rule_id": rule.id,
+            "assigned_now": assigned_count,
+            "total_matching": len(contacts),
+            "message": f"Rule saved. {assigned_count} thread(s) assigned now; future matching emails will auto-assign.",
+        })
+
+    # DELETE
+    if label_id:
+        FolderAssignment.objects.filter(store=store, label_id=label_id).delete()
+    else:
+        FolderAssignment.objects.filter(store=store, folder=folder, label__isnull=True).delete()
+    return Response({"success": True, "removed": True})

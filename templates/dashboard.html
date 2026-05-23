@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.0.0/tabler-icons.min.css" />
   <style>
     html,body{height:100%}
     body{margin:0;font-family:Arial;background:#f5f7fb;color:#111827;overflow:hidden}
@@ -4427,6 +4428,891 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
     </div>
   </aside>
 
+  <!-- ════════════════════════════════════════════════════════════════════
+       CONTEXTUAL EMAIL SIDEBAR
+       Slides in to replace the main sidebar when user is in the Emails
+       section. Driven by body[data-active-section="emails"] in CSS.
+       ════════════════════════════════════════════════════════════════════ -->
+  <aside class="sidebar sidebar-email" id="sidebarEmail">
+
+    <!-- ── BACK BAR ─────────────────────────────────────────────────── -->
+    <button class="ec-back-bar" onclick="showSection('overview')" title="Back to main menu">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      <span>Back to main menu</span>
+    </button>
+
+    <!-- ── BRAND HEADER ─────────────────────────────────────────────── -->
+    <div class="ec-head">
+      <span class="ec-logo-box">
+        <span class="ec-logo" id="ecBrandLogo">D</span>
+      </span>
+      <div class="ec-brand-text">
+        <b class="ec-title" id="ecBrandName">Drop Sigma</b>
+        <span class="ec-brand-sub" id="ecBrandSub">
+          <span class="ec-live-dot"></span>
+          <span class="ec-live-label">Live Sync · Online</span>
+          <button class="ec-sync-btn" id="ecSyncBtn" onclick="event.stopPropagation();ecSyncNow();" title="Sync inbox now" aria-label="Sync inbox now">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          </button>
+        </span>
+      </div>
+    </div>
+
+    <!-- ── COMPOSE EMAIL — purple gradient ───────────────────────── -->
+    <div class="ec-compose-wrap">
+      <button class="ec-compose" id="ecComposeBtn" onclick="openComposeModalGated()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+        <span>Compose Email</span>
+        <span class="ec-kbd">⌘N</span>
+      </button>
+    </div>
+
+    <!-- Search bar removed from sidebar (the page-level / will still work if added back later). -->
+    <input type="hidden" id="ecSearchInput" value="">
+
+    <!-- ── SCROLLABLE NAV ───────────────────────────────────────────── -->
+    <div class="sb-nav-area ec-scroll">
+
+      <!-- MAIN -->
+      <div class="ec-group">
+        <button class="ec-item active" data-view="inbox" onclick="setEmailFolder('inbox')">
+          <span class="ec-ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v12H8l-4 4z"/></svg></span>
+          <span class="ec-lbl">Inbox</span>
+          <span class="ec-cnt ec-cnt-accent ec-cnt-glow" data-cnt="inbox"></span>
+        </button>
+        <button class="ec-item" data-view="unread" onclick="setEmailFolder('unread')">
+          <span class="ec-ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l2.5 2"/></svg></span>
+          <span class="ec-lbl">Unread</span>
+          <span class="ec-cnt" data-cnt="unread"></span>
+        </button>
+        <button class="ec-item ec-priority" data-view="needs_human" onclick="setEmailFolder('needs_human')">
+          <span class="ec-ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 20h20L12 2z"/><path d="M12 9v5M12 17h.01"/></svg></span>
+          <span class="ec-lbl">Needs Human</span>
+          <span class="ec-cnt ec-cnt-priority" data-cnt="needs_human"></span>
+        </button>
+      </div>
+
+      <!-- WORKFLOW -->
+      <div class="ec-section"><span>Workflow</span></div>
+      <div class="ec-group">
+        <button class="ec-item" data-view="ai_drafts" onclick="setEmailFolder('ai_drafts')">
+          <span class="ec-ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.5 3.5L17 8l-3.5 1.5L12 13l-1.5-3.5L7 8l3.5-1.5L12 3z"/><path d="M18 14l.9 2.4L21 17l-2.1.6L18 20l-.9-2.4L15 17l2.1-.6L18 14z"/></svg></span>
+          <span class="ec-lbl">AI Drafts</span>
+          <span class="ec-cnt ec-cnt-amber" data-cnt="ai_drafts"></span>
+        </button>
+        <button class="ec-item" data-view="scheduled" onclick="setEmailFolder('scheduled')">
+          <span class="ec-ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg></span>
+          <span class="ec-lbl">Scheduled</span>
+          <span class="ec-cnt" data-cnt="scheduled"></span>
+        </button>
+        <button class="ec-item" data-view="resolved" onclick="setEmailFolder('resolved')">
+          <span class="ec-ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+          <span class="ec-lbl">Resolved</span>
+          <span class="ec-cnt ec-cnt-green" data-cnt="resolved"></span>
+        </button>
+      </div>
+
+      <!-- CATEGORIES -->
+      <div class="ec-section"><span>Categories</span></div>
+      <div class="ec-group">
+        <button class="ec-item" data-view="refunds" onclick="setEmailFolder('refunds')">
+          <span class="ec-ic"><span class="ec-dot ec-dot-teal"></span></span>
+          <span class="ec-lbl">Refunds</span>
+          <span class="ec-cnt" data-cnt="refunds"></span>
+        </button>
+        <button class="ec-item" data-view="returns" onclick="setEmailFolder('returns')">
+          <span class="ec-ic"><span class="ec-dot ec-dot-blue"></span></span>
+          <span class="ec-lbl">Returns</span>
+          <span class="ec-cnt" data-cnt="returns"></span>
+        </button>
+        <button class="ec-item" data-view="dispute" onclick="setEmailFolder('dispute')">
+          <span class="ec-ic"><span class="ec-dot ec-dot-amber"></span></span>
+          <span class="ec-lbl">Dispute</span>
+          <span class="ec-cnt" data-cnt="dispute"></span>
+        </button>
+        <button class="ec-item" data-view="spam" onclick="setEmailFolder('spam')">
+          <span class="ec-ic"><span class="ec-dot ec-dot-pink"></span></span>
+          <span class="ec-lbl">Spam</span>
+          <span class="ec-cnt" data-cnt="spam"></span>
+        </button>
+        <button class="ec-item" data-view="archive" onclick="setEmailFolder('archive')">
+          <span class="ec-ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/></svg></span>
+          <span class="ec-lbl">Archive</span>
+          <span class="ec-cnt" data-cnt="archive"></span>
+        </button>
+      </div>
+
+      <!-- LABELS -->
+      <div class="ec-section ec-section-with-action">
+        <span>Labels</span>
+        <button class="ec-section-add" onclick="openLabelModal()" title="Create label" aria-label="Create label">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+      </div>
+      <div class="ec-group">
+        <div class="ec-labels" id="ecLabelsList">
+          <div class="ec-labels-empty" id="ecLabelsEmpty">
+            Create a label to organize threads
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── TEMPLATES ROW ────────────────────────────────────────────── -->
+    <div class="ec-foot-row" onclick="switchEmailView('templates', this)">
+      <span class="ec-foot-ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></span>
+      <span class="ec-foot-lbl">Templates</span>
+      <span class="ec-foot-cnt" id="ecTemplatesCnt"></span>
+    </div>
+
+    <!-- ── SETTINGS ROW ─────────────────────────────────────────────── -->
+    <div class="ec-foot-row" onclick="switchEmailView('settings', this)">
+      <span class="ec-foot-ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
+      <span class="ec-foot-lbl">Settings</span>
+    </div>
+
+    <!-- ── USER FOOTER (with dropup menu) ───────────────────────────── -->
+    <div class="ec-foot-row ec-foot-user">
+      <div class="ec-avatar" id="ecUserAvatar">M<span class="ec-status"></span></div>
+      <div class="ec-who" onclick="switchEmailView('settings', this)" style="cursor:pointer;">
+        <b id="ecUserName">Loading…</b>
+        <small id="ecUserEmail"></small>
+      </div>
+      <button class="ec-user-menu-btn" onclick="event.stopPropagation();ecToggleUserMenu()" aria-label="Account menu" title="Account menu">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 15 12 9 18 15"/></svg>
+      </button>
+
+      <!-- DROPUP MENU — switch connected email accounts + add new -->
+      <div class="ec-user-menu" id="ecUserMenu">
+        <div class="ec-user-menu-label">SWITCH INBOX</div>
+        <div id="ecUserMenuAccounts">
+          <!-- Connected accounts listed here by ecRenderUserMenu() -->
+        </div>
+        <div class="ec-user-menu-divider"></div>
+        <button class="ec-user-menu-item ec-user-menu-add" onclick="ecCloseUserMenu();if(typeof openConnectEmailModal==='function')openConnectEmailModal();">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Connect a new email
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       ADD / EDIT LABEL MODAL
+       ════════════════════════════════════════════════════════════════════ -->
+  <div class="modal-bg" id="labelModal" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(8,11,22,.7);backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:24px;" onclick="if(event.target===this)closeLabelModal()">
+    <div style="background:#fff;border-radius:18px;width:100%;max-width:440px;box-shadow:0 32px 80px rgba(0,0,0,.4);overflow:hidden;">
+      <div style="padding:20px 24px;border-bottom:1px solid #eef2f7;display:flex;align-items:center;justify-content:space-between;">
+        <h3 style="margin:0;font-size:17px;font-weight:800;color:#0f172a;letter-spacing:-.2px;" id="labelModalTitle">New label</h3>
+        <button onclick="closeLabelModal()" style="background:none;border:none;cursor:pointer;color:#94a3b8;font-size:18px;width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;">✕</button>
+      </div>
+      <div style="padding:22px 24px 8px;">
+        <label style="display:block;font-size:12px;font-weight:700;color:#475569;margin-bottom:6px;letter-spacing:.04em;text-transform:uppercase;">Name</label>
+        <input id="labelNameInput" type="text" maxlength="50" placeholder="e.g. Urgent, VIP, Refund" style="width:100%;padding:10px 12px;border:1.5px solid #e5eaf2;border-radius:9px;font-size:13.5px;font-family:inherit;font-weight:500;color:#0f172a;outline:none;transition:border-color .15s;" oninput="document.getElementById('labelNameCount').textContent=this.value.length+'/50';document.getElementById('labelDuplicateErr').style.display='none';">
+        <div style="display:flex;justify-content:space-between;margin-top:5px;font-size:11px;">
+          <span id="labelDuplicateErr" style="color:#dc2626;font-weight:700;display:none;">Name already exists.</span>
+          <span id="labelNameCount" style="color:#94a3b8;margin-left:auto;">0/50</span>
+        </div>
+
+        <label style="display:block;font-size:12px;font-weight:700;color:#475569;margin:18px 0 8px;letter-spacing:.04em;text-transform:uppercase;">Color</label>
+        <div id="labelColorSwatches" style="display:flex;gap:8px;flex-wrap:wrap;">
+          <!-- Filled by JS -->
+        </div>
+
+        <label style="display:block;font-size:12px;font-weight:700;color:#475569;margin:18px 0 6px;letter-spacing:.04em;text-transform:uppercase;">Icon (optional)</label>
+        <input id="labelIconInput" type="text" maxlength="2" placeholder="🔥" style="width:80px;padding:8px 10px;border:1.5px solid #e5eaf2;border-radius:9px;font-size:18px;font-family:inherit;text-align:center;outline:none;">
+
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#475569;font-weight:600;margin-top:16px;cursor:pointer;">
+          <input id="labelSharedInput" type="checkbox" checked style="width:16px;height:16px;accent-color:#6366f1;cursor:pointer;">
+          Shared with team
+        </label>
+      </div>
+      <div style="padding:14px 24px 20px;display:flex;justify-content:flex-end;gap:8px;">
+        <button onclick="closeLabelModal()" style="padding:9px 16px;background:#f1f5f9;border:none;border-radius:9px;color:#475569;font-weight:700;font-size:12.5px;cursor:pointer;font-family:inherit;">Cancel</button>
+        <button id="labelSaveBtn" onclick="saveLabel()" style="padding:9px 18px;background:linear-gradient(135deg,#6366f1,#a855f7);border:none;border-radius:9px;color:#fff;font-weight:800;font-size:12.5px;cursor:pointer;font-family:inherit;box-shadow:0 6px 16px rgba(168,85,247,.35);">Create label</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       Email Sidebar + Label Modal styles
+       ════════════════════════════════════════════════════════════════════ -->
+  <style>
+    /* ════════════════════════════════════════════════════════════════════
+       EMAIL SIDEBAR — Premium Light "Kayali" theme
+       Frosted white glass + purple accent + soft active pill with glow.
+       Matches the user-provided sample exactly.
+       ════════════════════════════════════════════════════════════════════ */
+    :root{
+      --ec-sb:rgba(255,255,255,0.92);
+      --ec-stroke:rgba(17,17,40,0.07);
+      --ec-stroke-strong:rgba(17,17,40,0.12);
+      --ec-txt:#1a1c2e;
+      --ec-txt-dim:#5a607a;
+      --ec-txt-faint:#9499b0;
+      --ec-accent:#6c5ce7;
+      --ec-accent-2:#8b7bff;
+      --ec-accent-soft:#efeaff;
+      --ec-accent-glow:rgba(108,92,231,0.35);
+      --ec-green:#10b981;
+      --ec-amber:#f59e0b;
+      --ec-red:#f43f5e;
+      --ec-blue:#3b82f6;
+      --ec-pink:#ec4899;
+      --ec-teal:#14b8a6;
+    }
+    .sidebar-email{display:none!important;}
+    body[data-active-section="emails"] aside.sidebar:not(.sidebar-email){display:none!important;}
+
+    /* ── CONTAINER — frosted glass, fits parent grid column (240px) ── */
+    body[data-active-section="emails"] .sidebar.sidebar-email{
+      display:flex!important;flex-direction:column!important;
+      box-sizing:border-box!important;
+      height:100vh!important;width:100%!important;max-width:100%!important;min-width:0!important;
+      padding:0!important;margin:0!important;
+      background:linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,248,253,0.98))!important;
+      color:var(--ec-txt)!important;
+      border-right:1px solid var(--ec-stroke)!important;
+      backdrop-filter:blur(26px) saturate(150%)!important;
+      -webkit-backdrop-filter:blur(26px) saturate(150%)!important;
+      overflow:hidden!important;
+      font-family:inherit;
+      position:relative;
+      box-shadow:24px 0 60px -34px rgba(60,50,120,0.28)!important;
+    }
+    body[data-active-section="emails"] .sidebar.sidebar-email::before{
+      content:'';position:absolute;inset:0;
+      background:radial-gradient(420px 220px at 30% -5%, rgba(108,92,231,0.08), transparent 60%);
+      pointer-events:none;z-index:0;
+    }
+    body .sidebar.sidebar-email > *{position:relative;z-index:1;}
+
+    body .sidebar.sidebar-email .ec-head,
+    body .sidebar.sidebar-email .ec-compose,
+    body .sidebar.sidebar-email .ec-search,
+    body .sidebar.sidebar-email .ec-scroll,
+    body .sidebar.sidebar-email .ec-foot-row{
+      flex-shrink:0;box-sizing:border-box;
+    }
+
+    /* ── BACK BAR ───────────────────────────────────────────────── */
+    body .sidebar.sidebar-email .ec-back-bar{
+      display:flex!important;align-items:center;gap:6px;
+      width:calc(100% - 24px)!important;
+      margin:12px 12px 0!important;padding:6px 10px!important;
+      background:rgba(108,92,231,0.06)!important;border:1px solid rgba(108,92,231,0.14)!important;
+      color:var(--ec-accent)!important;
+      border-radius:7px!important;cursor:pointer!important;
+      font-family:inherit!important;font-size:11.5px!important;font-weight:600!important;
+      letter-spacing:-.1px!important;
+      box-shadow:none!important;
+      transition:all .15s ease!important;
+    }
+    body .sidebar.sidebar-email .ec-back-bar:hover{
+      background:var(--ec-accent-soft)!important;border-color:rgba(108,92,231,0.24)!important;
+    }
+    body .sidebar.sidebar-email .ec-back-bar svg{transition:transform .15s ease;flex-shrink:0;}
+    body .sidebar.sidebar-email .ec-back-bar:hover svg{transform:translateX(-2px);}
+
+    /* ── BRAND HEADER ────────────────────────────────────────────── */
+    body .sidebar.sidebar-email .ec-head{
+      display:flex!important;align-items:center;gap:10px;
+      padding:10px 14px 12px!important;margin:0!important;
+      background:transparent!important;color:var(--ec-txt)!important;
+      border:none!important;min-width:0;
+    }
+    body .sidebar.sidebar-email .ec-logo-box{
+      width:32px;height:32px;border-radius:9px;
+      background:linear-gradient(140deg,var(--ec-accent-2),#5b48d9 70%);
+      display:grid;place-items:center;color:#fff;flex-shrink:0;
+      box-shadow:0 6px 16px -6px var(--ec-accent-glow), inset 0 1px 0 rgba(255,255,255,0.4);
+      position:relative;overflow:hidden;
+    }
+    body .sidebar.sidebar-email .ec-logo-box::after{
+      content:'';position:absolute;top:-50%;left:-30%;width:60%;height:200%;
+      background:linear-gradient(90deg,transparent,rgba(255,255,255,0.55),transparent);
+      transform:rotate(20deg);animation:ec-shine 5s ease-in-out infinite;pointer-events:none;
+    }
+    @keyframes ec-shine{0%,70%{left:-40%;}85%,100%{left:130%;}}
+    body .sidebar.sidebar-email .ec-logo{
+      font-size:14px;font-weight:800;color:#fff;line-height:1;position:relative;z-index:1;
+    }
+    body .sidebar.sidebar-email .ec-brand-text{min-width:0;flex:1;overflow:hidden;}
+    body .sidebar.sidebar-email .ec-title{
+      font-size:14px!important;font-weight:800!important;color:var(--ec-txt)!important;
+      letter-spacing:-0.2px!important;
+      margin:0!important;padding:0!important;
+      background:none!important;-webkit-background-clip:initial!important;background-clip:initial!important;
+      -webkit-text-fill-color:var(--ec-txt)!important;text-shadow:none!important;
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;
+    }
+    body .sidebar.sidebar-email .ec-brand-sub{
+      font-size:10px;color:var(--ec-txt-faint);display:flex;align-items:center;gap:5px;margin-top:2px;
+      white-space:nowrap;min-width:0;
+    }
+    body .sidebar.sidebar-email .ec-live-label{
+      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;
+    }
+    /* Sync button — small refined pill next to "Online" */
+    body .sidebar.sidebar-email .ec-sync-btn{
+      width:18px!important;height:18px!important;border-radius:5px!important;
+      background:rgba(108,92,231,0.08)!important;border:1px solid rgba(108,92,231,0.14)!important;
+      color:var(--ec-accent)!important;
+      cursor:pointer!important;padding:0!important;margin:0 0 0 2px!important;
+      display:inline-flex!important;align-items:center;justify-content:center;flex-shrink:0;
+      box-shadow:none!important;
+      transition:all .15s ease!important;
+    }
+    body .sidebar.sidebar-email .ec-sync-btn:hover{
+      background:var(--ec-accent-soft)!important;border-color:rgba(108,92,231,0.3)!important;
+      box-shadow:0 2px 8px -2px var(--ec-accent-glow)!important;
+      transform:rotate(45deg);
+    }
+    body .sidebar.sidebar-email .ec-sync-btn.spinning svg{
+      animation:ec-spin .9s linear infinite;
+    }
+    @keyframes ec-spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+    body .sidebar.sidebar-email .ec-sync-btn.success{
+      background:rgba(16,185,129,0.12)!important;border-color:rgba(16,185,129,0.32)!important;
+      color:var(--ec-green)!important;
+    }
+    body .sidebar.sidebar-email .ec-brand-text{display:flex;flex-direction:column;line-height:1.1;flex:1;min-width:0;}
+    body .sidebar.sidebar-email .ec-title{
+      font-size:16px!important;font-weight:800!important;color:var(--ec-txt)!important;
+      letter-spacing:-0.2px!important;
+      margin:0!important;padding:0!important;
+      background:none!important;-webkit-background-clip:initial!important;background-clip:initial!important;
+      -webkit-text-fill-color:var(--ec-txt)!important;text-shadow:none!important;
+    }
+    body .sidebar.sidebar-email .ec-title::before,
+    body .sidebar.sidebar-email .ec-title::after{content:none!important;display:none!important;}
+    body .sidebar.sidebar-email .ec-brand-sub{
+      font-size:11px;color:var(--ec-txt-faint);display:flex;align-items:center;gap:5px;margin-top:3px;
+    }
+    body .sidebar.sidebar-email .ec-live-dot{
+      width:6px;height:6px;border-radius:50%;background:var(--ec-green);
+      animation:ec-livepulse 2s infinite;display:inline-block;
+    }
+    @keyframes ec-livepulse{
+      0%{box-shadow:0 0 0 0 rgba(16,185,129,0.45);}
+      70%{box-shadow:0 0 0 6px rgba(16,185,129,0);}
+      100%{box-shadow:0 0 0 0 rgba(16,185,129,0);}
+    }
+
+    /* ── COMPOSE EMAIL — wrapped so width never overflows ───────── */
+    body .sidebar.sidebar-email .ec-compose-wrap{
+      padding:4px 12px 10px!important;margin:0!important;
+      box-sizing:border-box!important;width:100%!important;
+    }
+    body .sidebar.sidebar-email .ec-compose{
+      width:100%!important;box-sizing:border-box!important;
+      margin:0!important;
+      display:flex!important;align-items:center;justify-content:flex-start;gap:8px;
+      padding:8px 12px!important;border-radius:9px!important;
+      background:linear-gradient(135deg,var(--ec-accent),#5b48d9)!important;
+      color:#fff!important;font-weight:600!important;font-size:12.5px!important;letter-spacing:-.05px!important;
+      cursor:pointer!important;border:none!important;
+      box-shadow:0 6px 18px -6px var(--ec-accent-glow), inset 0 1px 0 rgba(255,255,255,0.3)!important;
+      transition:transform .15s ease, box-shadow .15s ease, filter .15s ease !important;
+      font-family:inherit!important;text-align:left;
+      overflow:hidden;
+    }
+    body .sidebar.sidebar-email .ec-compose:hover{
+      transform:translateY(-1px);
+      box-shadow:0 10px 22px -6px var(--ec-accent-glow)!important;
+      filter:brightness(1.05);
+    }
+    body .sidebar.sidebar-email .ec-compose:active{transform:translateY(0);}
+    body .sidebar.sidebar-email .ec-compose svg{width:13px;height:13px;flex-shrink:0;}
+    body .sidebar.sidebar-email .ec-compose > span:not(.ec-kbd){
+      flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    }
+    body .sidebar.sidebar-email .ec-compose .ec-kbd{
+      flex-shrink:0;font-size:9.5px;background:rgba(255,255,255,0.22);padding:1px 5px;border-radius:4px;
+      font-weight:600;color:#fff;border:none!important;letter-spacing:0;
+    }
+    body .sidebar.sidebar-email .ec-compose.em-btn-disabled{
+      background:rgba(17,17,40,0.06)!important;color:var(--ec-txt-faint)!important;
+      cursor:not-allowed!important;box-shadow:none!important;
+    }
+    body .sidebar.sidebar-email .ec-compose.em-btn-disabled:hover{transform:none!important;filter:none!important;}
+
+    /* ── SEARCH ──────────────────────────────────────────────────── */
+    body .sidebar.sidebar-email .ec-search{
+      margin:0 12px 12px!important;position:relative;
+      padding:0!important;background:transparent!important;border:none!important;
+    }
+    body .sidebar.sidebar-email .ec-search input{
+      width:100%!important;box-sizing:border-box!important;
+      padding:7px 30px 7px 30px!important;
+      background:#fff!important;
+      border:1px solid var(--ec-stroke-strong)!important;border-radius:8px!important;
+      color:var(--ec-txt)!important;font-size:12px!important;font-family:inherit!important;
+      outline:none!important;
+      box-shadow:0 1px 2px rgba(17,17,40,0.04)!important;
+      transition:border .15s, box-shadow .15s, background .15s !important;
+      margin:0!important;
+    }
+    body .sidebar.sidebar-email .ec-search input::placeholder{color:var(--ec-txt-faint)!important;}
+    body .sidebar.sidebar-email .ec-search input:focus{
+      border-color:var(--ec-accent)!important;
+      box-shadow:0 0 0 3px rgba(108,92,231,0.12)!important;
+    }
+    body .sidebar.sidebar-email .ec-search > svg{
+      position:absolute;left:9px;top:50%;transform:translateY(-50%);
+      color:var(--ec-txt-faint);pointer-events:none;width:13px;height:13px;
+    }
+    body .sidebar.sidebar-email .ec-slash{
+      position:absolute;right:8px;top:50%;transform:translateY(-50%);
+      font-size:9.5px;color:var(--ec-txt-faint);
+      border:1px solid var(--ec-stroke-strong);padding:1px 5px;border-radius:4px;
+      line-height:1;
+    }
+
+    /* ── SCROLLABLE NAV ──────────────────────────────────────────── */
+    body .sidebar.sidebar-email .ec-scroll{
+      flex:1!important;overflow-y:auto!important;overflow-x:hidden;min-height:0!important;
+      padding:0 8px 8px!important;margin:0!important;
+    }
+    .sidebar-email .ec-scroll::-webkit-scrollbar{width:5px;}
+    .sidebar-email .ec-scroll::-webkit-scrollbar-thumb{background:rgba(17,17,40,0.1);border-radius:6px;}
+    .sidebar-email .ec-scroll::-webkit-scrollbar-thumb:hover{background:rgba(17,17,40,0.2);}
+
+    .sidebar-email .ec-group{display:flex!important;flex-direction:column!important;gap:0;margin-bottom:2px;}
+
+    /* Section labels — with a subtle top divider for clean separation */
+    body .sidebar.sidebar-email .ec-section{
+      position:relative;
+      font-size:9.5px!important;letter-spacing:1.1px!important;text-transform:uppercase!important;
+      color:var(--ec-txt-faint)!important;font-weight:700!important;
+      padding:14px 10px 5px!important;
+      margin-top:10px!important;
+      display:flex!important;align-items:center;justify-content:space-between;
+      background:transparent!important;border:none!important;
+    }
+    /* Hairline divider above each section label (gradient fade — premium look) */
+    body .sidebar.sidebar-email .ec-section::before{
+      content:'';position:absolute;top:0;left:6px;right:6px;height:1px;
+      background:linear-gradient(90deg, transparent, rgba(17,17,40,0.10) 18%, rgba(17,17,40,0.10) 82%, transparent);
+      pointer-events:none;
+    }
+    /* No divider before the very first section if it's the top-most one */
+    body .sidebar.sidebar-email .ec-scroll > .ec-section:first-child{margin-top:0!important;}
+    body .sidebar.sidebar-email .ec-scroll > .ec-section:first-child::before{display:none;}
+    body .sidebar.sidebar-email .ec-section-add{
+      cursor:pointer;width:16px!important;height:16px!important;border-radius:4px!important;
+      display:grid!important;place-items:center;
+      color:var(--ec-txt-faint)!important;transition:.15s!important;
+      background:transparent!important;border:none!important;
+      padding:0!important;margin:0!important;box-shadow:none!important;
+    }
+    body .sidebar.sidebar-email .ec-section-add:hover{background:var(--ec-accent-soft)!important;color:var(--ec-accent)!important;}
+
+    /* ── ITEM (folder rows) ──────────────────────────────────────── */
+    body .sidebar.sidebar-email .ec-item{
+      position:relative!important;
+      display:flex!important;align-items:center!important;gap:9px;width:100%!important;
+      box-sizing:border-box!important;
+      padding:6px 10px!important;margin:0 0 1px 0!important;
+      background:transparent!important;border:none!important;border-radius:8px!important;
+      font-family:inherit!important;font-size:12.5px!important;font-weight:500!important;
+      color:var(--ec-txt-dim)!important;
+      cursor:pointer!important;text-align:left!important;letter-spacing:0!important;
+      box-shadow:none!important;transform:none!important;line-height:1.2!important;
+      user-select:none;
+      transition:background .15s ease, color .15s ease !important;
+    }
+    body .sidebar.sidebar-email .ec-item .ec-ic{
+      width:16px;height:16px;flex-shrink:0;display:grid;place-items:center;
+      color:var(--ec-txt-faint)!important;transition:color .15s;
+    }
+    body .sidebar.sidebar-email .ec-item .ec-ic svg{width:14px;height:14px;}
+    body .sidebar.sidebar-email .ec-item .ec-lbl{
+      flex:1!important;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+      color:inherit!important;
+    }
+    body .sidebar.sidebar-email .ec-item .ec-cnt{
+      font-size:10.5px!important;font-weight:700!important;
+      min-width:18px;height:18px;padding:0 6px!important;border-radius:999px!important;
+      display:grid!important;place-items:center;
+      background:rgba(17,17,40,0.06)!important;color:var(--ec-txt-dim)!important;
+      font-variant-numeric:tabular-nums;letter-spacing:0;
+    }
+    body .sidebar.sidebar-email .ec-item .ec-cnt:empty,
+    body .sidebar.sidebar-email .ec-item .ec-cnt[data-empty="1"]{display:none!important;}
+    body .sidebar.sidebar-email .ec-cnt-accent{background:var(--ec-accent-soft)!important;color:var(--ec-accent)!important;}
+    body .sidebar.sidebar-email .ec-cnt-green{background:rgba(16,185,129,0.13)!important;color:var(--ec-green)!important;}
+    body .sidebar.sidebar-email .ec-cnt-amber{background:rgba(245,158,11,0.15)!important;color:#d97706!important;}
+    body .sidebar.sidebar-email .ec-cnt-glow{box-shadow:0 4px 12px -3px var(--ec-accent-glow)!important;}
+
+    body .sidebar.sidebar-email .ec-item:hover{
+      background:rgba(108,92,231,0.06)!important;color:var(--ec-txt)!important;
+    }
+    body .sidebar.sidebar-email .ec-item:hover .ec-ic{color:var(--ec-accent)!important;}
+
+    /* Active state — accent gradient bg + left indicator with glow */
+    body .sidebar.sidebar-email .ec-item.active{
+      background:linear-gradient(135deg, var(--ec-accent-soft), rgba(108,92,231,0.06))!important;
+      color:var(--ec-accent)!important;font-weight:600!important;
+      box-shadow:inset 0 0 0 1px rgba(108,92,231,0.2)!important;
+    }
+    body .sidebar.sidebar-email .ec-item.active .ec-ic{color:var(--ec-accent)!important;}
+    body .sidebar.sidebar-email .ec-item.active::before{
+      content:'';position:absolute;left:-8px;top:50%;transform:translateY(-50%);
+      width:3px;height:18px;border-radius:0 3px 3px 0;
+      background:linear-gradient(var(--ec-accent),var(--ec-accent-2));
+      box-shadow:0 0 8px var(--ec-accent-glow);
+    }
+
+    /* Needs Human — red */
+    body .sidebar.sidebar-email .ec-priority{color:#e11d48!important;}
+    body .sidebar.sidebar-email .ec-priority .ec-ic{color:var(--ec-red)!important;}
+    body .sidebar.sidebar-email .ec-priority:hover{background:rgba(244,63,94,0.07)!important;}
+    body .sidebar.sidebar-email .ec-cnt-priority:not([data-empty="1"]){
+      background:rgba(244,63,94,0.13)!important;color:var(--ec-red)!important;
+    }
+    body .sidebar.sidebar-email .ec-priority.active{
+      background:rgba(244,63,94,0.1)!important;color:#e11d48!important;
+      box-shadow:inset 0 0 0 1px rgba(244,63,94,0.2)!important;
+    }
+    body .sidebar.sidebar-email .ec-priority.active::before{
+      background:var(--ec-red)!important;
+      box-shadow:0 0 10px rgba(244,63,94,0.4)!important;
+    }
+
+    /* Color dots used in category items (in place of icons) */
+    body .sidebar.sidebar-email .ec-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+    body .sidebar.sidebar-email .ec-dot-green{background:var(--ec-green);}
+    body .sidebar.sidebar-email .ec-dot-amber{background:var(--ec-amber);}
+    body .sidebar.sidebar-email .ec-dot-red{background:var(--ec-red);}
+    body .sidebar.sidebar-email .ec-dot-blue{background:var(--ec-blue);}
+    body .sidebar.sidebar-email .ec-dot-pink{background:var(--ec-pink);}
+    body .sidebar.sidebar-email .ec-dot-teal{background:var(--ec-teal);}
+
+    /* ── LABELS ──────────────────────────────────────────────────── */
+    body .sidebar.sidebar-email .ec-labels{display:flex!important;flex-direction:column;gap:0;}
+    body .sidebar.sidebar-email .ec-labels-empty{
+      padding:8px 12px!important;color:var(--ec-txt-faint)!important;font-size:12px!important;font-style:italic;
+    }
+    body .sidebar.sidebar-email .ec-label-row{
+      position:relative!important;
+      display:flex!important;align-items:center!important;gap:9px;width:100%!important;
+      box-sizing:border-box!important;
+      padding:6px 10px!important;margin:0 0 1px 0!important;
+      background:transparent!important;border:none!important;border-radius:8px!important;
+      font-family:inherit!important;font-size:12.5px!important;font-weight:500!important;
+      color:var(--ec-txt-dim)!important;
+      cursor:pointer!important;text-align:left!important;letter-spacing:0!important;
+      box-shadow:none!important;line-height:1.2!important;
+      transition:background .15s ease, color .15s ease !important;
+    }
+    body .sidebar.sidebar-email .ec-label-row:hover{background:rgba(108,92,231,0.06)!important;color:var(--ec-txt)!important;}
+    body .sidebar.sidebar-email .ec-label-row.active{
+      background:linear-gradient(135deg, var(--ec-accent-soft), rgba(108,92,231,0.06))!important;
+      color:var(--ec-accent)!important;font-weight:600!important;
+      box-shadow:inset 0 0 0 1px rgba(108,92,231,0.2)!important;
+    }
+    body .sidebar.sidebar-email .ec-label-row.active::before{
+      content:'';position:absolute;left:-8px;top:50%;transform:translateY(-50%);
+      width:3px;height:18px;border-radius:0 3px 3px 0;
+      background:linear-gradient(var(--ec-accent),var(--ec-accent-2));
+      box-shadow:0 0 8px var(--ec-accent-glow);
+    }
+    body .sidebar.sidebar-email .ec-label-dot{
+      width:9px;height:9px;border-radius:3px;flex-shrink:0;
+      box-shadow:inset 0 0 0 0.5px rgba(0,0,0,0.1);margin-right:0;
+    }
+    body .sidebar.sidebar-email .ec-label-name{
+      flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:inherit;
+    }
+    body .sidebar.sidebar-email .ec-label-cnt{
+      font-size:11px!important;font-weight:700!important;color:var(--ec-txt-dim)!important;
+      font-variant-numeric:tabular-nums;letter-spacing:0;
+    }
+    body .sidebar.sidebar-email .ec-label-menu{
+      opacity:0;transition:opacity .12s, background .12s, color .12s;
+      background:transparent!important;border:none!important;cursor:pointer;color:var(--ec-txt-faint)!important;
+      font-size:13px!important;width:20px!important;height:20px!important;border-radius:5px!important;
+      margin-left:6px;line-height:1;display:flex;align-items:center;justify-content:center;
+      padding:0!important;box-shadow:none!important;
+    }
+    body .sidebar.sidebar-email .ec-label-row:hover .ec-label-menu{opacity:1;}
+    body .sidebar.sidebar-email .ec-label-menu:hover{background:rgba(108,92,231,0.12)!important;color:var(--ec-accent)!important;}
+
+    /* 3-dot kebab on every folder/label item — shows on hover */
+    body .sidebar.sidebar-email .ec-item-menu{
+      opacity:0;transition:opacity .12s, background .12s, color .12s;
+      background:transparent!important;border:none!important;cursor:pointer;
+      color:var(--ec-txt-faint)!important;
+      font-size:15px!important;line-height:1!important;font-weight:700!important;
+      width:20px!important;height:20px!important;border-radius:5px!important;
+      margin-left:4px;display:flex;align-items:center;justify-content:center;
+      padding:0!important;box-shadow:none!important;flex-shrink:0;
+    }
+    body .sidebar.sidebar-email .ec-item:hover .ec-item-menu,
+    body .sidebar.sidebar-email .ec-label-row:hover .ec-item-menu{opacity:1;}
+    body .sidebar.sidebar-email .ec-item-menu:hover{
+      background:rgba(108,92,231,0.12)!important;color:var(--ec-accent)!important;opacity:1!important;
+    }
+
+    /* Shared menu items used by sidebar kebab popup + assign submenu */
+    .ec-menu-item{
+      display:flex!important;align-items:center;gap:9px;width:100%;
+      background:transparent!important;border:none!important;cursor:pointer;
+      font-family:inherit!important;font-size:12.5px!important;font-weight:500!important;
+      color:#1a1c2e!important;
+      padding:8px 10px!important;border-radius:7px!important;margin:0!important;
+      text-align:left;box-shadow:none!important;
+      transition:background .12s, color .12s !important;
+    }
+    .ec-menu-item:hover{background:rgba(108,92,231,0.08)!important;color:#4338ca!important;}
+    .ec-menu-item svg{flex-shrink:0;color:currentColor;}
+    .ec-menu-danger{color:#dc2626!important;}
+    .ec-menu-danger:hover{background:rgba(220,38,38,0.07)!important;color:#b91c1c!important;}
+
+    /* ── DIVIDER ─────────────────────────────────────────────────── */
+    body .sidebar.sidebar-email .ec-divider{height:1px;background:var(--ec-stroke);margin:10px 12px;}
+
+    /* ── DROP SIGMA AI MINI CARD ─────────────────────────────────── */
+    /* Using ec-ds-* class names instead of ec-ai-* so global .ai-fab /
+       .ai-panel / .ai-orb rules can never bleed into the sidebar card. */
+    body .sidebar.sidebar-email .ec-ds-card{
+      display:block!important;
+      margin:8px 4px 12px!important;padding:14px!important;border-radius:14px!important;
+      background:linear-gradient(135deg, rgba(108,92,231,0.10), rgba(20,184,166,0.07))!important;
+      border:1px solid rgba(108,92,231,0.18)!important;
+      position:relative;overflow:hidden;cursor:pointer;
+      transition:transform .15s ease, box-shadow .15s ease !important;
+      box-shadow:none!important;color:var(--ec-txt)!important;
+    }
+    body .sidebar.sidebar-email .ec-ds-card:hover{
+      transform:translateY(-1px);
+      box-shadow:0 10px 22px -10px var(--ec-accent-glow)!important;
+    }
+    body .sidebar.sidebar-email .ec-ds-card::before{
+      content:'';position:absolute;inset:0;
+      background:radial-gradient(150px 80px at 90% 0%, rgba(255,255,255,0.55), transparent 60%);
+      pointer-events:none;
+    }
+    body .sidebar.sidebar-email .ec-ds-head{
+      display:flex!important;align-items:center!important;gap:9px;
+      position:relative;z-index:1;
+    }
+    body .sidebar.sidebar-email .ec-ds-orb{
+      width:30px;height:30px;border-radius:9px;flex-shrink:0;
+      background:linear-gradient(135deg, var(--ec-accent), var(--ec-teal))!important;
+      display:grid;place-items:center;color:#fff!important;
+      box-shadow:0 8px 16px -5px var(--ec-accent-glow);
+    }
+    body .sidebar.sidebar-email .ec-ds-orb svg{color:#fff;display:block;}
+    body .sidebar.sidebar-email .ec-ds-meta{display:flex;flex-direction:column;line-height:1.2;min-width:0;flex:1;}
+    body .sidebar.sidebar-email .ec-ds-name{
+      font-size:13px!important;color:var(--ec-txt)!important;font-weight:700!important;
+      letter-spacing:-.1px;
+    }
+    body .sidebar.sidebar-email .ec-ds-sub{
+      font-size:10.5px;color:var(--ec-txt-dim)!important;font-weight:500;margin-top:2px;
+    }
+    body .sidebar.sidebar-email .ec-ds-stats{
+      display:flex!important;gap:8px;margin-top:12px;position:relative;z-index:1;
+    }
+    body .sidebar.sidebar-email .ec-ds-pill{
+      flex:1;
+      background:#fff!important;border:1px solid var(--ec-stroke)!important;border-radius:9px!important;
+      padding:7px 9px!important;box-shadow:0 1px 3px rgba(17,17,40,0.05)!important;
+      text-align:left;
+    }
+    body .sidebar.sidebar-email .ec-ds-n{
+      font-size:15px!important;font-weight:800!important;color:var(--ec-txt)!important;
+      font-variant-numeric:tabular-nums;line-height:1.1;letter-spacing:-.2px;
+    }
+    body .sidebar.sidebar-email .ec-ds-t{
+      font-size:9.5px!important;color:var(--ec-txt-faint)!important;
+      text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin-top:2px;
+    }
+
+    /* ── TEMPLATES + USER FOOTER ROWS — tighter ─────────────────── */
+    body .sidebar.sidebar-email .ec-foot-row{
+      border-top:1px solid var(--ec-stroke)!important;
+      padding:9px 12px!important;
+      display:flex!important;align-items:center;gap:9px;cursor:pointer;
+      transition:background .15s !important;
+      background:transparent!important;margin:0!important;
+      min-width:0;
+    }
+    body .sidebar.sidebar-email .ec-foot-row:hover{background:rgba(108,92,231,0.05)!important;}
+    body .sidebar.sidebar-email .ec-foot-ic{color:var(--ec-txt-faint);flex-shrink:0;display:inline-flex;}
+    body .sidebar.sidebar-email .ec-foot-ic svg{width:14px;height:14px;}
+    body .sidebar.sidebar-email .ec-foot-lbl{flex:1;font-size:12px;color:var(--ec-txt-dim);font-weight:500;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    body .sidebar.sidebar-email .ec-foot-cnt{font-size:10.5px;color:var(--ec-txt-faint);}
+    body .sidebar.sidebar-email .ec-foot-cnt:empty{display:none;}
+
+    /* User footer row */
+    body .sidebar.sidebar-email .ec-foot-user .ec-avatar{
+      width:30px;height:30px;border-radius:9px;flex-shrink:0;
+      background:linear-gradient(135deg,#ec4899,#8b7bff);display:grid;place-items:center;
+      font-weight:700;font-size:11.5px;color:#fff;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,0.35);position:relative;
+    }
+    body .sidebar.sidebar-email .ec-foot-user .ec-status{
+      position:absolute;bottom:-2px;right:-2px;width:9px;height:9px;border-radius:50%;
+      background:var(--ec-green);border:2px solid #fff;
+    }
+    body .sidebar.sidebar-email .ec-who{flex:1;min-width:0;overflow:hidden;}
+    body .sidebar.sidebar-email .ec-who b{font-size:12px;display:block;color:var(--ec-txt);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    body .sidebar.sidebar-email .ec-who small{font-size:10px;color:var(--ec-txt-faint);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    body .sidebar.sidebar-email .ec-cog{color:var(--ec-txt-faint);transition:.2s;flex-shrink:0;display:inline-flex;}
+    body .sidebar.sidebar-email .ec-cog svg{width:14px;height:14px;}
+    body .sidebar.sidebar-email .ec-foot-user:hover .ec-cog{color:var(--ec-accent);transform:rotate(45deg);}
+
+    /* Dropup trigger button (replaces the old cog) */
+    body .sidebar.sidebar-email .ec-foot-user{position:relative;}
+    body .sidebar.sidebar-email .ec-user-menu-btn{
+      width:24px!important;height:24px!important;border-radius:6px!important;
+      background:transparent!important;border:none!important;color:var(--ec-txt-faint)!important;
+      cursor:pointer!important;padding:0!important;margin:0!important;flex-shrink:0;
+      display:inline-flex!important;align-items:center;justify-content:center;
+      box-shadow:none!important;
+      transition:all .15s ease!important;
+    }
+    body .sidebar.sidebar-email .ec-user-menu-btn:hover{
+      background:rgba(108,92,231,0.08)!important;color:var(--ec-accent)!important;
+    }
+    body .sidebar.sidebar-email .ec-user-menu-btn svg{transition:transform .2s ease;}
+    body .sidebar.sidebar-email .ec-user-menu-btn.open svg{transform:rotate(180deg);}
+
+    /* Dropup menu — opens above the user row */
+    body .sidebar.sidebar-email .ec-user-menu{
+      position:absolute;bottom:calc(100% + 6px);right:10px;left:10px;
+      background:#fff!important;border:1px solid var(--ec-stroke-strong)!important;
+      border-radius:12px!important;padding:6px!important;
+      box-shadow:0 18px 40px -12px rgba(60,50,120,0.32), 0 2px 8px rgba(17,17,40,0.04)!important;
+      z-index:200;display:none;
+      transform:translateY(4px) scale(.98);opacity:0;
+      transition:opacity .14s ease, transform .16s cubic-bezier(.4,1.4,.5,1) !important;
+      pointer-events:none;
+    }
+    body .sidebar.sidebar-email .ec-user-menu.open{
+      display:block;transform:translateY(0) scale(1);opacity:1;pointer-events:auto;
+    }
+    body .sidebar.sidebar-email .ec-user-menu-head{
+      display:flex;align-items:center;gap:9px;padding:8px 10px 10px;
+    }
+    body .sidebar.sidebar-email .ec-user-menu-divider{
+      height:1px;background:var(--ec-stroke);margin:2px 0;
+    }
+    body .sidebar.sidebar-email .ec-user-menu-item{
+      display:flex!important;align-items:center;gap:9px;width:100%;
+      background:transparent!important;border:none!important;cursor:pointer;
+      font-family:inherit!important;font-size:12.5px!important;font-weight:500!important;
+      color:var(--ec-txt-dim)!important;
+      padding:7px 10px!important;border-radius:7px!important;margin:0!important;
+      text-align:left;box-shadow:none!important;
+      transition:background .12s, color .12s !important;
+    }
+    body .sidebar.sidebar-email .ec-user-menu-item:hover{
+      background:rgba(108,92,231,0.07)!important;color:var(--ec-accent)!important;
+    }
+    body .sidebar.sidebar-email .ec-user-menu-item svg{flex-shrink:0;color:currentColor;}
+    body .sidebar.sidebar-email .ec-user-menu-danger{color:#dc2626!important;}
+    body .sidebar.sidebar-email .ec-user-menu-danger:hover{background:rgba(220,38,38,0.07)!important;color:#b91c1c!important;}
+
+    /* Account switcher items inside dropup */
+    body .sidebar.sidebar-email .ec-user-menu-label{
+      font-size:9.5px!important;font-weight:700!important;
+      color:var(--ec-txt-faint)!important;letter-spacing:1.1px!important;text-transform:uppercase!important;
+      padding:6px 10px 4px!important;
+    }
+    body .sidebar.sidebar-email .ec-user-menu-acc{
+      display:flex!important;align-items:center;gap:9px;width:100%;
+      background:transparent!important;border:none!important;cursor:pointer;
+      font-family:inherit!important;font-size:12.5px!important;font-weight:500!important;
+      color:var(--ec-txt-dim)!important;
+      padding:7px 10px!important;border-radius:7px!important;margin:0!important;
+      text-align:left;box-shadow:none!important;
+      transition:background .12s, color .12s !important;
+    }
+    body .sidebar.sidebar-email .ec-user-menu-acc:hover{
+      background:rgba(108,92,231,0.06)!important;color:var(--ec-txt)!important;
+    }
+    body .sidebar.sidebar-email .ec-user-menu-acc.active{
+      background:var(--ec-accent-soft)!important;color:var(--ec-accent)!important;font-weight:700!important;
+    }
+    body .sidebar.sidebar-email .ec-user-menu-acc .ec-acc-dot{
+      width:22px;height:22px;border-radius:6px;flex-shrink:0;
+      background:linear-gradient(135deg,#ec4899,#8b7bff);color:#fff;
+      display:grid;place-items:center;font-size:10px;font-weight:700;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,0.35);
+    }
+    body .sidebar.sidebar-email .ec-user-menu-acc.active .ec-acc-dot{
+      background:linear-gradient(135deg,var(--ec-accent),#5b48d9);
+    }
+    body .sidebar.sidebar-email .ec-acc-email{
+      flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    }
+    body .sidebar.sidebar-email .ec-user-menu-acc svg{color:var(--ec-accent);flex-shrink:0;}
+    body .sidebar.sidebar-email .ec-user-menu-empty{
+      padding:10px;text-align:center;color:var(--ec-txt-faint);font-size:11.5px;font-style:italic;
+    }
+    body .sidebar.sidebar-email .ec-user-menu-add{
+      color:var(--ec-accent)!important;font-weight:700!important;
+    }
+    body .sidebar.sidebar-email .ec-user-menu-add:hover{
+      background:var(--ec-accent-soft)!important;color:#4338ca!important;
+    }
+
+    /* DARK MODE */
+    body.vf-dark-mode .sidebar-email{background:#0a0d1c!important;border-right-color:rgba(255,255,255,.06)!important;}
+    body.vf-dark-mode .sidebar-email .ec-title{color:#fff!important;}
+    body.vf-dark-mode .sidebar-email .ec-back{color:#64748b!important;}
+    body.vf-dark-mode .sidebar-email .ec-back:hover{color:#fff!important;background:rgba(255,255,255,.06)!important;}
+    body.vf-dark-mode .sidebar-email .ec-search input{border-color:rgba(255,255,255,.1)!important;color:#fff!important;}
+    body.vf-dark-mode .sidebar-email .ec-search input:focus{background:rgba(255,255,255,.04)!important;}
+    body.vf-dark-mode .sidebar-email .ec-search kbd{background:rgba(255,255,255,.06)!important;color:#64748b!important;border-color:rgba(255,255,255,.08)!important;}
+    body.vf-dark-mode .sidebar-email .ec-divider{background:rgba(255,255,255,.06)!important;}
+    body.vf-dark-mode .sidebar-email .ec-item{color:#94a3b8!important;}
+    body.vf-dark-mode .sidebar-email .ec-item:hover{background:rgba(255,255,255,.05)!important;color:#fff!important;}
+    body.vf-dark-mode .sidebar-email .ec-item.active{background:rgba(99,102,241,.18)!important;color:#c7d2fe!important;}
+    body.vf-dark-mode .sidebar-email .ec-section{color:#475569!important;}
+    body.vf-dark-mode .sidebar-email .ec-section-add{color:#475569!important;}
+    body.vf-dark-mode .sidebar-email .ec-section-add:hover{color:#fff!important;background:rgba(255,255,255,.06)!important;}
+    body.vf-dark-mode .sidebar-email .ec-foot{border-top-color:rgba(255,255,255,.06)!important;}
+    body.vf-dark-mode .sidebar-email .ec-foot-item{color:#64748b!important;}
+    body.vf-dark-mode .sidebar-email .ec-foot-item:hover{background:rgba(255,255,255,.05)!important;color:#fff!important;}
+    body.vf-dark-mode .sidebar-email .ec-label-row{color:#94a3b8!important;}
+    body.vf-dark-mode .sidebar-email .ec-label-row:hover{background:rgba(255,255,255,.05)!important;color:#fff!important;}
+    body.vf-dark-mode .sidebar-email .ec-label-row.active{background:rgba(99,102,241,.18)!important;color:#c7d2fe!important;}
+
+    /* Label modal swatches */
+    .lbl-swatch{width:34px;height:34px;border-radius:9px;cursor:pointer;border:2px solid transparent;transition:transform .15s,box-shadow .15s;display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff;font-weight:900;}
+    .lbl-swatch:hover{transform:scale(1.08);}
+    .lbl-swatch.selected{border-color:#0f172a;box-shadow:0 0 0 3px rgba(99,102,241,.18),0 4px 14px rgba(0,0,0,.18);}
+
+    /* Active-thread label chips (thread header) */
+    .em-thread-labels{display:flex;flex-wrap:wrap;gap:5px;}
+    .em-thread-label{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:99px;font-size:11px;font-weight:800;letter-spacing:.1px;color:#fff;}
+    .em-thread-label .x{cursor:pointer;opacity:.7;font-size:10px;line-height:1;padding:2px 4px;border-radius:4px;}
+    .em-thread-label .x:hover{background:rgba(0,0,0,.2);opacity:1;}
+
+    /* Needs-Human escalation banner inside thread */
+    .em-needs-human-banner{background:linear-gradient(135deg,#fef3c7,#fee2e2);border:1px solid #fca5a5;border-radius:12px;padding:14px 18px;margin:12px 0 8px;display:flex;align-items:flex-start;gap:12px;}
+    .em-needs-human-banner .icon{font-size:22px;flex-shrink:0;}
+    .em-needs-human-banner .body{flex:1;}
+    .em-needs-human-banner .title{font-size:13.5px;font-weight:900;color:#7f1d1d;margin-bottom:2px;}
+    .em-needs-human-banner .reason{font-size:12.5px;color:#7f1d1d;line-height:1.5;}
+    .em-needs-human-banner .cat{display:inline-block;font-size:10px;font-weight:800;padding:1.5px 7px;border-radius:5px;background:#fff;color:#b91c1c;margin-top:6px;text-transform:uppercase;letter-spacing:.06em;}
+    .em-needs-human-banner .actions{display:flex;gap:6px;margin-top:10px;}
+    .em-needs-human-banner button{background:#fff;color:#7f1d1d;border:1px solid #fca5a5;padding:5px 11px;border-radius:7px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;transition:.15s;}
+    .em-needs-human-banner button:hover{background:#fef2f2;}
+    .em-needs-human-banner button.primary{background:#dc2626;color:#fff;border-color:#dc2626;}
+    .em-needs-human-banner button.primary:hover{background:#b91c1c;}
+
+    /* Active-label filter chip in inbox header */
+    .em-label-filter-chip{display:inline-flex;align-items:center;gap:6px;padding:3px 9px 3px 11px;border-radius:99px;font-size:11px;font-weight:800;color:#fff;}
+    .em-label-filter-chip .x{cursor:pointer;background:rgba(0,0,0,.2);width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;}
+  </style>
+
   <!-- Profile Modal -->
   <div id="profileModal" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(5,7,18,.8);backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:24px;">
     <div style="background:var(--vf-gradient,linear-gradient(145deg,#0b0e22,#10132b));border:1px solid rgba(99,102,241,.28);border-radius:22px;padding:32px;width:100%;max-width:420px;box-shadow:0 40px 80px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.04);">
@@ -5701,45 +6587,32 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
 
     <section id="emailsSection" class="section">
 
-      <!-- EMAIL HEADER — single compact row -->
+      <!-- EMAIL HEADER — only the title remains; Project picker, Inbox
+           dropdown, Live Sync, Refresh, Compose Email all removed from the
+           page per design feedback. Sidebar now owns Compose, sync, and
+           inbox switching. Hidden ID sinks are kept so existing code that
+           updates these elements doesn't throw. -->
       <div class="em-hdr">
         <div class="em-hdr-top">
           <div class="em-hdr-left">
             <h1 class="em-hdr-h1">Customer Inbox <span class="em-live-chip"><span class="em-live-dot"></span> Live</span></h1>
-            <div class="em-scope">
-              <div class="em-scope-seg">
-                <span class="em-scope-lbl">Project</span>
-                <span class="em-scope-val" id="epStoreName">—</span>
-                <span class="em-scope-caret">▾</span>
-              </div>
-              <span class="em-scope-sep">›</span>
-              <div class="em-scope-seg" style="gap:7px;">
-                <span class="em-scope-dot offline" id="epInboxDot"></span>
-                <div>
-                  <div class="em-scope-lbl">Inbox</div>
-                  <div class="em-scope-val" id="epInboxLabel">Loading…</div>
-                </div>
-                <span class="em-scope-count zero" id="epBadge">0</span>
-                <span class="em-scope-caret">▾</span>
-                <select id="epInboxSelect" onchange="onEmailInboxChange()">
-                  <option value="">Loading…</option>
-                </select>
-              </div>
-            </div>
           </div>
-          <div class="em-hdr-right">
-            <span id="liveSyncBadge" class="live-sync-badge" onclick="toggleLiveSync()" title="Click to pause/resume live sync" style="cursor:pointer;">Live Sync ON</span>
-            <button class="em-sync-btn" title="Sync inbox now" onclick="syncInboxNow()">↻</button>
-            <button class="em-new-btn" id="emComposeBtn" onclick="openComposeModalGated()" title="Compose a new email">+ Compose Email</button>
-            <!-- Inbox / Templates / Settings tabs moved into the sidebar
-                 (under the Emails group), matching the Vendors pattern.
-                 Keeping the hidden Inbox button so emNavInboxCount badge
-                 reference doesn't break for code that updates it. -->
-            <div class="em-nav-chips" style="display:none;">
-              <button class="em-nav-chip active" id="emNavInbox" onclick="switchEmailView('inbox',this)">Inbox <span class="em-nav-badge" id="emNavInboxCount">0</span></button>
-              <button class="em-nav-chip" id="emNavTemplates" onclick="switchEmailView('templates',this)">Templates</button>
-              <button class="em-nav-chip" id="emNavSettings" onclick="switchEmailView('settings',this)">Settings</button>
-            </div>
+          <div class="em-hdr-right"></div>
+        </div>
+        <!-- Hidden sinks for legacy JS that targets these IDs -->
+        <div style="display:none!important;visibility:hidden!important;height:0!important;overflow:hidden!important;">
+          <span id="epStoreName">—</span>
+          <span id="epInboxDot"></span>
+          <span id="epInboxLabel">—</span>
+          <span id="epBadge">0</span>
+          <select id="epInboxSelect" onchange="onEmailInboxChange()"><option value=""></option></select>
+          <span id="liveSyncBadge" onclick="toggleLiveSync()">Live Sync ON</span>
+          <button class="em-sync-btn" onclick="syncInboxNow()">↻</button>
+          <button class="em-new-btn" id="emComposeBtn" onclick="openComposeModalGated()">+ Compose Email</button>
+          <div class="em-nav-chips">
+            <button class="em-nav-chip active" id="emNavInbox" onclick="switchEmailView('inbox',this)">Inbox <span class="em-nav-badge" id="emNavInboxCount">0</span></button>
+            <button class="em-nav-chip" id="emNavTemplates" onclick="switchEmailView('templates',this)">Templates</button>
+            <button class="em-nav-chip" id="emNavSettings" onclick="switchEmailView('settings',this)">Settings</button>
           </div>
         </div>
       </div>
@@ -5795,13 +6668,12 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
             <input id="emailSearch" placeholder="Search conversations…" oninput="renderEmails()">
           </div>
 
-          <!-- Filter tabs -->
-          <div class="em-tabs" id="emFilterTabs">
-            <div class="em-tab active" onclick="setEmailFilter2('', this)">All</div>
-            <div class="em-tab" onclick="setEmailFilter2('unread', this)">Unread<span class="em-tab-count" id="emTabUnreadCount" style="display:none;">0</span></div>
-            <div class="em-tab" onclick="setEmailFilter2('drafted', this)">AI Draft</div>
-            <div class="em-tab" onclick="setEmailFilter2('mine', this)">Assigned</div>
-            <div class="em-tab" onclick="setEmailFilter2('resolved', this)">Resolved</div>
+          <!-- Filter tabs removed — sidebar handles folder filtering now.
+               Hidden span sinks kept so any code that updates the unread
+               count by ID doesn't error. !important + visibility:hidden
+               ensures nothing can re-show this strip. -->
+          <div id="emFilterTabs" style="display:none!important;visibility:hidden!important;height:0!important;overflow:hidden!important;">
+            <span id="emTabUnreadCount">0</span>
           </div>
 
           <!-- Bulk-select toolbar: appears when at least one thread is checked.
@@ -5836,6 +6708,10 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
               <div style="min-width:0;flex:1;">
                 <div class="em-conv-title" id="emailDetailSubject">Select a thread</div>
                 <div class="em-conv-sub" id="emailDetailMeta">Thread details will show here.</div>
+                <!-- Chips of currently-applied labels on this thread -->
+                <div class="em-thread-labels" id="emThreadLabels" style="margin-top:6px;"></div>
+                <!-- Needs-Human escalation banner (shown when thread is needs_human) -->
+                <div id="emNeedsHumanBanner" style="display:none;"></div>
               </div>
               <div class="em-conv-controls">
 
@@ -5872,8 +6748,7 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
                   </div>
                 </div>
 
-                <button class="em-btn-soft" onclick="openLinkedOrderFromEmail()" title="Linked Order">📦 Order</button>
-                <button class="em-btn-dark" onclick="generateEmailDraft()" title="Generate AI draft">✦ Draft</button>
+                <button class="em-btn-soft" onclick="openThreadLabelPicker(event)" title="Apply labels to this thread">🏷️ Label</button>
                 <div class="em-more-wrap" id="emMoreWrap" style="position:relative;">
                   <button class="em-icon-btn-sm" id="emMoreBtn" title="More options" onclick="toggleEmailMoreMenu(event)">···</button>
                   <div id="emMoreMenu" style="display:none;position:absolute;right:0;top:100%;margin-top:6px;background:#fff;border:1px solid var(--vf-line);border-radius:12px;padding:6px;min-width:200px;box-shadow:0 10px 30px rgba(15,23,42,.12);z-index:200;">
@@ -15683,6 +16558,18 @@ function switchEmailView(tab, btn){
 
   if(tab==="settings") loadEmailSettings();
   if(tab==="templates"){ loadTemplates(); loadAutoEmailState(); }
+
+  // De-highlight the contextual sidebar folders when user switches OUT
+  // of the inbox to Templates/Settings — otherwise a stale "Inbox" pill
+  // stays highlighted while a different panel is showing.
+  if (tab === "templates" || tab === "settings"){
+    document.querySelectorAll('.sidebar-email .ec-item').forEach(b => b.classList.remove('active'));
+  } else if (tab === "inbox"){
+    // Coming back to inbox — restore the active item to the current folder
+    document.querySelectorAll('.sidebar-email .ec-item').forEach(b => {
+      b.classList.toggle('active', b.dataset.view === (typeof emailFolder !== 'undefined' ? emailFolder : 'inbox'));
+    });
+  }
 }
 
 /* ── Email Settings ─────────────────────────────────────────────── */
@@ -17604,23 +18491,41 @@ function toggleLiveSync(){
 
 // ── Email Assign Chip & Status Pill ──────────────────────────────────────────
 
+/* ── Close-all helper — used by every header popover so only ONE
+   stays open at any time across: Assignee chip, Status pill, More
+   menu, Label picker. */
+function _closeAllThreadHeaderPops(except){
+  if (except !== 'assignee') document.getElementById("assigneeChip")?.classList.remove("open");
+  if (except !== 'status')   document.getElementById("statusPill")?.classList.remove("popOpen");
+  if (except !== 'more'){
+    const mm = document.getElementById("emMoreMenu");
+    if (mm) mm.style.display = "none";
+  }
+  if (except !== 'label'){
+    const lp = document.getElementById("thLblPicker");
+    if (lp) lp.style.display = "none";
+  }
+}
+window._closeAllThreadHeaderPops = _closeAllThreadHeaderPops;
+
 function toggleAssigneeChip(ev){
   try { ev?.stopPropagation?.(); } catch(_) {}
   const chip = document.getElementById("assigneeChip");
-  const pill = document.getElementById("statusPill");
   if(!chip) return;
-  // Close any sibling popovers so only one is open at a time.
-  pill?.classList.remove("popOpen");
-  chip.classList.toggle("open");
+  const willOpen = !chip.classList.contains("open");
+  _closeAllThreadHeaderPops('assignee');
+  if (willOpen) chip.classList.add("open");
+  else          chip.classList.remove("open");
 }
 
 function toggleStatusPill(ev){
   try { ev?.stopPropagation?.(); } catch(_) {}
   const pill = document.getElementById("statusPill");
-  const chip = document.getElementById("assigneeChip");
   if(!pill) return;
-  chip?.classList.remove("open");
-  pill.classList.toggle("popOpen");
+  const willOpen = !pill.classList.contains("popOpen");
+  _closeAllThreadHeaderPops('status');
+  if (willOpen) pill.classList.add("popOpen");
+  else          pill.classList.remove("popOpen");
 }
 
 function renderAssignChip(threadData){
@@ -17674,8 +18579,7 @@ function renderAssignChip(threadData){
     statusPill.classList.remove("open","resolved","popOpen");
     if(isResolved){
       statusPill.classList.add("resolved");
-      const d = resolvedAt ? " · " + new Date(resolvedAt).toLocaleDateString("en-GB",{day:"2-digit",month:"short"}) : "";
-      statusText.textContent = "✅ Resolved" + d;
+      statusText.textContent = "✅ Resolved";
     } else {
       statusPill.classList.add("open");
       statusText.textContent = "Open";
@@ -17782,6 +18686,23 @@ function populateEmailInboxPicker(){
     allOpt.textContent = "📬 All Emails (" + totalUnread + " new)";
     sel.appendChild(allOpt);
   }
+
+  // Always-on "+ Add Email" entry at the bottom — triggers the Add Email
+  // modal when chosen, then reverts the dropdown to the previously-active
+  // inbox so the value never sticks on "__add__".
+  if (accounts.length > 0){
+    const sep = document.createElement("option");
+    sep.disabled = true;
+    sep.textContent = "──────────────";
+    sep.style.color = "#ccc";
+    sel.appendChild(sep);
+  }
+  const addOpt = document.createElement("option");
+  addOpt.value = "__add__";
+  addOpt.textContent = "+ Add Email";
+  addOpt.style.color = "#6366f1";
+  addOpt.style.fontWeight = "700";
+  sel.appendChild(addOpt);
 
   // Default: connected email (not All Inboxes)
   if(activeEmailInbox === "__all__"){
@@ -17908,6 +18829,20 @@ async function clearManageAssignment(){
 function onEmailInboxChange(){
   const sel = document.getElementById("epInboxSelect");
   if(!sel) return;
+
+  // "+ Add Email" sentinel — open the Add Email modal, then revert the
+  // dropdown to whatever inbox was active before (don't persist __add__).
+  if (sel.value === "__add__"){
+    const prev = activeEmailInbox || connectedStoreEmail || "";
+    sel.value = prev;
+    if (typeof openConnectEmailModal === "function"){
+      openConnectEmailModal();
+    } else {
+      alert("Add Email modal not available.");
+    }
+    return;
+  }
+
   activeEmailInbox = sel.value;
   const totalUnread = (allThreads || []).reduce((s, t) => s + getThreadUnreadCount(t), 0);
   updateEmailInboxLabel();
@@ -18366,13 +19301,14 @@ function renderEmails(){
   const _ctrl   = document.getElementById("emControlsBar");
   const _hdr    = document.getElementById("emInboxHdr");
   const _search = document.getElementById("emSearchWrap");
-  const _tabs   = document.getElementById("emFilterTabs");
+  // _tabs removed from toggle: emFilterTabs is permanently hidden now —
+  // the sidebar handles all folder filtering. Re-showing it would leak
+  // the orphaned unread-count span and add an empty horizontal strip.
   const _connected = !!connectedStoreEmail;
   const _hasThreads = (allThreads || []).length > 0;
   if(_ctrl)   _ctrl.style.display   = (_connected || _hasThreads) ? "" : "none";
   if(_hdr)    _hdr.style.display    = (_connected || _hasThreads) ? "" : "none";
   if(_search) _search.style.display = (_connected || _hasThreads) ? "" : "none";
-  if(_tabs)   _tabs.style.display   = (_connected || _hasThreads) ? "" : "none";
 
   // No email connected AND no threads — show connect prompt
   if(!_connected && !_hasThreads){
@@ -18394,6 +19330,12 @@ function renderEmails(){
   }
 
   let threads = getVisibleThreads(allThreads || []);
+
+  // Contextual sidebar filters (folder + label) — applied first so other
+  // legacy filters layer cleanly on top.
+  if (typeof applyEmailFolderFilter === 'function'){
+    threads = applyEmailFolderFilter(threads);
+  }
 
   if(emailFilter){
     threads = threads.filter(t => {
@@ -18564,9 +19506,8 @@ function renderAssignStrip(threadData){
   }
 
   if(isResolved){
-    const timeStr = resolvedAt ? ` · ${new Date(resolvedAt).toLocaleDateString("en-GB",{day:"2-digit",month:"short"})}` : "";
     resolvedBadgeEl.style.display = "inline-flex";
-    resolvedBadgeEl.innerHTML = `✅ Resolved${escapeHtml(timeStr)}`;
+    resolvedBadgeEl.innerHTML = `✅ Resolved`;
     reopenBtnEl.style.display = "inline-flex";
   } else {
     resolvedBadgeEl.style.display = "none";
@@ -18799,6 +19740,8 @@ async function openThread(contact, options={}){
     document.getElementById("emailDetailSubject").innerText = threadInfo.latest_subject || lastMsg.subject || "Customer Thread";
     document.getElementById("emailDetailMeta").innerText = `${contact} · ${currentThreadEmails.length} messages`;
     renderOrderStatusChip(threadInfo);
+    renderThreadLabelsInHeader();
+    renderNeedsHumanBannerForThread(threadInfo);
 
     // Skip re-rendering the chat body when nothing meaningful changed since
     // the last paint. Without this, the 3-sec poller would replace innerHTML
@@ -19517,8 +20460,10 @@ function toggleEmailMoreMenu(ev){
   const menu = document.getElementById("emMoreMenu");
   if(!menu) return;
   const open = menu.style.display !== "none";
-  // Close any other open dropdown first
-  document.querySelectorAll(".em-status-pop").forEach(p => p.classList.remove("open"));
+  // Close every other thread-header popover (Assignee / Status / Label).
+  if (typeof _closeAllThreadHeaderPops === 'function'){
+    _closeAllThreadHeaderPops(open ? null : 'more');
+  }
   menu.style.display = open ? "none" : "block";
   if(!open){
     // Close on outside click (once)
@@ -25902,17 +26847,16 @@ function renderAdminHistory(){
      ═══════════════════════════════════════════════════════════════ -->
 <style>
 .ai-fab{position:fixed;bottom:24px;right:24px;z-index:10000;display:flex;align-items:center;gap:10px;padding:14px 20px 14px 16px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;border-radius:50px;cursor:pointer;box-shadow:0 14px 35px rgba(99,102,241,.45);font-family:inherit;font-size:14px;font-weight:800;letter-spacing:-.2px;transition:all .25s cubic-bezier(.4,.6,.3,1);animation:_aiFabPulse 2.5s ease-in-out infinite;}
-/* When the Emails section is active, lift the floater up high enough so it
-   never overlaps the chat reply / Send button at the bottom of the panel. */
+/* Hide the Drop Sigma AI floater entirely when on the Emails section —
+   the contextual sidebar already covers AI workflows there, and the
+   floater used to overlap the chat composer / send button. */
 body[data-active-section="emails"] .ai-fab,
-body[data-active-section="emails"] .ai-panel{bottom:96px;}
+body[data-active-section="emails"] .ai-panel{display:none!important;}
 /* Shrink the floater on small viewports so it never crowds the content
    below it on any section. */
 @media(max-width:760px){
   .ai-fab{padding:11px 16px 11px 12px;font-size:12.5px;}
   .ai-fab .ti{display:none;}
-  body[data-active-section="emails"] .ai-fab,
-  body[data-active-section="emails"] .ai-panel{bottom:110px;}
 }
 /* Reserve room at the bottom of every scrollable section so the floater
    never visually sits on top of any content — Drop Sigma AI ke neechay
@@ -26511,6 +27455,1068 @@ window.dsImgboxDownload = async function(){
 document.addEventListener('keydown', e=>{
   if(e.key === 'Escape' && document.getElementById('dsImgbox')?.classList.contains('open')) dsImgboxClose();
 });
+</script>
+
+<!-- ════════════════════════════════════════════════════════════════════
+     EMAIL LABELS + NEEDS-HUMAN + CONTEXTUAL FOLDER LOGIC
+     ════════════════════════════════════════════════════════════════════ -->
+<script>
+/* ──────────────────────────────────────────────────────────────────────
+   STATE
+   ────────────────────────────────────────────────────────────────────── */
+let emailLabels = [];           // [{id, name, color, icon, is_shared, position, thread_count}]
+let emailFolder = 'inbox';      // current folder filter for the inbox list
+let emailLabelFilter = null;    // label_id when filtering by a label
+let emailEditingLabelId = null; // when label modal is in edit mode
+
+const LABEL_SWATCH_COLORS = [
+  '#ef4444', '#f97316', '#f59e0b', '#10b981',
+  '#06b6d4', '#3b82f6', '#6366f1', '#a855f7',
+  '#ec4899', '#fb7185', '#84cc16', '#14b8a6',
+];
+
+/* ──────────────────────────────────────────────────────────────────────
+   LABEL MODAL  — Add / Edit
+   ────────────────────────────────────────────────────────────────────── */
+function openLabelModal(label){
+  emailEditingLabelId = label ? label.id : null;
+  document.getElementById('labelModalTitle').textContent = label ? 'Edit label' : 'New label';
+  document.getElementById('labelSaveBtn').textContent    = label ? 'Save changes' : 'Create label';
+  document.getElementById('labelNameInput').value        = label ? label.name : '';
+  document.getElementById('labelIconInput').value        = label ? (label.icon || '') : '';
+  document.getElementById('labelSharedInput').checked    = label ? !!label.is_shared : true;
+  document.getElementById('labelNameCount').textContent  = (label ? label.name.length : 0) + '/50';
+  document.getElementById('labelDuplicateErr').style.display = 'none';
+  _renderLabelSwatches(label ? label.color : LABEL_SWATCH_COLORS[6]);
+  document.getElementById('labelModal').style.display = 'flex';
+  setTimeout(()=>document.getElementById('labelNameInput').focus(), 60);
+}
+function closeLabelModal(){
+  document.getElementById('labelModal').style.display = 'none';
+  emailEditingLabelId = null;
+}
+function _renderLabelSwatches(selectedColor){
+  const wrap = document.getElementById('labelColorSwatches');
+  if(!wrap) return;
+  wrap.innerHTML = LABEL_SWATCH_COLORS.map(c =>
+    `<div class="lbl-swatch ${c===selectedColor?'selected':''}" data-color="${c}" style="background:${c};" onclick="_pickLabelColor('${c}')"></div>`
+  ).join('');
+  wrap.dataset.selected = selectedColor;
+}
+function _pickLabelColor(color){
+  const wrap = document.getElementById('labelColorSwatches');
+  if(!wrap) return;
+  wrap.dataset.selected = color;
+  wrap.querySelectorAll('.lbl-swatch').forEach(s => s.classList.toggle('selected', s.dataset.color === color));
+}
+async function saveLabel(){
+  const name  = document.getElementById('labelNameInput').value.trim();
+  const icon  = document.getElementById('labelIconInput').value.trim();
+  const color = document.getElementById('labelColorSwatches').dataset.selected || '#6366f1';
+  const is_shared = document.getElementById('labelSharedInput').checked;
+  if(!name){
+    document.getElementById('labelNameInput').focus();
+    return;
+  }
+  const url    = emailEditingLabelId ? `/emails/api/labels/${emailEditingLabelId}/` : '/emails/api/labels/';
+  const method = emailEditingLabelId ? 'PATCH' : 'POST';
+  const r = await fetch(url, {
+    method, credentials:'same-origin',
+    headers:{'Content-Type':'application/json','X-CSRFToken':getCSRFToken()},
+    body: JSON.stringify({name, color, icon, is_shared}),
+  });
+  const d = await r.json();
+  if(r.status === 409){
+    document.getElementById('labelDuplicateErr').style.display = 'inline';
+    return;
+  }
+  if(!d.success){
+    await _alert(d.message || 'Could not save label', 'Error', '❌');
+    return;
+  }
+  closeLabelModal();
+  await loadEmailLabels();
+  renderEmailLabelsList();
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   LABELS — fetch + render in sidebar
+   ────────────────────────────────────────────────────────────────────── */
+async function loadEmailLabels(){
+  try {
+    const r = await fetch('/emails/api/labels/', {credentials:'same-origin'});
+    const d = await r.json();
+    if(d.success) emailLabels = d.labels || [];
+  } catch(_){ emailLabels = []; }
+}
+function renderEmailLabelsList(){
+  const wrap = document.getElementById('ecLabelsList');
+  const empty = document.getElementById('ecLabelsEmpty');
+  if(!wrap) return;
+  if(!emailLabels.length){
+    wrap.innerHTML = '';
+    if(empty) { empty.style.display = 'block'; wrap.appendChild(empty); }
+    return;
+  }
+  if(empty) empty.style.display = 'none';
+  wrap.innerHTML = emailLabels.map(l => `
+    <div class="ec-label-row ${emailLabelFilter === l.id ? 'active' : ''}" data-id="${l.id}" onclick="filterByLabel(${l.id})">
+      <span class="ec-label-dot" style="background:${escapeHtml(l.color)};">${escapeHtml(l.icon||'')}</span>
+      <span class="ec-label-name" title="${escapeHtml(l.name)}">${escapeHtml(l.name)}</span>
+      <span class="ec-label-cnt">${l.thread_count || ''}</span>
+      <button class="ec-item-menu" onclick='event.stopPropagation();openSidebarItemMenu(event,${JSON.stringify({kind:"label",labelId:l.id,label:l.name,color:l.color})})' title="Label actions">⋯</button>
+    </div>
+  `).join('');
+}
+async function openLabelContextMenu(event, labelId){
+  // Simple confirm-style menu — Edit / Delete
+  const label = emailLabels.find(l => l.id === labelId);
+  if(!label) return;
+  const choice = await _confirm(
+    `What do you want to do with "${label.name}"?`,
+    { title: label.name, icon: label.icon || '🏷️', confirmText: 'Edit', cancelText: 'Delete' }
+  );
+  if(choice === true){
+    openLabelModal(label);
+  } else if(choice === false){
+    if(label.thread_count > 0){
+      const ok = await _confirm(`This label is used by ${label.thread_count} thread(s). Delete anyway?`, {title:'Confirm Delete', icon:'🗑️', confirmText:'Delete', cancelText:'Cancel'});
+      if(!ok) return;
+    }
+    const r = await fetch(`/emails/api/labels/${labelId}/`, {
+      method:'DELETE', credentials:'same-origin',
+      headers:{'X-CSRFToken':getCSRFToken()},
+    });
+    const d = await r.json();
+    if(d.success){
+      if(emailLabelFilter === labelId) emailLabelFilter = null;
+      await loadEmailLabels();
+      renderEmailLabelsList();
+      try { renderEmails(); } catch(_){}
+    }
+  }
+}
+function filterByLabel(labelId){
+  if(emailLabelFilter === labelId){
+    emailLabelFilter = null;
+  } else {
+    emailLabelFilter = labelId;
+    // also reset folder so the filter is the dominant view
+    setEmailFolder('inbox', {silent:true});
+  }
+  // URL sync for shareable deep-links
+  try {
+    const u = new URL(window.location.href);
+    if(emailLabelFilter) u.searchParams.set('label', String(emailLabelFilter));
+    else                 u.searchParams.delete('label');
+    window.history.replaceState({}, '', u.toString());
+  } catch(_){}
+  renderEmailLabelsList();
+  try { renderEmails(); } catch(_){}
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   FOLDER SWITCHING — Inbox / Unread / Needs Human / Drafts / etc.
+   Each folder maps to a client-side predicate over allThreads.
+   ────────────────────────────────────────────────────────────────────── */
+function setEmailFolder(folder, opts){
+  opts = opts || {};
+  emailFolder = folder;
+  // Clear the label filter when switching folders (unless caller asked to keep)
+  if (!opts.keepLabel) emailLabelFilter = null;
+  // CRITICAL: if user was viewing Templates / Settings, bring the inbox
+  // panel back into view before applying any folder filter. Without this,
+  // clicking Inbox/Unread/etc. only changes the filter but the panel
+  // stays hidden because switchEmailView('templates') had display:none'd it.
+  try {
+    const inboxPanel = document.getElementById('emTabInbox');
+    if (inboxPanel && inboxPanel.style.display === 'none' && typeof switchEmailView === 'function'){
+      switchEmailView('inbox');
+    }
+  } catch(_){}
+  document.querySelectorAll('.sidebar-email .ec-item').forEach(b => {
+    b.classList.toggle('active', b.dataset.view === folder);
+  });
+  // Reflect in URL
+  try {
+    const u = new URL(window.location.href);
+    if(folder && folder !== 'inbox') u.searchParams.set('folder', folder);
+    else                              u.searchParams.delete('folder');
+    if(!emailLabelFilter)             u.searchParams.delete('label');
+    window.history.replaceState({}, '', u.toString());
+  } catch(_){}
+  renderEmailLabelsList();
+  // Special view: Needs Human uses its own renderer
+  if(folder === 'needs_human'){
+    renderNeedsHumanView();
+  } else {
+    try { renderEmails(); } catch(_){}
+  }
+}
+
+/* Filter helper used by renderEmails() — apply current folder + label filter. */
+function applyEmailFolderFilter(threads){
+  let list = threads || [];
+  // 1) folder predicate
+  switch(emailFolder){
+    case 'unread':
+      list = list.filter(t => (t.unread_count || 0) > 0);
+      break;
+    case 'needs_human':
+      list = list.filter(t => t.ai_status === 'needs_human');
+      break;
+    case 'drafts':
+    case 'ai_drafts':
+      list = list.filter(t => (t.drafted_count || 0) > 0);
+      break;
+    case 'sent':
+      list = list.filter(t => (t.replied_count || 0) > 0);
+      break;
+    case 'resolved':
+      list = list.filter(t => t.is_resolved);
+      break;
+    case 'refunds':
+    case 'returns':
+    case 'dispute':
+    case 'spam':
+      // category match — best-effort, falls back to subject keyword
+      list = list.filter(t => {
+        const kw = emailFolder.replace(/s$/,'');
+        const subj = (t.latest_subject||'').toLowerCase();
+        return subj.includes(kw);
+      });
+      break;
+    case 'inbox':
+    default:
+      break;
+  }
+  // 2) label filter
+  if(emailLabelFilter){
+    list = list.filter(t => Array.isArray(t.label_ids) && t.label_ids.includes(emailLabelFilter));
+  }
+  return list;
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   STATS — populate sidebar count badges
+   ────────────────────────────────────────────────────────────────────── */
+async function loadEmailThreadStats(){
+  try {
+    const r = await fetch('/emails/api/threads/stats/?store_id=' + encodeURIComponent(selectedStoreId), {credentials:'same-origin'});
+    const d = await r.json();
+    if(!d.success) return;
+    const c = d.counts || {};
+    document.querySelectorAll('.sidebar-email .ec-cnt[data-cnt]').forEach(el => {
+      const v = c[el.dataset.cnt];
+      if(v && v > 0){ el.textContent = v; el.dataset.empty = ''; }
+      else { el.textContent = ''; el.dataset.empty = '1'; }
+    });
+    // labels list comes back in stats too — adopt it (with thread_count)
+    if(Array.isArray(d.labels)){
+      emailLabels = d.labels;
+      renderEmailLabelsList();
+    }
+  } catch(_){}
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   NEEDS-HUMAN VIEW
+   ────────────────────────────────────────────────────────────────────── */
+async function renderNeedsHumanView(){
+  const list = document.getElementById('emailsList');
+  if(!list) return;
+  list.innerHTML = '<div class="empty" style="padding:30px;text-align:center;color:#94a3b8;">Loading needs-human threads…</div>';
+  try {
+    const r = await fetch('/emails/api/threads/needs-human/?store_id=' + encodeURIComponent(selectedStoreId), {credentials:'same-origin'});
+    const d = await r.json();
+    if(!d.success || !d.threads.length){
+      list.innerHTML = `<div class="empty" style="padding:40px 24px;text-align:center;color:#94a3b8;">
+        <div style="font-size:32px;margin-bottom:10px;">🎉</div>
+        <div style="font-weight:700;color:#475569;">No threads need human attention</div>
+        <div style="font-size:12px;margin-top:4px;">All emails are being handled automatically.</div>
+      </div>`;
+      return;
+    }
+    list.innerHTML = d.threads.map(t => {
+      const cat = (t.ai_category||'').replace(/_/g,' ').toUpperCase() || 'NEEDS REVIEW';
+      const conf = (t.ai_confidence != null) ? `<span style="margin-left:8px;font-size:10.5px;color:#94a3b8;font-weight:600;">AI confidence: ${Math.round(t.ai_confidence * 100)}%</span>` : '';
+      return `
+      <div class="em-tc" onclick="openThread('${escapeJs(t.contact)}')" style="cursor:pointer;">
+        <div class="em-tc-av" style="background:#fee2e2;color:#b91c1c;">⚠</div>
+        <div class="em-tc-body">
+          <div class="em-tc-row1">
+            <span class="em-tc-name">${escapeHtml(t.contact)}</span>
+            <span class="em-tc-time">${t.escalated_at ? new Date(t.escalated_at).toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : ''}</span>
+          </div>
+          <div class="em-tc-subject">${escapeHtml(t.subject || 'No subject')}</div>
+          <div class="em-needs-human-banner" style="margin:8px 0 4px;">
+            <div class="icon">⚠️</div>
+            <div class="body">
+              <div class="title">This email needs human attention</div>
+              <div class="reason">${escapeHtml(t.ai_reason || 'AI could not generate a reply.')}</div>
+              <span class="cat">${escapeHtml(cat)}</span>${conf}
+            </div>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e){
+    list.innerHTML = `<div class="empty" style="padding:30px;color:#dc2626;">Failed to load: ${escapeHtml(e.message)}</div>`;
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   THREAD HEADER — Label assignment dropdown
+   ────────────────────────────────────────────────────────────────────── */
+function openThreadLabelPicker(event){
+  event.stopPropagation();
+  if(!currentThreadContact) return;
+  // Close every other thread-header popover so only ONE is open at a time.
+  if (typeof _closeAllThreadHeaderPops === 'function'){
+    _closeAllThreadHeaderPops('label');
+  }
+  let pop = document.getElementById('thLblPicker');
+  if(!pop){
+    pop = document.createElement('div');
+    pop.id = 'thLblPicker';
+    // position:fixed so it lives in the viewport coordinate system —
+    // never gets clipped by overflow:hidden ancestors and never scrolls
+    // off-screen with the page.
+    pop.style.cssText = 'position:fixed;background:#fff;border:1px solid #e5eaf2;border-radius:11px;box-shadow:0 14px 38px rgba(15,23,42,.18);padding:8px;width:260px;max-width:calc(100vw - 16px);z-index:99999;display:none;';
+    document.body.appendChild(pop);
+  }
+  const threadObj = (allThreads || []).find(t => t.contact === currentThreadContact);
+  const current = new Set((threadObj && threadObj.label_ids) || []);
+  pop.innerHTML = `
+    <input type="text" id="thLblSearch" placeholder="Search labels…" oninput="filterLabelPickerList(this.value)" style="width:100%;padding:7px 9px;border:1px solid #e5eaf2;border-radius:7px;font-size:12px;outline:none;font-family:inherit;margin-bottom:6px;box-sizing:border-box;">
+    <div id="thLblList" style="max-height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:1px;">
+      ${emailLabels.length === 0
+        ? '<div style="padding:14px;color:#94a3b8;font-size:12px;text-align:center;">No labels yet</div>'
+        : emailLabels.map(l => `
+            <label class="th-lbl-row" data-name="${escapeHtml(l.name.toLowerCase())}" style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:12.5px;color:#475569;">
+              <input type="checkbox" data-id="${l.id}" ${current.has(l.id)?'checked':''} style="width:14px;height:14px;accent-color:${l.color};cursor:pointer;">
+              <span class="ec-label-dot" style="background:${escapeHtml(l.color)};width:9px;height:9px;border-radius:3px;flex-shrink:0;"></span>
+              <span style="flex:1;">${escapeHtml(l.icon||'')} ${escapeHtml(l.name)}</span>
+            </label>`).join('')
+      }
+    </div>
+    <div style="border-top:1px solid #eef2f7;margin-top:6px;padding-top:6px;display:flex;gap:6px;">
+      <button onclick="openLabelModal()" style="flex:1;background:#eef2ff;color:#4338ca;border:none;padding:6px;border-radius:7px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit;">+ Create new label</button>
+      <button onclick="applyThreadLabels()" style="flex:1;background:linear-gradient(135deg,#6366f1,#a855f7);color:#fff;border:none;padding:6px;border-radius:7px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit;">Apply</button>
+    </div>`;
+  // Make visible (off-screen first) so we can measure its actual size.
+  pop.style.left = '-9999px';
+  pop.style.top  = '-9999px';
+  pop.style.display = 'block';
+
+  // Now compute position relative to the trigger button, clamped to viewport.
+  const rect    = event.currentTarget.getBoundingClientRect();
+  const popRect = pop.getBoundingClientRect();
+  const vw      = window.innerWidth;
+  const vh      = window.innerHeight;
+  const margin  = 8;
+
+  // Prefer right-aligning to the trigger (so the popup grows leftward),
+  // because the Label button sits near the right edge of the chat header.
+  let left = rect.right - popRect.width;
+  if (left + popRect.width > vw - margin) left = vw - popRect.width - margin;
+  if (left < margin) left = margin;
+
+  // Below the trigger by default; flip above if it'd overflow the bottom.
+  let top = rect.bottom + 6;
+  if (top + popRect.height > vh - margin){
+    const above = rect.top - popRect.height - 6;
+    top = above >= margin ? above : Math.max(margin, vh - popRect.height - margin);
+  }
+
+  pop.style.left = left + 'px';
+  pop.style.top  = top  + 'px';
+
+  setTimeout(()=>document.addEventListener('click', _thLblOutside), 30);
+  // Hover styles for rows
+  pop.querySelectorAll('.th-lbl-row').forEach(r => {
+    r.onmouseover = () => r.style.background = '#f8fafc';
+    r.onmouseout  = () => r.style.background = '';
+  });
+  // Close on scroll/resize (avoid stale positioning)
+  window.addEventListener('resize', _thLblClose, { once:true });
+  document.addEventListener('scroll', _thLblClose, { once:true, capture:true });
+}
+function _thLblClose(){ closeThreadLabelPicker(); }
+function _thLblOutside(e){
+  const p = document.getElementById('thLblPicker');
+  if(p && !p.contains(e.target)) closeThreadLabelPicker();
+}
+function closeThreadLabelPicker(){
+  const p = document.getElementById('thLblPicker');
+  if(p) p.style.display = 'none';
+  document.removeEventListener('click', _thLblOutside);
+}
+function filterLabelPickerList(q){
+  const ql = (q || '').toLowerCase().trim();
+  document.querySelectorAll('#thLblList .th-lbl-row').forEach(row => {
+    row.style.display = !ql || row.dataset.name.includes(ql) ? '' : 'none';
+  });
+}
+async function applyThreadLabels(){
+  if(!currentThreadContact) return;
+  const ids = Array.from(document.querySelectorAll('#thLblList input[type=checkbox]:checked')).map(c => parseInt(c.dataset.id,10));
+  const r = await fetch('/emails/api/threads/labels/', {
+    method:'POST', credentials:'same-origin',
+    headers:{'Content-Type':'application/json','X-CSRFToken':getCSRFToken()},
+    body: JSON.stringify({store_id: selectedStoreId, contact: currentThreadContact, label_ids: ids}),
+  });
+  const d = await r.json();
+  if(d.success){
+    // Update local cache
+    const t = (allThreads||[]).find(t => t.contact === currentThreadContact);
+    if(t) t.label_ids = ids;
+    renderEmailLabelsList();
+    renderThreadLabelsInHeader();
+    closeThreadLabelPicker();
+    loadEmailThreadStats();   // refresh counts
+  }
+}
+function renderThreadLabelsInHeader(){
+  const wrap = document.getElementById('emThreadLabels');
+  if(!wrap) return;
+  const t = (allThreads||[]).find(t => t.contact === currentThreadContact);
+  const ids = (t && t.label_ids) || [];
+  if(!ids.length){ wrap.innerHTML = ''; return; }
+  wrap.innerHTML = ids.map(id => {
+    const l = emailLabels.find(x => x.id === id);
+    if(!l) return '';
+    return `<span class="em-thread-label" style="background:${escapeHtml(l.color)};">${escapeHtml(l.icon||'')} ${escapeHtml(l.name)} <span class="x" onclick="removeThreadLabel(${l.id})" title="Remove">✕</span></span>`;
+  }).join('');
+}
+
+/* When the open thread is in ai_status=needs_human, show a prominent banner
+   with the AI's escalation reason + category + actions. */
+function renderNeedsHumanBannerForThread(threadInfo){
+  const wrap = document.getElementById('emNeedsHumanBanner');
+  if(!wrap) return;
+  if(!threadInfo || threadInfo.ai_status !== 'needs_human'){
+    wrap.style.display = 'none';
+    wrap.innerHTML = '';
+    return;
+  }
+  const cat = (threadInfo.ai_escalation_category || '').replace(/_/g,' ').toUpperCase() || 'NEEDS REVIEW';
+  const reason = threadInfo.ai_escalation_reason || 'AI did not draft a reply for this thread — manual response required.';
+  wrap.innerHTML = `
+    <div class="em-needs-human-banner">
+      <div class="icon">⚠️</div>
+      <div class="body">
+        <div class="title">This email needs human attention</div>
+        <div class="reason">${escapeHtml(reason)}</div>
+        <span class="cat">${escapeHtml(cat)}</span>
+        <div class="actions">
+          <button class="primary" onclick="markThreadAiStatus('auto_handled')">Mark as handled</button>
+          <button onclick="generateEmailDraft()">Generate AI</button>
+        </div>
+      </div>
+    </div>`;
+  wrap.style.display = 'block';
+}
+
+/* PATCH the latest message's ai_status (used by "Mark as handled"). */
+async function markThreadAiStatus(newStatus){
+  if(!currentThreadEmails || !currentThreadEmails.length) return;
+  // Find the most-recent message and update its status
+  const lastMsg = currentThreadEmails[currentThreadEmails.length - 1];
+  if(!lastMsg) return;
+  try {
+    const r = await fetch(`/emails/api/${lastMsg.id}/ai-status/`, {
+      method:'PATCH', credentials:'same-origin',
+      headers:{'Content-Type':'application/json','X-CSRFToken':getCSRFToken()},
+      body: JSON.stringify({ai_status: newStatus}),
+    });
+    const d = await r.json();
+    if(d.success){
+      const t = (allThreads||[]).find(t => t.contact === currentThreadContact);
+      if(t){ t.ai_status = newStatus; }
+      renderNeedsHumanBannerForThread(t);
+      loadEmailThreadStats();
+    }
+  } catch(e){
+    console.warn('[markThreadAiStatus]', e);
+  }
+}
+async function removeThreadLabel(labelId){
+  await fetch('/emails/api/threads/labels/', {
+    method:'DELETE', credentials:'same-origin',
+    headers:{'Content-Type':'application/json','X-CSRFToken':getCSRFToken()},
+    body: JSON.stringify({store_id: selectedStoreId, contact: currentThreadContact, label_id: labelId}),
+  });
+  const t = (allThreads||[]).find(t => t.contact === currentThreadContact);
+  if(t) t.label_ids = (t.label_ids || []).filter(i => i !== labelId);
+  renderEmailLabelsList();
+  renderThreadLabelsInHeader();
+  loadEmailThreadStats();
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   USER DROPUP MENU — opens above the avatar row
+   ────────────────────────────────────────────────────────────────────── */
+function ecRenderUserMenuAccounts(){
+  const wrap = document.getElementById('ecUserMenuAccounts');
+  if (!wrap) return;
+  const accounts = (connectedStoreAccounts && connectedStoreAccounts.length)
+    ? connectedStoreAccounts
+    : (connectedStoreEmail ? [{id:null, email:connectedStoreEmail}] : []);
+  if (!accounts.length){
+    wrap.innerHTML = `<div class="ec-user-menu-empty">No inbox connected yet</div>`;
+    return;
+  }
+  const active = (activeEmailInbox && activeEmailInbox !== '__all__')
+    ? activeEmailInbox
+    : (connectedStoreEmail || '');
+  wrap.innerHTML = accounts.map(acc => {
+    const isActive = acc.email === active;
+    const initial = (acc.email || '?').charAt(0).toUpperCase();
+    return `
+      <button class="ec-user-menu-acc ${isActive?'active':''}" onclick="ecSwitchInbox('${(''+acc.email).replace(/'/g, "\\'")}')">
+        <span class="ec-acc-dot">${initial}</span>
+        <span class="ec-acc-email">${acc.email || ''}</span>
+        ${isActive ? `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>` : ''}
+      </button>`;
+  }).join('');
+}
+
+function ecSwitchInbox(email){
+  ecCloseUserMenu();
+  activeEmailInbox = email;
+  // Sync the top INBOX picker if present
+  const sel = document.getElementById('epInboxSelect');
+  if (sel){
+    sel.value = email;
+    try { onEmailInboxChange(); } catch(_){ try { renderEmails(); } catch(_){} }
+  } else {
+    try { renderEmails(); } catch(_){}
+  }
+}
+window.ecSwitchInbox = ecSwitchInbox;
+
+function ecToggleUserMenu(){
+  const menu = document.getElementById('ecUserMenu');
+  const btn  = document.querySelector('.sidebar.sidebar-email .ec-user-menu-btn');
+  if(!menu) return;
+  const opening = !menu.classList.contains('open');
+  document.querySelectorAll('.sidebar.sidebar-email .ec-user-menu.open').forEach(m => m.classList.remove('open'));
+  if (opening) menu.classList.add('open');
+  if (btn) btn.classList.toggle('open', opening);
+  if (opening){
+    ecRenderUserMenuAccounts();
+    setTimeout(()=>document.addEventListener('click', ecUserMenuOutside), 30);
+  }
+}
+function ecCloseUserMenu(){
+  const menu = document.getElementById('ecUserMenu');
+  const btn  = document.querySelector('.sidebar.sidebar-email .ec-user-menu-btn');
+  if (menu) menu.classList.remove('open');
+  if (btn) btn.classList.remove('open');
+  document.removeEventListener('click', ecUserMenuOutside);
+}
+function ecUserMenuOutside(e){
+  const menu = document.getElementById('ecUserMenu');
+  const btn  = document.querySelector('.sidebar.sidebar-email .ec-user-menu-btn');
+  if (!menu || !btn) return;
+  if (!menu.contains(e.target) && !btn.contains(e.target)) ecCloseUserMenu();
+}
+window.ecToggleUserMenu = ecToggleUserMenu;
+window.ecCloseUserMenu  = ecCloseUserMenu;
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.getElementById('ecUserMenu')?.classList.contains('open')){
+    ecCloseUserMenu();
+  }
+});
+
+/* ──────────────────────────────────────────────────────────────────────
+   SIDEBAR SYNC — refresh inbox + show spin/success state on the button
+   ────────────────────────────────────────────────────────────────────── */
+async function ecSyncNow(){
+  const btn = document.getElementById('ecSyncBtn');
+  if (btn && btn.classList.contains('spinning')) return;  // dedupe
+  if (btn) { btn.classList.add('spinning'); btn.classList.remove('success'); }
+  try {
+    // Use the real inbox sync function if available, else fall back to loadEmails
+    if (typeof syncInboxNow === 'function'){
+      await syncInboxNow({silent:true});
+    }
+    if (typeof loadEmails === 'function'){
+      await loadEmails({silent:true, preserveSelection:true});
+    }
+    if (typeof loadEmailThreadStats === 'function'){
+      await loadEmailThreadStats();
+    }
+    if (btn){
+      btn.classList.remove('spinning');
+      btn.classList.add('success');
+      setTimeout(()=>btn.classList.remove('success'), 1400);
+    }
+  } catch(err){
+    if (btn) btn.classList.remove('spinning');
+    console.warn('[ecSyncNow]', err);
+  }
+}
+window.ecSyncNow = ecSyncNow;
+
+/* ──────────────────────────────────────────────────────────────────────
+   SIDEBAR SEARCH — proxies to the existing inbox search box if present
+   ────────────────────────────────────────────────────────────────────── */
+function ecSearchEmails(value){
+  const inboxSearch = document.getElementById('emailSearch');
+  if(inboxSearch){
+    inboxSearch.value = value;
+    inboxSearch.dispatchEvent(new Event('input', {bubbles:true}));
+  } else {
+    try { renderEmails(); } catch(_){}
+  }
+}
+// Keyboard shortcut: / focuses search, ⌘N opens compose
+document.addEventListener('keydown', e => {
+  if(document.body.getAttribute('data-active-section') !== 'emails') return;
+  const target = e.target;
+  const inField = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
+  if(inField) return;
+  if(e.key === '/'){
+    e.preventDefault();
+    document.getElementById('ecSearchInput')?.focus();
+  } else if((e.metaKey || e.ctrlKey) && (e.key === 'n' || e.key === 'N')){
+    e.preventDefault();
+    if(typeof openComposeModalGated === 'function') openComposeModalGated();
+  }
+});
+
+/* Keep the sidebar's "Compose Email" button enabled/disabled in sync with
+   whether a Gmail account is connected (same gate as the inbox button). */
+function refreshSidebarComposeBtnState(){
+  const btn = document.getElementById('ecComposeBtn');
+  if(!btn) return;
+  const hasConnected = !!connectedStoreEmail
+    || (Array.isArray(connectedStoreAccounts) && connectedStoreAccounts.length > 0);
+  if (hasConnected){
+    btn.classList.remove('em-btn-disabled');
+    btn.title = 'Compose a new email (⌘N)';
+  } else {
+    btn.classList.add('em-btn-disabled');
+    btn.title = 'Connect your Gmail account first';
+  }
+}
+// Wrap the existing refresh so we update both buttons together
+(function(){
+  const orig = window.refreshComposeBtnState;
+  if(typeof orig !== 'function') return;
+  window.refreshComposeBtnState = function(){
+    orig.apply(this, arguments);
+    try { refreshSidebarComposeBtnState(); } catch(_){}
+  };
+})();
+
+/* ──────────────────────────────────────────────────────────────────────
+   BOOTSTRAP
+   - Load labels + stats when Emails section opens
+   - Honor ?folder=  and ?label=  URL params on first load
+   ────────────────────────────────────────────────────────────────────── */
+/* Populate the brand block + user footer.
+   Footer row now shows BRAND/STORE name (not the human user name) per
+   request — name = business_name OR active store name from the project
+   switcher; email = active connected inbox. */
+async function _hydrateSidebarUser(){
+  let profile = {};
+  try {
+    const r = await fetch('/api/profile/', {credentials:'same-origin'});
+    if(r.ok) profile = await r.json();
+  } catch(_){}
+
+  // Resolve brand name — priority:
+  //   1. profile.business_name (saved on user profile)
+  //   2. Active store name from the project switcher
+  //   3. "Drop Sigma" default
+  const activeStoreOpt = document.querySelector('#projectSwitcher option:checked');
+  const activeStoreName = activeStoreOpt ? (activeStoreOpt.text || '').trim() : '';
+  const brand = (profile.business_name && profile.business_name.trim())
+                || activeStoreName
+                || 'Drop Sigma';
+
+  // Avatar initials — first 1-2 chars from brand name words
+  const initials = (brand.split(/\s+/).map(s=>s[0]).slice(0,2).join('') || 'D').toUpperCase();
+
+  // Email shown under the brand — prefer the currently active connected inbox
+  const activeEmail = (typeof connectedStoreEmail !== 'undefined' && connectedStoreEmail)
+                      ? connectedStoreEmail
+                      : (profile.email || '');
+
+  const nameEl   = document.getElementById('ecUserName');
+  const emailEl  = document.getElementById('ecUserEmail');
+  const avatarEl = document.getElementById('ecUserAvatar');
+  if (nameEl)  nameEl.textContent  = brand;
+  if (emailEl) emailEl.textContent = activeEmail;
+  if (avatarEl){
+    avatarEl.innerHTML = initials + '<span class="ec-status"></span>';
+  }
+
+  // Top brand block — keep in sync (same brand + first letter)
+  const brandLogo = document.getElementById('ecBrandLogo');
+  const brandName = document.getElementById('ecBrandName');
+  if (brandLogo) brandLogo.textContent = (brand[0] || 'D').toUpperCase();
+  if (brandName) brandName.textContent = brand;
+}
+/* ═════════ SIDEBAR ITEM 3-DOT MENU — "Empty Chat" + "Assign to team" ═════════
+   Used by both folders (Inbox/Unread/Needs Human/etc) and custom labels.
+   - Empty Chat   → wipes all threads in the folder/label via empty_folder_api
+   - Assign to team → bulk-assigns matching threads to a team member via the
+                      existing bulk_assign_threads_api (so the member sees
+                      them in their employee portal automatically). */
+let _ecMenuTeamCache = null;
+async function _ecFetchTeam(){
+  if (_ecMenuTeamCache) return _ecMenuTeamCache;
+  try {
+    const r = await fetch('/teamapp/members/', {credentials:'same-origin'});
+    const d = await r.json();
+    _ecMenuTeamCache = (d && d.members) ? d.members : [];
+  } catch(_){ _ecMenuTeamCache = []; }
+  return _ecMenuTeamCache;
+}
+
+/* Helper: collect contacts that match the given target (folder or label).
+   Used so "Assign to team" can call the bulk endpoint. */
+function _ecCollectTargetContacts(target){
+  const all = allThreads || [];
+  // Reuse the folder predicate already used by the list view.
+  if (target.kind === 'label'){
+    return all.filter(t => Array.isArray(t.label_ids) && t.label_ids.includes(target.labelId))
+              .map(t => t.contact);
+  }
+  // Folder case — call the existing applyEmailFolderFilter() logic but
+  // override the global folder var to compute against the requested one.
+  const prev = (typeof emailFolder !== 'undefined') ? emailFolder : 'inbox';
+  emailFolder = target.folder || 'inbox';
+  let list = [];
+  try { list = (typeof applyEmailFolderFilter === 'function' ? applyEmailFolderFilter(all) : all); }
+  finally { emailFolder = prev; }
+  return list.map(t => t.contact);
+}
+
+// Cache of active folder/label rules — refreshed by _ecLoadFolderRules()
+let _ecFolderRules = [];
+async function _ecLoadFolderRules(){
+  try {
+    const r = await fetch('/emails/api/folders/assignments/?store_id=' + encodeURIComponent(selectedStoreId), {credentials:'same-origin'});
+    const d = await r.json();
+    _ecFolderRules = (d && d.success && d.rules) ? d.rules : [];
+  } catch(_){ _ecFolderRules = []; }
+}
+window._ecLoadFolderRules = _ecLoadFolderRules;
+function _ecFindRule(target){
+  if (target.kind === 'label'){
+    return _ecFolderRules.find(r => String(r.label_id) === String(target.labelId));
+  }
+  return _ecFolderRules.find(r => !r.label_id && r.folder === target.folder);
+}
+
+function openSidebarItemMenu(ev, target){
+  ev.stopPropagation();
+  closeSidebarItemMenu();
+  const pop = document.createElement('div');
+  pop.id = 'ecItemMenu';
+  pop.style.cssText = 'position:fixed;background:#fff;border:1px solid #e5eaf2;border-radius:11px;box-shadow:0 14px 38px rgba(15,23,42,.22);padding:6px;width:240px;z-index:99999;';
+  const labelTxt = target.label || target.folder || '';
+  const rule = _ecFindRule(target);
+  const assignmentRow = rule ? `
+    <div style="padding:8px 10px;background:#eef2ff;border:1px solid #c7d2fe;border-radius:8px;margin:0 0 6px;font-size:11.5px;color:#4338ca;display:flex;align-items:center;gap:7px;">
+      <span style="width:18px;height:18px;border-radius:5px;background:linear-gradient(135deg,#6366f1,#a855f7);color:#fff;display:grid;place-items:center;font-size:9px;font-weight:800;flex-shrink:0;">${escapeHtml((rule.member_name||'?').split(/\\s+/).map(s=>s[0]).slice(0,2).join('').toUpperCase())}</span>
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><b>${escapeHtml(rule.member_name)}</b> owns this folder</span>
+    </div>` : '';
+  pop.innerHTML = `
+    <div style="padding:6px 10px 8px;font-size:10.5px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #f1f5f9;margin-bottom:4px;display:flex;align-items:center;gap:6px;">
+      ${target.kind==='label' ? `<span style="width:8px;height:8px;border-radius:2px;background:${escapeHtml(target.color||'#94a3b8')};"></span>` : ''}
+      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(labelTxt)}</span>
+    </div>
+    ${assignmentRow}
+    <button class="ec-menu-item" data-act="assign">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 11l-3-3m0 0l3-3m-3 3h-6"/></svg>
+      <span>${rule ? 'Change team member' : 'Assign to team'}</span>
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" style="margin-left:auto;opacity:.5;"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>
+    ${rule ? `
+    <button class="ec-menu-item" data-act="unassign">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      <span>Remove rule</span>
+    </button>` : ''}
+    <button class="ec-menu-item ec-menu-danger" data-act="empty">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+      <span>Empty Chat</span>
+    </button>
+  `;
+  document.body.appendChild(pop);
+
+  // Position: anchor next to the trigger, clamped to viewport
+  const rect = ev.currentTarget.getBoundingClientRect();
+  const popRect = pop.getBoundingClientRect();
+  const vw = window.innerWidth, vh = window.innerHeight, m = 8;
+  let left = rect.right + 6;
+  if (left + popRect.width > vw - m) left = rect.left - popRect.width - 6;
+  if (left < m) left = m;
+  let top = rect.top;
+  if (top + popRect.height > vh - m) top = Math.max(m, vh - popRect.height - m);
+  pop.style.left = left + 'px';
+  pop.style.top  = top  + 'px';
+
+  // Wire actions
+  pop.querySelector('[data-act="empty"]').onclick = async (e) => {
+    e.stopPropagation();
+    closeSidebarItemMenu();
+    await ecEmptyTarget(target);
+  };
+  pop.querySelector('[data-act="assign"]').onclick = async (e) => {
+    e.stopPropagation();
+    await ecOpenAssignSubmenu(e, target);
+  };
+  const unassignBtn = pop.querySelector('[data-act="unassign"]');
+  if (unassignBtn){
+    unassignBtn.onclick = async (e) => {
+      e.stopPropagation();
+      closeSidebarItemMenu();
+      const ok = await _confirm(
+        'Remove the team-member assignment from this folder? Future emails will no longer auto-assign.',
+        { title: 'Remove rule', icon: '👤', confirmText: 'Remove', cancelText: 'Cancel' }
+      );
+      if (!ok) return;
+      const body = { store_id: selectedStoreId };
+      if (target.kind === 'label') body.label_id = target.labelId;
+      else                          body.folder   = target.folder;
+      try {
+        const r = await fetch('/emails/api/folders/assignments/', {
+          method:'DELETE', credentials:'same-origin',
+          headers:{'Content-Type':'application/json','X-CSRFToken':getCSRFToken()},
+          body: JSON.stringify(body),
+        });
+        const d = await r.json();
+        if (!d.success){
+          await _alert(d.message || 'Failed to remove rule.', 'Error', '❌');
+          return;
+        }
+        await _ecLoadFolderRules();
+        if (typeof _alert === 'function'){
+          await _alert('Rule removed. Future emails won\'t auto-assign.', 'Done', '✓');
+        }
+      } catch(e){
+        await _alert('Network error: ' + e.message, 'Error', '❌');
+      }
+    };
+  }
+
+  setTimeout(()=>document.addEventListener('click', _ecMenuOutside), 30);
+  window.addEventListener('resize', closeSidebarItemMenu, { once:true });
+}
+function _ecMenuOutside(e){
+  const p = document.getElementById('ecItemMenu');
+  const s = document.getElementById('ecAssignSubmenu');
+  if (p && !p.contains(e.target) && (!s || !s.contains(e.target))){
+    closeSidebarItemMenu();
+  }
+}
+function closeSidebarItemMenu(){
+  document.getElementById('ecItemMenu')?.remove();
+  document.getElementById('ecAssignSubmenu')?.remove();
+  document.removeEventListener('click', _ecMenuOutside);
+}
+window.openSidebarItemMenu = openSidebarItemMenu;
+window.closeSidebarItemMenu = closeSidebarItemMenu;
+
+/* Empty target — confirms then deletes */
+async function ecEmptyTarget(target){
+  const labelTxt = target.label || target.folder || '';
+  const ok = await _confirm(
+    `This will permanently delete all chats in "${labelTxt}". This cannot be undone. Continue?`,
+    { title: 'Empty ' + labelTxt, icon: '🗑️', confirmText: 'Empty chats', cancelText: 'Cancel' }
+  );
+  if (!ok) return;
+  const body = { store_id: selectedStoreId };
+  if (target.kind === 'label') body.label_id = target.labelId;
+  else                          body.folder   = target.folder;
+  try {
+    const r = await fetch('/emails/api/folders/empty/', {
+      method:'POST', credentials:'same-origin',
+      headers:{'Content-Type':'application/json','X-CSRFToken':getCSRFToken()},
+      body: JSON.stringify(body),
+    });
+    const d = await r.json();
+    if (!d.success){
+      await _alert(d.message || 'Failed to empty chats.', 'Error', '❌');
+      return;
+    }
+    // Refresh inbox + counts
+    if (typeof loadEmails === 'function') await loadEmails({silent:true, preserveSelection:false});
+    if (typeof loadEmailThreadStats === 'function') await loadEmailThreadStats();
+    if (typeof _alert === 'function'){
+      await _alert(`Deleted ${d.deleted_threads} thread(s) (${d.deleted_messages} message(s)).`, 'Done', '✓');
+    }
+  } catch(e){
+    await _alert('Network error: ' + e.message, 'Error', '❌');
+  }
+}
+
+/* Open submenu showing team members; clicking one bulk-assigns the
+   target's threads to that member. They'll then see those threads in
+   their employee portal automatically (existing EmailThreadAssignment
+   flow). */
+async function ecOpenAssignSubmenu(ev, target){
+  // Remove any existing submenu
+  document.getElementById('ecAssignSubmenu')?.remove();
+  const members = await _ecFetchTeam();
+  const sub = document.createElement('div');
+  sub.id = 'ecAssignSubmenu';
+  sub.style.cssText = 'position:fixed;background:#fff;border:1px solid #e5eaf2;border-radius:11px;box-shadow:0 14px 38px rgba(15,23,42,.22);padding:6px;width:230px;max-height:320px;overflow-y:auto;z-index:100000;';
+  if (!members.length){
+    sub.innerHTML = `<div style="padding:14px;text-align:center;font-size:12px;color:#94a3b8;font-style:italic;">No team members yet</div>`;
+  } else {
+    sub.innerHTML = `
+      <div style="padding:6px 10px 6px;font-size:10.5px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #f1f5f9;margin-bottom:4px;">ASSIGN TO</div>
+      ${members.map(m => {
+        const initials = (m.name||'?').split(/\s+/).map(s=>s[0]).slice(0,2).join('').toUpperCase();
+        return `
+          <button class="ec-menu-item" data-mid="${m.id}">
+            <span style="width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,#6366f1,#a855f7);color:#fff;display:grid;place-items:center;font-size:10px;font-weight:800;flex-shrink:0;">${escapeHtml(initials)}</span>
+            <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(m.name)}<br><span style="font-size:10.5px;color:#94a3b8;font-weight:500;">${escapeHtml(formatText ? formatText(m.role) : (m.role||''))}</span></span>
+          </button>`;
+      }).join('')}
+    `;
+  }
+  document.body.appendChild(sub);
+  // Position next to the main menu
+  const mainPop = document.getElementById('ecItemMenu');
+  if (mainPop){
+    const r = mainPop.getBoundingClientRect();
+    const subR = sub.getBoundingClientRect();
+    let left = r.right + 6;
+    if (left + subR.width > window.innerWidth - 8) left = r.left - subR.width - 6;
+    if (left < 8) left = 8;
+    let top = r.top;
+    if (top + subR.height > window.innerHeight - 8) top = Math.max(8, window.innerHeight - subR.height - 8);
+    sub.style.left = left + 'px';
+    sub.style.top  = top  + 'px';
+  }
+  // Wire member clicks
+  sub.querySelectorAll('[data-mid]').forEach(b => {
+    b.onclick = async (e) => {
+      e.stopPropagation();
+      const memberId = b.dataset.mid;
+      closeSidebarItemMenu();
+      // Persistent rule — saves the folder/label → member mapping AND
+      // assigns all current matching threads. Future matching emails will
+      // auto-assign via auto_assign_for_folder_rules() in the email-save
+      // pipeline.
+      const body = { store_id: selectedStoreId, member_id: memberId };
+      if (target.kind === 'label') body.label_id = target.labelId;
+      else                          body.folder   = target.folder;
+      try {
+        const r = await fetch('/emails/api/folders/assignments/', {
+          method:'POST', credentials:'same-origin',
+          headers:{'Content-Type':'application/json','X-CSRFToken':getCSRFToken()},
+          body: JSON.stringify(body),
+        });
+        const d = await r.json();
+        if (!d.success){
+          await _alert(d.message || 'Assignment failed.', 'Error', '❌');
+          return;
+        }
+        if (typeof loadEmails === 'function') await loadEmails({silent:true, preserveSelection:true});
+        if (typeof loadEmailThreadStats === 'function') await loadEmailThreadStats();
+        if (typeof _ecLoadFolderRules === 'function') await _ecLoadFolderRules();
+        if (typeof _alert === 'function'){
+          const member = (members || []).find(m => String(m.id) === String(memberId));
+          const memberName = member ? member.name : 'team member';
+          await _alert(
+            `Rule saved.\n\n${d.assigned_now} thread(s) assigned to ${memberName} right now. Any future emails landing in this folder will also auto-assign to them.`,
+            'Persistent rule active',
+            '✓'
+          );
+        }
+      } catch(e){
+        await _alert('Network error: ' + e.message, 'Error', '❌');
+      }
+    };
+  });
+}
+window.ecOpenAssignSubmenu = ecOpenAssignSubmenu;
+
+/* Inject a 3-dot kebab button into every folder item in the contextual
+   sidebar (Inbox, Unread, Needs Human, etc) — one-shot at init, then no
+   re-render is needed because the items live in static markup. */
+function _ecInjectItemMenus(){
+  document.querySelectorAll('.sidebar.sidebar-email .ec-item').forEach(btn => {
+    if (btn.querySelector('.ec-item-menu')) return;  // already injected
+    const view = btn.dataset.view || '';
+    const lbl  = btn.querySelector('.ec-lbl')?.textContent?.trim() || view;
+    const kebab = document.createElement('button');
+    kebab.className = 'ec-item-menu';
+    kebab.title = 'Folder actions';
+    kebab.setAttribute('aria-label','Folder actions');
+    kebab.innerHTML = '⋯';
+    kebab.onclick = (ev) => {
+      ev.stopPropagation();
+      ev.preventDefault();
+      openSidebarItemMenu(ev, {kind:'folder', folder:view, label:lbl});
+    };
+    btn.appendChild(kebab);
+  });
+}
+
+async function initEmailContextual(){
+  await loadEmailLabels();
+  renderEmailLabelsList();
+  _ecInjectItemMenus();
+  _ecLoadFolderRules();   // load active folder/label assignment rules
+  const stats = await (async()=>{
+    try {
+      const r = await fetch('/emails/api/threads/stats/?store_id=' + encodeURIComponent(selectedStoreId), {credentials:'same-origin'});
+      const d = await r.json();
+      return d.success ? d : null;
+    } catch(_){ return null; }
+  })();
+  if(stats){
+    // Populate sidebar counts (same as loadEmailThreadStats does, but reuse the fetch)
+    const c = stats.counts || {};
+    document.querySelectorAll('.sidebar-email .ec-cnt[data-cnt]').forEach(el => {
+      const v = c[el.dataset.cnt];
+      if(v && v > 0){ el.textContent = v; el.dataset.empty = ''; }
+      else { el.textContent = ''; el.dataset.empty = '1'; }
+    });
+    if(Array.isArray(stats.labels)){ emailLabels = stats.labels; renderEmailLabelsList(); }
+  }
+  _hydrateSidebarUser();
+  refreshSidebarComposeBtnState();
+  // Restore filter from URL
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const f = params.get('folder');
+    const l = params.get('label');
+    if(l){
+      const id = parseInt(l, 10);
+      if(!isNaN(id)) emailLabelFilter = id;
+    }
+    if(f && f !== 'inbox') setEmailFolder(f, {keepLabel:true});
+  } catch(_){}
+}
+// Hook into showSection so it fires whenever the emails section becomes active
+(function(){
+  const orig = window.showSection;
+  if(typeof orig !== 'function') return;
+  window.showSection = function(section){
+    const r = orig.apply(this, arguments);
+    if(section === 'emails'){
+      setTimeout(()=>initEmailContextual(), 50);
+    }
+    return r;
+  };
+})();
+// Periodic stats refresh while in emails
+setInterval(()=>{
+  if(document.body.getAttribute('data-active-section') === 'emails'){
+    loadEmailThreadStats();
+  }
+}, 25000);
 </script>
 
 </body>
