@@ -4380,27 +4380,61 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
     <stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#a855f7"/>
   </linearGradient>
 </defs></svg>
-<body{% if embed_mode == "emails" %} class="ds-embed-emails" data-embed="emails"{% endif %}>
+<body{% if embed_mode == "emails" %} class="ds-embed-emails" data-embed="emails" data-active-section="emails"{% endif %}>
 {% if embed_mode == "emails" %}
 <style>
 /* ────────────────────────────────────────────────────────────────────
    EMBED MODE: emails-only view for the employee portal iframe.
-   Hides every section, modal, and chrome element except the emails
-   section + its contextual sidebar. The scope-aware backend already
-   filters data — this is purely visual stripping.
+   The body tag carries data-active-section="emails" from the start so
+   every existing CSS rule scoped to that attribute fires naturally —
+   meaning the sidebar-email layout, hiding of the main sidebar, etc.
+   all work without re-implementing. Then a few additional rules below
+   strip the remaining admin chrome (notification bell, ai floater,
+   top bar) that's not normally gated by data-active-section.
    ──────────────────────────────────────────────────────────────── */
 body.ds-embed-emails{
   background:#fff !important;
+  margin:0 !important;
+  padding:0 !important;
+  overflow:hidden !important;  /* prevent the iframe from scrolling the
+                                    page; the inner panels scroll. */
 }
 /* Force emails section visible regardless of routing JS */
 body.ds-embed-emails #emailsSection{display:flex !important;}
-/* Hide every non-email section */
+/* Hide every non-email section explicitly (data-active-section already
+   does this implicitly but be defensive). */
 body.ds-embed-emails section.section:not(#emailsSection){display:none !important;}
-/* Hide the main left nav (employee portal owns navigation now) */
-body.ds-embed-emails > aside.sidebar:not(.sidebar-email){display:none !important;}
-/* Show the contextual email sidebar without the data-active-section gate */
-body.ds-embed-emails .sidebar.sidebar-email{display:flex !important;}
-/* Hide the Drop Sigma AI floater + admin top bar + notification bell */
+/* Ensure the contextual email sidebar is visible inside the iframe
+   regardless of routing JS. (The matching CSS in dashboard.html is
+   gated on body[data-active-section="emails"] which the embed body
+   already carries — but be explicit so this is robust.) */
+body.ds-embed-emails aside.sidebar.sidebar-email{display:flex !important;}
+/* Layout container: dashboard.html's .layout grid is "240px 1fr".
+   Inside the iframe the layout should be exactly that. */
+body.ds-embed-emails .layout{
+  display:grid !important;
+  grid-template-columns:240px 1fr !important;
+  width:100vw !important;
+  height:100vh !important;
+  max-width:100vw !important;
+}
+body.ds-embed-emails .main-content,
+body.ds-embed-emails main{
+  min-width:0 !important;
+  overflow:hidden !important;
+}
+/* Hide the entire main left nav AND the notifications bell wrap.
+   Selectors are intentionally NOT direct-child because the sidebar
+   lives inside <div class="layout">, not directly under <body>. */
+body.ds-embed-emails aside.sidebar:not(.sidebar-email){display:none !important;}
+body.ds-embed-emails div[style*="position:fixed"][style*="z-index:9998"]{display:none !important;}
+/* Suspension / review / impersonation banners (sticky at top of body) */
+body.ds-embed-emails #impersonationBanner,
+body.ds-embed-emails #suspensionBanner,
+body.ds-embed-emails #reviewBanner,
+body.ds-embed-emails #upgradeBanner{
+  display:none !important;
+}
 body.ds-embed-emails .ai-fab,
 body.ds-embed-emails #aiFloater,
 body.ds-embed-emails #notifBell,
@@ -4410,11 +4444,12 @@ body.ds-embed-emails [id^="impersonate"],
 body.ds-embed-emails [id^="profileMenu"]{
   display:none !important;
 }
-/* Hide the "Back to main menu" button inside sidebar-email when
-   embedded (employee will use their portal's nav to leave). */
-body.ds-embed-emails .ec-back-btn,
+/* Hide the "Back to main menu" button — employee uses their portal's
+   own nav to navigate away. Class is `ec-back-bar` (not -btn). */
+body.ds-embed-emails .ec-back-bar,
 body.ds-embed-emails [data-back="main-menu"]{display:none !important;}
-/* Tighten main-content padding since there's no top bar */
+/* Iframe context: collapse top padding everywhere so the email UI
+   sits flush against the iframe edges. */
 body.ds-embed-emails main,
 body.ds-embed-emails .main-content,
 body.ds-embed-emails .app-shell{
