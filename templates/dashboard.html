@@ -4617,6 +4617,13 @@ document.addEventListener("DOMContentLoaded", () => {
     }, true);  // capture phase so we beat the inline onclick handler
   }
 
+  // ── INSTANT FIRST PAINT FROM CACHE ──
+  // If a recent snapshot exists for this store, hydrate the UI from
+  // it RIGHT NOW (synchronously) so the user sees their last-known
+  // folders + threads with zero perceived delay. The background poll
+  // (1.5s) still fires to refresh against the server.
+  try { _emHydrateFromCache(); } catch(_){}
+
   // Safety net: never trap the user under the initial loader. Even if
   // API calls keep failing, force-hide after 20 seconds. The loader
   // will normally close in <2 seconds once threads arrive; this cap
@@ -19774,6 +19781,9 @@ async function loadEmails(options={}){
     // threads actually arrive (even if scope arrived earlier with
     // counts but no threads).
     try { window._emInitialState.threadsIn = true; _emMaybeHideInitialLoader(); } catch(_){}
+    // Snapshot to localStorage so the next hard-refresh hydrates
+    // instantly from cache (admin-style first paint).
+    try { _emCacheSnapshot(); } catch(_){}
     // Employee scope arrives on every threads response — apply it to
     // the sidebar so newly-assigned folders/labels appear without a
     // page reload.
@@ -29372,6 +29382,62 @@ function applyEmailFolderFilter(threads){
    Owners + view_all employees pass through unchanged. */
 window._emCurrentScope = null;  // Set whenever stats/threads API responds
 
+// ── EMBED CACHE ──
+// Employee portal hard-refresh used to re-fetch everything from
+// scratch with a long loader. We cache the last successful scope +
+// threads payload in localStorage and hydrate the UI from it on the
+// next page load — same behaviour as admin sees (instant first
+// paint). The API still fires in the background to refresh data.
+const _emCacheKey = "ds_embed_email_cache_v1";
+function _emCacheSnapshot(){
+  if(document.body.dataset.embed !== "emails") return;
+  try {
+    const payload = {
+      threads: (typeof allThreads !== "undefined" && allThreads) ? allThreads : [],
+      scope:   window._emCurrentScope || null,
+      sid:     String(selectedStoreId || ""),
+      ts:      Date.now(),
+    };
+    localStorage.setItem(_emCacheKey, JSON.stringify(payload));
+  } catch(_){}
+}
+function _emCacheClear(){
+  try { localStorage.removeItem(_emCacheKey); } catch(_){}
+}
+function _emHydrateFromCache(){
+  if(document.body.dataset.embed !== "emails") return false;
+  try {
+    const raw = localStorage.getItem(_emCacheKey);
+    if(!raw) return false;
+    const p = JSON.parse(raw);
+    if(!p || !Array.isArray(p.threads)) return false;
+    // Stale check (1 hour) — older than that, force re-fetch
+    if(Date.now() - (p.ts || 0) > 3600 * 1000) return false;
+    // Must be the same store
+    if(String(p.sid) !== String(selectedStoreId || "")) return false;
+
+    // Hydrate in-memory state from the cached payload
+    allThreads = p.threads;
+    allEmails  = allThreads;
+    window.allThreads = allThreads;
+
+    if(p.scope){
+      try { applyEmailScopeToSidebar(p.scope); } catch(_){}
+    }
+    // Mark the loader gates as already satisfied
+    if(window._emInitialState){
+      window._emInitialState.scopeIn   = true;
+      window._emInitialState.threadsIn = true;
+      _emMaybeHideInitialLoader();
+    }
+    // Paint right away so the user sees their last view instantly
+    try { updateEmailStats(); } catch(_){}
+    try { populateEmailInboxPicker(); } catch(_){}
+    try { renderEmails(); } catch(_){}
+    return true;
+  } catch(_) { return false; }
+}
+
 // Track which initial data has arrived. Loader hides once BOTH the
 // scope AND threads have arrived AND the threads list actually
 // reflects what scope says is available (otherwise we'd hide while
@@ -29439,6 +29505,10 @@ function applyEmailScopeToSidebar(scope){
   // newly-allowed messages appear without a manual refresh.
   if(prevKey && prevKey !== nextKey){
     try { if(typeof loadEmails === "function") loadEmails({silent:true, preserveSelection:true}); } catch(_){}
+    // Scope changed — invalidate the cached scope by snapshotting
+    // the new one immediately (cache is keyed by store_id, payload
+    // contains scope so this keeps things consistent).
+    try { _emCacheSnapshot(); } catch(_){}
   }
 
   // ZERO-ASSIGNMENT GATE — when the requester is an employee with no
