@@ -22097,9 +22097,39 @@ const _CMP_ALLOWED_EXT = ["pdf","png","jpg","jpeg","gif","webp","svg","docx","do
    open the compose modal if at least one Gmail account is connected for the
    active store — otherwise we redirect them to the Add Email flow. */
 async function openComposeModalGated(){
-  const hasConnected = !!connectedStoreEmail
+  let hasConnected = !!connectedStoreEmail
     || (Array.isArray(connectedStoreAccounts) && connectedStoreAccounts.length > 0);
+  // If we haven't fetched yet (common in the employee iframe right
+  // after load), try once before showing the "Connect Email" prompt.
+  // For employees, the API returns the OWNER's connected account so
+  // this naturally lets them compose through the assigned inbox.
+  if(!hasConnected){
+    try{
+      const r = await fetch(`/emails/api/connected-email/?store_id=${encodeURIComponent(selectedStoreId)}`, {credentials:"same-origin"});
+      const d = await r.json();
+      if(d && d.success && d.connected && d.email){
+        connectedStoreEmail = d.email;
+        connectedStoreAccounts = d.accounts || [];
+        hasConnected = true;
+      }
+    }catch(_){}
+  }
   if (!hasConnected){
+    // Employees see a different message — they can't connect inboxes
+    // anyway, the owner has to. Show an info-style alert instead of
+    // a "Connect now?" confirm.
+    const inEmbed = document.body.dataset.embed === "emails";
+    if (inEmbed){
+      if (typeof _alert === 'function'){
+        await _alert(
+          "Your administrator hasn't connected an email inbox to this store yet. Please ask them to connect one before composing.",
+          'No inbox connected', '📧'
+        );
+      } else {
+        alert("Your administrator hasn't connected an email inbox yet.");
+      }
+      return;
+    }
     if (typeof _confirm === 'function'){
       const ok = await _confirm(
         'You need to connect a Gmail account before composing emails. Connect one now?',
@@ -29336,6 +29366,10 @@ function _emCacheSnapshot(){
       threads: (typeof allThreads !== "undefined" && allThreads) ? allThreads : [],
       scope:   window._emCurrentScope || null,
       sid:     String(selectedStoreId || ""),
+      // Caching the connected-email lets the compose button work
+      // immediately on hard refresh — no async wait for the API.
+      connectedEmail:    (typeof connectedStoreEmail !== "undefined") ? (connectedStoreEmail || "") : "",
+      connectedAccounts: (typeof connectedStoreAccounts !== "undefined" && Array.isArray(connectedStoreAccounts)) ? connectedStoreAccounts : [],
       ts:      Date.now(),
     };
     localStorage.setItem(_emCacheKey, JSON.stringify(payload));
@@ -29360,6 +29394,14 @@ function _emHydrateFromCache(){
     allThreads = p.threads;
     allEmails  = allThreads;
     window.allThreads = allThreads;
+    // Restore the connected-email state so the Compose Email gate
+    // works on first click (no async wait for /connected-email/).
+    if(p.connectedEmail){
+      try {
+        connectedStoreEmail   = p.connectedEmail;
+        connectedStoreAccounts = Array.isArray(p.connectedAccounts) ? p.connectedAccounts : [];
+      } catch(_){}
+    }
 
     if(p.scope){
       try { applyEmailScopeToSidebar(p.scope); } catch(_){}
