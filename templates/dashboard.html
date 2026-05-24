@@ -11279,89 +11279,402 @@ document.addEventListener("DOMContentLoaded", () => {
   </div>
 </div>
 
-<div id="composeModal" class="modal-bg">
-  <div class="modal" style="max-width:720px;">
-    <div class="modal-head">
-      <div>
-        <h2>Compose Email</h2>
-        <p class="sub">Send via your store's connected inbox (Gmail / SMTP).</p>
+<div id="composeModal" class="modal-bg cmp-modal-bg">
+  <div class="modal cmp-modal-shell">
+    <!-- ── PREMIUM HEADER ── -->
+    <div class="cmp-head">
+      <div class="cmp-head-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 2 11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/>
+        </svg>
       </div>
-      <button class="btn red" onclick="closeComposeModal()">Close</button>
-    </div>
-
-    <!-- Toolbar: Templates · AI · Link order · CC/BCC toggle -->
-    <div class="cmp-toolbar">
-      <button type="button" class="cmp-tb" onclick="cmpOpenTemplates()" title="Insert a saved template">📄 Templates</button>
-      <button type="button" class="cmp-tb" onclick="cmpAIDraft()" title="Generate body with AI">✦ AI Draft</button>
-      <button type="button" class="cmp-tb" onclick="cmpLinkOrder()" title="Link this email to an order">🔗 <span id="cmpOrderLabel">Link order</span></button>
-      <button type="button" class="cmp-tb" id="cmpCcBccBtn" onclick="cmpToggleCcBcc()" title="Show CC / BCC">＋ CC / BCC</button>
-      <span class="cmp-tb-spacer"></span>
-      <label class="cmp-sig-toggle" title="Append your store signature">
-        <input type="checkbox" id="cmpSigToggle" checked> <span>Signature</span>
-      </label>
-    </div>
-
-    <label>To</label>
-    <input id="composeTo" placeholder="customer@email.com">
-
-    <!-- CC / BCC rows (hidden by default; toggled by button OR show_cc_bcc setting) -->
-    <div class="em-compose-cc-row" style="display:none;">
-      <label>Cc <span style="font-size:11px;color:#94a3b8;font-weight:500;">(comma-separated)</span></label>
-      <input id="composeCc" placeholder="cc1@email.com, cc2@email.com">
-    </div>
-    <div class="em-compose-cc-row" style="display:none;">
-      <label>Bcc <span style="font-size:11px;color:#94a3b8;font-weight:500;">(comma-separated)</span></label>
-      <input id="composeBcc" placeholder="bcc1@email.com, bcc2@email.com">
-    </div>
-
-    <label>Subject</label>
-    <input id="composeSubject" placeholder="Email subject...">
-
-    <label>Message</label>
-    <!-- Rich text mini-toolbar -->
-    <div class="cmp-rt">
-      <button type="button" onclick="cmpFmt('bold')" title="Bold (Ctrl+B)"><b>B</b></button>
-      <button type="button" onclick="cmpFmt('italic')" title="Italic (Ctrl+I)"><i>I</i></button>
-      <button type="button" onclick="cmpFmt('underline')" title="Underline (Ctrl+U)"><u>U</u></button>
-      <div class="cmp-rt-sep"></div>
-      <button type="button" onclick="cmpFmt('insertUnorderedList')" title="Bullet list">• List</button>
-      <button type="button" onclick="cmpFmt('insertOrderedList')" title="Numbered list">1. List</button>
-      <div class="cmp-rt-sep"></div>
-      <button type="button" onclick="cmpInsertLink()" title="Insert link">🔗 Link</button>
-      <button type="button" onclick="cmpFmt('removeFormat')" title="Clear formatting">Aa</button>
-      <span class="cmp-tb-spacer"></span>
-      <span id="cmpCharCount" style="font-size:11px;color:#94a3b8;">0 chars</span>
-    </div>
-    <div id="composeBodyRich" contenteditable="true"
-         oninput="cmpBodyChanged()"
-         onpaste="cmpHandlePaste(event)"
-         class="cmp-body" placeholder="Write your message…"></div>
-    <!-- Hidden textarea — preserved for backward compatibility with sendEmail() -->
-    <textarea id="composeBody" style="display:none;"></textarea>
-
-    <!-- Attachments drag-drop area -->
-    <div class="cmp-attach-area" id="cmpAttachArea"
-         ondragover="cmpDragOver(event)" ondragleave="cmpDragLeave(event)" ondrop="cmpDrop(event)">
-      <input type="file" id="cmpAttachInput" multiple style="display:none;" onchange="cmpFilesPicked(this.files)">
-      <div class="cmp-attach-prompt" id="cmpAttachPrompt">
-        <span style="font-size:18px;">📎</span>
-        <span style="font-weight:600;color:#475569;">Drag &amp; drop files here</span>
-        <span style="color:#94a3b8;">or</span>
-        <button type="button" class="cmp-attach-pick" onclick="document.getElementById('cmpAttachInput').click()">Browse</button>
-        <span style="color:#94a3b8;font-size:11px;margin-left:8px;">Max 20 MB total · PDF, PNG, JPG, DOCX, XLSX, CSV, TXT</span>
+      <div class="cmp-head-text">
+        <h2 class="cmp-head-title">Compose Email</h2>
+        <p class="cmp-head-sub">Send via your store's connected inbox</p>
       </div>
-      <div class="cmp-attach-list" id="cmpAttachList"></div>
+      <button class="cmp-head-close" onclick="closeComposeModal()" title="Close" aria-label="Close">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
     </div>
 
-    <div class="actions">
-      <button id="composeSendBtn" class="btn green" onclick="sendNewEmail()">📨 Send Email</button>
-      <button id="composeSaveDraftBtn" class="btn" type="button" onclick="cmpSaveDraft()" title="Save offline draft in this browser only">💾 Save offline draft</button>
-      <button class="btn dark" onclick="closeComposeModal()">Cancel</button>
+    <!-- ── SCROLLABLE BODY ── -->
+    <div class="cmp-body-wrap">
+
+      <!-- Action Toolbar -->
+      <div class="cmp-toolbar cmp-toolbar-v2">
+        <button type="button" class="cmp-tb" onclick="cmpOpenTemplates()" title="Insert a saved template">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+          <span>Templates</span>
+        </button>
+        <button type="button" class="cmp-tb cmp-tb-ai" onclick="cmpAIDraft()" title="Generate body with AI">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l1.5 3.5L17 7l-3.5 1.5L12 12l-1.5-3.5L7 7l3.5-1.5L12 2z"/><path d="M5 14l1 2 2 1-2 1-1 2-1-2-2-1 2-1 1-2z"/><path d="M19 14l1 2 2 1-2 1-1 2-1-2-2-1 2-1 1-2z"/></svg>
+          <span>AI Draft</span>
+        </button>
+        <button type="button" class="cmp-tb" onclick="cmpLinkOrder()" title="Link this email to an order">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+          <span id="cmpOrderLabel">Link order</span>
+        </button>
+        <button type="button" class="cmp-tb" id="cmpCcBccBtn" onclick="cmpToggleCcBcc()" title="Show CC / BCC">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          <span>CC / BCC</span>
+        </button>
+        <span class="cmp-tb-spacer"></span>
+        <label class="cmp-sig-toggle cmp-sig-toggle-v2" title="Append your store signature">
+          <input type="checkbox" id="cmpSigToggle" checked>
+          <span class="cmp-sig-track"><span class="cmp-sig-thumb"></span></span>
+          <span>Signature</span>
+        </label>
+      </div>
+
+      <!-- TO Field -->
+      <div class="cmp-field">
+        <label class="cmp-label"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>TO</label>
+        <input id="composeTo" class="cmp-input" placeholder="customer@email.com">
+      </div>
+
+      <!-- CC / BCC rows -->
+      <div class="em-compose-cc-row cmp-field" style="display:none;">
+        <label class="cmp-label">CC <span class="cmp-label-hint">(comma-separated)</span></label>
+        <input id="composeCc" class="cmp-input" placeholder="cc1@email.com, cc2@email.com">
+      </div>
+      <div class="em-compose-cc-row cmp-field" style="display:none;">
+        <label class="cmp-label">BCC <span class="cmp-label-hint">(comma-separated)</span></label>
+        <input id="composeBcc" class="cmp-input" placeholder="bcc1@email.com, bcc2@email.com">
+      </div>
+
+      <!-- SUBJECT Field -->
+      <div class="cmp-field">
+        <label class="cmp-label"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="M4 4l8 8 8-8"/></svg>SUBJECT</label>
+        <input id="composeSubject" class="cmp-input" placeholder="Write a clear, concise subject line">
+      </div>
+
+      <!-- MESSAGE Field -->
+      <div class="cmp-field">
+        <label class="cmp-label"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>MESSAGE</label>
+        <div class="cmp-editor-shell">
+          <div class="cmp-rt cmp-rt-v2">
+            <button type="button" onclick="cmpFmt('bold')" title="Bold (Ctrl+B)"><b>B</b></button>
+            <button type="button" onclick="cmpFmt('italic')" title="Italic (Ctrl+I)"><i>I</i></button>
+            <button type="button" onclick="cmpFmt('underline')" title="Underline (Ctrl+U)"><u>U</u></button>
+            <div class="cmp-rt-sep"></div>
+            <button type="button" onclick="cmpFmt('insertUnorderedList')" title="Bullet list">• List</button>
+            <button type="button" onclick="cmpFmt('insertOrderedList')" title="Numbered list">1. List</button>
+            <div class="cmp-rt-sep"></div>
+            <button type="button" onclick="cmpInsertLink()" title="Insert link">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+              <span>Link</span>
+            </button>
+            <button type="button" onclick="cmpFmt('removeFormat')" title="Clear formatting">Aa</button>
+            <span class="cmp-tb-spacer"></span>
+            <span id="cmpCharCount" class="cmp-char-count">0 chars</span>
+          </div>
+          <div id="composeBodyRich" contenteditable="true"
+               oninput="cmpBodyChanged()"
+               onpaste="cmpHandlePaste(event)"
+               class="cmp-body cmp-body-v2" placeholder="Write your message…"></div>
+        </div>
+        <textarea id="composeBody" style="display:none;"></textarea>
+      </div>
+
+      <!-- Attachments -->
+      <div class="cmp-field">
+        <label class="cmp-label"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>ATTACHMENTS</label>
+        <div class="cmp-attach-area cmp-attach-area-v2" id="cmpAttachArea"
+             ondragover="cmpDragOver(event)" ondragleave="cmpDragLeave(event)" ondrop="cmpDrop(event)">
+          <input type="file" id="cmpAttachInput" multiple style="display:none;" onchange="cmpFilesPicked(this.files)">
+          <div class="cmp-attach-prompt cmp-attach-prompt-v2" id="cmpAttachPrompt">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="opacity:.7;">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            <div class="cmp-attach-text">
+              <div class="cmp-attach-title">Drag &amp; drop files here</div>
+              <div class="cmp-attach-sub">or <button type="button" class="cmp-attach-pick cmp-attach-pick-v2" onclick="document.getElementById('cmpAttachInput').click()">browse from your device</button></div>
+              <div class="cmp-attach-meta">Max 20 MB · PDF, PNG, JPG, DOCX, XLSX, CSV, TXT</div>
+            </div>
+          </div>
+          <div class="cmp-attach-list" id="cmpAttachList"></div>
+        </div>
+      </div>
+
+      <p id="composeMessage" class="cmp-status"></p>
     </div>
 
-    <p id="composeMessage" class="sub"></p>
+    <!-- ── STICKY FOOTER ── -->
+    <div class="cmp-footer">
+      <button class="cmp-btn cmp-btn-ghost" onclick="closeComposeModal()">Cancel</button>
+      <button id="composeSaveDraftBtn" class="cmp-btn cmp-btn-secondary" type="button" onclick="cmpSaveDraft()" title="Save offline draft in this browser only">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Save draft
+      </button>
+      <button id="composeSendBtn" class="cmp-btn cmp-btn-primary" onclick="sendNewEmail()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+        Send Email
+      </button>
+    </div>
   </div>
 </div>
+
+<style>
+/* ────────────────────────────────────────────────────────────────────
+   COMPOSE EMAIL — PREMIUM v2
+   Refined card with gradient header, clean field labels, subtle
+   shadows, and a sticky footer. Matches the rest of the Drop Sigma
+   modal language (assign-email modal, etc.).
+   ──────────────────────────────────────────────────────────────── */
+.cmp-modal-bg{
+  background:rgba(8,11,22,.72) !important;
+  backdrop-filter:blur(10px) !important;
+  -webkit-backdrop-filter:blur(10px) !important;
+}
+.cmp-modal-shell{
+  max-width:760px !important;
+  width:96vw !important;
+  max-height:92vh !important;
+  padding:0 !important;
+  border-radius:20px !important;
+  overflow:hidden !important;
+  display:flex !important;
+  flex-direction:column !important;
+  background:#fff !important;
+  box-shadow:0 32px 100px rgba(15,23,42,.45),0 0 0 1px rgba(99,102,241,.08) !important;
+}
+
+/* Header */
+.cmp-head{
+  display:flex;align-items:center;gap:14px;
+  padding:18px 22px;
+  background:linear-gradient(135deg,#fafbff,#f5f3ff);
+  border-bottom:1px solid #eef2f7;
+  flex-shrink:0;
+}
+.cmp-head-icon{
+  width:44px;height:44px;border-radius:13px;
+  background:linear-gradient(135deg,#6366f1,#a855f7);
+  display:grid;place-items:center;flex-shrink:0;
+  box-shadow:0 8px 22px rgba(99,102,241,.4);
+}
+.cmp-head-text{flex:1;min-width:0;}
+.cmp-head-title{
+  margin:0;font-size:18px;font-weight:800;
+  color:#0f172a;letter-spacing:-.3px;
+}
+.cmp-head-sub{
+  margin:2px 0 0;font-size:12px;
+  color:#64748b;line-height:1.4;
+}
+.cmp-head-close{
+  background:rgba(15,23,42,.06);border:none;
+  width:34px;height:34px;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  color:#475569;cursor:pointer;flex-shrink:0;
+  transition:all .15s ease;
+}
+.cmp-head-close:hover{background:#fee2e2;color:#dc2626;}
+
+/* Scrollable body */
+.cmp-body-wrap{
+  flex:1;min-height:0;overflow-y:auto;
+  padding:18px 22px;
+}
+
+/* Toolbar v2 */
+.cmp-toolbar-v2{
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+  padding:8px;
+  background:#f8fafc;
+  border:1px solid #e2e8f0;
+  border-radius:12px;
+  margin-bottom:18px;
+}
+.cmp-toolbar-v2 .cmp-tb{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:7px 11px;
+  background:#fff;
+  border:1px solid #e2e8f0;
+  border-radius:9px;
+  color:#475569;font-size:12px;font-weight:600;
+  cursor:pointer;font-family:inherit;
+  transition:all .15s ease;
+}
+.cmp-toolbar-v2 .cmp-tb:hover{
+  background:#f1f5f9;color:#0f172a;
+  border-color:#cbd5e1;transform:translateY(-1px);
+}
+.cmp-toolbar-v2 .cmp-tb-ai{
+  background:linear-gradient(135deg,#6366f1,#a855f7);
+  color:#fff;border-color:transparent;
+  box-shadow:0 3px 10px rgba(168,85,247,.3);
+}
+.cmp-toolbar-v2 .cmp-tb-ai:hover{
+  background:linear-gradient(135deg,#4f46e5,#9333ea);color:#fff;
+}
+.cmp-toolbar-v2 .cmp-tb-spacer{flex:1;}
+
+/* iOS-style signature switch */
+.cmp-sig-toggle-v2{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:5px 10px;background:#fff;
+  border:1px solid #e2e8f0;border-radius:9px;
+  font-size:12px;font-weight:600;color:#475569;cursor:pointer;
+}
+.cmp-sig-toggle-v2 input{display:none;}
+.cmp-sig-track{
+  width:30px;height:18px;border-radius:99px;
+  background:#cbd5e1;position:relative;
+  transition:background .2s ease;flex-shrink:0;
+}
+.cmp-sig-thumb{
+  position:absolute;top:2px;left:2px;
+  width:14px;height:14px;border-radius:50%;
+  background:#fff;transition:transform .2s cubic-bezier(.34,1.56,.64,1);
+  box-shadow:0 2px 4px rgba(0,0,0,.2);
+}
+.cmp-sig-toggle-v2 input:checked + .cmp-sig-track{
+  background:linear-gradient(135deg,#6366f1,#a855f7);
+}
+.cmp-sig-toggle-v2 input:checked + .cmp-sig-track .cmp-sig-thumb{
+  transform:translateX(12px);
+}
+
+/* Fields */
+.cmp-field{margin-bottom:14px;}
+.cmp-label{
+  display:inline-flex;align-items:center;gap:5px;
+  font-size:10.5px;font-weight:800;color:#64748b;
+  text-transform:uppercase;letter-spacing:.7px;
+  margin-bottom:6px;
+}
+.cmp-label-hint{
+  font-size:10px;color:#94a3b8;font-weight:500;
+  text-transform:none;letter-spacing:0;margin-left:5px;
+}
+.cmp-modal-shell .cmp-input{
+  width:100%;padding:11px 14px;
+  background:#fff;
+  border:1.5px solid #e2e8f0 !important;
+  border-radius:11px !important;
+  font-size:13.5px;font-weight:500;color:#0f172a;
+  font-family:inherit;outline:none;
+  transition:all .15s ease;
+  box-sizing:border-box;
+  box-shadow:none !important;
+}
+.cmp-modal-shell .cmp-input:focus{
+  border-color:#6366f1 !important;
+  box-shadow:0 0 0 3px rgba(99,102,241,.12) !important;
+}
+.cmp-modal-shell .cmp-input::placeholder{color:#94a3b8;font-weight:400;}
+
+/* Editor */
+.cmp-editor-shell{
+  border:1.5px solid #e2e8f0;border-radius:11px;
+  overflow:hidden;background:#fff;
+  transition:border-color .15s ease;
+}
+.cmp-editor-shell:focus-within{
+  border-color:#6366f1;
+  box-shadow:0 0 0 3px rgba(99,102,241,.12);
+}
+.cmp-rt-v2{
+  display:flex;align-items:center;gap:3px;
+  padding:7px 9px;
+  background:#f8fafc;border-bottom:1px solid #e2e8f0;
+  flex-wrap:wrap;
+}
+.cmp-rt-v2 button{
+  padding:5px 9px;background:transparent;border:none;
+  border-radius:6px;color:#475569;font-size:12px;font-weight:600;
+  cursor:pointer;font-family:inherit;line-height:1;
+  display:inline-flex;align-items:center;gap:4px;
+  transition:all .12s ease;
+}
+.cmp-rt-v2 button:hover{background:#e0e7ff;color:#4338ca;}
+.cmp-rt-v2 .cmp-rt-sep{width:1px;height:16px;background:#cbd5e1;margin:0 2px;}
+.cmp-char-count{font-size:10.5px;color:#94a3b8;font-weight:500;}
+.cmp-body-v2{
+  min-height:180px;max-height:320px;
+  padding:13px 14px;font-size:13.5px;line-height:1.6;
+  color:#0f172a;outline:none;overflow-y:auto;
+  background:#fff;
+}
+.cmp-body-v2:empty:before{
+  content:attr(placeholder);
+  color:#94a3b8;pointer-events:none;
+}
+
+/* Attachments */
+.cmp-attach-area-v2{
+  border:1.5px dashed #cbd5e1 !important;
+  border-radius:13px !important;
+  background:#fafbff !important;
+  padding:0 !important;
+  transition:all .15s ease;
+}
+.cmp-attach-area-v2:hover,
+.cmp-attach-area-v2.dragover{
+  border-color:#6366f1 !important;
+  background:#eef2ff !important;
+}
+.cmp-attach-prompt-v2{
+  display:flex;align-items:center;gap:14px;
+  padding:16px 18px !important;
+}
+.cmp-attach-text{flex:1;min-width:0;}
+.cmp-attach-title{font-size:13px;font-weight:700;color:#0f172a;margin-bottom:2px;}
+.cmp-attach-sub{font-size:12px;color:#64748b;}
+.cmp-attach-pick-v2{
+  background:none;border:none;color:#6366f1;
+  font-weight:700;cursor:pointer;text-decoration:underline;
+  font-family:inherit;font-size:12px;padding:0;
+}
+.cmp-attach-pick-v2:hover{color:#4338ca;}
+.cmp-attach-meta{font-size:10.5px;color:#94a3b8;margin-top:3px;}
+
+/* Sticky footer */
+.cmp-footer{
+  display:flex;justify-content:flex-end;gap:8px;align-items:center;
+  padding:14px 22px;
+  background:#fafbff;
+  border-top:1px solid #eef2f7;
+  flex-shrink:0;
+}
+.cmp-btn{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:10px 18px;border:none;border-radius:11px;
+  font-size:13px;font-weight:700;cursor:pointer;
+  font-family:inherit;line-height:1;
+  transition:all .18s cubic-bezier(.34,1.56,.64,1);
+}
+.cmp-btn:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+.cmp-btn-ghost{
+  background:transparent;color:#64748b;
+  border:1px solid #e2e8f0;
+}
+.cmp-btn-ghost:hover{background:#f1f5f9;color:#0f172a;}
+.cmp-btn-secondary{
+  background:#fff;color:#475569;
+  border:1px solid #e2e8f0;
+}
+.cmp-btn-secondary:hover{
+  background:#f8fafc;border-color:#cbd5e1;
+  color:#0f172a;transform:translateY(-1px);
+}
+.cmp-btn-primary{
+  background:linear-gradient(135deg,#10b981,#059669);
+  color:#fff;
+  box-shadow:0 6px 16px rgba(16,185,129,.35);
+}
+.cmp-btn-primary:hover{
+  background:linear-gradient(135deg,#059669,#047857);
+  transform:translateY(-1px);
+  box-shadow:0 10px 22px rgba(16,185,129,.45);
+}
+
+.cmp-status{
+  margin:10px 0 0;font-size:12px;color:#64748b;
+  min-height:18px;text-align:center;
+}
+</style>
 
 
 <!-- ──────────────────────────────────────────────────────────────────
