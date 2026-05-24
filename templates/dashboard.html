@@ -4499,40 +4499,6 @@ body.ds-embed-emails.ds-embed-emails #emTabSettings{
   display:none !important;
 }
 
-/* ── INITIAL LOADER — animated full-section overlay ── */
-@keyframes emLoaderPulse{
-  0%,100%{transform:scale(1);opacity:.18;}
-  50%{transform:scale(1.15);opacity:.32;}
-}
-@keyframes emLoaderSpin{
-  to{transform:rotate(360deg);}
-}
-@keyframes emLoaderShimmer{
-  0%{transform:translateX(-100%);}
-  100%{transform:translateX(100%);}
-}
-/* Show the loader on every fresh embed-mode page load. Once both
-   scope AND threads have arrived, JS adds .ds-emails-ready which
-   triggers a graceful fade-out. */
-body.ds-embed-emails #emInitialLoader{
-  display:flex !important;
-  opacity:1;
-  transition:opacity .25s ease;
-}
-body.ds-embed-emails.ds-emails-ready #emInitialLoader{
-  opacity:0 !important;
-  pointer-events:none !important;
-}
-/* Hide entirely after the fade so it never blocks clicks. */
-body.ds-embed-emails.ds-emails-ready #emInitialLoader.ds-loader-gone{
-  display:none !important;
-}
-/* If the employee actually has nothing assigned, the loader hides
-   immediately so the empty state can take over without delay. */
-body.ds-embed-emails.ds-no-assignments #emInitialLoader{
-  display:none !important;
-}
-
 /* ── PRE-HIDE every sidebar folder/label in embed mode ──
    Otherwise all 10 folders flash visible for ~1 sec until the first
    scope API arrives and JS adds .ec-scope-hidden to non-assigned
@@ -4624,19 +4590,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // (1.5s) still fires to refresh against the server.
   try { _emHydrateFromCache(); } catch(_){}
 
-  // Safety net: never trap the user under the initial loader. Even if
-  // API calls keep failing, force-hide after 20 seconds. The loader
-  // will normally close in <2 seconds once threads arrive; this cap
-  // only kicks in for genuinely-broken networks or huge inboxes.
-  setTimeout(() => {
-    try {
-      document.body.classList.add("ds-emails-ready");
-      const el = document.getElementById("emInitialLoader");
-      if(el){
-        setTimeout(() => { try { el.classList.add("ds-loader-gone"); } catch(_){} }, 300);
-      }
-    } catch(_){}
-  }, 20000);
+  // (Initial-loader safety timeout no longer needed — loader removed.)
 
   // Defense: even if the Templates/Settings menu items are somehow
   // triggered (URL hash, JS shortcut, etc.), block the switch so
@@ -7112,36 +7066,6 @@ document.addEventListener("DOMContentLoaded", () => {
            Hides the entire email module (sidebar + content panels)
            and shows a centered "Nothing assigned" message. Toggled
            via body.ds-no-assignments by the scope handler. -->
-      <!-- Full-section loading overlay — shown until BOTH the scope
-           and the first threads response have arrived. Hidden via
-           body.ds-emails-ready class added by the JS handlers when
-           initial data is in. Inside embed mode (employee iframe)
-           only — owners never see this. -->
-      <div id="emInitialLoader" style="display:none;position:absolute;inset:0;z-index:40;background:linear-gradient(135deg,#fafbff,#f5f3ff);align-items:center;justify-content:center;padding:48px 32px;">
-        <div style="display:flex;flex-direction:column;align-items:center;gap:18px;max-width:380px;text-align:center;">
-          <div style="position:relative;width:64px;height:64px;">
-            <div style="position:absolute;inset:0;border-radius:50%;background:linear-gradient(135deg,#6366f1,#a855f7);opacity:.18;animation:emLoaderPulse 1.4s ease-in-out infinite;"></div>
-            <div style="position:absolute;inset:8px;border-radius:50%;border:3px solid rgba(99,102,241,.15);border-top-color:#6366f1;animation:emLoaderSpin .9s linear infinite;"></div>
-            <div style="position:absolute;inset:18px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#a855f7);display:flex;align-items:center;justify-content:center;box-shadow:0 8px 20px rgba(99,102,241,.45);">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M22 12A10 10 0 1 1 12 2"/>
-                <path d="m22 4-9 9-3-3"/>
-              </svg>
-            </div>
-          </div>
-          <div>
-            <div style="font-size:15px;font-weight:800;color:#0f172a;letter-spacing:-.2px;margin-bottom:6px;">Syncing latest emails…</div>
-            <div id="emInitialLoaderSub" style="font-size:12.5px;color:#64748b;line-height:1.6;max-width:300px;">
-              Loading your assigned folders and threads.<br>
-              <span style="font-size:11.5px;color:#94a3b8;">This may take a moment depending on your inbox size.</span>
-            </div>
-          </div>
-          <div style="width:200px;height:3px;border-radius:99px;background:rgba(99,102,241,.12);overflow:hidden;position:relative;">
-            <div style="position:absolute;inset:0;background:linear-gradient(90deg,transparent,#6366f1,transparent);animation:emLoaderShimmer 1.4s ease-in-out infinite;"></div>
-          </div>
-        </div>
-      </div>
-
       <div id="emEmployeeNoAccess" style="display:none;position:absolute;inset:0;z-index:30;background:#fff;align-items:center;justify-content:center;padding:48px 32px;">
         <!-- Back-to-portal button (top-left) so the employee always
              has a way out even when the contextual sidebar is hidden. -->
@@ -29438,40 +29362,11 @@ function _emHydrateFromCache(){
   } catch(_) { return false; }
 }
 
-// Track which initial data has arrived. Loader hides once BOTH the
-// scope AND threads have arrived AND the threads list actually
-// reflects what scope says is available (otherwise we'd hide while
-// the user is still looking at an empty stale list).
+// Loader state kept around for callers that still flip these flags
+// (no-op now — full-page loader removed in favour of admin's natural
+// "Loading emails…" text in the thread list).
 window._emInitialState = window._emInitialState || { scopeIn: false, threadsIn: false };
-function _emMaybeHideInitialLoader(){
-  const st = window._emInitialState;
-  if(!st.scopeIn || !st.threadsIn) return;
-
-  // Sanity: scope says the employee has access to something, but the
-  // threads array is empty? Keep the loader visible — the threads
-  // response is still in flight. The fast poller (every 1.5s) will
-  // retry and eventually populate.
-  try {
-    const scope = window._emCurrentScope;
-    if(scope && scope.is_employee && !scope.view_all){
-      const hasAssignedScope = (
-        (scope.visible_folders && scope.visible_folders.length > 0) ||
-        (scope.visible_label_ids && scope.visible_label_ids.length > 0) ||
-        scope.show_assigned_threads_folder
-      );
-      const threadsLoaded = Array.isArray(window.allThreads) && window.allThreads.length > 0;
-      if(hasAssignedScope && !threadsLoaded){
-        return;  // wait for threads
-      }
-    }
-  } catch(_){}
-
-  document.body.classList.add('ds-emails-ready');
-  setTimeout(() => {
-    const el = document.getElementById('emInitialLoader');
-    if(el) el.classList.add('ds-loader-gone');
-  }, 280);
-}
+function _emMaybeHideInitialLoader(){ /* loader removed — admin parity */ }
 
 function applyEmailScopeToSidebar(scope){
   if(!scope) return;
