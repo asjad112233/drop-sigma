@@ -4486,20 +4486,13 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
       <svg class="sb-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>
       Orders
     </button>
-    <button id="navEmails" data-tip="Emails" onclick="handleEmailNavClick(event)" style="justify-content:space-between!important;">
+    <button id="navEmails" data-tip="Emails" onclick="showSection('emails')">
       <svg class="sb-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 8l10 7 10-7"/></svg>
-      <span style="flex:1;text-align:left;">Emails</span>
-      <span id="emailNavChevronWrap" data-chevron="1" style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;margin:-6px;border-radius:6px;cursor:pointer;flex-shrink:0;transition:background .15s;" onmouseover="this.style.background='rgba(0,0,0,.06)'" onmouseout="this.style.background=''">
-        <svg id="emailNavChevron" width="12" height="12" viewBox="0 0 12 12" fill="none" style="opacity:.55;transition:transform .25s ease;pointer-events:none;">
-          <path d="M2 4.5l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </span>
+      Emails
     </button>
-    <div id="emailNavGroup" class="sb-sub-group" style="display:none;">
-      <button class="sb-sub-item active" id="navSubEmailInbox"     onclick="showSection('emails');setTimeout(()=>switchEmailView('inbox', this),30)">Inbox</button>
-      <button class="sb-sub-item"        id="navSubEmailTemplates" onclick="showSection('emails');setTimeout(()=>switchEmailView('templates', this),30)">Templates</button>
-      <button class="sb-sub-item"        id="navSubEmailSettings"  onclick="showSection('emails');setTimeout(()=>switchEmailView('settings', this),30)">Settings</button>
-    </div>
+    <!-- Sub-items (Inbox / Templates / Settings) removed — everything
+         now lives inside the in-section sidebar of the Emails view. -->
+    <div id="emailNavGroup" class="sb-sub-group" style="display:none;"></div>
 
     <div class="sb-divider"></div>
 
