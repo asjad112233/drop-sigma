@@ -4618,7 +4618,9 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // Safety net: never trap the user under the initial loader. Even if
-  // both API calls fail / network drops, force-hide after 8 seconds.
+  // API calls keep failing, force-hide after 20 seconds. The loader
+  // will normally close in <2 seconds once threads arrive; this cap
+  // only kicks in for genuinely-broken networks or huge inboxes.
   setTimeout(() => {
     try {
       document.body.classList.add("ds-emails-ready");
@@ -4627,7 +4629,7 @@ document.addEventListener("DOMContentLoaded", () => {
         setTimeout(() => { try { el.classList.add("ds-loader-gone"); } catch(_){} }, 300);
       }
     } catch(_){}
-  }, 8000);
+  }, 20000);
 
   // Defense: even if the Templates/Settings menu items are somehow
   // triggered (URL hash, JS shortcut, etc.), block the switch so
@@ -7121,8 +7123,11 @@ document.addEventListener("DOMContentLoaded", () => {
             </div>
           </div>
           <div>
-            <div style="font-size:15px;font-weight:800;color:#0f172a;letter-spacing:-.2px;margin-bottom:4px;">Syncing latest emails…</div>
-            <div id="emInitialLoaderSub" style="font-size:12.5px;color:#64748b;line-height:1.5;">Loading your assigned folders and threads</div>
+            <div style="font-size:15px;font-weight:800;color:#0f172a;letter-spacing:-.2px;margin-bottom:6px;">Syncing latest emails…</div>
+            <div id="emInitialLoaderSub" style="font-size:12.5px;color:#64748b;line-height:1.6;max-width:300px;">
+              Loading your assigned folders and threads.<br>
+              <span style="font-size:11.5px;color:#94a3b8;">This may take a moment depending on your inbox size.</span>
+            </div>
           </div>
           <div style="width:200px;height:3px;border-radius:99px;background:rgba(99,102,241,.12);overflow:hidden;position:relative;">
             <div style="position:absolute;inset:0;background:linear-gradient(90deg,transparent,#6366f1,transparent);animation:emLoaderShimmer 1.4s ease-in-out infinite;"></div>
@@ -19762,7 +19767,12 @@ async function loadEmails(options={}){
 
     allThreads = data.threads || [];
     allEmails = allThreads; // old code compatibility
+    // Expose for the initial-loader gate (it checks allThreads.length)
+    try { window.allThreads = allThreads; } catch(_){}
     // Mark threads as received — gates the initial loader fade-out.
+    // Loader re-checks every response so it can finally close once
+    // threads actually arrive (even if scope arrived earlier with
+    // counts but no threads).
     try { window._emInitialState.threadsIn = true; _emMaybeHideInitialLoader(); } catch(_){}
     // Employee scope arrives on every threads response — apply it to
     // the sidebar so newly-assigned folders/labels appear without a
@@ -29362,13 +29372,35 @@ function applyEmailFolderFilter(threads){
    Owners + view_all employees pass through unchanged. */
 window._emCurrentScope = null;  // Set whenever stats/threads API responds
 
-// Track which initial data has arrived. Loader hides once BOTH are in.
+// Track which initial data has arrived. Loader hides once BOTH the
+// scope AND threads have arrived AND the threads list actually
+// reflects what scope says is available (otherwise we'd hide while
+// the user is still looking at an empty stale list).
 window._emInitialState = window._emInitialState || { scopeIn: false, threadsIn: false };
 function _emMaybeHideInitialLoader(){
   const st = window._emInitialState;
   if(!st.scopeIn || !st.threadsIn) return;
+
+  // Sanity: scope says the employee has access to something, but the
+  // threads array is empty? Keep the loader visible — the threads
+  // response is still in flight. The fast poller (every 1.5s) will
+  // retry and eventually populate.
+  try {
+    const scope = window._emCurrentScope;
+    if(scope && scope.is_employee && !scope.view_all){
+      const hasAssignedScope = (
+        (scope.visible_folders && scope.visible_folders.length > 0) ||
+        (scope.visible_label_ids && scope.visible_label_ids.length > 0) ||
+        scope.show_assigned_threads_folder
+      );
+      const threadsLoaded = Array.isArray(window.allThreads) && window.allThreads.length > 0;
+      if(hasAssignedScope && !threadsLoaded){
+        return;  // wait for threads
+      }
+    }
+  } catch(_){}
+
   document.body.classList.add('ds-emails-ready');
-  // Remove from layout after fade-out completes.
   setTimeout(() => {
     const el = document.getElementById('emInitialLoader');
     if(el) el.classList.add('ds-loader-gone');
