@@ -16,6 +16,8 @@ urlpatterns = [
     path("favicon.ico", RedirectView.as_view(url="/static/favicon.svg", permanent=True)),
     path("", views.homepage, name="home"),
     path("dashboard/", views.dashboard_page, name="dashboard"),
+    # Embeddable emails-only view for the employee portal iframe
+    path("dashboard/embed/emails/", views.dashboard_embed_emails, name="dashboard_embed_emails"),
     path("login/", views.admin_login_page, name="admin_login"),
     path("setup-admin-x9k2/", views.setup_admin),
     path("logout/", views.admin_logout_view, name="admin_logout"),

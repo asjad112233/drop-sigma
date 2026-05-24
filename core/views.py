@@ -654,6 +654,35 @@ def dashboard_page(request):
     return response
 
 
+@login_required(login_url="/login/")
+def dashboard_embed_emails(request):
+    """Render dashboard.html in 'embedded emails-only' mode for the
+    employee portal iframe. Allowed for tenant owners AND team members
+    — the email APIs themselves do all scope filtering, so this view
+    just has to render the chrome without redirecting employees away.
+
+    Context flag `embed_mode='emails'` makes dashboard.html hide the
+    main nav, top bar, profile menu, and every section except the
+    emails section + its contextual sidebar."""
+    real_user = request.user
+    display_name = real_user.get_full_name().strip() or real_user.username
+    initials = "".join(w[0].upper() for w in display_name.split()[:2]) or "U"
+    response = render(request, "dashboard.html", {
+        "embed_mode":        "emails",
+        "is_impersonating":  False,
+        "impersonate_name":  "",
+        "impersonate_email": "",
+        "is_subscribed":     True,
+        "is_suspended":      False,
+        "is_flagged":        False,
+        "display_name":      display_name,
+        "user_initials":     initials,
+    })
+    response["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response["X-Frame-Options"] = "SAMEORIGIN"
+    return response
+
+
 # ── Upgrade / Subscribe ────────────────────────────────────────────────────────
 
 PLANS = [

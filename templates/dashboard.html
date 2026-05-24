@@ -4380,7 +4380,49 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
     <stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#a855f7"/>
   </linearGradient>
 </defs></svg>
-<body>
+<body{% if embed_mode == "emails" %} class="ds-embed-emails" data-embed="emails"{% endif %}>
+{% if embed_mode == "emails" %}
+<style>
+/* ────────────────────────────────────────────────────────────────────
+   EMBED MODE: emails-only view for the employee portal iframe.
+   Hides every section, modal, and chrome element except the emails
+   section + its contextual sidebar. The scope-aware backend already
+   filters data — this is purely visual stripping.
+   ──────────────────────────────────────────────────────────────── */
+body.ds-embed-emails{
+  background:#fff !important;
+}
+/* Force emails section visible regardless of routing JS */
+body.ds-embed-emails #emailsSection{display:flex !important;}
+/* Hide every non-email section */
+body.ds-embed-emails section.section:not(#emailsSection){display:none !important;}
+/* Hide the main left nav (employee portal owns navigation now) */
+body.ds-embed-emails > aside.sidebar:not(.sidebar-email){display:none !important;}
+/* Show the contextual email sidebar without the data-active-section gate */
+body.ds-embed-emails .sidebar.sidebar-email{display:flex !important;}
+/* Hide the Drop Sigma AI floater + admin top bar + notification bell */
+body.ds-embed-emails .ai-fab,
+body.ds-embed-emails #aiFloater,
+body.ds-embed-emails #notifBell,
+body.ds-embed-emails .top-bar,
+body.ds-embed-emails #gLoader,
+body.ds-embed-emails [id^="impersonate"],
+body.ds-embed-emails [id^="profileMenu"]{
+  display:none !important;
+}
+/* Hide the "Back to main menu" button inside sidebar-email when
+   embedded (employee will use their portal's nav to leave). */
+body.ds-embed-emails .ec-back-btn,
+body.ds-embed-emails [data-back="main-menu"]{display:none !important;}
+/* Tighten main-content padding since there's no top bar */
+body.ds-embed-emails main,
+body.ds-embed-emails .main-content,
+body.ds-embed-emails .app-shell{
+  padding-top:0 !important;
+  margin-top:0 !important;
+}
+</style>
+{% endif %}
 <div id="gLoader"></div>
 <form id="csrfHiddenForm" style="display:none;">{% csrf_token %}</form>
 
@@ -4632,6 +4674,14 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
 
       <!-- MAIN -->
       <div class="ec-group">
+        <!-- "Assigned Threads" — virtual folder shown only for employees
+             whose admin has individually assigned them at least one thread
+             without giving them folder-level access. Hidden for owners. -->
+        <button class="ec-item ec-item-assigned" data-view="assigned_threads" onclick="setEmailFolder('assigned_threads')" style="display:none;">
+          <span class="ec-ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="m17 11 2 2 4-4"/></svg></span>
+          <span class="ec-lbl">Assigned Threads</span>
+          <span class="ec-cnt ec-cnt-accent" data-cnt="assigned_threads"></span>
+        </button>
         <button class="ec-item active" data-view="inbox" onclick="setEmailFolder('inbox')">
           <span class="ec-ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v12H8l-4 4z"/></svg></span>
           <span class="ec-lbl">Inbox</span>
@@ -19222,6 +19272,12 @@ async function loadEmails(options={}){
 
     allThreads = data.threads || [];
     allEmails = allThreads; // old code compatibility
+    // Employee scope arrives on every threads response — apply it to
+    // the sidebar so newly-assigned folders/labels appear without a
+    // page reload.
+    if(data.scope){
+      try { applyEmailScopeToSidebar(data.scope); } catch(_){}
+    }
     updateEmailStats();
     populateEmailInboxPicker();
     renderEmails();
@@ -28520,6 +28576,11 @@ function applyEmailFolderFilter(threads){
       // Threads explicitly archived via the "Move to folder → Archive" action
       list = list.filter(t => !!t.latest_archived);
       break;
+    case 'assigned_threads':
+      // Virtual folder shown only to employees with direct thread
+      // assignments. Backend tags those threads with is_individually_assigned.
+      list = list.filter(t => !!t.is_individually_assigned && !t.latest_archived);
+      break;
     case 'inbox':
       // Inbox = everything EXCEPT archived (archived threads only show
       // in the Archive folder).
@@ -28532,6 +28593,81 @@ function applyEmailFolderFilter(threads){
   }
   // (Label filter handled at the top — label view trumps folder.)
   return list;
+}
+
+/* Apply employee scope to the contextual sidebar:
+   - Hide folders not in visible_folders
+   - Hide labels not in visible_label_ids
+   - Show "Assigned Threads" only if backend says so
+   - Hide Compose/Connect/Settings/Templates for restricted employees
+   Owners + view_all employees pass through unchanged. */
+window._emCurrentScope = null;  // Set whenever stats/threads API responds
+
+function applyEmailScopeToSidebar(scope){
+  if(!scope) return;
+  window._emCurrentScope = scope;
+
+  // 1. Assigned Threads virtual folder visibility
+  const assignedBtn = document.querySelector('.ec-item[data-view="assigned_threads"]');
+  if(assignedBtn){
+    assignedBtn.style.display = scope.show_assigned_threads_folder ? '' : 'none';
+  }
+
+  // Owners + view_all employees see everything as before.
+  if(!scope.is_employee || scope.view_all){
+    document.querySelectorAll('.ec-item[data-view]').forEach(btn => {
+      if(btn.dataset.view !== 'assigned_threads') btn.style.display = '';
+    });
+    return;
+  }
+
+  // 2. Filter built-in folder buttons by visible_folders
+  const visibleSet = new Set(scope.visible_folders || []);
+  // Always allow the assigned-threads virtual folder regardless
+  visibleSet.add('assigned_threads');
+  document.querySelectorAll('.ec-item[data-view]').forEach(btn => {
+    const v = btn.dataset.view;
+    if(v === 'assigned_threads') return;  // handled above
+    btn.style.display = visibleSet.has(v) ? '' : 'none';
+  });
+
+  // 3. Hide empty section headers (the divider above hidden groups)
+  document.querySelectorAll('.ec-section, .ec-section-with-action').forEach(header => {
+    const grp = header.nextElementSibling;
+    if(!grp || !grp.classList.contains('ec-group')) return;
+    const anyVisible = Array.from(grp.querySelectorAll('.ec-item, .ec-labels')).some(el => {
+      if(el.classList.contains('ec-labels')){
+        return el.querySelectorAll('.ec-label-item:not([style*="display:none"])').length > 0;
+      }
+      return el.style.display !== 'none';
+    });
+    header.style.display = anyVisible ? '' : 'none';
+  });
+
+  // 4. Hide tenant-only chrome — Compose, Add inbox, Templates, Settings
+  // (employees can't connect new accounts or edit templates).
+  ['emComposeBtn','navTemplates','navSettings','ecComposeBtn','addInboxBtn']
+    .forEach(id => {
+      const el = document.getElementById(id);
+      if(el) el.style.display = 'none';
+    });
+  document.querySelectorAll('[data-tenant-only]').forEach(el => {
+    el.style.display = 'none';
+  });
+}
+
+/* Render-side filter for the labels list — applied after each
+   renderEmailLabelsList() call to keep restricted employees from
+   seeing unassigned labels. */
+function applyEmailScopeToLabels(){
+  const scope = window._emCurrentScope;
+  if(!scope || !scope.is_employee || scope.view_all) return;
+  if(!scope.visible_label_ids) return;
+  const allowed = new Set(scope.visible_label_ids);
+  document.querySelectorAll('.ec-label-item').forEach(item => {
+    const id = Number(item.dataset.labelId);
+    item.style.display = allowed.has(id) ? '' : 'none';
+  });
 }
 
 /* ──────────────────────────────────────────────────────────────────────
@@ -28552,6 +28688,12 @@ async function loadEmailThreadStats(){
     if(Array.isArray(d.labels)){
       emailLabels = d.labels;
       renderEmailLabelsList();
+    }
+    // Employee scope: narrow sidebar to assigned folders/labels and
+    // surface the "Assigned Threads" virtual folder when applicable.
+    if(d.scope){
+      try { applyEmailScopeToSidebar(d.scope); } catch(_){}
+      try { applyEmailScopeToLabels(); } catch(_){}
     }
   } catch(_){}
 }
