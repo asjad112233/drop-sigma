@@ -58,6 +58,7 @@ from .views import (
     permanent_delete_threads_api,
     thread_history_api,
     bulk_mark_threads_read_api,
+    team_email_assignments_api,
 )
 
 urlpatterns = [
@@ -166,6 +167,8 @@ urlpatterns = [
     path("api/threads/permanent-delete/",   permanent_delete_threads_api, name="permanent_delete_threads_api"),
     path("api/threads/history/",            thread_history_api,           name="thread_history_api"),
     path("api/threads/bulk-mark-read/",     bulk_mark_threads_read_api,   name="bulk_mark_threads_read_api"),
+    # Admin → assigns email folders / labels / capabilities to a team member
+    path("api/team/<int:member_id>/email-assignments/", team_email_assignments_api, name="team_email_assignments_api"),
 
     # Gmail OAuth2
     path("oauth/start/", gmail_oauth_start_api, name="gmail_oauth_start"),

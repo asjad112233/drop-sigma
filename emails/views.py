@@ -297,6 +297,8 @@ def _resolve_email_scope(request):
             "visible_folders": set(ALL_BUILTIN_FOLDERS),
             "visible_label_ids": None,  # None means "all"
             "has_individual_assignments": False,
+            "can_compose":   True,
+            "can_add_email": True,
         }
 
     owner = member.owner
@@ -349,6 +351,8 @@ def _resolve_email_scope(request):
             "visible_folders": set(ALL_BUILTIN_FOLDERS),
             "visible_label_ids": None,
             "has_individual_assignments": has_individual,
+            "can_compose":   bool(perms.get("can_compose")),
+            "can_add_email": bool(perms.get("can_add_email")),
         }
 
     return {
@@ -362,6 +366,20 @@ def _resolve_email_scope(request):
         "visible_label_ids": visible_label_ids,
         "has_individual_assignments": has_individual,
     }
+
+
+def _is_team_member(request):
+    """True iff the requester is logged in as a team member (employee),
+    not the tenant owner. Used to gate owner-only actions like adding
+    a new email account, editing templates, or changing settings."""
+    try:
+        if not request.user.is_authenticated:
+            return False
+        if hasattr(request.user, "team_profile"):
+            return request.user.team_profile.filter(is_active=True).exists()
+    except Exception:
+        pass
+    return False
 
 
 def _data_owner(request):
@@ -564,6 +582,13 @@ def log_thread_activity(store, contact, event, description="", meta=None,
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def connect_email_account_api(request):
+    # Employees cannot add or change inbox accounts — only the tenant owner.
+    if _is_team_member(request):
+        return Response({
+            "success": False,
+            "message": "Only the account owner can connect a new email inbox."
+        }, status=403)
+
     store_id = request.data.get("store_id")
     email = request.data.get("email")
     app_password = request.data.get("app_password")
@@ -618,6 +643,13 @@ def connect_email_account_api(request):
 @permission_classes([IsAuthenticated])
 def connect_custom_email_api(request):
     """Connect a custom hosting email via SMTP + IMAP credentials."""
+    # Employees cannot add or change inbox accounts — only the tenant owner.
+    if _is_team_member(request):
+        return Response({
+            "success": False,
+            "message": "Only the account owner can connect a new email inbox."
+        }, status=403)
+
     store_id  = request.data.get("store_id")
     email     = request.data.get("email", "").strip()
     password  = request.data.get("password", "").strip()
@@ -680,6 +712,13 @@ def connect_custom_email_api(request):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def gmail_oauth_start_api(request):
+    # Only the tenant owner can begin a Gmail OAuth flow to add a new
+    # inbox account. Employees are blocked even if they craft the URL.
+    if _is_team_member(request):
+        return Response({
+            "success": False,
+            "message": "Only the account owner can connect a new email inbox."
+        }, status=403)
     import urllib.parse
     from django.conf import settings as _settings
     store_id = request.GET.get("store_id")
@@ -893,6 +932,14 @@ def email_settings_update_api(request):
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def disconnect_email_account_api(request):
+    # Disconnecting an inbox is owner-only — employees must never be
+    # able to sever the tenant's email connection.
+    if _is_team_member(request):
+        return Response({
+            "success": False,
+            "message": "Only the account owner can disconnect an email inbox."
+        }, status=403)
+
     store_id = request.data.get("store_id")
     account_id = request.data.get("account_id")
 
@@ -1395,6 +1442,8 @@ def email_threads_api(request):
                 and not scope["view_all"]
                 and scope.get("has_individual_assignments")
             ),
+            "can_compose":   bool(scope.get("can_compose")) or not scope["is_employee"] or scope["view_all"],
+            "can_add_email": bool(scope.get("can_add_email")) or not scope["is_employee"],
         },
     })
 
@@ -4622,6 +4671,8 @@ def threads_stats_api(request):
                 and not scope["view_all"]
                 and scope.get("has_individual_assignments")
             ),
+            "can_compose":   bool(scope.get("can_compose")) or not scope["is_employee"] or scope["view_all"],
+            "can_add_email": bool(scope.get("can_add_email")) or not scope["is_employee"],
         },
     })
 
@@ -5444,6 +5495,155 @@ def bulk_mark_threads_read_api(request):
         "success": True,
         "updated_threads": updated_threads,
         "updated_messages": updated_msgs,
+    })
+
+
+# ─────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────
+# Team-member email assignments API (admin-only).
+#
+# Admin opens the "Assign Email" modal next to the Customer Inbox
+# header. They pick a team member and check off folders, labels,
+# capabilities (Compose, Add Inbox), or "Full Access". This endpoint:
+#   GET  → returns the member's current assignments so the modal can
+#          pre-fill checkboxes
+#   POST → wipes the member's existing folder/label/capability rules
+#          and writes the new set atomically
+#
+# Backed by:
+#   - FolderAssignment (folder/label → member rules)
+#   - TeamMember.permissions JSON: can_compose, can_add_email,
+#     view_all_threads, allowed_stores
+# ─────────────────────────────────────────────────────────────────────
+ALL_BUILTIN_FOLDER_KEYS = [
+    "inbox", "unread", "needs_human", "ai_drafts", "resolved",
+    "refunds", "returns", "dispute", "spam", "archive",
+]
+
+
+@csrf_exempt
+@api_view(["GET", "POST"])
+@permission_classes([IsAuthenticated])
+def team_email_assignments_api(request, member_id):
+    """Admin-only. Reads or replaces a team member's email assignments.
+
+    GET  /emails/api/team/<member_id>/email-assignments/?store_id=N
+         → { success, folders:[], label_ids:[], can_compose, can_add_email,
+              view_all_threads, available_labels:[{id,name,color,icon}] }
+
+    POST /emails/api/team/<member_id>/email-assignments/
+         body: {
+           store_id, folders:[...], label_ids:[...],
+           can_compose, can_add_email, view_all_threads
+         }
+    """
+    from .models import EmailLabel, FolderAssignment
+    from teamapp.models import TeamMember
+
+    # Admin-only: requester must be the tenant owner (not an employee).
+    if _is_team_member(request):
+        return Response({
+            "success": False,
+            "message": "Only the account owner can manage employee assignments."
+        }, status=403)
+
+    member = TeamMember.objects.filter(
+        id=member_id, owner=request.user
+    ).first()
+    if not member:
+        return Response({"success": False, "message": "Team member not found."}, status=404)
+
+    store_id = request.data.get("store_id") if request.method == "POST" else request.GET.get("store_id")
+    store = None
+    if store_id:
+        store = Store.objects.filter(id=store_id, user=request.user).first()
+        if not store:
+            return Response({"success": False, "message": "Store not found."}, status=404)
+
+    # ── GET: return current state for modal pre-fill ──
+    if request.method == "GET":
+        fa_qs = FolderAssignment.objects.filter(
+            assigned_to=member, is_active=True
+        )
+        if store:
+            fa_qs = fa_qs.filter(store=store)
+        folders = sorted({f for f in fa_qs.values_list("folder", flat=True) if f})
+        label_ids = sorted({lid for lid in fa_qs.values_list("label_id", flat=True) if lid})
+
+        perms = member.permissions or {}
+        # Owner's labels (available to assign)
+        avail_labels = list(EmailLabel.objects.filter(
+            owner=request.user
+        ).order_by("position", "name").values("id", "name", "color", "icon"))
+
+        return Response({
+            "success": True,
+            "member": {
+                "id": member.id,
+                "name": member.name,
+                "email": getattr(member, "email", "") or "",
+                "role": getattr(member, "role", "") or "",
+            },
+            "folders": folders,
+            "label_ids": label_ids,
+            "can_compose":      bool(perms.get("can_compose")),
+            "can_add_email":    bool(perms.get("can_add_email")),
+            "view_all_threads": bool(perms.get("view_all_threads")),
+            "available_folders": list(ALL_BUILTIN_FOLDER_KEYS),
+            "available_labels": avail_labels,
+        })
+
+    # ── POST: replace assignments atomically ──
+    if not store:
+        return Response({"success": False, "message": "store_id is required."}, status=400)
+
+    folders          = request.data.get("folders") or []
+    label_ids        = request.data.get("label_ids") or []
+    can_compose      = bool(request.data.get("can_compose"))
+    can_add_email    = bool(request.data.get("can_add_email"))
+    view_all_threads = bool(request.data.get("view_all_threads"))
+
+    # Validate folders against the allowed set (no rogue strings).
+    folders = [f for f in folders if isinstance(f, str) and f in ALL_BUILTIN_FOLDER_KEYS]
+    # Validate labels — only ones the owner actually owns are allowed.
+    label_ids = [int(x) for x in label_ids if str(x).isdigit()]
+    label_ids = list(EmailLabel.objects.filter(
+        id__in=label_ids, owner=request.user
+    ).values_list("id", flat=True))
+
+    # Wipe existing folder/label rules for THIS member + store.
+    FolderAssignment.objects.filter(
+        assigned_to=member, store=store
+    ).delete()
+
+    # Create fresh folder rules
+    fa_rows = [
+        FolderAssignment(store=store, folder=f, assigned_to=member, is_active=True)
+        for f in folders
+    ]
+    # Create fresh label rules
+    fa_rows.extend([
+        FolderAssignment(store=store, label_id=lid, assigned_to=member, is_active=True)
+        for lid in label_ids
+    ])
+    if fa_rows:
+        FolderAssignment.objects.bulk_create(fa_rows, ignore_conflicts=True)
+
+    # Update permissions JSON (preserve other keys like allowed_stores)
+    perms = member.permissions or {}
+    perms["can_compose"]      = can_compose
+    perms["can_add_email"]    = can_add_email
+    perms["view_all_threads"] = view_all_threads
+    # Allow this employee to see the Emails tab in their portal
+    perms["view_emails"]      = True
+    member.permissions = perms
+    member.save(update_fields=["permissions"])
+
+    return Response({
+        "success": True,
+        "message": "Assignments updated.",
+        "folders_count":   len(folders),
+        "labels_count":    len(label_ids),
     })
 
 

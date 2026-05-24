@@ -661,14 +661,54 @@ def dashboard_embed_emails(request):
     — the email APIs themselves do all scope filtering, so this view
     just has to render the chrome without redirecting employees away.
 
-    Context flag `embed_mode='emails'` makes dashboard.html hide the
-    main nav, top bar, profile menu, and every section except the
-    emails section + its contextual sidebar."""
+    For team members, we resolve the OWNER's first accessible store
+    and pass it down via context. The template falls back to that
+    store_id when the URL query param is missing (which it is when
+    the employee's iframe loads without an explicit selection)."""
     real_user = request.user
     display_name = real_user.get_full_name().strip() or real_user.username
     initials = "".join(w[0].upper() for w in display_name.split()[:2]) or "U"
+
+    # Resolve a sensible default store_id for the requester so the
+    # embedded dashboard's API calls don't all default to "2".
+    default_store_id = ""
+    has_any_assignment = True   # default: assume access until proven otherwise
+    try:
+        from stores.models import Store as _Store
+        if hasattr(real_user, "team_profile"):
+            member = real_user.team_profile.filter(is_active=True).select_related("owner").first()
+            if member and member.owner_id:
+                perms = member.permissions or {}
+                allowed = perms.get("allowed_stores") or []
+                qs = _Store.objects.filter(user_id=member.owner_id)
+                if allowed:
+                    qs = qs.filter(id__in=[int(s) for s in allowed if str(s).isdigit()])
+                first = qs.order_by("id").first()
+                if first:
+                    default_store_id = str(first.id)
+                # Pre-resolve whether this employee has ANY assignment so
+                # we can avoid the empty-state flash on initial render.
+                from emails.models import FolderAssignment, EmailThreadAssignment
+                from django.db.models import Q as _Q
+                has_view_all   = bool(perms.get("view_all_threads"))
+                has_fa         = FolderAssignment.objects.filter(
+                                    assigned_to=member, is_active=True, store__user=member.owner
+                                 ).exists()
+                has_individual = EmailThreadAssignment.objects.filter(
+                                    store__user=member.owner
+                                 ).filter(_Q(assigned_to=member) | _Q(co_assignees=member)).exists()
+                has_any_assignment = bool(has_view_all or has_fa or has_individual)
+        if not default_store_id:
+            first_own = _Store.objects.filter(user=real_user).order_by("id").first()
+            if first_own:
+                default_store_id = str(first_own.id)
+    except Exception:
+        pass
+
     response = render(request, "dashboard.html", {
         "embed_mode":        "emails",
+        "embed_default_store_id": default_store_id,
+        "embed_has_assignments":  has_any_assignment,
         "is_impersonating":  False,
         "impersonate_name":  "",
         "impersonate_email": "",

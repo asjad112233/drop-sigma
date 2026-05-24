@@ -32,6 +32,20 @@ body{font-family:'Inter','Segoe UI',sans-serif;background:var(--bg);color:var(--
 /* ── Layout ── */
 .layout{display:grid;grid-template-columns:240px 1fr;min-height:100vh;}
 
+/* ── EMAIL MODE ──
+   When the user clicks Emails, the employee portal's main sidebar
+   hides and the iframe expands to cover the full viewport. The iframe
+   then renders the contextual email sidebar (Inbox, Unread, Needs
+   Human, etc.) which visually REPLACES the employee sidebar — same
+   pattern as the admin dashboard. To navigate back, the "Back to
+   main menu" link inside the iframe postMessages this parent which
+   switches back to Overview (handled by the message listener below). */
+body.emp-emails-mode .layout{grid-template-columns:1fr !important;}
+body.emp-emails-mode aside.sidebar#sidebar{display:none !important;}
+body.emp-emails-mode main.main{padding:0 !important;margin:0 !important;height:100vh !important;overflow:hidden !important;}
+body.emp-emails-mode #secEmails{padding:0 !important;height:100vh !important;}
+body.emp-emails-mode #secEmails > div{height:100vh !important;border-radius:0 !important;box-shadow:none !important;}
+
 /* ── Sidebar ── */
 .sidebar{
   background:var(--surface);border-right:1px solid var(--border);
@@ -576,18 +590,26 @@ body{font-family:'Inter','Segoe UI',sans-serif;background:var(--bg);color:var(--
          The iframe loads /dashboard/embed/emails/ which renders
          dashboard.html in "embed_mode=emails" — same UI as the admin
          email module. Backend APIs auto-scope to whatever the admin
-         has assigned to this employee (folders, labels, individual
-         threads, or full inbox). -->
-    <section class="section" id="secEmails" style="padding:0;display:flex;flex-direction:column;height:calc(100vh - 32px);">
-      <iframe
-        id="emailsEmbedFrame"
-        src="/dashboard/embed/emails/?section=emails"
-        title="Emails"
-        style="width:100%;flex:1;border:0;border-radius:14px;background:#fff;box-shadow:0 2px 12px rgba(15,23,42,.06);"
-        allow="clipboard-read; clipboard-write; fullscreen"
-        loading="lazy"
-        referrerpolicy="same-origin"
-      ></iframe>
+         has assigned to this employee.
+
+         CRITICAL layout note: switchSection() in this template clears
+         every section's inline style.display before adding .active —
+         so we CAN'T rely on display:flex + flex:1 to size the iframe.
+         Instead we use position:absolute + inset:0 + a relative-anchor
+         wrapper so the iframe always fills its section, regardless of
+         what switchSection touches. -->
+    <section class="section" id="secEmails" style="padding:0;">
+      <div style="position:relative;width:100%;height:calc(100vh - 32px);background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 2px 12px rgba(15,23,42,.06);">
+        <iframe
+          id="emailsEmbedFrame"
+          src="/dashboard/embed/emails/?section=emails"
+          title="Emails"
+          style="position:absolute;inset:0;width:100%;height:100%;border:0;background:#fff;"
+          allow="clipboard-read; clipboard-write; fullscreen"
+          loading="lazy"
+          referrerpolicy="same-origin"
+        ></iframe>
+      </div>
     </section>
 
     <!-- ── My Stores (read-only, gated by view_stores) ── -->
@@ -1508,7 +1530,25 @@ function switchSection(id){
   document.getElementById("nav_"+id)?.classList.add("active");
   if(id==="secChat")  ecChatInit();
   if(id==="secTasks") loadEmpTasks();
+  // Email mode swaps the main sidebar for the contextual email
+  // sidebar inside the iframe (same UX as the admin dashboard).
+  document.body.classList.toggle("emp-emails-mode", id === "secEmails");
 }
+
+// ── Iframe postMessage listener ──
+// The embedded admin email view (inside #emailsEmbedFrame) sends
+// {type:"back-to-portal"} when the user clicks "Back to main menu"
+// in its contextual sidebar. We respond by switching back to Overview
+// which hides .emp-emails-mode and restores the main sidebar.
+window.addEventListener("message", (ev) => {
+  if(!ev || !ev.data) return;
+  // Only trust messages from the iframe element we own
+  const frame = document.getElementById("emailsEmbedFrame");
+  if(frame && ev.source !== frame.contentWindow) return;
+  if(ev.data.type === "back-to-portal"){
+    try { switchSection("secOverview"); } catch(_){}
+  }
+});
 
 // ── Overview ──
 function renderOverview(){

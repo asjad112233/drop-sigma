@@ -78,6 +78,7 @@ def team_members_api(request):
         "id": m.id,
         "user": m.user_id,
         "name": m.name,
+        "email": m.email or "",
         "role": m.role,
         "status": m.status,
         "is_admin": False,
