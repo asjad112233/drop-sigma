@@ -4499,6 +4499,20 @@ body.ds-embed-emails.ds-embed-emails #emTabSettings{
   display:none !important;
 }
 
+/* ── PRE-HIDE every sidebar folder/label in embed mode ──
+   Otherwise all 10 folders flash visible for ~1 sec until the first
+   scope API arrives and JS adds .ec-scope-hidden to non-assigned
+   ones. Default everything to hidden, then JS reveals only what the
+   employee actually has access to (via the .ec-scope-visible class
+   added in applyEmailScopeToSidebar). Owners never hit embed mode,
+   so they're unaffected. */
+body.ds-embed-emails.ds-embed-emails .sidebar.sidebar-email .ec-item[data-view]:not(.ec-scope-visible),
+body.ds-embed-emails.ds-embed-emails .sidebar.sidebar-email .ec-section:not(.ec-scope-visible),
+body.ds-embed-emails.ds-embed-emails .sidebar.sidebar-email .ec-section-with-action:not(.ec-scope-visible),
+body.ds-embed-emails.ds-embed-emails .sidebar.sidebar-email .ec-label-item:not(.ec-scope-visible){
+  display:none !important;
+}
+
 /* ── ZERO-ASSIGNMENT EMPTY STATE ──
    When body.ds-no-assignments is set (by the scope handler when an
    employee has zero access), hide the entire email layout — sidebar
@@ -29316,43 +29330,72 @@ function applyEmailScopeToSidebar(scope){
   );
   document.body.classList.toggle('ds-no-assignments', !!hasNothingAssigned);
 
-  // 1. Assigned Threads virtual folder — uses ec-scope-hidden class
-  //    (NOT inline style) because the Kayali sidebar's .ec-item rule
-  //    is display:flex!important which beats inline display:none.
+  // Embed mode pre-hides everything by default (via CSS). We add the
+  // `ec-scope-visible` class to items the employee IS allowed to see.
+  // Outside embed mode, we use `ec-scope-hidden` to subtract from the
+  // default-visible set. Both approaches end up at the same place.
+  const inEmbed = document.body.dataset.embed === "emails";
+
+  // 1. Assigned Threads virtual folder
   const assignedBtn = document.querySelector('.ec-item[data-view="assigned_threads"]');
   if(assignedBtn){
-    assignedBtn.classList.toggle('ec-scope-hidden', !scope.show_assigned_threads_folder);
+    if(scope.show_assigned_threads_folder){
+      assignedBtn.classList.add('ec-scope-visible');
+      assignedBtn.classList.remove('ec-scope-hidden');
+    } else {
+      assignedBtn.classList.remove('ec-scope-visible');
+      if(!inEmbed) assignedBtn.classList.add('ec-scope-hidden');
+    }
   }
 
-  // Owners + view_all employees see everything — clear all scope-hides.
+  // Owners + view_all employees see EVERY folder/label/section.
   if(!scope.is_employee || scope.view_all){
-    document.querySelectorAll('.ec-scope-hidden').forEach(el => el.classList.remove('ec-scope-hidden'));
+    document.querySelectorAll('.ec-item[data-view], .ec-section, .ec-section-with-action, .ec-label-item').forEach(el => {
+      el.classList.add('ec-scope-visible');
+      el.classList.remove('ec-scope-hidden');
+    });
     if(assignedBtn && !scope.show_assigned_threads_folder){
-      assignedBtn.classList.add('ec-scope-hidden');
+      assignedBtn.classList.remove('ec-scope-visible');
+      if(!inEmbed) assignedBtn.classList.add('ec-scope-hidden');
     }
     return;
   }
 
-  // 2. Filter built-in folder buttons by visible_folders
+  // 2. Built-in folder buttons — only the ones the scope allows
   const visibleSet = new Set(scope.visible_folders || []);
-  visibleSet.add('assigned_threads');  // virtual folder handled above
+  visibleSet.add('assigned_threads');
   document.querySelectorAll('.ec-item[data-view]').forEach(btn => {
     const v = btn.dataset.view;
     if(v === 'assigned_threads') return;
-    btn.classList.toggle('ec-scope-hidden', !visibleSet.has(v));
+    if(visibleSet.has(v)){
+      btn.classList.add('ec-scope-visible');
+      btn.classList.remove('ec-scope-hidden');
+    } else {
+      btn.classList.remove('ec-scope-visible');
+      if(!inEmbed) btn.classList.add('ec-scope-hidden');
+    }
   });
 
-  // 3. Hide empty section headers (divider above hidden groups)
+  // 3. Section headers — reveal only when at least one child is visible
   document.querySelectorAll('.ec-section, .ec-section-with-action').forEach(header => {
     const grp = header.nextElementSibling;
-    if(!grp || !grp.classList.contains('ec-group')) return;
+    if(!grp || !grp.classList.contains('ec-group')){
+      header.classList.add('ec-scope-visible');
+      return;
+    }
     const anyVisible = Array.from(grp.querySelectorAll('.ec-item, .ec-labels')).some(el => {
       if(el.classList.contains('ec-labels')){
-        return el.querySelectorAll('.ec-label-item:not(.ec-scope-hidden)').length > 0;
+        return el.querySelectorAll('.ec-label-item.ec-scope-visible').length > 0;
       }
-      return !el.classList.contains('ec-scope-hidden');
+      return el.classList.contains('ec-scope-visible');
     });
-    header.classList.toggle('ec-scope-hidden', !anyVisible);
+    if(anyVisible){
+      header.classList.add('ec-scope-visible');
+      header.classList.remove('ec-scope-hidden');
+    } else {
+      header.classList.remove('ec-scope-visible');
+      if(!inEmbed) header.classList.add('ec-scope-hidden');
+    }
   });
 
   // 4. Tenant-only chrome — capability gates handle these now
@@ -29365,15 +29408,26 @@ function applyEmailScopeToSidebar(scope){
 function applyEmailScopeToLabels(){
   const scope = window._emCurrentScope;
   if(!scope) return;
+  const inEmbed = document.body.dataset.embed === "emails";
+  // Owners + view_all → every label visible
   if(!scope.is_employee || scope.view_all){
-    document.querySelectorAll('.ec-label-item.ec-scope-hidden').forEach(el => el.classList.remove('ec-scope-hidden'));
+    document.querySelectorAll('.ec-label-item').forEach(el => {
+      el.classList.add('ec-scope-visible');
+      el.classList.remove('ec-scope-hidden');
+    });
     return;
   }
   if(!scope.visible_label_ids) return;
   const allowed = new Set(scope.visible_label_ids);
   document.querySelectorAll('.ec-label-item').forEach(item => {
     const id = Number(item.dataset.labelId);
-    item.classList.toggle('ec-scope-hidden', !allowed.has(id));
+    if(allowed.has(id)){
+      item.classList.add('ec-scope-visible');
+      item.classList.remove('ec-scope-hidden');
+    } else {
+      item.classList.remove('ec-scope-visible');
+      if(!inEmbed) item.classList.add('ec-scope-hidden');
+    }
   });
 }
 
