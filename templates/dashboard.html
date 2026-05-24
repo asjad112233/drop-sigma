@@ -4657,11 +4657,9 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
           <span class="ec-lbl">AI Drafts</span>
           <span class="ec-cnt ec-cnt-amber" data-cnt="ai_drafts"></span>
         </button>
-        <button class="ec-item" data-view="scheduled" onclick="setEmailFolder('scheduled')">
-          <span class="ec-ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg></span>
-          <span class="ec-lbl">Scheduled</span>
-          <span class="ec-cnt" data-cnt="scheduled"></span>
-        </button>
+        <!-- "Scheduled" folder removed — backend send_at feature not
+             yet implemented. Re-add when EmailMessage gains a scheduled
+             status + sender worker. -->
         <button class="ec-item" data-view="resolved" onclick="setEmailFolder('resolved')">
           <span class="ec-ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
           <span class="ec-lbl">Resolved</span>
@@ -11012,7 +11010,7 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
 
     <div class="actions">
       <button id="composeSendBtn" class="btn green" onclick="sendNewEmail()">📨 Send Email</button>
-      <button id="composeSaveDraftBtn" class="btn" type="button" onclick="cmpSaveDraft()" title="Save as draft in your account">💾 Save Draft</button>
+      <button id="composeSaveDraftBtn" class="btn" type="button" onclick="cmpSaveDraft()" title="Save offline draft in this browser only">💾 Save offline draft</button>
       <button class="btn dark" onclick="closeComposeModal()">Cancel</button>
     </div>
 
@@ -13580,7 +13578,10 @@ async function loadOverview(){
           if(diff<1440) return Math.floor(diff/60)+"h ago"; return Math.floor(diff/1440)+"d ago";
         })() : "";
         const catColor = CAT_COLOR[e.category]||"#94a3b8";
-        return `<div onclick="showSection('emails')" style="display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border-radius:10px;background:var(--vf-surface-2);border:1px solid var(--vf-line);cursor:pointer;transition:.15s;" onmouseover="this.style.borderColor='rgba(14,165,233,.4)'" onmouseout="this.style.borderColor='var(--vf-line)'">
+        // Deep-link to the specific thread (not just the section) by
+        // extracting the bare email from the sender display string.
+        const senderEmail = (e.sender_email || (e.sender||'').match(/<([^>]+)>/)?.[1] || e.sender || '').toLowerCase().trim();
+        return `<div onclick="showSection('emails');setTimeout(()=>{ try{ openThread('${escapeJs(senderEmail)}'); }catch(_){} }, 250)" style="display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border-radius:10px;background:var(--vf-surface-2);border:1px solid var(--vf-line);cursor:pointer;transition:.15s;" onmouseover="this.style.borderColor='rgba(14,165,233,.4)'" onmouseout="this.style.borderColor='var(--vf-line)'">
           <div style="width:8px;height:8px;border-radius:50%;background:${catColor};flex-shrink:0;margin-top:4px;"></div>
           <div style="flex:1;min-width:0;">
             <div style="font-size:12.5px;font-weight:700;color:var(--vf-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(e.sender)}</div>
@@ -17137,7 +17138,21 @@ function _maybeNotifyNewEmail(newCount, preview){
       const title = newCount === 1 ? "New email" : `${newCount} new emails`;
       const body = (preview && preview.snippet) ? preview.snippet : "Open Drop Sigma to view.";
       const n = new Notification(`Drop Sigma · ${title}`, {body, icon:"/static/favicon.ico", tag:"new-email", renotify:true});
-      n.onclick = () => { window.focus(); showSection("emails"); n.close(); };
+      // If we know which contact the notification is about, deep-link
+       // straight into that thread after the section opens.
+      n.onclick = () => {
+        window.focus();
+        showSection("emails");
+        const targetContact = preview && (preview.contact || preview.sender_email || preview.from);
+        if(targetContact){
+          setTimeout(() => {
+            try {
+              if(typeof openThread === 'function') openThread(String(targetContact).toLowerCase());
+            } catch(_){}
+          }, 250);
+        }
+        n.close();
+      };
       setTimeout(()=>n.close(), 6000);
     }catch(_){}
   }
@@ -19640,62 +19655,36 @@ async function emBulkMoveToFolder(){
   }
 }
 
-/* Bulk mark read / unread. The toggle-read endpoint flips the flag
-   on a single message — we need to fetch the latest message-id of each
-   selected thread first, then PATCH it to match the desired state.
-   `state` ∈ {'read','unread'}. */
+/* Bulk mark read / unread. Sets the desired state on EVERY message
+   in each selected thread via one server call — not a per-message
+   flip, which was buggy when older messages were already in the right
+   state. `state` ∈ {'read','unread'}. */
 async function emBulkMark(state){
   if(_emBulkSelected.size === 0) return;
   if(state !== 'read' && state !== 'unread') return;
 
-  const want = (state === 'read');
-  // We need a map of contact → latest email_id. The threads payload
-  // exposes this via `latest_id` (added server-side specifically for
-  // the bulk-action toolbar).
   const contacts = Array.from(_emBulkSelected);
-  const ids = [];
-  const cache = (typeof allThreads !== 'undefined' && allThreads) ? allThreads : [];
-  contacts.forEach(c => {
-    const t = cache.find(x => (x.contact||'').toLowerCase() === c.toLowerCase());
-    if(t && t.latest_id){
-      ids.push({id: t.latest_id, isRead: !!t.is_read});
+  try {
+    const r = await fetch('/emails/api/threads/bulk-mark-read/', {
+      method:'POST',
+      headers:{'Content-Type':'application/json', 'X-CSRFToken':getCSRFToken()},
+      credentials:'same-origin',
+      body: JSON.stringify({
+        store_id: selectedStoreId,
+        contacts: contacts,
+        state: state,
+      })
+    });
+    const d = await r.json().catch(()=>({}));
+    if(!r.ok || d.success === false){
+      await _alert(d.message || 'Mark failed.', 'Bulk Mark', '❌');
+      return;
     }
-  });
-
-  if(ids.length === 0){
-    await _alert('Could not resolve selected threads.', 'Bulk Mark', '⚠️');
-    return;
-  }
-
-  // Toggle-read endpoint flips; we only call it when the current state
-  // doesn't match what we want.
-  const todo = ids.filter(x => x.isRead !== want);
-  if(todo.length === 0){
-    await _alert(`All selected threads are already ${state}.`, 'Bulk Mark', 'ℹ️');
-    return;
-  }
-
-  let success = 0, fail = 0;
-  const results = await Promise.all(todo.map(async (item) => {
-    try {
-      const r = await fetch(`/emails/api/${item.id}/toggle-read/`, {
-        method:'POST',
-        headers:{'Content-Type':'application/json', 'X-CSRFToken':getCSRFToken()},
-        credentials:'same-origin',
-        body: '{}'
-      });
-      const d = await r.json().catch(()=>({}));
-      return r.ok && d.success !== false;
-    } catch(_){ return false; }
-  }));
-  results.forEach(ok => ok ? success++ : fail++);
-
-  emBulkClear();
-  await loadEmails({silent:true, preserveSelection:false});
-  try { if(typeof loadEmailThreadStats === "function") loadEmailThreadStats(); } catch(_){}
-
-  if(fail > 0){
-    await _alert(`Marked ${success} thread(s) as ${state}. ${fail} failed.`, 'Bulk Mark', '⚠️');
+    emBulkClear();
+    await loadEmails({silent:true, preserveSelection:false});
+    try { if(typeof loadEmailThreadStats === "function") loadEmailThreadStats(); } catch(_){}
+  } catch(e){
+    await _alert('Network error: ' + e.message, 'Bulk Mark', '❌');
   }
 }
 
@@ -21619,7 +21608,7 @@ function cmpSaveDraft(){
   try{
     localStorage.setItem("ds_compose_draft", JSON.stringify(draft));
     const msg = document.getElementById("composeMessage");
-    msg.style.color = "#0a7b34"; msg.innerText = "💾 Draft saved to this browser. (Backend drafts coming soon.)";
+    msg.style.color = "#0a7b34"; msg.innerText = "💾 Draft saved offline (this browser only). Clearing browser data will remove it.";
   }catch(e){
     alert("Could not save draft: " + e.message);
   }
@@ -27553,8 +27542,8 @@ body[data-active-section="emails"] .ai-panel{display:none!important;}
   .ai-fab .ti{display:none;}
 }
 /* Reserve room at the bottom of every scrollable section so the floater
-   never visually sits on top of any content — Drop Sigma AI ke neechay
-   kuch b ni hona chahiye. The selectors target the main scrollable area
+   never visually sits on top of any content — Drop Sigma AI floater
+   must not overlap any content beneath it. The selectors target the main scrollable area
    per section. The exclusion uses :where() to keep specificity flat. */
 .section.active > :where(.section-scroll, .ov-grid, .pox-wrap, .stores-grid,
 .vendors-grid, .tasks-list, .stock-wrap, .ai-training-wrap, .team-grid){

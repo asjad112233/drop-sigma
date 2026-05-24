@@ -9,7 +9,7 @@ from django.utils import timezone
 from django.db.models import Q
 
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from email.utils import parseaddr
@@ -240,6 +240,48 @@ def get_thread_contact(email_obj):
     return sender
 
 
+def get_thread_messages(store, contact):
+    """Return a queryset of EVERY message in a thread for (store, contact)
+    — including outbound replies (where sender = store_email).
+
+    The previous pattern `EmailMessage.filter(sender__icontains=contact)`
+    had two bugs:
+      1. icontains is a SUBSTRING match — "bob@a.com" also matched
+         "bobby@a.com" and "robob@a.com".
+      2. Outbound replies have sender = store_email, NOT the contact, so
+         they were silently excluded from archive / restore / delete.
+
+    This helper walks the candidate set (sender OR recipient matches the
+    contact in any form) and filters via the canonical contact extracted
+    by get_thread_contact(). Returns a queryset of matching primary keys.
+    """
+    from .models import EmailMessage as _EM
+    contact = (contact or "").strip().lower()
+    if not (store and contact):
+        return _EM.objects.none()
+
+    # Candidate set: anything where the contact appears in either side.
+    # icontains is OK here because we re-verify each one below.
+    candidates = _EM.objects.filter(store=store).filter(
+        Q(sender__icontains=contact) | Q(recipient__icontains=contact)
+    )
+
+    # Verify by canonical contact match. parseaddr normalizes display-name
+    # and case differences. Inline the store-email lookup once.
+    acct = EmailAccount.objects.filter(store=store, is_active=True).first()
+    store_email = extract_clean_email(acct.email) if acct else extract_clean_email(settings.DEFAULT_FROM_EMAIL)
+
+    matched_ids = []
+    for m in candidates.only("id", "sender", "recipient"):
+        s = extract_clean_email(m.sender)
+        r = extract_clean_email(m.recipient)
+        canon = r if s == store_email else s
+        if canon == contact:
+            matched_ids.append(m.id)
+
+    return _EM.objects.filter(id__in=matched_ids)
+
+
 # ─────────────────────────────────────────────────────────────────────
 # Thread-activity logger.
 #
@@ -306,8 +348,7 @@ def log_thread_activity(store, contact, event, description="", meta=None,
 
 @csrf_exempt
 @api_view(["POST"])
-@authentication_classes([])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def connect_email_account_api(request):
     store_id = request.data.get("store_id")
     email = request.data.get("email")
@@ -319,7 +360,7 @@ def connect_email_account_api(request):
             "message": "Store, email and app password are required."
         }, status=400)
 
-    store = Store.objects.filter(id=store_id).first()
+    store = Store.objects.filter(id=store_id, user=request.user).first()
 
     if not store:
         return Response({
@@ -360,8 +401,7 @@ def connect_email_account_api(request):
 
 @csrf_exempt
 @api_view(["POST"])
-@authentication_classes([])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def connect_custom_email_api(request):
     """Connect a custom hosting email via SMTP + IMAP credentials."""
     store_id  = request.data.get("store_id")
@@ -375,7 +415,7 @@ def connect_custom_email_api(request):
     if not all([store_id, email, password, imap_host, smtp_host]):
         return Response({"success": False, "message": "All fields are required."}, status=400)
 
-    store = Store.objects.filter(id=store_id).first()
+    store = Store.objects.filter(id=store_id, user=request.user).first()
     if not store:
         return Response({"success": False, "message": "Store not found."}, status=404)
 
@@ -424,6 +464,7 @@ def connect_custom_email_api(request):
 
 
 @api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def gmail_oauth_start_api(request):
     import urllib.parse
     from django.conf import settings as _settings
@@ -514,7 +555,7 @@ def gmail_oauth_callback(request):
     if not email:
         return _redirect("/dashboard/?gmail_error=no_email")
 
-    store = Store.objects.filter(id=store_id).first()
+    store = Store.objects.filter(id=store_id, user=request.user).first()
     if not store:
         return _redirect("/dashboard/?gmail_error=store_not_found")
 
@@ -552,6 +593,7 @@ def gmail_oauth_callback(request):
 
 
 @api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def connected_email_api(request):
     store_id = request.GET.get("store_id")
 
@@ -586,8 +628,7 @@ _SETTINGS_FIELDS = [
 
 
 @api_view(["GET"])
-@authentication_classes([])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def email_settings_api(request):
     store_id = request.GET.get("store_id")
     account_id = request.GET.get("account_id")
@@ -612,8 +653,7 @@ def email_settings_api(request):
 
 @csrf_exempt
 @api_view(["PATCH"])
-@authentication_classes([])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def email_settings_update_api(request):
     store_id = request.data.get("store_id")
     account_id = request.data.get("account_id")
@@ -637,8 +677,7 @@ def email_settings_update_api(request):
 
 @csrf_exempt
 @api_view(["POST"])
-@authentication_classes([])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def disconnect_email_account_api(request):
     store_id = request.data.get("store_id")
     account_id = request.data.get("account_id")
@@ -666,8 +705,7 @@ def disconnect_email_account_api(request):
 
 @csrf_exempt
 @api_view(["POST"])
-@authentication_classes([])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def send_email_api(request):
     subject   = request.data.get("subject")
     body      = request.data.get("body")
@@ -684,7 +722,7 @@ def send_email_api(request):
             "message": "Subject, body and recipient required."
         }, status=400)
 
-    store = Store.objects.filter(id=store_id).first()
+    store = Store.objects.filter(id=store_id, user=request.user).first()
 
     if not store:
         return Response({
@@ -746,6 +784,27 @@ def send_email_api(request):
             file=f,
             size=f.size,
         )
+
+    # Log the compose-new on the thread timeline so the History modal
+    # actually shows something for threads started from Compose.
+    try:
+        contact_for_log = (get_thread_contact(email_obj) or "").strip().lower()
+        preview = (body or "").strip().split("\n")[0][:120]
+        log_thread_activity(
+            store, contact_for_log, "reply_sent",
+            description=f"Compose: {subject}" + (f" — {preview}" if preview else ""),
+            meta={
+                "subject": subject,
+                "from": from_email,
+                "to": recipient,
+                "has_attachments": bool(files),
+                "source": "compose",
+            },
+            message=email_obj,
+            request=request,
+        )
+    except Exception:
+        pass
 
     return Response({
         "success": True,
@@ -856,11 +915,10 @@ def archive_email_thread_api(request, email_id):
 
     # Pull every message in the thread for this contact + flip the
     # raw_data.archived flag so the Archive folder picks them up.
-    msgs = EmailMessage.objects.filter(store=email.store)
     if contact:
-        msgs = msgs.filter(sender__icontains=contact)
+        msgs = get_thread_messages(email.store, contact)
     else:
-        msgs = msgs.filter(id=email.id)
+        msgs = EmailMessage.objects.filter(id=email.id)
 
     for m in msgs:
         raw = m.raw_data or {}
@@ -1164,8 +1222,7 @@ def generate_ai_draft_api(request, email_id):
 
 @csrf_exempt
 @api_view(["POST"])
-@authentication_classes([])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def improve_reply_api(request):
     text = request.data.get("text", "").strip()
 
@@ -1238,7 +1295,7 @@ def _ai_get_user_store(request, store_id=None):
     """Resolve a store for the current user (used by AI Training endpoints)."""
     try:
         if store_id:
-            return Store.objects.filter(id=store_id).first()
+            return Store.objects.filter(id=store_id, user=request.user).first()
         if request.user.is_authenticated:
             return Store.objects.filter(user=request.user, is_active=True).first()
     except Exception:
@@ -1248,8 +1305,7 @@ def _ai_get_user_store(request, store_id=None):
 
 @csrf_exempt
 @api_view(["GET", "PUT"])
-@authentication_classes([])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def ai_training_profile_api(request):
     """GET or PUT the AI Training Profile for the current user's active store."""
     from .models import AiTrainingProfile
@@ -1320,8 +1376,7 @@ def ai_training_profile_api(request):
 
 @csrf_exempt
 @api_view(["GET", "POST"])
-@authentication_classes([])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def ai_training_snippets_api(request):
     """GET all snippets for current store. POST creates a new one."""
     from .models import KnowledgeSnippet
@@ -1366,8 +1421,7 @@ def ai_training_snippets_api(request):
 
 @csrf_exempt
 @api_view(["POST", "GET"])
-@authentication_classes([])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def ai_training_example_api(request):
     """Manually-curated training example (admin teaches AI the right reply).
 
@@ -1409,11 +1463,11 @@ def ai_training_example_api(request):
     # Resolve the store — fall back to the first store the user owns
     store = None
     if store_id:
-        store = Store.objects.filter(id=store_id).first()
+        store = Store.objects.filter(id=store_id, user=request.user).first()
     if store is None and request.user.is_authenticated and not request.user.is_superuser:
         store = Store.objects.filter(user=request.user).first()
     if store is None:
-        store = Store.objects.first()
+        store = Store.objects.filter(user=request.user).first()
 
     if store is None:
         return Response({"success": False, "message": "No store available — connect a store first."}, status=400)
@@ -1435,8 +1489,7 @@ def ai_training_example_api(request):
 
 @csrf_exempt
 @api_view(["PUT", "DELETE"])
-@authentication_classes([])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def ai_training_snippet_detail_api(request, snippet_id):
     """PUT updates, DELETE removes."""
     from .models import KnowledgeSnippet
@@ -1467,8 +1520,7 @@ def ai_training_snippet_detail_api(request, snippet_id):
 
 @csrf_exempt
 @api_view(["GET"])
-@authentication_classes([])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def category_training_list_api(request):
     """List all 6 default request categories with the current store's state.
 
@@ -1487,8 +1539,7 @@ def category_training_list_api(request):
 
 @csrf_exempt
 @api_view(["GET", "PUT"])
-@authentication_classes([])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def category_training_detail_api(request, slug):
     """GET the question schema + saved answers for one category.
 
@@ -1599,8 +1650,7 @@ def _v2_require_profile(request):
 
 @csrf_exempt
 @api_view(["GET"])
-@authentication_classes([])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def ai_v2_qa_list_api(request):
     """Return all 52 questions grouped by section + tenant's current answers + progress."""
     from .ai_training_v2 import QA_SECTIONS, qa_progress
@@ -1653,8 +1703,7 @@ def ai_v2_qa_list_api(request):
 
 @csrf_exempt
 @api_view(["POST"])
-@authentication_classes([])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def ai_v2_qa_answer_api(request, qid):
     """Save the answer to a single question. Body: { answer: str }."""
     from .ai_training_v2 import QA_BY_ID, qa_progress
@@ -1693,8 +1742,7 @@ def ai_v2_qa_answer_api(request, qid):
 
 @csrf_exempt
 @api_view(["GET"])
-@authentication_classes([])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def ai_v2_topics_api(request):
     """Return all 10 topics with live confidence scores + enable state + snippet counts."""
     from .ai_training_v2 import (
@@ -1746,8 +1794,7 @@ def ai_v2_topics_api(request):
 
 @csrf_exempt
 @api_view(["POST"])
-@authentication_classes([])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def ai_v2_topic_toggle_api(request, key):
     """Enable / disable one topic. Body: { enabled: bool }."""
     from .ai_training_v2 import TOPIC_BY_KEY, set_topic_enabled, calculate_topic_score, get_topic_enabled
@@ -1771,8 +1818,7 @@ def ai_v2_topic_toggle_api(request, key):
 
 @csrf_exempt
 @api_view(["GET", "POST", "PUT", "DELETE"])
-@authentication_classes([])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def ai_v2_snippets_api(request):
     """List, create, update, delete snippets for the v2 module.
 
@@ -1851,8 +1897,7 @@ def ai_v2_snippets_api(request):
 
 @csrf_exempt
 @api_view(["POST"])
-@authentication_classes([])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def ai_v2_test_api(request):
     """Test the AI with a sample customer question.
     Body: { question: str, topic?: str }
@@ -2028,8 +2073,7 @@ def _guess_topic(question):
 
 @csrf_exempt
 @api_view(["GET"])
-@authentication_classes([])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def ai_v2_overall_api(request):
     """Lightweight endpoint for the hero dashboard score."""
     from .ai_training_v2 import calculate_overall_score, qa_progress, ADVANCED_TOPICS, get_topic_enabled
@@ -2056,8 +2100,7 @@ def ai_v2_overall_api(request):
 
 @csrf_exempt
 @api_view(["POST"])
-@authentication_classes([])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def ai_playground_api(request):
     """
     Generic Claude playground endpoint for AI Training Studio.
@@ -2104,7 +2147,7 @@ def ai_playground_api(request):
             store = None
             if store_id:
                 try:
-                    store = Store.objects.filter(id=store_id).first()
+                    store = Store.objects.filter(id=store_id, user=request.user).first()
                 except Exception:
                     store = None
             if store is None and request.user.is_authenticated:
@@ -2384,8 +2427,7 @@ def send_email_reply_api(request, email_id):
 
 @csrf_exempt
 @api_view(["POST"])
-@authentication_classes([])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def sync_inbox_api(request):
     store_id = request.data.get("store_id", 2)
     result = sync_gmail_inbox(store_id)
@@ -2394,8 +2436,7 @@ def sync_inbox_api(request):
 
 
 @api_view(["GET"])
-@authentication_classes([])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def download_attachment_api(_request, attachment_id):
     attachment = get_object_or_404(EmailAttachment, id=attachment_id)
     content_type = attachment.content_type or "application/octet-stream"
@@ -2413,8 +2454,7 @@ def download_attachment_api(_request, attachment_id):
 
 @csrf_exempt
 @api_view(["POST"])
-@authentication_classes([])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def assign_thread_multi_api(request):
     """Assign multiple team members to a thread. First member becomes primary assigned_to."""
     from teamapp.models import TeamMember
@@ -2425,7 +2465,7 @@ def assign_thread_multi_api(request):
     if not store_id or not contact:
         return Response({"success": False, "message": "store_id and contact are required."}, status=400)
 
-    store = get_object_or_404(Store, id=store_id)
+    store = get_object_or_404(Store, id=store_id, user=request.user)
     members = list(TeamMember.objects.filter(id__in=member_ids))
 
     assignment, _ = EmailThreadAssignment.objects.get_or_create(store=store, contact=contact)
@@ -2568,8 +2608,7 @@ def bulk_assign_threads_api(request):
 
 @csrf_exempt
 @api_view(["POST"])
-@authentication_classes([])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def assign_thread_api(request):
     from teamapp.models import TeamMember
     store_id = request.data.get("store_id")
@@ -2579,7 +2618,7 @@ def assign_thread_api(request):
     if not store_id or not contact or not member_id:
         return Response({"success": False, "message": "store_id, contact and member_id are required."}, status=400)
 
-    store = get_object_or_404(Store, id=store_id)
+    store = get_object_or_404(Store, id=store_id, user=request.user)
     member = get_object_or_404(TeamMember, id=member_id)
 
     EmailThreadAssignment.objects.update_or_create(
@@ -2608,8 +2647,7 @@ def assign_thread_api(request):
 
 @csrf_exempt
 @api_view(["POST"])
-@authentication_classes([])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def unassign_thread_api(request):
     store_id = request.data.get("store_id")
     contact = (request.data.get("contact") or "").strip().lower()
@@ -2624,7 +2662,7 @@ def unassign_thread_api(request):
     EmailThreadAssignment.objects.filter(store_id=store_id, contact=contact).delete()
 
     try:
-        store_obj = Store.objects.get(id=store_id)
+        store_obj = Store.objects.get(id=store_id, user=request.user)
         log_thread_activity(
             store_obj, contact, "unassigned",
             description=f"Unassigned{' from ' + prev_name if prev_name else ''}",
@@ -2718,7 +2756,6 @@ def _forbidden_response():
 
 @csrf_exempt
 @api_view(["GET", "POST"])
-@permission_classes([AllowAny])
 def email_templates_api(request):
     if request.method == "GET":
         store_id = request.GET.get("store_id")
@@ -2735,7 +2772,7 @@ def email_templates_api(request):
     if not request.user.is_authenticated:
         return Response({'success': False, 'message': 'Login required.'}, status=401)
     store_id = request.data.get("store_id")
-    store = Store.objects.filter(id=store_id).first() if store_id else None
+    store = Store.objects.filter(id=store_id, user=request.user).first() if store_id else None
     if not store:
         return Response({'success': False, 'message': 'Store not found.'}, status=404)
     if not (request.user.is_superuser or store.user_id == request.user.id):
@@ -2750,7 +2787,7 @@ def email_templates_api(request):
 
 @csrf_exempt
 @api_view(["GET", "PUT", "DELETE"])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def email_template_detail_api(request, template_id):
     t = get_object_or_404(EmailTemplate, id=template_id)
     if request.method == "GET":
@@ -2768,7 +2805,7 @@ def email_template_detail_api(request, template_id):
 
 @csrf_exempt
 @api_view(["POST"])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def set_category_default_api(request, template_id):
     t = get_object_or_404(EmailTemplate, id=template_id)
     if not _user_can_manage_template(request.user, t):
@@ -2805,7 +2842,7 @@ def set_category_default_api(request, template_id):
 
 @csrf_exempt
 @api_view(["POST"])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def duplicate_template_api(request, template_id):
     t = get_object_or_404(EmailTemplate, id=template_id)
     if not _user_can_manage_template(request.user, t):
@@ -2827,7 +2864,7 @@ def duplicate_template_api(request, template_id):
 
 @csrf_exempt
 @api_view(["POST"])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def reset_template_to_default_api(request, template_id):
     """Replace this template's content with the matching seed default.
     Matches by exact name first (e.g. 'Order Confirmation — Shopify'),
@@ -2859,19 +2896,17 @@ def reset_template_to_default_api(request, template_id):
 
 @csrf_exempt
 @api_view(["GET"])
-@authentication_classes([])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def template_sample_data_api(request):
     store_id = request.GET.get("store_id")
-    store = Store.objects.filter(id=store_id).first()
+    store = Store.objects.filter(id=store_id, user=request.user).first()
     ctx = build_template_context(store)
     return Response({'success': True, 'data': ctx})
 
 
 @csrf_exempt
 @api_view(["POST"])
-@authentication_classes([])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def send_test_template_api(request, template_id):
     t = get_object_or_404(EmailTemplate, id=template_id)
     test_email = (request.data.get('test_email') or '').strip()
@@ -3618,8 +3653,7 @@ def _active_categories_for_store(store_id):
 
 @csrf_exempt
 @api_view(["GET", "POST"])
-@authentication_classes([])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def auto_email_toggle_api(request):
     store_id = request.data.get("store_id") or request.GET.get("store_id")
     account = EmailAccount.objects.filter(store_id=store_id).first()
@@ -3752,8 +3786,7 @@ def latest_email_event_api(request):
 
 @csrf_exempt
 @api_view(["GET", "POST"])
-@authentication_classes([])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def gmail_watch_debug_api(request):
     import logging as _log
     log = _log.getLogger(__name__)
@@ -3863,6 +3896,8 @@ def _record_webhook_event(event):
 @authentication_classes([])
 @permission_classes([AllowAny])
 def gmail_push_webhook(request):
+    """PUBLIC — Google Pub/Sub POSTs here unauthenticated. JWT signature
+    is verified inside the handler. Do NOT add login_required to this."""
     import base64
     import json as _json
     import logging
@@ -4165,6 +4200,7 @@ def thread_labels_api(request):
 
 
 @api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def threads_stats_api(request):
     """Return counts for the contextual sidebar badges.
     GET /emails/api/threads/stats/?store_id=N
@@ -4467,7 +4503,11 @@ def empty_folder_api(request):
 
     em_qs = EmailMessage.objects.filter(store=store)
 
-    # Filter to the matching set per folder
+    # ── Contact-based filters: build a contacts[] list, then use the
+    #    canonical helper to find EVERY message in those threads
+    #    (including outbound replies, which sender__in misses). ──
+    contacts_via_filter = None  # None = no contact-list filter applied
+
     if folder == "inbox":
         pass  # all
     elif folder == "unread":
@@ -4479,33 +4519,60 @@ def empty_folder_api(request):
     elif folder == "sent":
         em_qs = em_qs.filter(status="replied")
     elif folder == "resolved":
-        # Resolved is on the assignment, not the message
-        resolved_contacts = list(EmailThreadAssignment.objects.filter(
+        # Resolved is on the assignment — gather contact set
+        contacts_via_filter = list(EmailThreadAssignment.objects.filter(
             store=store, is_resolved=True,
         ).values_list("contact", flat=True))
-        em_qs = em_qs.filter(sender__in=resolved_contacts)
     elif folder in ("refunds", "returns", "dispute", "spam"):
         em_qs = em_qs.filter(category__icontains=folder.rstrip("s"))
     elif folder == "archive":
-        # No reliable archive flag yet — treat as no-op (return 0)
-        em_qs = em_qs.none()
+        # raw_data.archived=True is the canonical archive flag set by
+        # move_thread_to_folder_api / archive_email_thread_api.
+        em_qs = em_qs.filter(raw_data__archived=True)
 
     # Label-based filtering: collect all contacts that have the label
     if label_id:
         label_contacts = list(EmailThreadLabel.objects.filter(
             store=store, label_id=label_id, label__owner=request.user,
         ).values_list("contact", flat=True))
-        em_qs = em_qs.filter(sender__in=label_contacts)
+        # If we already had a contact list, intersect; else use just labels
+        if contacts_via_filter is not None:
+            contacts_via_filter = list(set(contacts_via_filter) & set(label_contacts))
+        else:
+            contacts_via_filter = label_contacts
 
-    # Count first, then delete
-    affected_contacts = set(em_qs.values_list("sender", flat=True))
+    # If we ended up with a contact list, build the message set via the
+    # canonical helper (catches both directions of the thread).
+    if contacts_via_filter is not None:
+        msg_ids = set()
+        for c in contacts_via_filter:
+            msg_ids.update(get_thread_messages(store, c).values_list("id", flat=True))
+        em_qs = EmailMessage.objects.filter(id__in=msg_ids, store=store)
+        affected_contacts = {(c or "").strip().lower() for c in contacts_via_filter}
+    else:
+        # Compute affected contacts from message set using canonical resolver
+        affected_contacts = set()
+        store_em_acct = EmailAccount.objects.filter(store=store, is_active=True).first()
+        store_em = extract_clean_email(store_em_acct.email) if store_em_acct else extract_clean_email(settings.DEFAULT_FROM_EMAIL)
+        for m in em_qs.only("sender", "recipient"):
+            s = extract_clean_email(m.sender)
+            r = extract_clean_email(m.recipient)
+            canon = r if s == store_em else s
+            if canon:
+                affected_contacts.add(canon)
+
     msg_count = em_qs.count()
     em_qs.delete()
 
-    # Also clean up assignments + labels for affected contacts (so they
-    # don't haunt the UI after the messages are gone)
-    EmailThreadAssignment.objects.filter(store=store, contact__in=affected_contacts).delete()
-    EmailThreadLabel.objects.filter(store=store, contact__in=affected_contacts).delete()
+    # Also clean up assignments + labels + activity log for affected contacts
+    if affected_contacts:
+        from .models import EmailThreadActivity
+        EmailThreadAssignment.objects.filter(store=store, contact__in=affected_contacts).delete()
+        EmailThreadLabel.objects.filter(store=store, contact__in=affected_contacts).delete()
+        try:
+            EmailThreadActivity.objects.filter(store=store, contact__in=affected_contacts).delete()
+        except Exception:
+            pass
 
     return Response({
         "success": True,
@@ -4813,9 +4880,10 @@ def move_thread_to_folder_api(request):
 
     store = get_object_or_404(Store, id=store_id, user=request.user)
 
-    # Sender field can be either "john@x.com" or "John Doe <john@x.com>".
-    # Substring (icontains) on the bare email matches both forms.
-    msgs = EmailMessage.objects.filter(store=store, sender__icontains=contact)
+    # Use canonical contact resolver — catches outbound replies (sender =
+    # store email) and avoids substring false-matches like "bob@a.com"
+    # also matching "bobby@a.com".
+    msgs = get_thread_messages(store, contact)
     if not msgs.exists():
         return Response({"success": False, "message": "No messages for that contact."}, status=404)
 
@@ -4953,7 +5021,7 @@ def restore_archived_threads_api(request):
     restored_threads = 0
     restored_msgs = 0
     for contact in contacts:
-        msgs = EmailMessage.objects.filter(store=store, sender__icontains=contact)
+        msgs = get_thread_messages(store, contact)
         if not msgs.exists():
             continue
         for m in msgs:
@@ -4993,9 +5061,10 @@ def restore_archived_threads_api(request):
 @api_view(["POST"])
 def permanent_delete_threads_api(request):
     """POST {store_id, contacts:[email,...]} — PERMANENTLY destroy every
-    message in each listed thread + thread assignment + label links.
-    No undo. Intended only for the Archive folder bulk action."""
-    from .models import EmailMessage, EmailThreadAssignment, EmailThreadLabel, EmailAttachment
+    message in each listed thread + thread assignment + label links +
+    activity log. No undo. Intended only for the Archive folder bulk
+    action."""
+    from .models import EmailMessage, EmailThreadAssignment, EmailThreadLabel, EmailAttachment, EmailThreadActivity
     if not request.user.is_authenticated:
         return Response({"success": False, "message": "Authentication required"}, status=401)
 
@@ -5010,11 +5079,11 @@ def permanent_delete_threads_api(request):
     deleted_threads = 0
     deleted_msgs = 0
     for contact in contacts:
-        msgs = EmailMessage.objects.filter(store=store, sender__icontains=contact)
+        msgs = get_thread_messages(store, contact)
         n = msgs.count()
         if not n:
             continue
-        # Cascade: attachments → messages → thread assignment → thread labels
+        # Cascade: attachments → messages → assignment → labels → activity log
         try:
             EmailAttachment.objects.filter(email__in=msgs).delete()
         except Exception:
@@ -5029,12 +5098,73 @@ def permanent_delete_threads_api(request):
             EmailThreadLabel.objects.filter(store=store, contact__iexact=contact).delete()
         except Exception:
             pass
+        try:
+            # Wipe the history timeline too so future emails from the
+            # same address don't inherit a stale audit trail.
+            EmailThreadActivity.objects.filter(store=store, contact__iexact=contact).delete()
+        except Exception:
+            pass
         deleted_threads += 1
 
     return Response({
         "success": True,
         "deleted_threads": deleted_threads,
         "deleted_messages": deleted_msgs,
+    })
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Bulk mark-read / mark-unread on multiple threads at once.
+# Sets is_read to a SPECIFIC state on every message in each thread
+# (not a per-message flip). Used by the bulk-action toolbar.
+# ─────────────────────────────────────────────────────────────────────
+@csrf_exempt
+@api_view(["POST"])
+def bulk_mark_threads_read_api(request):
+    """POST {store_id, contacts:[email,...], state:'read'|'unread'}
+    Sets is_read on EVERY message of each thread. Records a single
+    activity entry per thread."""
+    from .models import EmailMessage
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
+
+    store_id = request.data.get("store_id")
+    contacts = request.data.get("contacts") or []
+    state    = (request.data.get("state") or "").strip().lower()
+
+    if not store_id or not isinstance(contacts, list) or not contacts:
+        return Response({"success": False, "message": "store_id + contacts[] required."}, status=400)
+    if state not in ("read", "unread"):
+        return Response({"success": False, "message": "state must be 'read' or 'unread'."}, status=400)
+
+    store = get_object_or_404(Store, id=store_id, user=request.user)
+    target_is_read = (state == "read")
+    contacts = [(c or "").strip().lower() for c in contacts if c]
+
+    updated_threads = 0
+    updated_msgs    = 0
+    for contact in contacts:
+        msgs = get_thread_messages(store, contact)
+        if not msgs.exists():
+            continue
+        # Only touch messages whose current state doesn't match — avoids
+        # spurious Gmail label flips and minimizes work.
+        diff = msgs.exclude(is_read=target_is_read)
+        n = diff.update(is_read=target_is_read)
+        if n > 0:
+            updated_msgs += n
+            updated_threads += 1
+            log_thread_activity(
+                store, contact, state,
+                description=f"Marked as {state} (bulk)",
+                meta={"bulk": True, "messages_updated": n},
+                request=request,
+            )
+
+    return Response({
+        "success": True,
+        "updated_threads": updated_threads,
+        "updated_messages": updated_msgs,
     })
 
 

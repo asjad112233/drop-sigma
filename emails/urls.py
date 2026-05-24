@@ -57,6 +57,7 @@ from .views import (
     restore_archived_threads_api,
     permanent_delete_threads_api,
     thread_history_api,
+    bulk_mark_threads_read_api,
 )
 
 urlpatterns = [
@@ -164,6 +165,7 @@ urlpatterns = [
     path("api/threads/restore/",            restore_archived_threads_api, name="restore_archived_threads_api"),
     path("api/threads/permanent-delete/",   permanent_delete_threads_api, name="permanent_delete_threads_api"),
     path("api/threads/history/",            thread_history_api,           name="thread_history_api"),
+    path("api/threads/bulk-mark-read/",     bulk_mark_threads_read_api,   name="bulk_mark_threads_read_api"),
 
     # Gmail OAuth2
     path("oauth/start/", gmail_oauth_start_api, name="gmail_oauth_start"),
