@@ -19098,11 +19098,22 @@ function stopLiveEmailSync(updateUi=true){
 // indexed SELECT per tick.
 let _fastInboxTimer = null;
 let _fastInboxLastMaxId = null;
-const FAST_INBOX_INTERVAL_MS = 3000;
+// Faster cadence inside the employee iframe so admin-side assignment
+// changes (folders, labels, capabilities) propagate within ~1 second.
+// Owners stay on the 3-sec default — their scope is static so frequent
+// polling adds no value.
+const FAST_INBOX_INTERVAL_MS = (typeof document !== "undefined" && document.body && document.body.dataset.embed === "emails") ? 1500 : 3000;
 
 function startFastInboxPoller(){
   stopFastInboxPoller();
   _fastInboxTimer = setInterval(fastInboxTick, FAST_INBOX_INTERVAL_MS);
+  // Kick off the first refresh immediately for embed-mode employees
+  // so admin-side scope changes don't have to wait for the first tick.
+  if(typeof document !== "undefined" && document.body && document.body.dataset.embed === "emails"){
+    setTimeout(() => {
+      try { if(typeof loadEmailThreadStats === "function") loadEmailThreadStats(); } catch(_){}
+    }, 50);
+  }
 }
 
 function stopFastInboxPoller(){
