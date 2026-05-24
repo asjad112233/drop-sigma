@@ -4374,7 +4374,23 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
 /* Round avatars */
 .em-tc-av{width:32px!important;height:32px!important;border-radius:50%!important;font-size:12px!important;}
 /* Hide preview text */
-.em-tc-preview{display:none!important;}
+/* Latest-message preview line. Was previously hidden; brought back
+   so the sidebar surfaces the actual newest reply body (not just
+   the subject). Single-line ellipsis keeps the row compact. */
+.em-tc-preview{
+  display:block !important;
+  font-size:11.5px !important;
+  color:#64748b !important;
+  white-space:nowrap !important;
+  overflow:hidden !important;
+  text-overflow:ellipsis !important;
+  margin:2px 0 6px !important;
+  font-weight:500 !important;
+}
+/* When the thread is active or unread, make the preview a touch
+   darker so it reads cleanly against the highlighted row bg. */
+.em-tc.active .em-tc-preview,
+.em-tc.thread-unread .em-tc-preview{color:#475569 !important;}
 /* Count chip — indigo circle */
 .em-tc-chip.count{background:#6366f1!important;color:#fff!important;width:18px!important;height:18px!important;padding:0!important;justify-content:center!important;border-radius:50%!important;font-size:10.5px!important;font-weight:700!important;}
 /* When the count chip ALSO has .unread, force red. Specificity bumped
@@ -21668,7 +21684,20 @@ function getInitials(nameOrEmail){
 }
 
 function getEmailPreview(value){
-  let text = (value || "").replace(/\r/g, "").trim();
+  let text = String(value || "");
+  // Strip HTML so the preview shows readable text, not `<p>hy</p>`
+  // or signature blocks wrapped in <div>s.
+  text = text.replace(/<style[\s\S]*?<\/style>/gi, "")
+             .replace(/<script[\s\S]*?<\/script>/gi, "")
+             .replace(/<br\s*\/?>/gi, " ")
+             .replace(/<\/?[a-z][^>]*>/gi, "")
+             .replace(/&nbsp;/gi, " ")
+             .replace(/&amp;/gi, "&")
+             .replace(/&lt;/gi, "<")
+             .replace(/&gt;/gi, ">")
+             .replace(/&quot;/gi, '"')
+             .replace(/&#039;|&apos;/gi, "'");
+  text = text.replace(/\r/g, "").trim();
   text = text.replace(/\n+/g, " ").replace(/\s+/g, " ").trim();
   return text.length > 90 ? text.slice(0, 90) + "..." : text;
 }
