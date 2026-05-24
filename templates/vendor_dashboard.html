@@ -1173,7 +1173,12 @@ function switchTab(tab, btn){
   document.querySelectorAll(".vp-nav button").forEach(b=>b.classList.remove("active"));
   const tabEl = document.getElementById("tab"+tab.charAt(0).toUpperCase()+tab.slice(1));
   if(tabEl){ tabEl.classList.add("active"); if(tab==="chat") tabEl.style.display="flex"; }
-  btn.classList.add("active");
+  // btn may be omitted (e.g. restoration path uses null); resolve from data attr instead
+  if(btn && btn.classList){
+    btn.classList.add("active");
+  } else {
+    document.querySelector(`.vp-nav button[data-tab="${tab}"]`)?.classList.add("active");
+  }
   const main = document.querySelector(".vp-main");
   if(tab==="chat"){ main.classList.add("chat-mode"); vcChatInit(); vcLoadMembers(); }
   else { main.classList.remove("chat-mode"); }
@@ -1182,6 +1187,32 @@ function switchTab(tab, btn){
   if(tab==="history") loadOrderHistory();
   if(tab==="stock") loadVpStock();
   if(tab==="profile"){ loadMyPermissions(); loadMyPermanentProducts(); }
+  // ── Persist current tab so hard-refresh lands on the same page,
+  //    matching admin/employee dashboard behaviour. ──
+  try { if(tab) localStorage.setItem("vp_currentTab", tab); } catch(_){}
+  try {
+    const u = new URL(window.location.href);
+    if(u.searchParams.get("tab") !== tab){
+      u.searchParams.set("tab", tab);
+      window.history.replaceState({}, "", u.toString());
+    }
+  } catch(_){}
+}
+
+// Restore the tab the user was last on (URL > localStorage > first nav
+// item default). Called after the nav buttons are in the DOM.
+function _vpRestoreLastTab(){
+  let target = "";
+  try { target = new URLSearchParams(window.location.search).get("tab") || ""; } catch(_){}
+  if(!target){
+    try { target = localStorage.getItem("vp_currentTab") || ""; } catch(_){}
+  }
+  if(!target) return;  // nothing saved — leave default active state alone
+  const btn = document.querySelector(`.vp-nav button[data-tab="${target}"]`);
+  const tabEl = document.getElementById("tab" + target.charAt(0).toUpperCase() + target.slice(1));
+  if(btn && tabEl){
+    try { switchTab(target, btn); } catch(_){}
+  }
 }
 
 function setVendorFilter(f, btn){
@@ -2933,6 +2964,9 @@ async function _vcPollTick(){
 // Init
 loadVendorOrders();
 _vcWsBackground();
+// Restore last-viewed tab (URL > localStorage) so hard-refresh lands
+// on the same page — matches admin/employee dashboard behaviour.
+try { _vpRestoreLastTab(); } catch(_){}
 
 /* ═══════════════════════════════════════════════════════════
    VENDOR STOCK MODULE

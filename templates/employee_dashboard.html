@@ -1194,6 +1194,9 @@ async function boot(){
     buildSidebar();
     try{ if(localStorage.getItem("ecSbCollapsed")==="1"){ document.querySelector(".layout")?.classList.add("ec-sb-collapsed"); } }catch(e){}
     renderOverview();
+    // Restore last-viewed section so hard-refresh lands on the same
+    // page (admin-dashboard parity).
+    try { _empRestoreLastSection(); } catch(_){}
     if(perm("view_orders"))      loadMyOrders();
     if(perm("view_emails"))      loadMyEmails();
     if(perm("view_stores"))      loadMyStores();
@@ -1533,6 +1536,39 @@ function switchSection(id){
   // Email mode swaps the main sidebar for the contextual email
   // sidebar inside the iframe (same UX as the admin dashboard).
   document.body.classList.toggle("emp-emails-mode", id === "secEmails");
+  // ── Persist current section so hard-refresh lands on the same page,
+  //    matching the admin dashboard's behaviour exactly. URL is kept
+  //    in sync too — copy/paste the URL or use browser back/forward. ──
+  try { if(id) localStorage.setItem("emp_currentSection", id); } catch(_){}
+  try {
+    const u = new URL(window.location.href);
+    if(u.searchParams.get("section") !== id){
+      u.searchParams.set("section", id);
+      window.history.replaceState({}, "", u.toString());
+    }
+  } catch(_){}
+}
+
+// Restore the section the user was last on (URL > localStorage >
+// secOverview default). Runs after the nav has been built so the
+// active nav-item highlights correctly. Matches admin dashboard
+// priority order.
+function _empRestoreLastSection(){
+  let target = "";
+  try { target = new URLSearchParams(window.location.search).get("section") || ""; } catch(_){}
+  if(!target){
+    try { target = localStorage.getItem("emp_currentSection") || ""; } catch(_){}
+  }
+  if(!target) target = "secOverview";
+  // Guard: only switch to sections that exist + are permitted (nav
+  // item rendered). Falls back to Overview otherwise.
+  const navBtn = document.getElementById("nav_" + target);
+  const sectionEl = document.getElementById(target);
+  if(navBtn && sectionEl){
+    try { switchSection(target); } catch(_){}
+  } else {
+    try { switchSection("secOverview"); } catch(_){}
+  }
 }
 
 // ── Iframe postMessage listener ──
