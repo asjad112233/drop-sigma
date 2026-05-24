@@ -19630,7 +19630,23 @@ function updateEmailInboxBar(threadCount, unreadCount){
   const metaEl  = document.getElementById("eibMeta");
   if(!iconEl || !emailEl || !metaEl) return;
 
+  // Employees never see "No inbox connected" — they aren't allowed
+  // to connect inboxes anyway. Show their assignment-aware summary
+  // instead, with thread/unread counts derived from what they can see.
+  const inEmbed = document.body.dataset.embed === "emails";
+
   if(!connectedStoreEmail){
+    if(inEmbed){
+      // Employees: show a friendly summary instead of "No inbox connected".
+      const tcLocal = threadCount !== undefined ? threadCount : (allThreads||[]).length;
+      const ucLocal = unreadCount !== undefined ? unreadCount : (allThreads||[]).reduce((s,t)=>s+getThreadUnreadCount(t),0);
+      iconEl.textContent   = "📨";
+      iconEl.style.background = "linear-gradient(135deg,#6366f1,#a855f7)";
+      iconEl.style.color = "#fff";
+      emailEl.textContent  = "Your assigned inbox";
+      metaEl.textContent   = `${tcLocal} thread${tcLocal===1?"":"s"} · ${ucLocal} unread`;
+      return;
+    }
     iconEl.textContent   = "?";
     iconEl.style.background = "linear-gradient(135deg,#94a3b8,#64748b)";
     emailEl.textContent  = "No inbox connected";

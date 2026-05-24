@@ -365,6 +365,8 @@ def _resolve_email_scope(request):
         "visible_folders": visible_folders,
         "visible_label_ids": visible_label_ids,
         "has_individual_assignments": has_individual,
+        "can_compose":   bool(perms.get("can_compose")),
+        "can_add_email": bool(perms.get("can_add_email")),
     }
 
 
