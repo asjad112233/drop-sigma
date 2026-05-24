@@ -19121,6 +19121,14 @@ async function fastInboxTick(){
   // Skip if tab is hidden — saves API calls when the user isn't looking.
   if(document.hidden) return;
 
+  // ── Employee-portal embed: refresh scope every tick so admin-side
+  //    assignment changes (folders, labels, capabilities) appear in
+  //    the employee's view within ~3 seconds without a manual reload.
+  //    Owners don't need this — their scope is static. ──
+  if(document.body.dataset.embed === "emails"){
+    try { if(typeof loadEmailThreadStats === "function") loadEmailThreadStats(); } catch(_){}
+  }
+
   try{
     const sid = selectedStoreId || "";
     const r = await fetch(`/emails/api/latest-event/?store_id=${encodeURIComponent(sid)}`,
@@ -29256,9 +29264,34 @@ window._emCurrentScope = null;  // Set whenever stats/threads API responds
 
 function applyEmailScopeToSidebar(scope){
   if(!scope) return;
+  // Detect scope changes vs the last applied snapshot — if the set
+  // of visible folders/labels or capabilities changed, also reload
+  // the threads list so newly-allowed threads appear immediately.
+  const prev = window._emCurrentScope;
+  const prevKey = prev ? JSON.stringify({
+    f: prev.visible_folders || [],
+    l: prev.visible_label_ids || [],
+    v: !!prev.view_all,
+    c: !!prev.can_compose,
+    a: !!prev.can_add_email,
+    i: !!prev.show_assigned_threads_folder,
+  }) : null;
+  const nextKey = JSON.stringify({
+    f: scope.visible_folders || [],
+    l: scope.visible_label_ids || [],
+    v: !!scope.view_all,
+    c: !!scope.can_compose,
+    a: !!scope.can_add_email,
+    i: !!scope.show_assigned_threads_folder,
+  });
   window._emCurrentScope = scope;
   // Notify capability gates (Compose, Add Inbox) to re-evaluate
   try { document.dispatchEvent(new Event("ds-scope-updated")); } catch(_){}
+  // If scope changed since last apply, trigger a threads reload so
+  // newly-allowed messages appear without a manual refresh.
+  if(prevKey && prevKey !== nextKey){
+    try { if(typeof loadEmails === "function") loadEmails({silent:true, preserveSelection:true}); } catch(_){}
+  }
 
   // ZERO-ASSIGNMENT GATE — when the requester is an employee with no
   // folders, no labels, no individual threads AND no view_all
