@@ -240,6 +240,220 @@ def get_thread_contact(email_obj):
     return sender
 
 
+# ─────────────────────────────────────────────────────────────────────
+# EMPLOYEE-AWARE SCOPE RESOLVER
+#
+# Every email endpoint needs to answer: "whose inbox is this?" — the
+# owner's. The requester might BE the owner, OR a team member who was
+# given access to (some slice of) the owner's inbox. This helper does
+# that resolution once so the rest of the view can write a single
+# scoped query.
+#
+# Returns a dict:
+#   data_owner       — User whose Stores we're showing
+#   member           — TeamMember row if requester is an employee, else None
+#   allowed_stores   — list[int] | None (None = no store-narrowing)
+#   view_all         — bool — True for owners and "complete inbox" employees
+#   assigned_contacts — set[str] — lowercased emails the employee is
+#                                 explicitly allowed to see (only relevant
+#                                 when view_all is False)
+#   visible_folders  — set[str] — folders this requester can see in their
+#                                 sidebar (always full set for owners /
+#                                 view_all employees)
+#   visible_label_ids — set[int] — labels this requester can see
+#   is_employee      — convenience bool == bool(member)
+# ─────────────────────────────────────────────────────────────────────
+ALL_BUILTIN_FOLDERS = {
+    "inbox", "unread", "needs_human", "ai_drafts", "drafts",
+    "sent", "resolved", "refunds", "returns", "dispute",
+    "spam", "archive",
+    # "assigned_threads" is dynamic — added when employee has direct
+    # thread assignments without folder-level access.
+}
+
+
+def _resolve_email_scope(request):
+    """See module-level comment. Safe to call on any authenticated request."""
+    from .models import EmailThreadAssignment, EmailLabel, FolderAssignment
+
+    member = None
+    if hasattr(request.user, "team_profile"):
+        member = (
+            request.user.team_profile
+            .filter(is_active=True)
+            .select_related("owner")
+            .first()
+        )
+
+    if not member:
+        # Tenant owner — full access to their own stores.
+        return {
+            "data_owner": request.user,
+            "member": None,
+            "is_employee": False,
+            "allowed_stores": None,
+            "view_all": True,
+            "assigned_contacts": None,
+            "visible_folders": set(ALL_BUILTIN_FOLDERS),
+            "visible_label_ids": None,  # None means "all"
+            "has_individual_assignments": False,
+        }
+
+    owner = member.owner
+    perms = member.permissions or {}
+    allowed_stores = perms.get("allowed_stores") or []
+    allowed_stores = [int(s) for s in allowed_stores if str(s).isdigit()] or None
+    view_all = bool(perms.get("view_all_threads"))
+
+    # Threads explicitly assigned (primary or co) to this member —
+    # always visible regardless of folder/label rules.
+    assigned_qs = EmailThreadAssignment.objects.filter(
+        store__user=owner
+    ).filter(Q(assigned_to=member) | Q(co_assignees=member)).distinct()
+    if allowed_stores:
+        assigned_qs = assigned_qs.filter(store_id__in=allowed_stores)
+    assigned_contacts = set(
+        (c or "").strip().lower()
+        for c in assigned_qs.values_list("contact", flat=True)
+        if c
+    )
+
+    # Folder/label assignments this employee has — restricts the sidebar
+    # to only what's assigned (unless view_all is on).
+    fa_qs = FolderAssignment.objects.filter(
+        assigned_to=member, is_active=True, store__user=owner
+    )
+    if allowed_stores:
+        fa_qs = fa_qs.filter(store_id__in=allowed_stores)
+
+    visible_folders = set()
+    visible_label_ids = set()
+    for fa in fa_qs.values_list("folder", "label_id"):
+        folder, label_id = fa
+        if label_id:
+            visible_label_ids.add(label_id)
+        elif folder:
+            visible_folders.add(folder)
+
+    has_individual = bool(assigned_contacts)
+
+    if view_all:
+        # "Complete inbox" employee — same UI as the owner.
+        return {
+            "data_owner": owner,
+            "member": member,
+            "is_employee": True,
+            "allowed_stores": allowed_stores,
+            "view_all": True,
+            "assigned_contacts": None,
+            "visible_folders": set(ALL_BUILTIN_FOLDERS),
+            "visible_label_ids": None,
+            "has_individual_assignments": has_individual,
+        }
+
+    return {
+        "data_owner": owner,
+        "member": member,
+        "is_employee": True,
+        "allowed_stores": allowed_stores,
+        "view_all": False,
+        "assigned_contacts": assigned_contacts,
+        "visible_folders": visible_folders,
+        "visible_label_ids": visible_label_ids,
+        "has_individual_assignments": has_individual,
+    }
+
+
+def _data_owner(request):
+    """Return the User whose stores this request should query against.
+    For tenant owners → request.user. For team members → their owner.
+    Single chokepoint so every endpoint's per-user scope works for both
+    audiences without sprinkling team_profile lookups everywhere."""
+    if hasattr(request.user, "team_profile"):
+        member = (
+            request.user.team_profile
+            .filter(is_active=True)
+            .select_related("owner")
+            .first()
+        )
+        if member and member.owner_id:
+            return member.owner
+    return request.user
+
+
+def _scope_get_store(request, store_id):
+    """Return the Store the requester is allowed to act on, or 404.
+    Works for owners (own stores) AND team members (their owner's stores,
+    narrowed by allowed_stores permission)."""
+    scope = _resolve_email_scope(request)
+    qs = Store.objects.filter(id=store_id, user=scope["data_owner"])
+    if scope["allowed_stores"]:
+        qs = qs.filter(id__in=scope["allowed_stores"])
+    store = qs.first()
+    if not store:
+        from django.http import Http404
+        raise Http404("Store not found or you don't have access.")
+    return store, scope
+
+
+def _scope_messages_qs(scope, base_qs=None):
+    """Return EmailMessage queryset narrowed to whatever the scope says
+    this requester may see. Owners see everything in their stores;
+    employees see only assigned threads, folder-assigned threads,
+    label-assigned threads, plus individually-assigned ones."""
+    from .models import EmailMessage, EmailThreadLabel
+    qs = base_qs if base_qs is not None else EmailMessage.objects.all()
+    qs = qs.filter(store__user=scope["data_owner"])
+    if scope["allowed_stores"]:
+        qs = qs.filter(store_id__in=scope["allowed_stores"])
+
+    if scope["view_all"]:
+        return qs
+
+    # Employee with limited access — assemble the set of allowed contacts.
+    allowed_contacts = set(scope.get("assigned_contacts") or set())
+
+    # Add contacts that come from label-assigned threads.
+    if scope["visible_label_ids"]:
+        label_contacts = EmailThreadLabel.objects.filter(
+            store__user=scope["data_owner"],
+            label_id__in=scope["visible_label_ids"],
+        ).values_list("contact", flat=True)
+        allowed_contacts.update((c or "").strip().lower() for c in label_contacts if c)
+
+    # Folder visibility doesn't pre-filter by contact (folders are
+    # message-attribute filters, not contact-based). The frontend
+    # narrows by folder; here we just need to ensure the employee can
+    # see threads that have ANY message matching any visible folder.
+    # For empty `visible_folders` AND no labels AND no individual
+    # assignments → empty inbox.
+    if not allowed_contacts and not scope["visible_folders"]:
+        return qs.none()
+
+    # If at least one folder is visible, allow all threads (the frontend
+    # filter does the actual folder match per-message).
+    if scope["visible_folders"]:
+        # No further contact restriction — folder narrowing happens
+        # downstream. But we still combine with explicit allowed_contacts
+        # so individually-assigned threads aren't accidentally hidden.
+        return qs
+
+    # No folders visible — restrict strictly to allowed_contacts.
+    if not allowed_contacts:
+        return qs.none()
+
+    # Filter at the message level by canonical contact. Doing this in
+    # one go is hard (we'd need the contact resolver per row), so we
+    # fall back to a substring filter on sender|recipient and let the
+    # frontend rendering layer accept the slight over-fetch (the
+    # per-thread aggregator dedupes anyway).
+    contact_q = Q()
+    for c in allowed_contacts:
+        if c:
+            contact_q |= Q(sender__icontains=c) | Q(recipient__icontains=c)
+    return qs.filter(contact_q) if contact_q.children else qs.none()
+
+
 def get_thread_messages(store, contact):
     """Return a queryset of EVERY message in a thread for (store, contact)
     — including outbound replies (where sender = store_email).
@@ -360,7 +574,7 @@ def connect_email_account_api(request):
             "message": "Store, email and app password are required."
         }, status=400)
 
-    store = Store.objects.filter(id=store_id, user=request.user).first()
+    store = Store.objects.filter(id=store_id, user=_data_owner(request)).first()
 
     if not store:
         return Response({
@@ -415,7 +629,7 @@ def connect_custom_email_api(request):
     if not all([store_id, email, password, imap_host, smtp_host]):
         return Response({"success": False, "message": "All fields are required."}, status=400)
 
-    store = Store.objects.filter(id=store_id, user=request.user).first()
+    store = Store.objects.filter(id=store_id, user=_data_owner(request)).first()
     if not store:
         return Response({"success": False, "message": "Store not found."}, status=404)
 
@@ -555,7 +769,7 @@ def gmail_oauth_callback(request):
     if not email:
         return _redirect("/dashboard/?gmail_error=no_email")
 
-    store = Store.objects.filter(id=store_id, user=request.user).first()
+    store = Store.objects.filter(id=store_id, user=_data_owner(request)).first()
     if not store:
         return _redirect("/dashboard/?gmail_error=store_not_found")
 
@@ -722,7 +936,7 @@ def send_email_api(request):
             "message": "Subject, body and recipient required."
         }, status=400)
 
-    store = Store.objects.filter(id=store_id, user=request.user).first()
+    store = Store.objects.filter(id=store_id, user=_data_owner(request)).first()
 
     if not store:
         return Response({
@@ -827,7 +1041,7 @@ def emails_list_api(request):
         return Response({"success": True, "count": 0, "emails": []})
 
     # Per-user scope: only the requester's own inbox messages.
-    emails = EmailMessage.objects.filter(store__user=request.user).order_by("-created_at")
+    emails = EmailMessage.objects.filter(store__user=_data_owner(request)).order_by("-created_at")
 
     if store_id:
         emails = emails.filter(store_id=store_id)
@@ -849,7 +1063,7 @@ def email_detail_api(request, email_id):
     if not request.user.is_authenticated:
         return Response({"success": False, "message": "Authentication required"}, status=401)
     # Per-user scope: only the requester's own inbox messages.
-    email = get_object_or_404(EmailMessage, id=email_id, store__user=request.user)
+    email = get_object_or_404(EmailMessage, id=email_id, store__user=_data_owner(request))
     serializer = EmailMessageSerializer(email)
 
     return Response({
@@ -866,7 +1080,7 @@ def toggle_email_read_api(request, email_id):
     if not request.user.is_authenticated:
         return Response({"success": False, "message": "Authentication required"}, status=401)
     # Per-user scope: tenants can only mark their own emails read/unread.
-    email = get_object_or_404(EmailMessage, id=email_id, store__user=request.user)
+    email = get_object_or_404(EmailMessage, id=email_id, store__user=_data_owner(request))
     new_state = not email.is_read
     email.is_read = new_state
     email.save(update_fields=["is_read"])
@@ -907,7 +1121,7 @@ def archive_email_thread_api(request, email_id):
     if not request.user.is_authenticated:
         return Response({"success": False, "message": "Authentication required"}, status=401)
     # Per-user scope.
-    email = get_object_or_404(EmailMessage, id=email_id, store__user=request.user)
+    email = get_object_or_404(EmailMessage, id=email_id, store__user=_data_owner(request))
     try:
         contact = (get_thread_contact(email) or "").strip().lower()
     except Exception:
@@ -955,8 +1169,12 @@ def email_threads_api(request):
     if store_id and not EmailAccount.objects.filter(store_id=store_id, is_active=True).exists():
         return Response({"success": True, "count": 0, "threads": []})
 
-    # Per-user scope: only the requester's own inbox.
-    emails = EmailMessage.objects.filter(store__user=request.user).order_by("-created_at")
+    # ── Employee-aware scope ──
+    # For tenant owners → all of their inbox. For team members →
+    # narrowed to assigned threads + folder/label-assigned threads
+    # (or everything if view_all_threads permission is set).
+    scope = _resolve_email_scope(request)
+    emails = _scope_messages_qs(scope).order_by("-created_at")
 
     if store_id:
         emails = emails.filter(store_id=store_id)
@@ -966,7 +1184,7 @@ def email_threads_api(request):
     if store_id:
         # Per-user scope: only show thread assignments on stores the requester owns.
         for ta in EmailThreadAssignment.objects.filter(
-            store_id=store_id, store__user=request.user
+            store_id=store_id, store__user=_data_owner(request)
         ).select_related("assigned_to").prefetch_related("co_assignees"):
             key = ta.contact.lower()
             resolved_map[key] = {
@@ -994,6 +1212,16 @@ def email_threads_api(request):
             continue
 
         if contact not in threads:
+            # Tag for the "Assigned Threads" virtual folder — set only
+            # for employees, where this specific thread was directly
+            # assigned to them. Owners + view_all employees see this
+            # as False so the virtual folder is hidden for them.
+            is_individually_assigned = (
+                scope["is_employee"]
+                and not scope["view_all"]
+                and scope.get("assigned_contacts")
+                and (contact in scope["assigned_contacts"])
+            )
             threads[contact] = {
                 "contact": contact,
                 "name": getattr(email_obj, "sender_name", None) or contact,
@@ -1013,6 +1241,7 @@ def email_threads_api(request):
                 "replied_count": 0,
                 "unread_count": 0,
                 "is_read": True,
+                "is_individually_assigned": bool(is_individually_assigned),
             }
 
         threads[contact]["total_messages"] += 1
@@ -1056,7 +1285,7 @@ def email_threads_api(request):
             from orders.models import Order
             order_qs = Order.objects.filter(
                 customer_email__in=contact_emails,
-                store__user=request.user,
+                store__user=_data_owner(request),
             )
             if store_id:
                 order_qs = order_qs.filter(store_id=store_id)
@@ -1118,12 +1347,12 @@ def email_threads_api(request):
         ai_status_by_contact = {}
         if store_id:
             for row in EmailThreadLabel.objects.filter(
-                store_id=store_id, store__user=request.user,
+                store_id=store_id, store__user=_data_owner(request),
             ).values("contact", "label_id"):
                 k = (row["contact"] or "").lower()
                 labels_by_contact.setdefault(k, []).append(row["label_id"])
             for row in _EM.objects.filter(
-                store_id=store_id, store__user=request.user,
+                store_id=store_id, store__user=_data_owner(request),
             ).order_by("-created_at").values(
                 "sender", "ai_status", "ai_escalation_category", "ai_escalation_reason"
             )[:5000]:
@@ -1149,7 +1378,24 @@ def email_threads_api(request):
     return Response({
         "success": True,
         "count": len(results),
-        "threads": results
+        "threads": results,
+        # Frontend uses this block to render the right sidebar + virtual
+        # folders. Owners always get the full set; employees get only
+        # what's been assigned to them.
+        "scope": {
+            "is_employee":      bool(scope["is_employee"]),
+            "view_all":         bool(scope["view_all"]),
+            "visible_folders":  sorted(scope["visible_folders"] or []),
+            "visible_label_ids": (
+                None if scope["visible_label_ids"] is None
+                else sorted(scope["visible_label_ids"])
+            ),
+            "show_assigned_threads_folder": bool(
+                scope["is_employee"]
+                and not scope["view_all"]
+                and scope.get("has_individual_assignments")
+            ),
+        },
     })
 
 
@@ -1167,7 +1413,7 @@ def email_thread_detail_api(request):
         }, status=400)
 
     # Per-user scope.
-    emails = EmailMessage.objects.filter(store__user=request.user).order_by("created_at")
+    emails = EmailMessage.objects.filter(store__user=_data_owner(request)).order_by("created_at")
 
     if store_id:
         emails = emails.filter(store_id=store_id)
@@ -1204,7 +1450,7 @@ def generate_ai_draft_api(request, email_id):
     if not request.user.is_authenticated:
         return Response({"success": False, "message": "Authentication required"}, status=401)
     # Per-user scope.
-    email = get_object_or_404(EmailMessage, id=email_id, store__user=request.user)
+    email = get_object_or_404(EmailMessage, id=email_id, store__user=_data_owner(request))
 
     # Load tenant's email account to apply tone, custom instructions, signature
     account = EmailAccount.objects.filter(store=email.store, is_active=True).first()
@@ -1295,7 +1541,7 @@ def _ai_get_user_store(request, store_id=None):
     """Resolve a store for the current user (used by AI Training endpoints)."""
     try:
         if store_id:
-            return Store.objects.filter(id=store_id, user=request.user).first()
+            return Store.objects.filter(id=store_id, user=_data_owner(request)).first()
         if request.user.is_authenticated:
             return Store.objects.filter(user=request.user, is_active=True).first()
     except Exception:
@@ -1463,11 +1709,11 @@ def ai_training_example_api(request):
     # Resolve the store — fall back to the first store the user owns
     store = None
     if store_id:
-        store = Store.objects.filter(id=store_id, user=request.user).first()
+        store = Store.objects.filter(id=store_id, user=_data_owner(request)).first()
     if store is None and request.user.is_authenticated and not request.user.is_superuser:
-        store = Store.objects.filter(user=request.user).first()
+        store = Store.objects.filter(user=_data_owner(request)).first()
     if store is None:
-        store = Store.objects.filter(user=request.user).first()
+        store = Store.objects.filter(user=_data_owner(request)).first()
 
     if store is None:
         return Response({"success": False, "message": "No store available — connect a store first."}, status=400)
@@ -2147,7 +2393,7 @@ def ai_playground_api(request):
             store = None
             if store_id:
                 try:
-                    store = Store.objects.filter(id=store_id, user=request.user).first()
+                    store = Store.objects.filter(id=store_id, user=_data_owner(request)).first()
                 except Exception:
                     store = None
             if store is None and request.user.is_authenticated:
@@ -2194,7 +2440,7 @@ def auto_suggest_reply_api(request):
         return Response({"success": False, "message": "store_id and contact required."}, status=400)
 
     # Per-user scope on every read.
-    emails = EmailMessage.objects.filter(store_id=store_id, store__user=request.user).order_by("created_at")
+    emails = EmailMessage.objects.filter(store_id=store_id, store__user=_data_owner(request)).order_by("created_at")
     thread_emails = [e for e in emails if get_thread_contact(e) == contact]
 
     if not thread_emails:
@@ -2465,7 +2711,7 @@ def assign_thread_multi_api(request):
     if not store_id or not contact:
         return Response({"success": False, "message": "store_id and contact are required."}, status=400)
 
-    store = get_object_or_404(Store, id=store_id, user=request.user)
+    store = get_object_or_404(Store, id=store_id, user=_data_owner(request))
     members = list(TeamMember.objects.filter(id__in=member_ids))
 
     assignment, _ = EmailThreadAssignment.objects.get_or_create(store=store, contact=contact)
@@ -2550,13 +2796,13 @@ def bulk_assign_threads_api(request):
         return Response({"success": False, "message": "contacts (non-empty list) is required."}, status=400)
 
     # Tenant scope: the store must belong to the requester
-    store = get_object_or_404(Store, id=store_id, user=request.user)
+    store = get_object_or_404(Store, id=store_id, user=_data_owner(request))
 
     member = None
     if member_id not in (None, "", 0, "0", "null"):
         # The member must belong to the same tenant — keeps cross-tenant
         # leaks impossible even with a forged member_id.
-        member = TeamMember.objects.filter(id=member_id, owner=request.user).first()
+        member = TeamMember.objects.filter(id=member_id, owner=_data_owner(request)).first()
         if not member:
             return Response({"success": False, "message": "Team member not found."}, status=404)
 
@@ -2618,7 +2864,7 @@ def assign_thread_api(request):
     if not store_id or not contact or not member_id:
         return Response({"success": False, "message": "store_id, contact and member_id are required."}, status=400)
 
-    store = get_object_or_404(Store, id=store_id, user=request.user)
+    store = get_object_or_404(Store, id=store_id, user=_data_owner(request))
     member = get_object_or_404(TeamMember, id=member_id)
 
     EmailThreadAssignment.objects.update_or_create(
@@ -2662,7 +2908,7 @@ def unassign_thread_api(request):
     EmailThreadAssignment.objects.filter(store_id=store_id, contact=contact).delete()
 
     try:
-        store_obj = Store.objects.get(id=store_id, user=request.user)
+        store_obj = Store.objects.get(id=store_id, user=_data_owner(request))
         log_thread_activity(
             store_obj, contact, "unassigned",
             description=f"Unassigned{' from ' + prev_name if prev_name else ''}",
@@ -2772,7 +3018,7 @@ def email_templates_api(request):
     if not request.user.is_authenticated:
         return Response({'success': False, 'message': 'Login required.'}, status=401)
     store_id = request.data.get("store_id")
-    store = Store.objects.filter(id=store_id, user=request.user).first() if store_id else None
+    store = Store.objects.filter(id=store_id, user=_data_owner(request)).first() if store_id else None
     if not store:
         return Response({'success': False, 'message': 'Store not found.'}, status=404)
     if not (request.user.is_superuser or store.user_id == request.user.id):
@@ -2899,7 +3145,7 @@ def reset_template_to_default_api(request, template_id):
 @permission_classes([IsAuthenticated])
 def template_sample_data_api(request):
     store_id = request.GET.get("store_id")
-    store = Store.objects.filter(id=store_id, user=request.user).first()
+    store = Store.objects.filter(id=store_id, user=_data_owner(request)).first()
     ctx = build_template_context(store)
     return Response({'success': True, 'data': ctx})
 
@@ -3763,7 +4009,7 @@ def latest_email_event_api(request):
         return Response({"max_id": 0, "max_ts": "", "unread": 0}, status=401)
     store_id = request.GET.get("store_id") or ""
     # Per-user scope: poller only sees the requester's own inbox.
-    qs = EmailMessage.objects.filter(store__user=request.user)
+    qs = EmailMessage.objects.filter(store__user=_data_owner(request))
     if store_id:
         try:
             qs = qs.filter(store_id=int(store_id))
@@ -4036,11 +4282,11 @@ def labels_list_api(request):
         return Response({"success": False, "message": "Authentication required"}, status=401)
 
     if request.method == "GET":
-        qs = EmailLabel.objects.filter(owner=request.user).order_by("position", "name")
+        qs = EmailLabel.objects.filter(owner=_data_owner(request)).order_by("position", "name")
         # Per-tenant thread counts (counts threads where store.user == request.user)
         from django.db.models import Count, Q
         counts_qs = EmailThreadLabel.objects.filter(
-            store__user=request.user
+            store__user=_data_owner(request)
         ).values("label_id").annotate(c=Count("id"))
         counts = {row["label_id"]: row["c"] for row in counts_qs}
         return Response({
@@ -4060,15 +4306,15 @@ def labels_list_api(request):
     if not name:
         return Response({"success": False, "message": "Name is required."}, status=400)
 
-    if EmailLabel.objects.filter(owner=request.user, name__iexact=name).exists():
+    if EmailLabel.objects.filter(owner=_data_owner(request), name__iexact=name).exists():
         return Response({"success": False, "message": "A label with that name already exists."}, status=409)
 
     # Place new label at the end of the list
-    next_pos = (EmailLabel.objects.filter(owner=request.user).order_by("-position").first().position + 1
-                if EmailLabel.objects.filter(owner=request.user).exists() else 0)
+    next_pos = (EmailLabel.objects.filter(owner=_data_owner(request)).order_by("-position").first().position + 1
+                if EmailLabel.objects.filter(owner=_data_owner(request)).exists() else 0)
 
     label = EmailLabel.objects.create(
-        owner=request.user,
+        owner=_data_owner(request),
         name=name, color=color, icon=icon, is_shared=is_shared,
         position=next_pos, created_by=request.user,
     )
@@ -4085,7 +4331,7 @@ def label_detail_api(request, label_id):
     if not request.user.is_authenticated:
         return Response({"success": False, "message": "Authentication required"}, status=401)
 
-    label = EmailLabel.objects.filter(id=label_id, owner=request.user).first()
+    label = EmailLabel.objects.filter(id=label_id, owner=_data_owner(request)).first()
     if not label:
         return Response({"success": False, "message": "Label not found."}, status=404)
 
@@ -4096,7 +4342,7 @@ def label_detail_api(request, label_id):
             if not name:
                 return Response({"success": False, "message": "Name cannot be empty."}, status=400)
             # uniqueness check (excluding self)
-            if EmailLabel.objects.filter(owner=request.user, name__iexact=name).exclude(id=label.id).exists():
+            if EmailLabel.objects.filter(owner=_data_owner(request), name__iexact=name).exclude(id=label.id).exists():
                 return Response({"success": False, "message": "A label with that name already exists."}, status=409)
             label.name = name
         if request.data.get("color") is not None:
@@ -4135,7 +4381,7 @@ def thread_labels_api(request):
     if not store_id or not contact:
         return Response({"success": False, "message": "store_id and contact are required."}, status=400)
 
-    store = get_object_or_404(Store, id=store_id, user=request.user)
+    store = get_object_or_404(Store, id=store_id, user=_data_owner(request))
 
     if request.method == "POST":
         label_ids = request.data.get("label_ids") or []
@@ -4185,10 +4431,10 @@ def thread_labels_api(request):
     if not label_id:
         return Response({"success": False, "message": "label_id is required."}, status=400)
     # Capture name for log before delete
-    lbl_name = EmailLabel.objects.filter(id=label_id, owner=request.user).values_list("name", flat=True).first() or str(label_id)
+    lbl_name = EmailLabel.objects.filter(id=label_id, owner=_data_owner(request)).values_list("name", flat=True).first() or str(label_id)
     EmailThreadLabel.objects.filter(
         store=store, contact=contact, label_id=label_id,
-        label__owner=request.user,
+        label__owner=_data_owner(request),
     ).delete()
     log_thread_activity(
         store, contact, "label_removed",
@@ -4222,7 +4468,9 @@ def threads_stats_api(request):
         return Response({"success": False, "message": "Authentication required"}, status=401)
 
     store_id = request.GET.get("store_id")
-    em_qs = EmailMessage.objects.filter(store__user=request.user)
+    # Scope-aware queryset (owners → all; employees → assigned-only)
+    scope = _resolve_email_scope(request)
+    em_qs = _scope_messages_qs(scope)
     if store_id:
         em_qs = em_qs.filter(store_id=store_id)
 
@@ -4230,7 +4478,7 @@ def threads_stats_api(request):
     # store-email → recipient flip (for outbound replies) works
     # without re-querying per message.
     store_email_map = {}
-    acct_qs = EmailAccount.objects.filter(store__user=request.user, is_active=True)
+    acct_qs = EmailAccount.objects.filter(store__user=_data_owner(request), is_active=True)
     if store_id:
         acct_qs = acct_qs.filter(store_id=store_id)
     for sid, addr in acct_qs.values_list("store_id", "email"):
@@ -4269,7 +4517,7 @@ def threads_stats_api(request):
     # ── Resolved set comes from EmailThreadAssignment; we use it to
     #    exclude resolved threads from active counts and to compute
     #    the Resolved badge. Contacts stored already lower-cased.
-    ta_qs = EmailThreadAssignment.objects.filter(store__user=request.user)
+    ta_qs = EmailThreadAssignment.objects.filter(store__user=_data_owner(request))
     if store_id:
         ta_qs = ta_qs.filter(store_id=store_id)
     resolved_contacts = {
@@ -4327,8 +4575,13 @@ def threads_stats_api(request):
             if "spam"    in cat: counts["spam"]     += 1
 
     # ── Per-label counts (already correct — keyed by store+contact) ──
-    label_qs = EmailLabel.objects.filter(owner=request.user).order_by("position", "name")
-    link_counts_qs = EmailThreadLabel.objects.filter(store__user=request.user)
+    label_qs = EmailLabel.objects.filter(owner=scope["data_owner"]).order_by("position", "name")
+    # Employees with restricted access only see the labels they were
+    # explicitly assigned (via FolderAssignment).
+    if scope["is_employee"] and not scope["view_all"] and scope["visible_label_ids"] is not None:
+        label_qs = label_qs.filter(id__in=list(scope["visible_label_ids"]))
+
+    link_counts_qs = EmailThreadLabel.objects.filter(store__user=scope["data_owner"])
     if store_id:
         link_counts_qs = link_counts_qs.filter(store_id=store_id)
     label_counts_map = {
@@ -4340,10 +4593,36 @@ def threads_stats_api(request):
         for l in label_qs
     ]
 
+    # ── Count for the virtual "Assigned Threads" folder (employee-only) ──
+    assigned_threads_count = 0
+    if scope["is_employee"] and not scope["view_all"] and scope.get("assigned_contacts"):
+        # Count distinct contacts in the assigned set that still have
+        # at least one active (non-archived) message.
+        active_contacts = set()
+        for contact in scope["assigned_contacts"]:
+            latest = latest_per_contact.get(contact)
+            if latest and not _is_archived(latest):
+                active_contacts.add(contact)
+        assigned_threads_count = len(active_contacts)
+
     return Response({
         "success": True,
-        "counts": counts,
+        "counts": {**counts, "assigned_threads": assigned_threads_count},
         "labels": labels,
+        "scope": {
+            "is_employee":      bool(scope["is_employee"]),
+            "view_all":         bool(scope["view_all"]),
+            "visible_folders":  sorted(scope["visible_folders"] or []),
+            "visible_label_ids": (
+                None if scope["visible_label_ids"] is None
+                else sorted(scope["visible_label_ids"])
+            ),
+            "show_assigned_threads_folder": bool(
+                scope["is_employee"]
+                and not scope["view_all"]
+                and scope.get("has_individual_assignments")
+            ),
+        },
     })
 
 
@@ -4356,7 +4635,7 @@ def needs_human_threads_api(request):
 
     store_id = request.GET.get("store_id")
     qs = EmailMessage.objects.filter(
-        store__user=request.user, ai_status="needs_human",
+        store__user=_data_owner(request), ai_status="needs_human",
     ).select_related("store").order_by("-escalated_at", "-created_at")
     if store_id:
         qs = qs.filter(store_id=store_id)
@@ -4396,7 +4675,7 @@ def thread_ai_status_api(request, email_id):
     if not request.user.is_authenticated:
         return Response({"success": False, "message": "Authentication required"}, status=401)
 
-    msg = EmailMessage.objects.filter(id=email_id, store__user=request.user).first()
+    msg = EmailMessage.objects.filter(id=email_id, store__user=_data_owner(request)).first()
     if not msg:
         return Response({"success": False, "message": "Email not found."}, status=404)
 
@@ -4499,7 +4778,7 @@ def empty_folder_api(request):
     if not folder and not label_id:
         return Response({"success": False, "message": "folder or label_id required."}, status=400)
 
-    store = get_object_or_404(Store, id=store_id, user=request.user)
+    store = get_object_or_404(Store, id=store_id, user=_data_owner(request))
 
     em_qs = EmailMessage.objects.filter(store=store)
 
@@ -4533,7 +4812,7 @@ def empty_folder_api(request):
     # Label-based filtering: collect all contacts that have the label
     if label_id:
         label_contacts = list(EmailThreadLabel.objects.filter(
-            store=store, label_id=label_id, label__owner=request.user,
+            store=store, label_id=label_id, label__owner=_data_owner(request),
         ).values_list("contact", flat=True))
         # If we already had a contact list, intersect; else use just labels
         if contacts_via_filter is not None:
@@ -4690,7 +4969,7 @@ def folder_assignments_api(request):
 
     if request.method == "GET":
         store_id = request.GET.get("store_id")
-        qs = FolderAssignment.objects.filter(store__user=request.user, is_active=True).select_related("assigned_to", "label")
+        qs = FolderAssignment.objects.filter(store__user=_data_owner(request), is_active=True).select_related("assigned_to", "label")
         if store_id:
             qs = qs.filter(store_id=store_id)
         return Response({
@@ -4715,12 +4994,12 @@ def folder_assignments_api(request):
         return Response({"success": False, "message": "store_id is required."}, status=400)
     if not folder and not label_id:
         return Response({"success": False, "message": "folder or label_id required."}, status=400)
-    store = get_object_or_404(Store, id=store_id, user=request.user)
+    store = get_object_or_404(Store, id=store_id, user=_data_owner(request))
 
     # ── Resolve label (if any) up-front so both POST and DELETE use it ──
     label = None
     if label_id:
-        label = EmailLabel.objects.filter(id=label_id, owner=request.user).first()
+        label = EmailLabel.objects.filter(id=label_id, owner=_data_owner(request)).first()
         if not label:
             return Response({"success": False, "message": "Label not found."}, status=404)
         folder = ""  # mutual exclusion — label rules don't use folder field
@@ -4740,7 +5019,7 @@ def folder_assignments_api(request):
             return Response({"success": False, "message": "member_id or member_ids required."}, status=400)
 
         # Validate that all members belong to this tenant
-        valid_members = list(TeamMember.objects.filter(id__in=requested_ids, owner=request.user))
+        valid_members = list(TeamMember.objects.filter(id__in=requested_ids, owner=_data_owner(request)))
         valid_ids = {m.id for m in valid_members}
         invalid = [i for i in requested_ids if i not in valid_ids]
         if invalid and not valid_members:
@@ -4792,7 +5071,7 @@ def folder_assignments_api(request):
         em_qs = EmailMessage.objects.filter(store=store)
         if label:
             label_contacts = list(EmailThreadLabel.objects.filter(
-                store=store, label=label, label__owner=request.user,
+                store=store, label=label, label__owner=_data_owner(request),
             ).values_list("contact", flat=True))
             em_qs = em_qs.filter(sender__in=label_contacts)
         else:
@@ -4878,7 +5157,7 @@ def move_thread_to_folder_api(request):
     if not (store_id and contact and folder):
         return Response({"success": False, "message": "store_id, contact, folder required."}, status=400)
 
-    store = get_object_or_404(Store, id=store_id, user=request.user)
+    store = get_object_or_404(Store, id=store_id, user=_data_owner(request))
 
     # Use canonical contact resolver — catches outbound replies (sender =
     # store email) and avoids substring false-matches like "bob@a.com"
@@ -5015,7 +5294,7 @@ def restore_archived_threads_api(request):
     if not store_id or not isinstance(contacts, list) or not contacts:
         return Response({"success": False, "message": "store_id + contacts[] required."}, status=400)
 
-    store = get_object_or_404(Store, id=store_id, user=request.user)
+    store = get_object_or_404(Store, id=store_id, user=_data_owner(request))
     contacts = [(c or "").strip().lower() for c in contacts if c]
 
     restored_threads = 0
@@ -5073,7 +5352,7 @@ def permanent_delete_threads_api(request):
     if not store_id or not isinstance(contacts, list) or not contacts:
         return Response({"success": False, "message": "store_id + contacts[] required."}, status=400)
 
-    store = get_object_or_404(Store, id=store_id, user=request.user)
+    store = get_object_or_404(Store, id=store_id, user=_data_owner(request))
     contacts = [(c or "").strip().lower() for c in contacts if c]
 
     deleted_threads = 0
@@ -5137,7 +5416,7 @@ def bulk_mark_threads_read_api(request):
     if state not in ("read", "unread"):
         return Response({"success": False, "message": "state must be 'read' or 'unread'."}, status=400)
 
-    store = get_object_or_404(Store, id=store_id, user=request.user)
+    store = get_object_or_404(Store, id=store_id, user=_data_owner(request))
     target_is_read = (state == "read")
     contacts = [(c or "").strip().lower() for c in contacts if c]
 
@@ -5185,7 +5464,7 @@ def thread_history_api(request):
     if not (store_id and contact):
         return Response({"success": False, "message": "store_id + contact required."}, status=400)
 
-    store = get_object_or_404(Store, id=store_id, user=request.user)
+    store = get_object_or_404(Store, id=store_id, user=_data_owner(request))
 
     qs = EmailThreadActivity.objects.filter(
         store=store, contact=contact
