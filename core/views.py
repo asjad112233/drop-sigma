@@ -332,42 +332,42 @@ def setup_admin(request):
 def privacy_policy_page(request):
     """Public privacy policy — required by Shopify App Store review."""
     response = render(request, "legal/privacy.html")
-    response["Cache-Control"] = "public, max-age=3600"
+    response["Cache-Control"] = "public, max-age=60"
     return response
 
 
 def terms_of_service_page(request):
     """Public terms of service."""
     response = render(request, "legal/terms.html")
-    response["Cache-Control"] = "public, max-age=3600"
+    response["Cache-Control"] = "public, max-age=60"
     return response
 
 
 def support_page(request):
     """Public support / contact page — required by Shopify App Store review."""
     response = render(request, "legal/support.html")
-    response["Cache-Control"] = "public, max-age=3600"
+    response["Cache-Control"] = "public, max-age=60"
     return response
 
 
 def about_page(request):
     """Public About page."""
     response = render(request, "legal/about.html")
-    response["Cache-Control"] = "public, max-age=3600"
+    response["Cache-Control"] = "public, max-age=60"
     return response
 
 
 def pricing_page(request):
     """Public Pricing page."""
     response = render(request, "legal/pricing.html")
-    response["Cache-Control"] = "public, max-age=3600"
+    response["Cache-Control"] = "public, max-age=60"
     return response
 
 
 def contact_page(request):
     """Public Contact page with form."""
     response = render(request, "legal/contact.html")
-    response["Cache-Control"] = "public, max-age=3600"
+    response["Cache-Control"] = "public, max-age=60"
     return response
 
 
@@ -401,28 +401,28 @@ def contact_submit(request):
 def cookies_page(request):
     """Public Cookie Policy page (GDPR compliance)."""
     response = render(request, "legal/cookies.html")
-    response["Cache-Control"] = "public, max-age=3600"
+    response["Cache-Control"] = "public, max-age=60"
     return response
 
 
 def refund_page(request):
     """Public Refund Policy page."""
     response = render(request, "legal/refund.html")
-    response["Cache-Control"] = "public, max-age=3600"
+    response["Cache-Control"] = "public, max-age=60"
     return response
 
 
 def docs_page(request):
     """Public Documentation hub."""
     response = render(request, "legal/docs.html")
-    response["Cache-Control"] = "public, max-age=3600"
+    response["Cache-Control"] = "public, max-age=60"
     return response
 
 
 def features_page(request):
     """Public Features page."""
     response = render(request, "legal/features.html")
-    response["Cache-Control"] = "public, max-age=3600"
+    response["Cache-Control"] = "public, max-age=60"
     return response
 
 
