@@ -1006,6 +1006,236 @@ def shopify_webhook(request, store_id):
     return JsonResponse({"success": True, "created": created})
 
 
+# ════════════════════════════════════════════════════════════════════
+# SHOPIFY APP STORE COMPLIANCE — required webhooks
+# ────────────────────────────────────────────────────────────────────
+# Every Shopify app on the App Store MUST handle these 4 webhooks:
+#   1. app/uninstalled                — cleanup when merchant removes app
+#   2. customers/data_request         — GDPR data export request
+#   3. customers/redact               — GDPR data deletion request
+#   4. shop/redact                    — GDPR shop deletion (48h post-uninstall)
+#
+# All four endpoints verify the X-Shopify-Hmac-Sha256 signature using
+# the app's CLIENT SECRET (not the per-store api_secret like orders).
+# Shopify's review system will probe these URLs during submission.
+# ════════════════════════════════════════════════════════════════════
+
+def _verify_shopify_app_hmac(request):
+    """Validate the HMAC header sent by Shopify on app-level webhooks.
+    These are signed with the global SHOPIFY_API_SECRET (app secret),
+    NOT a per-store secret. Returns (ok, body_bytes)."""
+    from django.conf import settings as _settings
+    body = request.body
+    sig_header = request.META.get("HTTP_X_SHOPIFY_HMAC_SHA256", "")
+    app_secret = (getattr(_settings, "SHOPIFY_API_SECRET", "") or "").encode("utf-8")
+    if not (sig_header and app_secret):
+        return False, body
+    expected = base64.b64encode(
+        hmac.new(app_secret, body, hashlib.sha256).digest()
+    ).decode()
+    return hmac.compare_digest(sig_header, expected), body
+
+
+@csrf_exempt
+def shopify_app_uninstalled_webhook(request):
+    """Fires when a merchant uninstalls Drop Sigma from their Shopify
+    store. We deactivate the store record + clear the access_token so
+    we never accidentally hit Shopify with a stale token.
+
+    Endpoint: POST /orders/webhook/shopify/app-uninstalled/
+    Configured per-app in Partner Dashboard → Webhooks subscription."""
+    if request.method != "POST":
+        return JsonResponse({"success": False}, status=405)
+
+    ok, body = _verify_shopify_app_hmac(request)
+    if not ok:
+        return JsonResponse({"success": False, "message": "Invalid HMAC"}, status=401)
+
+    shop_domain = (request.META.get("HTTP_X_SHOPIFY_SHOP_DOMAIN") or "").strip().lower()
+    if not shop_domain:
+        return JsonResponse({"success": False, "message": "Missing shop domain"}, status=400)
+
+    # Find matching stores. Match both with and without https:// prefix
+    # since older rows may have inconsistent formatting.
+    candidates = [
+        shop_domain,
+        f"https://{shop_domain}",
+        f"https://{shop_domain}/",
+        f"http://{shop_domain}",
+    ]
+    affected = Store.objects.filter(
+        platform="shopify",
+        store_url__in=candidates,
+    )
+    affected.update(
+        is_active=False,
+        access_token="",  # invalidate token — merchant has revoked access
+    )
+
+    return JsonResponse({"success": True, "deactivated": affected.count()})
+
+
+@csrf_exempt
+def shopify_customers_data_request_webhook(request):
+    """GDPR: a customer has requested a copy of their stored personal
+    data. Per Shopify policy we must respond within 30 days. We log
+    the request — actual data export is fulfilled out-of-band by
+    Drop Sigma support (since the request includes minimal info).
+
+    Endpoint: POST /orders/webhook/shopify/customers-data-request/"""
+    import logging, json as _json
+    log = logging.getLogger(__name__)
+
+    if request.method != "POST":
+        return JsonResponse({"success": False}, status=405)
+
+    ok, body = _verify_shopify_app_hmac(request)
+    if not ok:
+        return JsonResponse({"success": False, "message": "Invalid HMAC"}, status=401)
+
+    try:
+        payload = _json.loads(body)
+    except Exception:
+        return JsonResponse({"success": False, "message": "Invalid JSON"}, status=400)
+
+    # Shopify guarantees these fields. We persist them as a structured
+    # entry so the support team can fulfil within the SLA.
+    log.warning(
+        "[Shopify GDPR] customers/data_request — shop_id=%s shop_domain=%s customer=%s orders=%s",
+        payload.get("shop_id"),
+        payload.get("shop_domain"),
+        (payload.get("customer") or {}).get("email"),
+        payload.get("orders_requested"),
+    )
+    # Persist to DB so support can action it
+    try:
+        from .models import ShopifyGdprRequest
+        ShopifyGdprRequest.objects.create(
+            request_type="data_request",
+            shop_domain=payload.get("shop_domain", ""),
+            customer_email=(payload.get("customer") or {}).get("email", "") or "",
+            payload=payload,
+        )
+    except Exception:
+        # Table may not exist yet on first deploy — soft fail
+        pass
+
+    return JsonResponse({"success": True})
+
+
+@csrf_exempt
+def shopify_customers_redact_webhook(request):
+    """GDPR: a customer has requested deletion of their personal data.
+    We anonymize any Order rows that referenced that email + log the
+    redact request for audit.
+
+    Endpoint: POST /orders/webhook/shopify/customers-redact/"""
+    import logging, json as _json
+    log = logging.getLogger(__name__)
+
+    if request.method != "POST":
+        return JsonResponse({"success": False}, status=405)
+
+    ok, body = _verify_shopify_app_hmac(request)
+    if not ok:
+        return JsonResponse({"success": False, "message": "Invalid HMAC"}, status=401)
+
+    try:
+        payload = _json.loads(body)
+    except Exception:
+        return JsonResponse({"success": False, "message": "Invalid JSON"}, status=400)
+
+    shop_domain = payload.get("shop_domain", "")
+    customer_email = (payload.get("customer") or {}).get("email", "") or ""
+
+    # Anonymize matching Order rows for this customer in this shop.
+    anonymized = 0
+    if shop_domain and customer_email:
+        candidate_urls = [
+            shop_domain, f"https://{shop_domain}", f"https://{shop_domain}/",
+        ]
+        anonymized = Order.objects.filter(
+            store__store_url__in=candidate_urls,
+            customer_email__iexact=customer_email,
+        ).update(
+            customer_name="[redacted]",
+            customer_email="",
+            customer_phone="",
+        )
+
+    log.warning(
+        "[Shopify GDPR] customers/redact — shop=%s customer=%s anonymized=%d",
+        shop_domain, customer_email, anonymized,
+    )
+    try:
+        from .models import ShopifyGdprRequest
+        ShopifyGdprRequest.objects.create(
+            request_type="customers_redact",
+            shop_domain=shop_domain,
+            customer_email=customer_email,
+            payload=payload,
+        )
+    except Exception:
+        pass
+
+    return JsonResponse({"success": True, "anonymized": anonymized})
+
+
+@csrf_exempt
+def shopify_shop_redact_webhook(request):
+    """GDPR: the shop has been uninstalled for >48 hours and Shopify
+    is now requesting full deletion of all data we hold about it.
+    We delete the Store row + cascade through Orders, Customers, etc.
+
+    Endpoint: POST /orders/webhook/shopify/shop-redact/"""
+    import logging, json as _json
+    log = logging.getLogger(__name__)
+
+    if request.method != "POST":
+        return JsonResponse({"success": False}, status=405)
+
+    ok, body = _verify_shopify_app_hmac(request)
+    if not ok:
+        return JsonResponse({"success": False, "message": "Invalid HMAC"}, status=401)
+
+    try:
+        payload = _json.loads(body)
+    except Exception:
+        return JsonResponse({"success": False, "message": "Invalid JSON"}, status=400)
+
+    shop_domain = (payload.get("shop_domain") or "").strip().lower()
+    if not shop_domain:
+        return JsonResponse({"success": False, "message": "Missing shop domain"}, status=400)
+
+    candidate_urls = [
+        shop_domain, f"https://{shop_domain}", f"https://{shop_domain}/",
+    ]
+    deleted_stores = 0
+    for store in Store.objects.filter(
+        platform="shopify",
+        store_url__in=candidate_urls,
+    ):
+        deleted_stores += 1
+        try:
+            store.delete()  # cascades through Orders + related rows
+        except Exception:
+            log.exception("Failed to delete store on shop/redact")
+
+    log.warning("[Shopify GDPR] shop/redact — shop=%s deleted=%d", shop_domain, deleted_stores)
+    try:
+        from .models import ShopifyGdprRequest
+        ShopifyGdprRequest.objects.create(
+            request_type="shop_redact",
+            shop_domain=shop_domain,
+            customer_email="",
+            payload=payload,
+        )
+    except Exception:
+        pass
+
+    return JsonResponse({"success": True, "deleted_stores": deleted_stores})
+
+
 @csrf_exempt
 def woocommerce_webhook(request, store_id):
     if request.method != "POST":

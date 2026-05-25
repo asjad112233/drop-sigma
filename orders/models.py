@@ -166,3 +166,34 @@ class OrderActivity(models.Model):
 
     def __str__(self):
         return f"#{self.order.external_order_id} — {self.activity_type}"
+
+# ════════════════════════════════════════════════════════════════════
+# SHOPIFY APP STORE — GDPR audit log
+# ────────────────────────────────────────────────────────────────────
+# Shopify requires apps to respond to GDPR webhooks (data export,
+# customer redact, shop redact). We log every incoming request here
+# so support can fulfil within the SLA and prove compliance during
+# App Store review.
+# ════════════════════════════════════════════════════════════════════
+class ShopifyGdprRequest(models.Model):
+    REQUEST_TYPES = [
+        ("data_request",      "Customer Data Request"),
+        ("customers_redact",  "Customer Redact"),
+        ("shop_redact",       "Shop Redact"),
+    ]
+    request_type   = models.CharField(max_length=32, choices=REQUEST_TYPES, db_index=True)
+    shop_domain    = models.CharField(max_length=255, db_index=True)
+    customer_email = models.EmailField(blank=True, default="")
+    payload        = models.JSONField(default=dict, blank=True)
+    handled        = models.BooleanField(default=False)
+    created_at     = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["request_type", "-created_at"]),
+            models.Index(fields=["shop_domain", "-created_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.request_type} @ {self.shop_domain} ({self.created_at:%Y-%m-%d})"

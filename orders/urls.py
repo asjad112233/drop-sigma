@@ -45,4 +45,20 @@ urlpatterns = [
 
     # Shopify Webhook (auto-sync new orders)
     path("webhook/shopify/<int:store_id>/", views.shopify_webhook, name="shopify_webhook"),
+
+    # ── Shopify App Store compliance webhooks (MANDATORY for review) ──
+    # Configured at the APP level in Partner Dashboard → Configuration.
+    # Signed with SHOPIFY_API_SECRET (app secret), not per-store secret.
+    path("webhook/shopify/app-uninstalled/",
+         views.shopify_app_uninstalled_webhook,
+         name="shopify_app_uninstalled_webhook"),
+    path("webhook/shopify/customers-data-request/",
+         views.shopify_customers_data_request_webhook,
+         name="shopify_customers_data_request_webhook"),
+    path("webhook/shopify/customers-redact/",
+         views.shopify_customers_redact_webhook,
+         name="shopify_customers_redact_webhook"),
+    path("webhook/shopify/shop-redact/",
+         views.shopify_shop_redact_webhook,
+         name="shopify_shop_redact_webhook"),
 ]

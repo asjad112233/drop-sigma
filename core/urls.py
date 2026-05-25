@@ -15,6 +15,10 @@ urlpatterns = [
     # tab actually has a brand mark instead of the generic globe.
     path("favicon.ico", RedirectView.as_view(url="/static/favicon.svg", permanent=True)),
     path("", views.homepage, name="home"),
+    # Public legal pages (mandatory for Shopify App Store submission)
+    path("privacy/", views.privacy_policy_page, name="privacy_policy"),
+    path("terms/",   views.terms_of_service_page, name="terms_of_service"),
+    path("support/", views.support_page,         name="support_page"),
     path("dashboard/", views.dashboard_page, name="dashboard"),
     # Embeddable emails-only view for the employee portal iframe
     path("dashboard/embed/emails/", views.dashboard_embed_emails, name="dashboard_embed_emails"),

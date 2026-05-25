@@ -328,6 +328,28 @@ def setup_admin(request):
     return JsonResponse({"success": True, "created": created, "msg": "Admin ready. Username: admin, Password: Admin@1234!"})
 
 
+# ── Legal / public pages (App Store compliance) ─────────────────────────────
+def privacy_policy_page(request):
+    """Public privacy policy — required by Shopify App Store review."""
+    response = render(request, "legal/privacy.html")
+    response["Cache-Control"] = "public, max-age=3600"
+    return response
+
+
+def terms_of_service_page(request):
+    """Public terms of service."""
+    response = render(request, "legal/terms.html")
+    response["Cache-Control"] = "public, max-age=3600"
+    return response
+
+
+def support_page(request):
+    """Public support / contact page — required by Shopify App Store review."""
+    response = render(request, "legal/support.html")
+    response["Cache-Control"] = "public, max-age=3600"
+    return response
+
+
 # ── Homepage ─────────────────────────────────────────────────────────────────
 
 def homepage(request):
