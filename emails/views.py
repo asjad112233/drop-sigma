@@ -1,4 +1,5 @@
 import os
+import re
 import requests
 
 from django.conf import settings
@@ -2573,15 +2574,38 @@ def send_email_reply_api(request, email_id):
 
     files = request.FILES.getlist("attachments")
 
+    # ── Build proper threading headers so the recipient's email client
+    #    groups the reply under the original conversation instead of
+    #    treating it as a brand-new email. ──
+    raw = email.raw_data if isinstance(email.raw_data, dict) else {}
+    original_msg_id    = (raw.get("message_id") or "").strip()
+    original_refs      = (raw.get("references")  or "").strip()
+    original_thread_id = (raw.get("thread_id")   or "").strip()
+    # Per RFC 5322: References = existing References + original Message-ID.
+    # When References is empty (very first reply), it becomes just the
+    # original Message-ID.
+    if original_msg_id:
+        references_header = (original_refs + " " + original_msg_id).strip() if original_refs else original_msg_id
+    else:
+        references_header = original_refs or None
+    # Subject: keep a single "Re:" prefix instead of piling up
+    # "Re: Re: Re: …" on every reply.
+    base_subject = (email.subject or "").strip()
+    base_subject = re.sub(r'^(?:re\s*:\s*)+', '', base_subject, flags=re.IGNORECASE).strip()
+    reply_subject = f"Re: {base_subject}" if base_subject else "Re:"
+
     try:
         from_email = send_email_with_store_account(
             store=email.store,
             recipient=email.sender,
-            subject=f"Re: {email.subject}",
+            subject=reply_subject,
             body=reply_text,
             files=files,
             cc=cc,
             bcc=bcc,
+            in_reply_to=original_msg_id or None,
+            references=references_header,
+            thread_id=original_thread_id or None,
         )
     except Exception as e:
         return Response({
@@ -2593,7 +2617,7 @@ def send_email_reply_api(request, email_id):
         store=email.store,
         sender=from_email,
         recipient=email.sender,
-        subject=f"Re: {email.subject}",
+        subject=reply_subject,
         body=reply_text,
         status="replied",
         is_read=True,
@@ -2604,6 +2628,12 @@ def send_email_reply_api(request, email_id):
             "sent_from": from_email,
             "cc": cc or "",
             "bcc": bcc or "",
+            # Preserve threading context so any further reply in this
+            # conversation continues to chain correctly even if it goes
+            # through the outbound path.
+            "in_reply_to": original_msg_id or "",
+            "references":  references_header or "",
+            "thread_id":   original_thread_id or "",
         }
     )
 
