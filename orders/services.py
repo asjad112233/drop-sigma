@@ -280,33 +280,57 @@ def process_shopify_order(store, item):
 
 
 def setup_shopify_webhook(store, delivery_url):
-    """Register webhook in Shopify if not already present. Returns (webhook_id, created)."""
+    """Register the full set of order webhooks in Shopify if not
+    already present. Subscribes to orders/create + orders/updated +
+    orders/fulfilled + orders/cancelled so the dashboard stays in
+    sync regardless of which lifecycle event fires.
+
+    Returns (list_of_webhook_ids, count_created)."""
     headers, auth = _shopify_session(store)
     base = f"{store.store_url.rstrip('/')}/admin/api/2024-01/webhooks.json"
+    topics = [
+        "orders/create",
+        "orders/updated",
+        "orders/fulfilled",
+        "orders/cancelled",
+        "orders/paid",
+    ]
 
-    # Check for existing webhook with same address
+    # Snapshot existing webhooks once so we don't re-create.
+    existing_by_topic = {}
     try:
         r = requests.get(base, headers=headers, auth=auth, timeout=15)
         if r.ok:
             for wh in r.json().get("webhooks", []):
                 if wh.get("address", "").rstrip("/") == delivery_url.rstrip("/"):
-                    return wh["id"], False
+                    existing_by_topic[wh.get("topic")] = wh.get("id")
     except Exception:
         pass
 
-    payload = {
-        "webhook": {
-            "topic": "orders/create",
-            "address": delivery_url,
-            "format": "json",
+    ids = []
+    created_count = 0
+    for topic in topics:
+        if topic in existing_by_topic:
+            ids.append(existing_by_topic[topic])
+            continue
+        payload = {
+            "webhook": {
+                "topic":   topic,
+                "address": delivery_url,
+                "format":  "json",
+            }
         }
-    }
-    try:
-        response = requests.post(base, headers=headers, auth=auth, json=payload, timeout=15)
-        response.raise_for_status()
-        return response.json()["webhook"]["id"], True
-    except Exception:
-        return None, False
+        try:
+            response = requests.post(base, headers=headers, auth=auth, json=payload, timeout=15)
+            response.raise_for_status()
+            wh = response.json().get("webhook") or {}
+            if wh.get("id"):
+                ids.append(wh["id"])
+                created_count += 1
+        except Exception:
+            # Soft-fail per topic — best effort.
+            continue
+    return ids, created_count
 
 
 def sync_shopify_orders(store, after=None):

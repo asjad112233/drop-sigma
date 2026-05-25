@@ -41,6 +41,23 @@ REST_FRAMEWORK = {
     ],
 }
 
+# ── Shopify Partner App (Public app OAuth) ──────────────────────────
+# Register a public app in your Shopify Partner dashboard, then set
+# these envs. The redirect URI on the app side must match
+# `<host>/stores/api/shopify-callback/` exactly (the same host the
+# tenant browser will be on — production = dropsigma.com).
+#
+# Scopes are read+write on orders/customers/products by default;
+# extend if you need fulfillment / inventory writes etc.
+import os as _os_for_shopify
+SHOPIFY_API_KEY    = _os_for_shopify.getenv("SHOPIFY_API_KEY", "")
+SHOPIFY_API_SECRET = _os_for_shopify.getenv("SHOPIFY_API_SECRET", "")
+SHOPIFY_SCOPES     = _os_for_shopify.getenv(
+    "SHOPIFY_SCOPES",
+    "read_orders,write_orders,read_customers,write_customers,read_products,read_fulfillments,write_fulfillments",
+)
+SHOPIFY_APP_NAME   = _os_for_shopify.getenv("SHOPIFY_APP_NAME", "Drop Sigma")
+
 CHAT_DEFAULT_CHANNELS = [
     {"name": "general",    "slug": "general",    "description": "General team discussion"},
     {"name": "operations", "slug": "operations", "description": "Orders & vendor ops"},

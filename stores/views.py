@@ -22,6 +22,12 @@ from vendors.models import StoreVendorAssignment
 _WC_OAUTH_SIGNER = TimestampSigner(salt="wc-oauth-state-v1")
 _WC_OAUTH_MAX_AGE = 30 * 60  # 30 minutes — plenty for a user to approve
 
+# Signer for the Shopify OAuth `state` parameter. Shopify echoes the
+# state back unchanged so we sign a compact payload (user_pk + shop
+# domain + name) and verify it on the callback to prevent CSRF.
+_SHOPIFY_OAUTH_SIGNER  = TimestampSigner(salt="shopify-oauth-state-v1")
+_SHOPIFY_OAUTH_MAX_AGE = 30 * 60
+
 
 def _register_webhook_for_store(store, request):
     """Silently register webhook for WooCommerce or Shopify. Never raises."""
@@ -169,16 +175,21 @@ def auto_connect_store(request):
             "message": "Platform and Store URL are required."
         }, status=400)
 
-    if platform.lower() != "woocommerce":
+    platform_lc = platform.lower()
+    if platform_lc not in ("woocommerce", "shopify"):
         return Response({
             "success": False,
-            "message": "Auto connect currently supports WooCommerce only."
+            "message": f"Auto connect doesn't support '{platform}'. Use WooCommerce or Shopify."
         }, status=400)
 
     store_url = store_url.rstrip("/")
 
     if not name:
         name = store_url.replace("https://", "").replace("http://", "").replace("www.", "").split("/")[0]
+
+    # ── Shopify route: handoff to the dedicated OAuth start flow ──
+    if platform_lc == "shopify":
+        return _shopify_oauth_build_auth_url(request, name=name, store_url=store_url)
 
     from stores.tunnel import get_base_url
     base_url = get_base_url(request=request, wait_secs=0)
@@ -321,6 +332,216 @@ def wc_callback_api(request):
     })
 
 
+# ════════════════════════════════════════════════════════════════════
+# SHOPIFY OAUTH FLOW (public app — Authorization Code grant)
+# ════════════════════════════════════════════════════════════════════
+def _shopify_normalize_shop(store_url):
+    """Normalize whatever the user typed into a `<shop>.myshopify.com`
+    host. Returns (host, error_message). One of them is empty.
+
+    Accepts:
+        my-store.myshopify.com
+        https://my-store.myshopify.com
+        https://my-store.myshopify.com/admin
+        my-custom-domain.com  → looks up via the host as-is (uncommon
+                                  for public apps; Shopify rejects)
+    """
+    import re as _re
+    raw = (store_url or "").strip()
+    if not raw:
+        return "", "Store URL is required."
+    raw = _re.sub(r"^https?://", "", raw, flags=_re.IGNORECASE)
+    raw = raw.split("/", 1)[0]      # drop any path
+    raw = raw.strip().lower()
+    raw = raw.replace("www.", "")
+    if not raw:
+        return "", "Could not parse store URL."
+    # If they typed just the handle (e.g. 'my-store'), assume .myshopify.com
+    if "." not in raw:
+        raw = f"{raw}.myshopify.com"
+    # Lightly validate — Shopify shops always sit on *.myshopify.com.
+    if not _re.match(r"^[a-z0-9][a-z0-9\-]*\.myshopify\.com$", raw):
+        # Allow custom domains too, but Shopify's OAuth only works on
+        # the canonical myshopify.com host. Reject early with a hint.
+        return "", "Enter your shop's '<name>.myshopify.com' URL (visible in your Shopify admin)."
+    return raw, ""
+
+
+def _shopify_oauth_build_auth_url(request, name, store_url):
+    """Shared by auto_connect_store: validates the shop, signs a state
+    token, and returns the Shopify authorize URL."""
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Login required."}, status=401)
+
+    if not settings.SHOPIFY_API_KEY or not settings.SHOPIFY_API_SECRET:
+        return Response({
+            "success": False,
+            "message": "Shopify isn't configured on this server. Ask the administrator to set SHOPIFY_API_KEY / SHOPIFY_API_SECRET.",
+        }, status=503)
+
+    shop, err = _shopify_normalize_shop(store_url)
+    if err:
+        return Response({"success": False, "message": err}, status=400)
+
+    from stores.tunnel import get_base_url
+    base_url = get_base_url(request=request, wait_secs=0).rstrip("/")
+    redirect_uri = f"{base_url}/stores/api/shopify-callback/"
+
+    # State token: signed payload → unsignable + tamper-evident on
+    # callback. Shopify echoes `state` back verbatim.
+    state_token = _SHOPIFY_OAUTH_SIGNER.sign_object({
+        "name":      name,
+        "shop":      shop,
+        "user_pk":   request.user.pk,
+    })
+
+    params = {
+        "client_id":    settings.SHOPIFY_API_KEY,
+        "scope":        settings.SHOPIFY_SCOPES,
+        "redirect_uri": redirect_uri,
+        "state":        state_token,
+        "grant_options[]": "",   # online tokens only when explicitly set
+    }
+    auth_url = f"https://{shop}/admin/oauth/authorize?{urlencode(params)}"
+
+    return Response({
+        "success": True,
+        "auth_url": auth_url,
+        # `shop` echoed back so the frontend can poll for completion
+        "shop_domain": shop,
+    })
+
+
+# ✅ STEP 2 (Shopify): receive callback ?code=…&hmac=…&shop=…&state=…
+@csrf_exempt
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def shopify_callback_api(request):
+    """
+    Shopify redirects the merchant's browser here after they approve
+    the app. We:
+      1. Verify the HMAC signature on the querystring (CSRF / tamper
+         protection per Shopify's spec).
+      2. Verify the signed state token (matches what we issued in step 1).
+      3. Exchange the auth `code` for a permanent access token via
+         POST /admin/oauth/access_token.
+      4. Create / update the Store row (api_key = our app id,
+         api_secret = our app secret, access_token = the merchant token).
+      5. Fire-and-forget register webhooks + initial sync.
+      6. Redirect the browser to /stores/connect/success/ where the
+         dashboard pops the success modal.
+    """
+    import hmac as _hmac, hashlib as _hashlib, logging as _logging
+    log = _logging.getLogger(__name__)
+
+    code  = request.GET.get("code", "")
+    shop  = (request.GET.get("shop") or "").strip().lower()
+    state = request.GET.get("state", "")
+    hmac_param = request.GET.get("hmac", "")
+
+    if not (code and shop and state and hmac_param):
+        return Response({"success": False, "message": "Missing required Shopify callback parameters."}, status=400)
+
+    # ── (1) Verify Shopify HMAC ──
+    # Compute HMAC-SHA256 over the sorted querystring (excluding `hmac`
+    # itself + the legacy `signature` param). Compare in constant time.
+    qs_pairs = []
+    for k, v in request.GET.items():
+        if k in ("hmac", "signature"):
+            continue
+        qs_pairs.append((k, v))
+    qs_pairs.sort()
+    message = "&".join(f"{k}={v}" for k, v in qs_pairs).encode("utf-8")
+    expected = _hmac.new(
+        settings.SHOPIFY_API_SECRET.encode("utf-8"),
+        message,
+        _hashlib.sha256,
+    ).hexdigest()
+    if not _hmac.compare_digest(expected, hmac_param):
+        log.warning(f"Shopify callback HMAC mismatch — shop={shop}")
+        return Response({"success": False, "message": "Invalid Shopify signature."}, status=400)
+
+    # ── (2) Verify state token ──
+    try:
+        state_payload = _SHOPIFY_OAUTH_SIGNER.unsign_object(state, max_age=_SHOPIFY_OAUTH_MAX_AGE)
+    except SignatureExpired:
+        return Response({"success": False, "message": "Authorization window expired. Please reconnect."}, status=400)
+    except BadSignature:
+        return Response({"success": False, "message": "Invalid state token."}, status=400)
+
+    if state_payload.get("shop") != shop:
+        return Response({"success": False, "message": "Shop mismatch in state token."}, status=400)
+
+    user_pk = state_payload.get("user_pk")
+    user = User.objects.filter(pk=user_pk).first() if user_pk else None
+    if not user:
+        # Fall back to the logged-in browser if our state user is gone
+        user = request.user if request.user.is_authenticated else None
+    if not user:
+        return Response({"success": False, "message": "Could not match this connection to your account. Please reconnect while logged in."}, status=400)
+
+    # ── (3) Exchange code → access token ──
+    try:
+        token_resp = _req.post(
+            f"https://{shop}/admin/oauth/access_token",
+            json={
+                "client_id":     settings.SHOPIFY_API_KEY,
+                "client_secret": settings.SHOPIFY_API_SECRET,
+                "code":          code,
+            },
+            timeout=20,
+        )
+    except Exception as e:
+        log.exception("Shopify token exchange request failed")
+        return Response({"success": False, "message": f"Could not reach Shopify ({e})."}, status=502)
+
+    if not token_resp.ok:
+        log.warning(f"Shopify token exchange returned {token_resp.status_code}: {token_resp.text[:200]}")
+        return Response({"success": False, "message": "Shopify rejected the authorization code."}, status=400)
+
+    token_data = token_resp.json() or {}
+    access_token = token_data.get("access_token") or ""
+    if not access_token:
+        return Response({"success": False, "message": "Shopify did not return an access token."}, status=400)
+    granted_scope = token_data.get("scope", "")
+
+    # ── (4) Create / update the Store row ──
+    name = state_payload.get("name") or shop.split(".")[0]
+    store_url = f"https://{shop}"
+    store, created = Store.objects.update_or_create(
+        store_url=store_url,
+        defaults={
+            "user":         user,
+            "name":         name,
+            "platform":     "shopify",
+            "api_key":      settings.SHOPIFY_API_KEY,
+            "api_secret":   settings.SHOPIFY_API_SECRET,
+            "access_token": access_token,
+            "is_active":    True,
+        }
+    )
+
+    # ── (5) Webhook registration + initial sync, both fire-and-forget ──
+    try:
+        _register_webhook_for_store(store, request)
+    except Exception:
+        log.exception("Shopify webhook setup failed (non-fatal)")
+    try:
+        _kickoff_initial_sync(store, days=30)
+    except Exception:
+        log.exception("Shopify initial sync failed (non-fatal)")
+
+    # ── (6) Redirect browser to the success page so the dashboard
+    #       can show its connected-store modal. ──
+    success_qs = urlencode({
+        "connected": "1",
+        "connected_store_id":   store.id,
+        "connected_store_name": store.name,
+        "platform":             "shopify",
+    })
+    return redirect(f"/dashboard/?{success_qs}&section=stores")
+
+
 # ✅ SUCCESS REDIRECT PAGE — WooCommerce redirects user here with credentials in query params
 def connect_success_page(request):
     consumer_key = request.GET.get("consumer_key", "")
@@ -385,12 +606,36 @@ def connect_success_page(request):
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def check_connected_api(request):
-    store_url = request.GET.get("store_url", "").rstrip("/")
-    if not store_url:
+    """Poll endpoint. Accepts store_url in any form the user might
+    have typed (with or without protocol, with or without trailing
+    slash) and matches against either form in the DB so the WC and
+    Shopify flows behave consistently."""
+    raw = (request.GET.get("store_url", "") or "").strip().rstrip("/")
+    if not raw:
         return Response({"connected": False})
-    store = Store.objects.filter(store_url=store_url, api_key__isnull=False, is_active=True).exclude(api_key="").first()
+
+    # Normalize candidate values — try both the "user typed" form and
+    # the canonical "with https://" form. Same trick for the *.myshopify
+    # domain when user typed just the handle.
+    candidates = {raw}
+    if raw.startswith("https://") or raw.startswith("http://"):
+        bare = raw.split("://", 1)[1]
+        candidates.add(bare)
+    else:
+        candidates.add(f"https://{raw}")
+    # Shopify handle without domain
+    if "." not in raw.split("://", 1)[-1]:
+        handle = raw.split("://", 1)[-1].replace("www.", "")
+        if handle:
+            candidates.add(f"{handle}.myshopify.com")
+            candidates.add(f"https://{handle}.myshopify.com")
+
+    store = (Store.objects
+             .filter(store_url__in=list(candidates), is_active=True)
+             .exclude(api_key="")
+             .first())
     if store:
-        return Response({"connected": True, "store_id": store.id, "store_name": store.name})
+        return Response({"connected": True, "store_id": store.id, "store_name": store.name, "platform": store.platform})
     return Response({"connected": False})
 
 

@@ -22992,8 +22992,11 @@ async function startAutoConnect(){
     document.getElementById("asStatusBox").style.display = "";
     document.getElementById("asConnectBtn").textContent = "Waiting…";
 
-    // Start polling
-    asStartPolling(storeUrl);
+    // Start polling. For Shopify the backend returns the canonical
+    // shop domain (e.g. "acme.myshopify.com") which is what the store
+    // gets saved under — use that instead of whatever the user typed
+    // so the poll always matches.
+    asStartPolling(d.shop_domain || storeUrl);
 
   }catch(e){
     msg.textContent = "Error: " + e.message;
