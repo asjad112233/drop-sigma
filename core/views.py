@@ -426,6 +426,13 @@ def features_page(request):
     return response
 
 
+def promo_page(request):
+    """Standalone auto-playing animated promo (7 scenes, ~35s loop). Designed to be screen-recorded to MP4."""
+    response = render(request, "promo.html")
+    response["Cache-Control"] = "public, max-age=60"
+    return response
+
+
 # ── Homepage ─────────────────────────────────────────────────────────────────
 
 def homepage(request):

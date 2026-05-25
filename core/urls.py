@@ -28,6 +28,7 @@ urlpatterns = [
     path("refund/",   views.refund_page,   name="refund_page"),
     path("docs/",     views.docs_page,     name="docs_page"),
     path("features/", views.features_page, name="features_page"),
+    path("promo/",    views.promo_page,    name="promo_page"),
     path("dashboard/", views.dashboard_page, name="dashboard"),
     # Embeddable emails-only view for the employee portal iframe
     path("dashboard/embed/emails/", views.dashboard_embed_emails, name="dashboard_embed_emails"),
