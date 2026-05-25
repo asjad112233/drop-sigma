@@ -1,0 +1,149 @@
+{% extends "legal/_base.html" %}
+{% block title %}Contact — Drop Sigma{% endblock %}
+{% block description %}Get in touch with the Drop Sigma team. Sales, support, partnerships, press — we're here to help.{% endblock %}
+
+{% block extra_css %}
+.contact-hero{padding:80px 0 30px;text-align:center;}
+.contact-hero h1{font-size:clamp(38px,5.5vw,60px);line-height:1.05;letter-spacing:-1.5px;font-weight:800;color:#fff;margin-bottom:16px;}
+.contact-hero p{font-size:18px;color:var(--ink-2);max-width:620px;margin:0 auto;line-height:1.7;}
+
+.contact-grid{
+  display:grid;grid-template-columns:1.1fr 1fr;gap:36px;
+  max-width:1080px;margin:56px auto 0;
+}
+@media(max-width:880px){.contact-grid{grid-template-columns:1fr;}}
+
+.form-card{
+  background:linear-gradient(145deg,rgba(20,22,45,.75),rgba(10,12,30,.75));
+  border:1px solid var(--line);border-radius:18px;
+  padding:32px;
+}
+.form-card h2{font-size:22px;font-weight:800;color:#fff;letter-spacing:-.4px;margin-bottom:20px;}
+.field{margin-bottom:16px;}
+.field label{display:block;font-size:12.5px;font-weight:600;color:var(--ink-2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;}
+.field input,.field select,.field textarea{
+  width:100%;padding:12px 14px;
+  background:rgba(255,255,255,.03);
+  border:1px solid var(--line-2);
+  border-radius:10px;color:var(--ink-0);
+  font-family:inherit;font-size:14px;
+  transition:border-color .2s,background .2s;
+}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--indigo);background:rgba(255,255,255,.05);}
+.field textarea{min-height:130px;resize:vertical;}
+.form-card .btn{width:100%;justify-content:center;margin-top:6px;}
+.form-status{margin-top:12px;font-size:13px;display:none;}
+.form-status.ok{color:var(--green);display:block;}
+.form-status.err{color:var(--red);display:block;}
+
+.contact-side{display:flex;flex-direction:column;gap:18px;}
+.contact-box{
+  background:linear-gradient(145deg,rgba(20,22,45,.6),rgba(10,12,30,.6));
+  border:1px solid var(--line);border-radius:14px;
+  padding:22px 24px;
+}
+.contact-box h3{font-size:13px;color:var(--ink-2);text-transform:uppercase;letter-spacing:.7px;font-weight:700;margin-bottom:10px;}
+.contact-box a{font-size:15.5px;color:#fff;font-weight:600;display:block;margin-bottom:4px;}
+.contact-box a:hover{color:var(--indigo-2);}
+.contact-box p{font-size:13.5px;color:var(--ink-2);line-height:1.6;margin:0;}
+
+.contact-box.gradient{
+  background:linear-gradient(135deg,rgba(99,102,241,.18),rgba(168,85,247,.14));
+  border-color:rgba(168,85,247,.32);
+}
+{% endblock %}
+
+{% block content %}
+<section class="contact-hero container">
+  <h1>Let's talk</h1>
+  <p>Sales, support, partnerships, press — pick the channel that fits and we'll reply within 4 hours on business days.</p>
+</section>
+
+<section class="container">
+  <div class="contact-grid">
+    <div class="form-card">
+      <h2>Send us a message</h2>
+      <form id="contactForm" onsubmit="return _dsSubmitContact(event)">
+        <div class="field">
+          <label>Your name</label>
+          <input type="text" name="name" required>
+        </div>
+        <div class="field">
+          <label>Email address</label>
+          <input type="email" name="email" required>
+        </div>
+        <div class="field">
+          <label>I'm reaching out about</label>
+          <select name="topic" required>
+            <option value="">— Select a topic —</option>
+            <option value="sales">Sales / pricing question</option>
+            <option value="support">Technical support</option>
+            <option value="partnership">Partnership / integration</option>
+            <option value="press">Press / media</option>
+            <option value="other">Something else</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Message</label>
+          <textarea name="message" placeholder="Tell us what's on your mind…" required></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Send message →</button>
+        <div class="form-status" id="contactStatus"></div>
+      </form>
+    </div>
+
+    <div class="contact-side">
+      <div class="contact-box gradient">
+        <h3>General &amp; sales</h3>
+        <a href="mailto:hello@dropsigma.com">hello@dropsigma.com</a>
+        <p>For pricing questions, demos, and anything else.</p>
+      </div>
+      <div class="contact-box">
+        <h3>Customer support</h3>
+        <a href="mailto:support@dropsigma.com">support@dropsigma.com</a>
+        <p>Existing customers — we reply within 4 business hours.</p>
+      </div>
+      <div class="contact-box">
+        <h3>Privacy &amp; legal</h3>
+        <a href="mailto:privacy@dropsigma.com">privacy@dropsigma.com</a>
+        <a href="mailto:legal@dropsigma.com">legal@dropsigma.com</a>
+        <p>Data requests, GDPR, contracts, security questions.</p>
+      </div>
+      <div class="contact-box">
+        <h3>Press &amp; partnerships</h3>
+        <a href="mailto:feedback@dropsigma.com">feedback@dropsigma.com</a>
+        <p>Integration ideas, podcast invites, media kit requests.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+function _dsSubmitContact(e){
+  e.preventDefault();
+  var f = document.getElementById('contactForm');
+  var s = document.getElementById('contactStatus');
+  s.className = 'form-status';
+  s.textContent = 'Sending…';
+  s.style.display = 'block';
+  var data = new FormData(f);
+  fetch('/contact/submit/', {method:'POST', body:data, headers:{'X-Requested-With':'XMLHttpRequest'}})
+    .then(function(r){return r.json();})
+    .then(function(j){
+      if(j && j.ok){
+        s.className = 'form-status ok';
+        s.textContent = '✓ Thanks! We received your message and will reply within 4 business hours.';
+        f.reset();
+      }else{
+        s.className = 'form-status err';
+        s.textContent = (j && j.error) ? j.error : 'Could not send. Please email us directly at hello@dropsigma.com.';
+      }
+    })
+    .catch(function(){
+      s.className = 'form-status err';
+      s.textContent = 'Network error. Please email us directly at hello@dropsigma.com.';
+    });
+  return false;
+}
+</script>
+{% endblock %}

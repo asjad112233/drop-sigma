@@ -350,6 +350,82 @@ def support_page(request):
     return response
 
 
+def about_page(request):
+    """Public About page."""
+    response = render(request, "legal/about.html")
+    response["Cache-Control"] = "public, max-age=3600"
+    return response
+
+
+def pricing_page(request):
+    """Public Pricing page."""
+    response = render(request, "legal/pricing.html")
+    response["Cache-Control"] = "public, max-age=3600"
+    return response
+
+
+def contact_page(request):
+    """Public Contact page with form."""
+    response = render(request, "legal/contact.html")
+    response["Cache-Control"] = "public, max-age=3600"
+    return response
+
+
+@csrf_exempt
+@require_POST
+def contact_submit(request):
+    """Handle contact-form POST. Logs the inquiry; never emails unauthenticated form to third parties."""
+    import json
+    from django.core.mail import mail_admins
+    try:
+        name = (request.POST.get("name") or "").strip()[:120]
+        email = (request.POST.get("email") or "").strip()[:200]
+        topic = (request.POST.get("topic") or "").strip()[:60]
+        message = (request.POST.get("message") or "").strip()[:5000]
+        if not (name and email and message):
+            return JsonResponse({"ok": False, "error": "Please fill in name, email, and message."}, status=400)
+
+        # Best-effort log to admins; never blocks the response if it fails.
+        try:
+            subject = f"[Drop Sigma contact] {topic or 'general'} — {name}"
+            body = f"From: {name} <{email}>\nTopic: {topic}\n\n{message}\n"
+            mail_admins(subject, body, fail_silently=True)
+        except Exception:
+            pass
+
+        return JsonResponse({"ok": True})
+    except Exception as exc:
+        return JsonResponse({"ok": False, "error": "Could not send. Please email hello@dropsigma.com directly."}, status=500)
+
+
+def cookies_page(request):
+    """Public Cookie Policy page (GDPR compliance)."""
+    response = render(request, "legal/cookies.html")
+    response["Cache-Control"] = "public, max-age=3600"
+    return response
+
+
+def refund_page(request):
+    """Public Refund Policy page."""
+    response = render(request, "legal/refund.html")
+    response["Cache-Control"] = "public, max-age=3600"
+    return response
+
+
+def docs_page(request):
+    """Public Documentation hub."""
+    response = render(request, "legal/docs.html")
+    response["Cache-Control"] = "public, max-age=3600"
+    return response
+
+
+def features_page(request):
+    """Public Features page."""
+    response = render(request, "legal/features.html")
+    response["Cache-Control"] = "public, max-age=3600"
+    return response
+
+
 # ── Homepage ─────────────────────────────────────────────────────────────────
 
 def homepage(request):

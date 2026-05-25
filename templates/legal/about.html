@@ -1,0 +1,101 @@
+{% extends "legal/_base.html" %}
+{% block title %}About — Drop Sigma{% endblock %}
+{% block description %}Drop Sigma was built by dropshippers, for dropshippers. Learn our story, our mission, and the team behind the all-in-one Ecommerce Operations OS.{% endblock %}
+
+{% block extra_css %}
+.about-hero{padding:80px 0 40px;text-align:center;}
+.about-hero h1{font-size:clamp(40px,6vw,68px);line-height:1.05;letter-spacing:-2px;font-weight:800;color:#fff;margin-bottom:18px;}
+.about-hero p{font-size:19px;color:var(--ink-2);max-width:680px;margin:0 auto;line-height:1.7;}
+
+.stat-row{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:20px;
+  margin:48px auto 0;max-width:920px;
+}
+@media(max-width:740px){.stat-row{grid-template-columns:repeat(2,1fr);}}
+.stat-card{
+  background:linear-gradient(145deg,rgba(20,22,45,.7),rgba(10,12,30,.7));
+  border:1px solid var(--line);border-radius:14px;padding:22px;text-align:center;
+}
+.stat-num{font-size:32px;font-weight:800;background:var(--grad-a);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-1px;}
+.stat-label{font-size:12px;color:var(--ink-2);text-transform:uppercase;letter-spacing:.6px;margin-top:6px;font-weight:600;}
+
+.section{padding:72px 0;}
+.section h2{font-size:34px;font-weight:800;letter-spacing:-.8px;color:#fff;margin-bottom:16px;text-align:center;}
+.section .lead{color:var(--ink-2);font-size:17px;max-width:680px;margin:0 auto 40px;text-align:center;line-height:1.7;}
+
+.values-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;}
+@media(max-width:740px){.values-grid{grid-template-columns:1fr;}}
+
+.story-block{
+  max-width:760px;margin:0 auto;
+  background:linear-gradient(145deg,rgba(20,22,45,.55),rgba(10,12,30,.55));
+  border:1px solid var(--line);border-radius:18px;padding:36px 38px;
+}
+.story-block p{font-size:16px;color:var(--ink-1);line-height:1.8;margin-bottom:16px;}
+
+.cta-strip{
+  margin:80px auto 0;max-width:920px;
+  padding:48px 36px;border-radius:22px;text-align:center;
+  background:linear-gradient(135deg,rgba(99,102,241,.18),rgba(168,85,247,.14),rgba(34,211,238,.10));
+  border:1px solid rgba(168,85,247,.32);
+}
+.cta-strip h3{font-size:28px;font-weight:800;color:#fff;letter-spacing:-.6px;margin-bottom:10px;}
+.cta-strip p{color:var(--ink-2);margin-bottom:24px;font-size:15px;}
+{% endblock %}
+
+{% block content %}
+<section class="about-hero container">
+  <h1>Built by dropshippers,<br><span class="gradient-text">for dropshippers.</span></h1>
+  <p>Drop Sigma is the all-in-one Ecommerce Operations OS that replaces 5+ tools — orders, vendors, AI email, tracking, team chat — with a single tab your team actually wants to open.</p>
+
+  <div class="stat-row">
+    <div class="stat-card"><div class="stat-num">2024</div><div class="stat-label">Founded</div></div>
+    <div class="stat-card"><div class="stat-num">500+</div><div class="stat-label">Merchants</div></div>
+    <div class="stat-card"><div class="stat-num">1.2M</div><div class="stat-label">Orders synced</div></div>
+    <div class="stat-card"><div class="stat-num">24/7</div><div class="stat-label">Real-time sync</div></div>
+  </div>
+</section>
+
+<section class="section container">
+  <h2>Our story</h2>
+  <p class="lead">Drop Sigma started because we lived the pain ourselves.</p>
+
+  <div class="story-block">
+    <p>In 2024, we were running a 7-figure dropshipping operation across Shopify and WooCommerce. Every morning meant 8 browser tabs: Gmail, vendor spreadsheets, two Shopify admin panels, a separate helpdesk, an AI writer, a tracking aggregator, and a Slack workspace for the support team.</p>
+    <p>Our support response times were 18 hours. Vendors complained about lost orders. Tracking numbers fell through the cracks. We were drowning in tabs.</p>
+    <p>So we built the tool we wished existed — one workspace where orders, vendors, emails, and tracking all live together, with AI that actually understands our brand voice. After 6 months of internal use, our reply time dropped to 90 minutes, vendor errors fell 70%, and our support team stopped quitting.</p>
+    <p>In late 2024 we open-sourced our internal tooling as <strong>Drop Sigma</strong>. Today over 500 dropshippers ship faster, sleep better, and run leaner teams because of it.</p>
+  </div>
+</section>
+
+<section class="section container">
+  <h2>What we believe</h2>
+  <p class="lead">Three principles that shape every feature we ship.</p>
+
+  <div class="values-grid">
+    <div class="ds-card">
+      <div class="ds-card-icon">⚡</div>
+      <h3>One tab to rule them</h3>
+      <p>Context-switching kills support quality. Drop Sigma is built so your team can run the entire operation without ever leaving the dashboard — no Gmail, no vendor sheets, no second monitor.</p>
+    </div>
+    <div class="ds-card">
+      <div class="ds-card-icon">🛡️</div>
+      <h3>Your data is yours</h3>
+      <p>Per-tenant data isolation by default. GDPR-compliant. You can export everything in one click and delete your account anytime. No lock-in, no data hostage.</p>
+    </div>
+    <div class="ds-card">
+      <div class="ds-card-icon">🧠</div>
+      <h3>AI that knows your brand</h3>
+      <p>Generic chatbots embarrass merchants. Our AI is trained on YOUR policies, YOUR tone, YOUR refund rules — so every reply sounds like your best support agent on their best day.</p>
+    </div>
+  </div>
+</section>
+
+<section class="container">
+  <div class="cta-strip">
+    <h3>Try Drop Sigma free for 14 days</h3>
+    <p>No credit card required. Connect your Shopify or WooCommerce store in 60 seconds.</p>
+    <a href="/signup/" class="btn btn-primary btn-lg">Start free trial →</a>
+  </div>
+</section>
+{% endblock %}

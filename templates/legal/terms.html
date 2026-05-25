@@ -1,59 +1,20 @@
-{% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Terms of Service · Drop Sigma</title>
-<meta name="description" content="Drop Sigma's terms of service governing your use of the platform.">
-<link rel="stylesheet" href="/static/css/legal.css">
-<style>
-*{box-sizing:border-box;margin:0;padding:0;}
-html,body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#0f172a;background:#fafbff;line-height:1.6;}
-.ds-legal-shell{max-width:880px;margin:0 auto;padding:48px 24px 96px;}
-.ds-legal-back{display:inline-flex;align-items:center;gap:6px;color:#6366f1;font-size:13px;font-weight:600;text-decoration:none;margin-bottom:24px;}
-.ds-legal-back:hover{text-decoration:underline;}
-.ds-legal-title{font-size:36px;font-weight:800;letter-spacing:-.5px;margin-bottom:8px;}
-.ds-legal-meta{font-size:13px;color:#64748b;margin-bottom:32px;}
-.ds-legal-body h2{font-size:20px;font-weight:800;margin:32px 0 12px;color:#0f172a;}
-.ds-legal-body p{margin:0 0 12px;color:#334155;font-size:14.5px;}
-.ds-legal-body ul,.ds-legal-body ol{margin:0 0 16px 20px;color:#334155;font-size:14.5px;}
-.ds-legal-body li{margin-bottom:6px;}
-.ds-legal-body strong{color:#0f172a;}
-.ds-legal-body a{color:#6366f1;text-decoration:none;}
-.ds-legal-body a:hover{text-decoration:underline;}
-.ds-legal-brand{display:inline-flex;align-items:center;gap:10px;font-weight:800;font-size:18px;color:#0f172a;margin-bottom:24px;}
-.ds-legal-brand-logo{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#6366f1,#a855f7);display:grid;place-items:center;color:#fff;font-weight:800;}
-.ds-legal-footer{margin-top:48px;padding-top:24px;border-top:1px solid #e2e8f0;font-size:13px;color:#64748b;text-align:center;}
-</style>
-</head>
-<body>
-<div class="ds-legal-shell">
-  <a class="ds-legal-back" href="/">← Back to Drop Sigma</a>
+{% extends "legal/_base.html" %}
+{% block title %}Terms of Service — Drop Sigma{% endblock %}
+{% block description %}Drop Sigma's terms of service governing your use of the platform.{% endblock %}
 
-  <div class="ds-legal-brand">
-    <span class="ds-legal-brand-logo">DS</span>
-    Drop Sigma
-  </div>
+{% block content %}
+<div class="ds-shell">
+  <a class="ds-back" href="/">← Back to Drop Sigma</a>
+  <h1 class="ds-title">Terms of Service</h1>
+  <p class="ds-subtitle">Last updated: 25 May 2026 · Effective immediately</p>
 
-  <h1 class="ds-legal-title">Terms of Service</h1>
-  <div class="ds-legal-meta">Last updated: 25 May 2026 · Effective immediately</div>
-
-  <div class="ds-legal-body">
+  <div class="ds-content">
 
     <h2>1. Acceptance of these terms</h2>
-    <p>
-      By signing up for, accessing, or otherwise using Drop Sigma ("Service"), you agree to be bound
-      by these Terms of Service ("Terms"). If you don't agree, you may not use the Service.
-      These Terms form a binding contract between you ("Customer") and <strong>Drop Sigma</strong> ("we", "us").
-    </p>
+    <p>By signing up for, accessing, or otherwise using Drop Sigma ("Service"), you agree to be bound by these Terms of Service ("Terms"). If you don't agree, you may not use the Service. These Terms form a binding contract between you ("Customer") and <strong>Drop Sigma</strong> ("we", "us").</p>
 
     <h2>2. The Service</h2>
-    <p>
-      Drop Sigma is a multi-tenant SaaS that connects to your Shopify and/or WooCommerce store(s)
-      to sync orders, manage customer support email, coordinate vendors, and run AI-powered replies.
-      Specific features and limits depend on the plan you've subscribed to.
-    </p>
+    <p>Drop Sigma is a multi-tenant SaaS that connects to your Shopify and/or WooCommerce store(s) to sync orders, manage customer support email, coordinate vendors, and run AI-powered replies. Specific features and limits depend on the plan you've subscribed to.</p>
 
     <h2>3. Your account</h2>
     <ul>
@@ -64,16 +25,8 @@ html,body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-se
     </ul>
 
     <h2>4. Customer data &amp; ownership</h2>
-    <p>
-      You retain all rights to the data you upload or that we sync from your connected stores ("Customer Data").
-      We process Customer Data solely to provide the Service, in line with our
-      <a href="/privacy/">Privacy Policy</a>.
-    </p>
-    <p>
-      You grant Drop Sigma a limited licence to host, copy, transmit, and display Customer Data as
-      necessary to deliver the Service. You're responsible for ensuring you have the legal right to
-      sync that data into Drop Sigma (e.g., your customers' personal data under GDPR).
-    </p>
+    <p>You retain all rights to the data you upload or that we sync from your connected stores ("Customer Data"). We process Customer Data solely to provide the Service, in line with our <a href="/privacy/">Privacy Policy</a>.</p>
+    <p>You grant Drop Sigma a limited licence to host, copy, transmit, and display Customer Data as necessary to deliver the Service. You're responsible for ensuring you have the legal right to sync that data into Drop Sigma (e.g., your customers' personal data under GDPR).</p>
 
     <h2>5. Acceptable use</h2>
     <p>You agree NOT to:</p>
@@ -88,18 +41,14 @@ html,body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-se
     <h2>6. Subscription &amp; billing</h2>
     <ul>
       <li>The Service is offered on monthly or annual subscriptions.</li>
-      <li>Fees are billed in advance and are non-refundable except where required by law.</li>
+      <li>Fees are billed in advance and are non-refundable except where required by law (see our <a href="/refund/">Refund Policy</a>).</li>
       <li>You authorize us to charge your payment method on each renewal date.</li>
       <li>We may change pricing for future billing cycles with 30 days' notice.</li>
       <li>Failure to pay within 14 days of the due date may result in suspension.</li>
     </ul>
 
     <h2>7. Free trial</h2>
-    <p>
-      If a free trial is offered, you may use the Service free of charge for the trial period.
-      We may end or shorten the trial at our discretion. After the trial, your subscription will
-      automatically begin unless you cancel.
-    </p>
+    <p>If a free trial is offered, you may use the Service free of charge for the trial period. We may end or shorten the trial at our discretion. After the trial, your subscription will automatically begin unless you cancel.</p>
 
     <h2>8. Cancellation &amp; termination</h2>
     <ul>
@@ -109,59 +58,28 @@ html,body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-se
     </ul>
 
     <h2>9. Service availability</h2>
-    <p>
-      We target 99.5% monthly uptime but do not guarantee uninterrupted access. Scheduled maintenance
-      is announced in advance. We're not liable for downtime caused by third-party providers
-      (Shopify, WooCommerce, AWS, Railway, etc.).
-    </p>
+    <p>We target 99.5% monthly uptime but do not guarantee uninterrupted access. Scheduled maintenance is announced in advance. We're not liable for downtime caused by third-party providers (Shopify, WooCommerce, AWS, Railway, etc.).</p>
 
     <h2>10. Third-party services</h2>
-    <p>
-      The Service integrates with third-party platforms (Shopify, WooCommerce, Gmail, etc.). Their
-      terms apply to your use of those platforms. We're not responsible for outages, changes, or
-      policy decisions made by those providers.
-    </p>
+    <p>The Service integrates with third-party platforms (Shopify, WooCommerce, Gmail, etc.). Their terms apply to your use of those platforms. We're not responsible for outages, changes, or policy decisions made by those providers.</p>
 
     <h2>11. Intellectual property</h2>
-    <p>
-      Drop Sigma, its name, logo, and all software, documentation, and design elements are owned by
-      Drop Sigma. We grant you a non-exclusive, non-transferable, revocable licence to use the
-      Service while your subscription is active.
-    </p>
+    <p>Drop Sigma, its name, logo, and all software, documentation, and design elements are owned by Drop Sigma. We grant you a non-exclusive, non-transferable, revocable licence to use the Service while your subscription is active.</p>
 
     <h2>12. Disclaimers</h2>
-    <p>
-      THE SERVICE IS PROVIDED "AS IS" WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED,
-      INCLUDING MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.
-      We do not warrant that the Service will be error-free, secure, or always available.
-    </p>
+    <p>THE SERVICE IS PROVIDED "AS IS" WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. We do not warrant that the Service will be error-free, secure, or always available.</p>
 
     <h2>13. Limitation of liability</h2>
-    <p>
-      TO THE MAXIMUM EXTENT PERMITTED BY LAW, OUR AGGREGATE LIABILITY UNDER THESE TERMS IS LIMITED TO
-      THE AMOUNT YOU PAID US IN THE 12 MONTHS BEFORE THE EVENT GIVING RISE TO LIABILITY.
-      WE'RE NOT LIABLE FOR INDIRECT, CONSEQUENTIAL, OR PUNITIVE DAMAGES.
-    </p>
+    <p>TO THE MAXIMUM EXTENT PERMITTED BY LAW, OUR AGGREGATE LIABILITY UNDER THESE TERMS IS LIMITED TO THE AMOUNT YOU PAID US IN THE 12 MONTHS BEFORE THE EVENT GIVING RISE TO LIABILITY. WE'RE NOT LIABLE FOR INDIRECT, CONSEQUENTIAL, OR PUNITIVE DAMAGES.</p>
 
     <h2>14. Indemnification</h2>
-    <p>
-      You agree to indemnify and hold Drop Sigma harmless from any claims arising from your use of
-      the Service in violation of these Terms or applicable law.
-    </p>
+    <p>You agree to indemnify and hold Drop Sigma harmless from any claims arising from your use of the Service in violation of these Terms or applicable law.</p>
 
     <h2>15. Governing law</h2>
-    <p>
-      These Terms are governed by the laws of Pakistan. Disputes are submitted to the exclusive
-      jurisdiction of the courts of Karachi, Pakistan — except where mandatory consumer protection
-      law allows you to bring claims in your local courts.
-    </p>
+    <p>These Terms are governed by the laws of Pakistan. Disputes are submitted to the exclusive jurisdiction of the courts of Karachi, Pakistan — except where mandatory consumer protection law allows you to bring claims in your local courts.</p>
 
     <h2>16. Changes</h2>
-    <p>
-      We may revise these Terms by posting an updated version. Material changes will be emailed to
-      account owners at least 14 days before they take effect. Continued use after the effective
-      date constitutes acceptance.
-    </p>
+    <p>We may revise these Terms by posting an updated version. Material changes will be emailed to account owners at least 14 days before they take effect. Continued use after the effective date constitutes acceptance.</p>
 
     <h2>17. Contact</h2>
     <p>
@@ -169,11 +87,7 @@ html,body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-se
       General support: <a href="mailto:support@dropsigma.com">support@dropsigma.com</a>
     </p>
 
-  </div>
-
-  <div class="ds-legal-footer">
-    © 2026 Drop Sigma · <a href="/terms/" style="color:#6366f1;text-decoration:none;">Terms</a> · <a href="/privacy/" style="color:#6366f1;text-decoration:none;">Privacy</a> · <a href="/support/" style="color:#6366f1;text-decoration:none;">Support</a>
+    <p style="margin-top:48px;color:var(--ink-3);font-size:13px;">See also: <a href="/privacy/">Privacy Policy</a> · <a href="/refund/">Refund Policy</a> · <a href="/cookies/">Cookie Policy</a></p>
   </div>
 </div>
-</body>
-</html>
+{% endblock %}

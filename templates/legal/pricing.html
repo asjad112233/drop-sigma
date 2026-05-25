@@ -1,0 +1,173 @@
+{% extends "legal/_base.html" %}
+{% block title %}Pricing — Drop Sigma{% endblock %}
+{% block description %}Simple, transparent pricing for Drop Sigma. Start with a free 14-day trial, then pick the plan that fits your dropshipping operation.{% endblock %}
+
+{% block extra_css %}
+.pricing-hero{padding:80px 0 30px;text-align:center;}
+.pricing-hero h1{font-size:clamp(40px,6vw,64px);line-height:1.05;letter-spacing:-1.8px;font-weight:800;color:#fff;margin-bottom:16px;}
+.pricing-hero p{font-size:18px;color:var(--ink-2);max-width:640px;margin:0 auto;line-height:1.7;}
+
+.plans{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:18px;
+  margin:60px auto 0;
+}
+@media(max-width:1000px){.plans{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:560px){.plans{grid-template-columns:1fr;}}
+
+.plan{
+  background:linear-gradient(145deg,rgba(20,22,45,.7),rgba(10,12,30,.7));
+  border:1px solid var(--line);border-radius:18px;
+  padding:28px 24px;display:flex;flex-direction:column;
+  transition:transform .3s,border-color .3s,box-shadow .3s;
+  position:relative;
+}
+.plan:hover{transform:translateY(-4px);border-color:rgba(168,85,247,.32);box-shadow:0 20px 50px -10px rgba(99,102,241,.3);}
+.plan.popular{
+  border-color:rgba(168,85,247,.45);
+  background:linear-gradient(145deg,rgba(40,30,80,.7),rgba(20,15,50,.7));
+  box-shadow:0 20px 60px -10px rgba(168,85,247,.35);
+}
+.popular-badge{
+  position:absolute;top:-12px;left:50%;transform:translateX(-50%);
+  background:var(--grad-a);color:#fff;
+  font-size:11px;font-weight:700;letter-spacing:.5px;
+  padding:5px 14px;border-radius:100px;text-transform:uppercase;
+  box-shadow:0 6px 18px rgba(168,85,247,.5);
+}
+.plan-name{font-size:13px;color:var(--ink-2);text-transform:uppercase;letter-spacing:.8px;font-weight:700;margin-bottom:10px;}
+.plan-price{font-size:42px;font-weight:800;color:#fff;letter-spacing:-1.5px;line-height:1;}
+.plan-price small{font-size:14px;font-weight:500;color:var(--ink-2);margin-left:4px;}
+.plan-desc{font-size:13px;color:var(--ink-2);margin:10px 0 22px;line-height:1.5;min-height:38px;}
+.plan-features{list-style:none;padding:0;margin:0 0 24px;flex:1;}
+.plan-features li{
+  display:flex;align-items:flex-start;gap:9px;
+  font-size:13.5px;color:var(--ink-1);
+  padding:7px 0;line-height:1.5;
+}
+.plan-features li::before{
+  content:"✓";color:var(--green);
+  flex-shrink:0;font-weight:700;margin-top:1px;
+}
+.plan .btn{justify-content:center;width:100%;}
+
+.faq-section{padding:80px 0;}
+.faq-section h2{font-size:32px;font-weight:800;color:#fff;letter-spacing:-.6px;text-align:center;margin-bottom:36px;}
+.faq-list{max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:14px;}
+.faq-item{
+  background:linear-gradient(145deg,rgba(20,22,45,.6),rgba(10,12,30,.6));
+  border:1px solid var(--line);border-radius:14px;
+  padding:20px 24px;
+}
+.faq-item h4{font-size:15.5px;font-weight:700;color:#fff;margin-bottom:8px;}
+.faq-item p{font-size:14.5px;color:var(--ink-2);line-height:1.7;margin:0;}
+
+.compare-note{text-align:center;color:var(--ink-3);font-size:13px;margin-top:18px;}
+.compare-note a{color:var(--indigo-2);}
+{% endblock %}
+
+{% block content %}
+<section class="pricing-hero container">
+  <h1>Pricing that <span class="gradient-text">scales with you</span></h1>
+  <p>Start free for 14 days. No credit card required. Cancel anytime. Plans are billed monthly in USD — no surprise fees, ever.</p>
+
+  <div class="plans">
+    <div class="plan">
+      <div class="plan-name">Free Trial</div>
+      <div class="plan-price">$0<small>/14 days</small></div>
+      <div class="plan-desc">Test-drive everything in Growth. No card required.</div>
+      <ul class="plan-features">
+        <li>All Growth features</li>
+        <li>1 connected store</li>
+        <li>Up to 100 orders</li>
+        <li>Email + chat support</li>
+        <li>Cancel anytime</li>
+      </ul>
+      <a href="/signup/" class="btn btn-ghost">Start free trial</a>
+    </div>
+
+    <div class="plan popular">
+      <div class="popular-badge">Most popular</div>
+      <div class="plan-name">Growth</div>
+      <div class="plan-price">$49<small>/mo</small></div>
+      <div class="plan-desc">Perfect for solo merchants and small teams getting started.</div>
+      <ul class="plan-features">
+        <li>Up to 500 orders/month</li>
+        <li>1 connected store</li>
+        <li>3 team members</li>
+        <li>AI email drafting</li>
+        <li>Vendor portal (3 vendors)</li>
+        <li>Real-time order sync</li>
+      </ul>
+      <a href="/signup/" class="btn btn-primary">Get started</a>
+    </div>
+
+    <div class="plan">
+      <div class="plan-name">Scale</div>
+      <div class="plan-price">$149<small>/mo</small></div>
+      <div class="plan-desc">For growing brands juggling multiple stores and vendors.</div>
+      <ul class="plan-features">
+        <li>Up to 5,000 orders/month</li>
+        <li>5 connected stores</li>
+        <li>10 team members</li>
+        <li>AI auto-reply rules</li>
+        <li>Unlimited vendors</li>
+        <li>Live tracking (1500+ couriers)</li>
+        <li>Priority email support</li>
+      </ul>
+      <a href="/signup/" class="btn btn-ghost">Choose Scale</a>
+    </div>
+
+    <div class="plan">
+      <div class="plan-name">Plus</div>
+      <div class="plan-price">$399<small>/mo</small></div>
+      <div class="plan-desc">Enterprise-grade for high-volume operators.</div>
+      <ul class="plan-features">
+        <li>Unlimited orders</li>
+        <li>Unlimited stores</li>
+        <li>Unlimited team members</li>
+        <li>SSO &amp; advanced RBAC</li>
+        <li>Dedicated CSM</li>
+        <li>Custom integrations</li>
+        <li>99.9% SLA</li>
+      </ul>
+      <a href="/contact/" class="btn btn-ghost">Contact sales</a>
+    </div>
+  </div>
+
+  <p class="compare-note">All plans include GDPR-compliant data isolation, 24/7 monitoring, and free product updates. <a href="/features/">Compare all features →</a></p>
+</section>
+
+<section class="faq-section container">
+  <h2>Frequently asked questions</h2>
+  <div class="faq-list">
+    <div class="faq-item">
+      <h4>Do you offer a free trial?</h4>
+      <p>Yes — every paid plan starts with a 14-day free trial. No credit card required. If you don't upgrade, your account simply pauses (your data is kept for 90 days in case you come back).</p>
+    </div>
+    <div class="faq-item">
+      <h4>Can I change plans later?</h4>
+      <p>Yes, upgrade or downgrade at any time from your account settings. Upgrades are prorated; downgrades take effect at the next billing cycle.</p>
+    </div>
+    <div class="faq-item">
+      <h4>What happens if I exceed my order limit?</h4>
+      <p>We'll never block your store. Instead, we email you with a soft warning at 90% usage. Continued overages are billed at $0.05 per extra order, with the option to auto-upgrade if it makes sense.</p>
+    </div>
+    <div class="faq-item">
+      <h4>Which payment methods do you accept?</h4>
+      <p>All major credit cards (Visa, Mastercard, Amex), Apple Pay, and PayPal via Stripe. Enterprise customers can also pay by wire transfer or annual invoice.</p>
+    </div>
+    <div class="faq-item">
+      <h4>Do you offer annual discounts?</h4>
+      <p>Yes — pay annually and save 20% on any plan. Contact sales for custom multi-year discounts on the Plus plan.</p>
+    </div>
+    <div class="faq-item">
+      <h4>Is there a setup fee?</h4>
+      <p>Never. You can connect your first store and import orders in under 60 seconds, completely self-serve.</p>
+    </div>
+    <div class="faq-item">
+      <h4>Can I get a refund?</h4>
+      <p>Yes — see our <a href="/refund/">Refund Policy</a>. We offer a 30-day money-back guarantee on your first paid month, no questions asked.</p>
+    </div>
+  </div>
+</section>
+{% endblock %}

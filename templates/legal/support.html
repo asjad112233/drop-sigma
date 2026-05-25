@@ -1,215 +1,184 @@
-{% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Support · Drop Sigma</title>
-<meta name="description" content="Get help with Drop Sigma — contact support, browse FAQs, and request features.">
-<style>
-*{box-sizing:border-box;margin:0;padding:0;}
-html,body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#0f172a;background:#fafbff;line-height:1.6;}
-.ds-support-shell{max-width:980px;margin:0 auto;padding:48px 24px 96px;}
-.ds-back{display:inline-flex;align-items:center;gap:6px;color:#6366f1;font-size:13px;font-weight:600;text-decoration:none;margin-bottom:24px;}
-.ds-back:hover{text-decoration:underline;}
-.ds-brand{display:inline-flex;align-items:center;gap:10px;font-weight:800;font-size:18px;color:#0f172a;margin-bottom:24px;}
-.ds-brand-logo{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#6366f1,#a855f7);display:grid;place-items:center;color:#fff;font-weight:800;}
-.ds-hero{margin-bottom:48px;}
-.ds-hero h1{font-size:40px;font-weight:800;letter-spacing:-.6px;margin-bottom:10px;color:#0f172a;}
-.ds-hero p{font-size:16px;color:#64748b;max-width:600px;line-height:1.6;}
+{% extends "legal/_base.html" %}
+{% block title %}Support — Drop Sigma{% endblock %}
+{% block description %}Get help with Drop Sigma — contact support, browse FAQs, and request features.{% endblock %}
 
-.ds-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px;margin-bottom:48px;}
-.ds-card{background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:22px;box-shadow:0 2px 8px rgba(15,23,42,.04);transition:all .2s ease;}
-.ds-card:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(99,102,241,.15);border-color:#a5b4fc;}
-.ds-card-icon{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#6366f1,#a855f7);display:grid;place-items:center;margin-bottom:14px;box-shadow:0 6px 18px rgba(99,102,241,.35);}
-.ds-card-title{font-size:16px;font-weight:800;color:#0f172a;margin-bottom:6px;letter-spacing:-.2px;}
-.ds-card-text{font-size:13.5px;color:#64748b;line-height:1.55;margin-bottom:14px;}
-.ds-card-link{color:#6366f1;font-size:13px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:5px;}
-.ds-card-link:hover{text-decoration:underline;}
+{% block extra_css %}
+.support-hero{padding:72px 0 30px;}
+.support-hero h1{font-size:clamp(36px,5vw,52px);line-height:1.05;letter-spacing:-1.4px;font-weight:800;color:#fff;margin-bottom:14px;}
+.support-hero p{font-size:17px;color:var(--ink-2);max-width:620px;line-height:1.65;}
 
-.ds-faq{margin-bottom:48px;}
-.ds-faq h2{font-size:24px;font-weight:800;color:#0f172a;margin-bottom:18px;letter-spacing:-.3px;}
-.ds-faq-item{background:#fff;border:1px solid #e2e8f0;border-radius:13px;margin-bottom:10px;overflow:hidden;}
-.ds-faq-q{padding:16px 20px;font-size:14.5px;font-weight:700;color:#0f172a;cursor:pointer;display:flex;justify-content:space-between;align-items:center;background:#fff;border:none;width:100%;text-align:left;font-family:inherit;}
-.ds-faq-q:hover{background:#f8fafc;}
-.ds-faq-a{padding:0 20px 16px;font-size:13.5px;color:#475569;line-height:1.65;display:none;}
-.ds-faq-item.open .ds-faq-a{display:block;}
-.ds-faq-item.open .ds-faq-q{background:#eef2ff;color:#3730a3;}
-.ds-faq-chev{transition:transform .2s ease;color:#94a3b8;}
-.ds-faq-item.open .ds-faq-chev{transform:rotate(180deg);color:#6366f1;}
+.support-cards{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;
+  margin:40px 0 56px;
+}
+.sup-card{
+  background:linear-gradient(145deg,rgba(20,22,45,.7),rgba(10,12,30,.7));
+  border:1px solid var(--line);border-radius:16px;
+  padding:24px;
+  transition:transform .3s,border-color .3s,box-shadow .3s;
+}
+.sup-card:hover{transform:translateY(-3px);border-color:rgba(168,85,247,.35);box-shadow:0 16px 32px -10px rgba(99,102,241,.28);}
+.sup-card-icon{
+  width:44px;height:44px;border-radius:12px;
+  background:var(--grad-a);
+  display:grid;place-items:center;
+  margin-bottom:14px;
+  box-shadow:0 6px 18px rgba(99,102,241,.4);
+}
+.sup-card-title{font-size:16px;font-weight:700;color:#fff;margin-bottom:6px;letter-spacing:-.2px;}
+.sup-card-text{font-size:13.5px;color:var(--ink-2);line-height:1.55;margin-bottom:14px;}
+.sup-card-link{color:var(--indigo-2);font-size:13px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:5px;}
+.sup-card-link:hover{color:#fff;}
 
-.ds-contact{background:linear-gradient(135deg,#eef2ff,#f5f3ff);border-radius:20px;padding:32px;text-align:center;margin-bottom:32px;}
-.ds-contact h2{font-size:22px;font-weight:800;color:#0f172a;margin-bottom:8px;}
-.ds-contact p{color:#475569;margin-bottom:16px;}
-.ds-contact-btn{display:inline-flex;align-items:center;gap:8px;padding:12px 24px;background:linear-gradient(135deg,#6366f1,#a855f7);color:#fff;border-radius:12px;text-decoration:none;font-weight:700;font-size:14px;box-shadow:0 8px 22px rgba(99,102,241,.35);transition:all .15s ease;}
-.ds-contact-btn:hover{transform:translateY(-1px);box-shadow:0 12px 28px rgba(168,85,247,.45);}
+.faq-section h2{font-size:26px;font-weight:800;color:#fff;margin-bottom:18px;letter-spacing:-.4px;}
+.faq-item{
+  background:linear-gradient(145deg,rgba(20,22,45,.6),rgba(10,12,30,.6));
+  border:1px solid var(--line);border-radius:14px;
+  margin-bottom:10px;overflow:hidden;
+}
+.faq-q{
+  padding:16px 22px;font-size:14.5px;font-weight:700;color:#fff;
+  cursor:pointer;display:flex;justify-content:space-between;align-items:center;
+  background:transparent;border:none;width:100%;text-align:left;
+  font-family:inherit;
+}
+.faq-q:hover{background:rgba(255,255,255,.03);}
+.faq-a{padding:0 22px 18px;font-size:14px;color:var(--ink-1);line-height:1.7;display:none;}
+.faq-a a{color:var(--indigo-2);}
+.faq-item.open .faq-a{display:block;}
+.faq-item.open .faq-q{background:rgba(99,102,241,.10);color:var(--indigo-2);}
+.faq-chev{transition:transform .2s;color:var(--ink-3);}
+.faq-item.open .faq-chev{transform:rotate(180deg);color:var(--indigo-2);}
 
-.ds-footer{margin-top:48px;padding-top:24px;border-top:1px solid #e2e8f0;font-size:13px;color:#64748b;text-align:center;}
-.ds-footer a{color:#6366f1;text-decoration:none;}
-</style>
-</head>
-<body>
-<div class="ds-support-shell">
+.contact-strip{
+  margin-top:48px;
+  padding:36px;border-radius:18px;text-align:center;
+  background:linear-gradient(135deg,rgba(99,102,241,.18),rgba(168,85,247,.14));
+  border:1px solid rgba(168,85,247,.32);
+}
+.contact-strip h2{font-size:22px;font-weight:800;color:#fff;margin-bottom:8px;}
+.contact-strip p{color:var(--ink-2);margin-bottom:18px;font-size:14.5px;}
+{% endblock %}
+
+{% block content %}
+<div class="ds-shell">
   <a class="ds-back" href="/">← Back to Drop Sigma</a>
 
-  <div class="ds-brand">
-    <span class="ds-brand-logo">DS</span>
-    Drop Sigma
-  </div>
-
-  <div class="ds-hero">
+  <div class="support-hero">
     <h1>How can we help?</h1>
     <p>Browse FAQs, read the docs, or contact our team — we usually reply within 4 hours on business days.</p>
   </div>
 
-  <div class="ds-cards">
-
-    <div class="ds-card">
-      <div class="ds-card-icon">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-        </svg>
+  <div class="support-cards">
+    <div class="sup-card">
+      <div class="sup-card-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
       </div>
-      <div class="ds-card-title">Email Support</div>
-      <div class="ds-card-text">Reach our team for billing, technical, or general questions. Response within 4 hours.</div>
-      <a class="ds-card-link" href="mailto:support@dropsigma.com">support@dropsigma.com →</a>
+      <div class="sup-card-title">Email Support</div>
+      <div class="sup-card-text">Reach our team for billing, technical, or general questions. Response within 4 hours.</div>
+      <a class="sup-card-link" href="mailto:support@dropsigma.com">support@dropsigma.com →</a>
     </div>
 
-    <div class="ds-card">
-      <div class="ds-card-icon" style="background:linear-gradient(135deg,#10b981,#059669);box-shadow:0 6px 18px rgba(16,185,129,.35);">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10"/>
-          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
-          <line x1="12" y1="17" x2="12.01" y2="17"/>
-        </svg>
+    <div class="sup-card">
+      <div class="sup-card-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
       </div>
-      <div class="ds-card-title">Documentation</div>
-      <div class="ds-card-text">Step-by-step guides for connecting stores, setting up AI replies, managing teams.</div>
-      <a class="ds-card-link" href="https://dropsigma.com/docs/">Read the docs →</a>
+      <div class="sup-card-title">Documentation</div>
+      <div class="sup-card-text">Step-by-step guides for connecting stores, setting up AI replies, managing teams.</div>
+      <a class="sup-card-link" href="/docs/">Read the docs →</a>
     </div>
 
-    <div class="ds-card">
-      <div class="ds-card-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706);box-shadow:0 6px 18px rgba(245,158,11,.35);">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
-        </svg>
+    <div class="sup-card">
+      <div class="sup-card-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
       </div>
-      <div class="ds-card-title">Status &amp; Uptime</div>
-      <div class="ds-card-text">Check live status of Drop Sigma's services, integrations, and recent incidents.</div>
-      <a class="ds-card-link" href="https://status.dropsigma.com">View status →</a>
+      <div class="sup-card-title">Status &amp; Uptime</div>
+      <div class="sup-card-text">Check live status of Drop Sigma's services, integrations, and recent incidents.</div>
+      <a class="sup-card-link" href="https://status.dropsigma.com">View status →</a>
     </div>
 
-    <div class="ds-card">
-      <div class="ds-card-icon" style="background:linear-gradient(135deg,#ec4899,#db2777);box-shadow:0 6px 18px rgba(236,72,153,.35);">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10"/>
-          <path d="M16 12l-4 4-4-4M12 8v8"/>
-        </svg>
+    <div class="sup-card">
+      <div class="sup-card-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M16 12l-4 4-4-4M12 8v8"/></svg>
       </div>
-      <div class="ds-card-title">Feature Requests</div>
-      <div class="ds-card-text">Got an idea? We read every suggestion and ship the most-requested ones monthly.</div>
-      <a class="ds-card-link" href="mailto:feedback@dropsigma.com">feedback@dropsigma.com →</a>
+      <div class="sup-card-title">Feature Requests</div>
+      <div class="sup-card-text">Got an idea? We read every suggestion and ship the most-requested ones monthly.</div>
+      <a class="sup-card-link" href="mailto:feedback@dropsigma.com">feedback@dropsigma.com →</a>
     </div>
-
   </div>
 
-  <div class="ds-faq">
+  <div class="faq-section">
     <h2>Frequently asked questions</h2>
 
-    <div class="ds-faq-item">
-      <button class="ds-faq-q" onclick="this.parentElement.classList.toggle('open')">
+    <div class="faq-item">
+      <button class="faq-q" onclick="this.parentElement.classList.toggle('open')">
         How do I connect my Shopify store?
-        <span class="ds-faq-chev">▼</span>
+        <span class="faq-chev">▼</span>
       </button>
-      <div class="ds-faq-a">
-        From your Drop Sigma dashboard, go to <strong>Stores → Add Store</strong>, pick Shopify, enter your <code>your-store.myshopify.com</code> URL and click <strong>Auto Connect</strong>. Shopify will show an install screen — click <strong>Install app</strong> and you're done. Orders sync automatically in the background.
-      </div>
+      <div class="faq-a">From your Drop Sigma dashboard, go to <strong>Stores → Add Store</strong>, pick Shopify, enter your <code>your-store.myshopify.com</code> URL and click <strong>Auto Connect</strong>. Shopify will show an install screen — click <strong>Install app</strong> and you're done. Orders sync automatically in the background.</div>
     </div>
 
-    <div class="ds-faq-item">
-      <button class="ds-faq-q" onclick="this.parentElement.classList.toggle('open')">
+    <div class="faq-item">
+      <button class="faq-q" onclick="this.parentElement.classList.toggle('open')">
         How do I connect my WooCommerce store?
-        <span class="ds-faq-chev">▼</span>
+        <span class="faq-chev">▼</span>
       </button>
-      <div class="ds-faq-a">
-        Same flow as Shopify — <strong>Stores → Add Store</strong>, pick WooCommerce, paste your store URL, click <strong>Auto Connect</strong>. A new tab opens on your WooCommerce admin; click <strong>Approve</strong> and Drop Sigma starts syncing.
-      </div>
+      <div class="faq-a">Same flow as Shopify — <strong>Stores → Add Store</strong>, pick WooCommerce, paste your store URL, click <strong>Auto Connect</strong>. A new tab opens on your WooCommerce admin; click <strong>Approve</strong> and Drop Sigma starts syncing.</div>
     </div>
 
-    <div class="ds-faq-item">
-      <button class="ds-faq-q" onclick="this.parentElement.classList.toggle('open')">
+    <div class="faq-item">
+      <button class="faq-q" onclick="this.parentElement.classList.toggle('open')">
         Is my data secure?
-        <span class="ds-faq-chev">▼</span>
+        <span class="faq-chev">▼</span>
       </button>
-      <div class="ds-faq-a">
-        Yes. All traffic is TLS-encrypted, OAuth tokens are encrypted at rest, and every API endpoint enforces per-tenant scoping — meaning your data can never be accessed by another Drop Sigma customer. Read the full details in our <a href="/privacy/">Privacy Policy</a>.
-      </div>
+      <div class="faq-a">Yes. All traffic is TLS-encrypted, OAuth tokens are encrypted at rest, and every API endpoint enforces per-tenant scoping — meaning your data can never be accessed by another Drop Sigma customer. Read the full details in our <a href="/privacy/">Privacy Policy</a>.</div>
     </div>
 
-    <div class="ds-faq-item">
-      <button class="ds-faq-q" onclick="this.parentElement.classList.toggle('open')">
+    <div class="faq-item">
+      <button class="faq-q" onclick="this.parentElement.classList.toggle('open')">
         What happens to my data when I uninstall the app?
-        <span class="ds-faq-chev">▼</span>
+        <span class="faq-chev">▼</span>
       </button>
-      <div class="ds-faq-a">
-        Within minutes of uninstalling Drop Sigma from your Shopify store, we deactivate access and clear all stored OAuth tokens. Per Shopify's GDPR webhooks, all data tied to that shop is permanently deleted within 48 hours.
-      </div>
+      <div class="faq-a">Within minutes of uninstalling Drop Sigma from your Shopify store, we deactivate access and clear all stored OAuth tokens. Per Shopify's GDPR webhooks, all data tied to that shop is permanently deleted within 48 hours.</div>
     </div>
 
-    <div class="ds-faq-item">
-      <button class="ds-faq-q" onclick="this.parentElement.classList.toggle('open')">
+    <div class="faq-item">
+      <button class="faq-q" onclick="this.parentElement.classList.toggle('open')">
         Can I invite my team?
-        <span class="ds-faq-chev">▼</span>
+        <span class="faq-chev">▼</span>
       </button>
-      <div class="ds-faq-a">
-        Absolutely. Drop Sigma has a dedicated <strong>Team</strong> portal where each employee gets their own login and you control what they can see (folders, labels, orders, etc.). Vendors also have a separate vendor portal with limited access.
-      </div>
+      <div class="faq-a">Absolutely. Drop Sigma has a dedicated <strong>Team</strong> portal where each employee gets their own login and you control what they can see (folders, labels, orders, etc.). Vendors also have a separate vendor portal with limited access.</div>
     </div>
 
-    <div class="ds-faq-item">
-      <button class="ds-faq-q" onclick="this.parentElement.classList.toggle('open')">
+    <div class="faq-item">
+      <button class="faq-q" onclick="this.parentElement.classList.toggle('open')">
         How does the AI email auto-reply work?
-        <span class="ds-faq-chev">▼</span>
+        <span class="faq-chev">▼</span>
       </button>
-      <div class="ds-faq-a">
-        Drop Sigma reads incoming customer emails, classifies the topic (refund, return, shipping query, etc.) and drafts a reply using your brand voice + the policies you set in the AI Training Studio. You can review every draft before sending, or enable auto-send for high-confidence categories.
-      </div>
+      <div class="faq-a">Drop Sigma reads incoming customer emails, classifies the topic (refund, return, shipping query, etc.) and drafts a reply using your brand voice + the policies you set in the AI Training Studio. You can review every draft before sending, or enable auto-send for high-confidence categories.</div>
     </div>
 
-    <div class="ds-faq-item">
-      <button class="ds-faq-q" onclick="this.parentElement.classList.toggle('open')">
+    <div class="faq-item">
+      <button class="faq-q" onclick="this.parentElement.classList.toggle('open')">
         Do you offer a free trial?
-        <span class="ds-faq-chev">▼</span>
+        <span class="faq-chev">▼</span>
       </button>
-      <div class="ds-faq-a">
-        Yes — Drop Sigma offers a 14-day free trial with no credit card required. You get access to every feature so you can evaluate the full product before committing.
-      </div>
+      <div class="faq-a">Yes — Drop Sigma offers a 14-day free trial with no credit card required. You get access to every feature so you can evaluate the full product before committing.</div>
     </div>
 
-    <div class="ds-faq-item">
-      <button class="ds-faq-q" onclick="this.parentElement.classList.toggle('open')">
+    <div class="faq-item">
+      <button class="faq-q" onclick="this.parentElement.classList.toggle('open')">
         How do I cancel my subscription?
-        <span class="ds-faq-chev">▼</span>
+        <span class="faq-chev">▼</span>
       </button>
-      <div class="ds-faq-a">
-        Go to <strong>Settings → Billing</strong> and click <strong>Cancel subscription</strong>. Your access continues until the end of the current billing period; no further charges will be made.
-      </div>
+      <div class="faq-a">Go to <strong>Settings → Billing</strong> and click <strong>Cancel subscription</strong>. Your access continues until the end of the current billing period; no further charges will be made. See our <a href="/refund/">Refund Policy</a> for details.</div>
     </div>
-
   </div>
 
-  <div class="ds-contact">
+  <div class="contact-strip">
     <h2>Didn't find what you needed?</h2>
     <p>Email our team and we'll get back to you within 4 hours on business days.</p>
-    <a class="ds-contact-btn" href="mailto:support@dropsigma.com">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 7L2 7"/></svg>
-      Contact support
-    </a>
-  </div>
-
-  <div class="ds-footer">
-    © 2026 Drop Sigma · <a href="/terms/">Terms</a> · <a href="/privacy/">Privacy</a> · <a href="/support/">Support</a>
+    <a class="btn btn-primary" href="/contact/">Contact us →</a>
   </div>
 </div>
-</body>
-</html>
+{% endblock %}

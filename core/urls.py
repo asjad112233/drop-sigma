@@ -19,6 +19,15 @@ urlpatterns = [
     path("privacy/", views.privacy_policy_page, name="privacy_policy"),
     path("terms/",   views.terms_of_service_page, name="terms_of_service"),
     path("support/", views.support_page,         name="support_page"),
+    # Public marketing / info pages
+    path("about/",    views.about_page,    name="about_page"),
+    path("pricing/",  views.pricing_page,  name="pricing_page"),
+    path("contact/",  views.contact_page,  name="contact_page"),
+    path("contact/submit/", views.contact_submit, name="contact_submit"),
+    path("cookies/",  views.cookies_page,  name="cookies_page"),
+    path("refund/",   views.refund_page,   name="refund_page"),
+    path("docs/",     views.docs_page,     name="docs_page"),
+    path("features/", views.features_page, name="features_page"),
     path("dashboard/", views.dashboard_page, name="dashboard"),
     # Embeddable emails-only view for the employee portal iframe
     path("dashboard/embed/emails/", views.dashboard_embed_emails, name="dashboard_embed_emails"),

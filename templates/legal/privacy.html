@@ -1,67 +1,22 @@
-{% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Privacy Policy · Drop Sigma</title>
-<meta name="description" content="Drop Sigma's privacy policy explaining how we collect, use, and protect data from connected stores and merchants.">
-<style>
-*{box-sizing:border-box;margin:0;padding:0;}
-html,body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#0f172a;background:#fafbff;line-height:1.6;}
-.ds-legal-shell{max-width:880px;margin:0 auto;padding:48px 24px 96px;}
-.ds-legal-header{margin-bottom:32px;}
-.ds-legal-back{display:inline-flex;align-items:center;gap:6px;color:#6366f1;font-size:13px;font-weight:600;text-decoration:none;margin-bottom:24px;}
-.ds-legal-back:hover{text-decoration:underline;}
-.ds-legal-title{font-size:36px;font-weight:800;letter-spacing:-.5px;margin-bottom:8px;}
-.ds-legal-meta{font-size:13px;color:#64748b;}
-.ds-legal-body h2{font-size:20px;font-weight:800;margin:32px 0 12px;color:#0f172a;}
-.ds-legal-body h3{font-size:16px;font-weight:700;margin:20px 0 8px;color:#1e293b;}
-.ds-legal-body p{margin:0 0 12px;color:#334155;font-size:14.5px;}
-.ds-legal-body ul,.ds-legal-body ol{margin:0 0 16px 20px;color:#334155;font-size:14.5px;}
-.ds-legal-body li{margin-bottom:6px;}
-.ds-legal-body strong{color:#0f172a;}
-.ds-legal-body a{color:#6366f1;text-decoration:none;}
-.ds-legal-body a:hover{text-decoration:underline;}
-.ds-legal-callout{background:linear-gradient(135deg,#eef2ff,#f5f3ff);border:1px solid #c7d2fe;border-radius:14px;padding:18px 22px;margin:20px 0;}
-.ds-legal-callout strong{display:block;margin-bottom:6px;color:#3730a3;}
-.ds-legal-footer{margin-top:48px;padding-top:24px;border-top:1px solid #e2e8f0;font-size:13px;color:#64748b;text-align:center;}
-.ds-legal-brand{display:inline-flex;align-items:center;gap:10px;font-weight:800;font-size:18px;color:#0f172a;margin-bottom:24px;}
-.ds-legal-brand-logo{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#6366f1,#a855f7);display:grid;place-items:center;color:#fff;font-weight:800;}
-table.ds-legal-table{width:100%;border-collapse:collapse;margin:16px 0;font-size:13.5px;}
-table.ds-legal-table th,table.ds-legal-table td{padding:9px 12px;border:1px solid #e2e8f0;text-align:left;}
-table.ds-legal-table th{background:#f8fafc;font-weight:700;}
-</style>
-</head>
-<body>
-<div class="ds-legal-shell">
-  <a class="ds-legal-back" href="/">← Back to Drop Sigma</a>
+{% extends "legal/_base.html" %}
+{% block title %}Privacy Policy — Drop Sigma{% endblock %}
+{% block description %}Drop Sigma's privacy policy explaining how we collect, use, and protect data from connected stores and merchants.{% endblock %}
 
-  <div class="ds-legal-brand">
-    <span class="ds-legal-brand-logo">DS</span>
-    Drop Sigma
-  </div>
+{% block content %}
+<div class="ds-shell">
+  <a class="ds-back" href="/">← Back to Drop Sigma</a>
+  <h1 class="ds-title">Privacy Policy</h1>
+  <p class="ds-subtitle">Last updated: 25 May 2026 · Effective immediately</p>
 
-  <div class="ds-legal-header">
-    <h1 class="ds-legal-title">Privacy Policy</h1>
-    <div class="ds-legal-meta">Last updated: 25 May 2026 · Effective immediately</div>
-  </div>
+  <div class="ds-content">
 
-  <div class="ds-legal-body">
-
-    <div class="ds-legal-callout">
+    <div class="ds-callout">
       <strong>Summary</strong>
-      Drop Sigma is a multi-tenant SaaS that helps e-commerce merchants run their dropshipping operations.
-      We only collect what we need to run the service, never sell your data, and respect every applicable
-      data-protection law including GDPR (EU) and CCPA (California).
+      Drop Sigma is a multi-tenant SaaS that helps e-commerce merchants run their dropshipping operations. We only collect what we need to run the service, never sell your data, and respect every applicable data-protection law including GDPR (EU) and CCPA (California).
     </div>
 
     <h2>1. Who we are</h2>
-    <p>
-      "Drop Sigma", "we", "us" and "our" refer to <strong>Drop Sigma</strong>, operating from Pakistan.
-      We provide an order-management, vendor-coordination, and customer-support SaaS for Shopify and
-      WooCommerce stores at <a href="https://dropsigma.com">dropsigma.com</a>.
-    </p>
+    <p>"Drop Sigma", "we", "us" and "our" refer to <strong>Drop Sigma</strong>, operating from Pakistan. We provide an order-management, vendor-coordination, and customer-support SaaS for Shopify and WooCommerce stores at <a href="https://dropsigma.com">dropsigma.com</a>.</p>
 
     <h2>2. Data we collect</h2>
 
@@ -74,9 +29,7 @@ table.ds-legal-table th{background:#f8fafc;font-weight:700;}
     </ul>
 
     <h3>2.2 Information pulled from your connected store</h3>
-    <p>
-      When you connect a Shopify or WooCommerce store via OAuth, with your explicit permission we sync:
-    </p>
+    <p>When you connect a Shopify or WooCommerce store via OAuth, with your explicit permission we sync:</p>
     <ul>
       <li>Orders (order number, line items, fulfilment status, payment status, totals, currency).</li>
       <li>Customer details associated with those orders (name, email, phone, shipping address).</li>
@@ -102,14 +55,11 @@ table.ds-legal-table th{background:#f8fafc;font-weight:700;}
       <li>Improve product reliability (anonymized error reporting and performance monitoring).</li>
       <li>Comply with legal obligations (tax invoices, court orders, GDPR / CCPA requests).</li>
     </ul>
-    <p>
-      We do <strong>not</strong> use your or your customers' data for advertising, profiling, or any
-      purpose unrelated to delivering Drop Sigma.
-    </p>
+    <p>We do <strong>not</strong> use your or your customers' data for advertising, profiling, or any purpose unrelated to delivering Drop Sigma.</p>
 
     <h2>4. Sharing &amp; sub-processors</h2>
     <p>We share data only with the small set of vendors needed to run Drop Sigma:</p>
-    <table class="ds-legal-table">
+    <table>
       <thead><tr><th>Sub-processor</th><th>Purpose</th><th>Region</th></tr></thead>
       <tbody>
         <tr><td>Railway</td><td>Application hosting + database</td><td>USA</td></tr>
@@ -119,20 +69,13 @@ table.ds-legal-table th{background:#f8fafc;font-weight:700;}
         <tr><td>Brevo / SMTP provider</td><td>Outbound transactional email</td><td>EU</td></tr>
       </tbody>
     </table>
-    <p>
-      All sub-processors are contractually bound to confidentiality and data-protection terms. We never sell
-      personal data to advertisers, data brokers, or any third party.
-    </p>
+    <p>All sub-processors are contractually bound to confidentiality and data-protection terms. We never sell personal data to advertisers, data brokers, or any third party.</p>
 
     <h2>5. Where we store data</h2>
-    <p>
-      Our primary database lives in Railway's US data center. Backups are encrypted at rest and kept for 30 days.
-      If you're in the EU, your data may be transferred outside the EEA — we rely on Standard Contractual Clauses
-      (SCCs) as the legal basis.
-    </p>
+    <p>Our primary database lives in Railway's US data center. Backups are encrypted at rest and kept for 30 days. If you're in the EU, your data may be transferred outside the EEA — we rely on Standard Contractual Clauses (SCCs) as the legal basis.</p>
 
     <h2>6. How long we keep it</h2>
-    <table class="ds-legal-table">
+    <table>
       <thead><tr><th>Data type</th><th>Retention</th></tr></thead>
       <tbody>
         <tr><td>Account &amp; team profiles</td><td>Until you delete the account, then ≤30 days</td></tr>
@@ -144,10 +87,7 @@ table.ds-legal-table th{background:#f8fafc;font-weight:700;}
     </table>
 
     <h2>7. Your rights</h2>
-    <p>
-      Regardless of where you live, you can email
-      <a href="mailto:privacy@dropsigma.com">privacy@dropsigma.com</a> to:
-    </p>
+    <p>Regardless of where you live, you can email <a href="mailto:privacy@dropsigma.com">privacy@dropsigma.com</a> to:</p>
     <ul>
       <li><strong>Access</strong> — request a copy of the data we hold on you.</li>
       <li><strong>Rectify</strong> — ask us to fix anything inaccurate.</li>
@@ -157,12 +97,9 @@ table.ds-legal-table th{background:#f8fafc;font-weight:700;}
     </ul>
     <p>We respond within 30 days. Free of charge unless the request is "manifestly unfounded or excessive".</p>
 
-    <div class="ds-legal-callout">
+    <div class="ds-callout">
       <strong>For Shopify merchants</strong>
-      We also honour the official Shopify GDPR webhooks:
-      <code>customers/data_request</code>, <code>customers/redact</code>, and <code>shop/redact</code>.
-      When you uninstall Drop Sigma from your store, all related data is deleted within 48 hours
-      automatically.
+      We also honour the official Shopify GDPR webhooks: <code>customers/data_request</code>, <code>customers/redact</code>, and <code>shop/redact</code>. When you uninstall Drop Sigma from your store, all related data is deleted within 48 hours automatically.
     </div>
 
     <h2>8. Security</h2>
@@ -179,9 +116,7 @@ table.ds-legal-table th{background:#f8fafc;font-weight:700;}
     <p>Drop Sigma is a B2B product. It is not directed at children under 16 and we don't knowingly collect data from them.</p>
 
     <h2>10. Changes to this policy</h2>
-    <p>
-      We'll post any material changes on this page and notify you via email at least 14 days before they take effect.
-    </p>
+    <p>We'll post any material changes on this page and notify you via email at least 14 days before they take effect.</p>
 
     <h2>11. Contact</h2>
     <p>
@@ -190,11 +125,7 @@ table.ds-legal-table th{background:#f8fafc;font-weight:700;}
       Website: <a href="https://dropsigma.com">dropsigma.com</a>
     </p>
 
-  </div>
-
-  <div class="ds-legal-footer">
-    © 2026 Drop Sigma · <a href="/terms/" style="color:#6366f1;text-decoration:none;">Terms of Service</a> · <a href="/privacy/" style="color:#6366f1;text-decoration:none;">Privacy</a> · <a href="/support/" style="color:#6366f1;text-decoration:none;">Support</a>
+    <p style="margin-top:48px;color:var(--ink-3);font-size:13px;">See also: <a href="/terms/">Terms of Service</a> · <a href="/cookies/">Cookie Policy</a> · <a href="/support/">Support</a></p>
   </div>
 </div>
-</body>
-</html>
+{% endblock %}

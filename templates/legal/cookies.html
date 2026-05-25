@@ -1,0 +1,81 @@
+{% extends "legal/_base.html" %}
+{% block title %}Cookie Policy — Drop Sigma{% endblock %}
+{% block description %}How Drop Sigma uses cookies and similar tracking technologies. GDPR &amp; CCPA compliant.{% endblock %}
+
+{% block content %}
+<div class="ds-shell">
+  <a class="ds-back" href="/">← Back to Drop Sigma</a>
+  <h1 class="ds-title">Cookie Policy</h1>
+  <p class="ds-subtitle">Last updated: 25 May 2026. Drop Sigma uses cookies and similar technologies to keep you logged in, remember your preferences, and improve the product. This policy explains exactly what we store and how to opt out.</p>
+
+  <div class="ds-content">
+
+    <div class="ds-callout">
+      <strong>TL;DR</strong>
+      We use a tiny number of cookies — only what's needed to log you in, remember your settings, and measure broad usage patterns. We never sell your data, never load third-party advertising cookies, and you can decline non-essential cookies from the banner at the bottom of the screen.
+    </div>
+
+    <h2>1. What is a cookie?</h2>
+    <p>A cookie is a small text file a website stores on your device to remember things about your visit. Cookies are widely used to make websites work, work better, or work more efficiently.</p>
+    <p>Drop Sigma uses cookies (and similar technologies like localStorage) in three categories: <strong>strictly necessary</strong>, <strong>functional</strong>, and <strong>analytics</strong>.</p>
+
+    <h2>2. Cookies we set</h2>
+
+    <h3>2.1 Strictly necessary (always on)</h3>
+    <p>These cookies are required for the site to work. You cannot opt out — without them you cannot log in or use Drop Sigma.</p>
+    <table>
+      <tr><th>Name</th><th>Purpose</th><th>Duration</th></tr>
+      <tr><td><code>sessionid</code></td><td>Keeps you logged into your Drop Sigma account.</td><td>14 days (rolling)</td></tr>
+      <tr><td><code>csrftoken</code></td><td>Protects you from cross-site request forgery attacks.</td><td>1 year</td></tr>
+      <tr><td><code>ds_cookie_choice</code></td><td>Remembers your cookie banner choice so we don't re-ask.</td><td>1 year (localStorage)</td></tr>
+    </table>
+
+    <h3>2.2 Functional (opt-out)</h3>
+    <p>These remember your preferences inside the app. Declining them won't break the site, but the experience will be less smooth.</p>
+    <table>
+      <tr><th>Name</th><th>Purpose</th><th>Duration</th></tr>
+      <tr><td><code>ds_active_section</code></td><td>Remembers which dashboard section you had open across page reloads.</td><td>Session (localStorage)</td></tr>
+      <tr><td><code>ds_theme</code></td><td>Remembers your light/dark theme choice.</td><td>1 year (localStorage)</td></tr>
+      <tr><td><code>ds_sidebar_collapsed</code></td><td>Remembers whether the dashboard sidebar is collapsed.</td><td>1 year (localStorage)</td></tr>
+    </table>
+
+    <h3>2.3 Analytics (opt-out)</h3>
+    <p>We use privacy-friendly analytics to understand which features get used and which break. We never share this data with advertisers and we never build user profiles.</p>
+    <table>
+      <tr><th>Provider</th><th>Purpose</th><th>Data sent</th></tr>
+      <tr><td>Plausible Analytics</td><td>Anonymous page-view stats (no cookies, EU-hosted).</td><td>URL, referrer, browser type — no personal identifiers.</td></tr>
+      <tr><td>Sentry (errors only)</td><td>Catch JavaScript errors so we can fix them.</td><td>Stack traces — IP addresses are scrubbed before storage.</td></tr>
+    </table>
+
+    <h2>3. Third-party cookies</h2>
+    <p>The following third-party services may set their own cookies when you use specific features:</p>
+    <ul>
+      <li><strong>Stripe</strong> — used only on the checkout page to process payments securely.</li>
+      <li><strong>Google OAuth</strong> — set only if you choose to connect a Google account (e.g., Gmail).</li>
+      <li><strong>Shopify</strong> — set when you install Drop Sigma from the Shopify App Store.</li>
+    </ul>
+    <p>We have no control over these third-party cookies. Each provider has its own privacy policy and you should review them if concerned.</p>
+
+    <h2>4. How to control or delete cookies</h2>
+    <p>You have several options:</p>
+    <ul>
+      <li>Click <strong>"Decline"</strong> in the cookie banner shown at the bottom of every page — this stops all non-essential cookies.</li>
+      <li>Use your browser's built-in cookie controls (Chrome, Firefox, Safari, Edge all let you clear or block specific cookies).</li>
+      <li>Use a browser extension like Privacy Badger or uBlock Origin for blanket protection.</li>
+      <li>Clear localStorage by opening DevTools → Application → Local Storage → right-click → Clear.</li>
+    </ul>
+    <p>Declining all cookies will not break Drop Sigma — strictly necessary cookies are still loaded so you can log in. You will just lose some convenience features.</p>
+
+    <h2>5. Do Not Track</h2>
+    <p>Drop Sigma respects your browser's Do Not Track (DNT) header. When DNT is enabled, we automatically disable all analytics and functional cookies, regardless of your banner choice.</p>
+
+    <h2>6. Changes to this policy</h2>
+    <p>If we add new cookies or change which providers we use, we'll update the table above and bump the "Last updated" date at the top. Material changes will also trigger a re-prompt of the cookie banner so you can review and re-consent.</p>
+
+    <h2>7. Contact us</h2>
+    <p>Questions about cookies, or want to exercise your GDPR/CCPA rights regarding data we've already collected? Email <a href="mailto:privacy@dropsigma.com">privacy@dropsigma.com</a> and we'll respond within 30 days.</p>
+
+    <p style="margin-top:48px;color:var(--ink-3);font-size:13px;">See also: <a href="/privacy/">Privacy Policy</a> · <a href="/terms/">Terms of Service</a></p>
+  </div>
+</div>
+{% endblock %}
