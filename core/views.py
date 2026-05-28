@@ -14,6 +14,7 @@ from django.core.mail import send_mail
 from django.conf import settings
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
+from django.utils import timezone
 
 _mail_logger = logging.getLogger("dropsigma.mail")
 
@@ -699,14 +700,39 @@ def verify_email_view(request, token):
 # ── Dashboard ─────────────────────────────────────────────────────────────────
 
 def _is_subscribed(user):
+    """
+    Authoritative access gate. A tenant is "subscribed" only when:
+      - Tenant status is active
+      - Subscription is paid AND status in {active, trialing}
+      - For recurring subscriptions, current_period_end has not passed
+
+    Hard cancels (customer.subscription.deleted) flip tenant.status to
+    "suspended" via webhook, but this layer is a defense-in-depth check
+    that survives missed webhooks.
+    """
     if user.is_superuser:
         return True
     try:
         tenant = user.tenant_profile
         sub    = tenant.subscription
-        return sub.payment_status == "paid" and tenant.status == "active"
     except Exception:
         return False
+
+    if tenant.status != "active":
+        return False
+    if sub.payment_status != "paid":
+        return False
+    # status field added in 0010 migration — older rows default to "active"
+    if sub.status and sub.status not in ("active", "trialing"):
+        return False
+    # Recurring subscriptions must not have expired
+    if sub.current_period_end:
+        # Allow a 1-day grace so Stripe webhook + clock skew don't lock out
+        # tenants whose invoice.paid hasn't arrived yet.
+        from datetime import timedelta
+        if sub.current_period_end + timedelta(days=1) < timezone.now():
+            return False
+    return True
 
 
 @login_required(login_url="/login/")
@@ -984,7 +1010,21 @@ def subscribe_view(request):
 
 # ── Payment helpers ───────────────────────────────────────────────────────────
 
-def _activate_subscription(user, plan_key, price, note=""):
+def _activate_subscription(user, plan_key, price, note="", *,
+                            provider="none",
+                            stripe_customer_id="",
+                            stripe_subscription_id="",
+                            stripe_price_id="",
+                            current_period_end=None,
+                            paypal_subscription_id="",
+                            paypal_plan_id=""):
+    """
+    Activate or refresh a tenant subscription record.
+
+    For Stripe recurring (mode=subscription), pass the IDs received from the
+    Checkout Session / webhook so we can later open the Customer Portal,
+    enforce period_end, and reconcile renewals.
+    """
     from superadmin.models import Tenant, Subscription, TenantActivity
     import datetime
     plan_map   = {"starter": "basic", "growth": "pro", "scale": "enterprise"}
@@ -1006,14 +1046,43 @@ def _activate_subscription(user, plan_key, price, note=""):
     sub.plan           = tenant_plan
     sub.price          = price
     sub.payment_status = "paid"
+    sub.status         = "active"
     sub.start_date     = datetime.date.today()
     sub.renews_on      = datetime.date.today() + datetime.timedelta(days=30)
+
+    if provider:
+        sub.provider = provider
+    # Stripe IDs — only overwrite when provided (don't clobber existing values)
+    if stripe_customer_id:
+        sub.stripe_customer_id = stripe_customer_id
+    if stripe_subscription_id:
+        sub.stripe_subscription_id = stripe_subscription_id
+    if stripe_price_id:
+        sub.stripe_price_id = stripe_price_id
+    if current_period_end:
+        sub.current_period_end = current_period_end
+        # also keep renews_on in sync as a date
+        try:
+            sub.renews_on = current_period_end.date()
+        except Exception:
+            pass
+    # PayPal IDs (used by Phase 2 — PayPal subscriptions)
+    if paypal_subscription_id:
+        sub.paypal_subscription_id = paypal_subscription_id
+    if paypal_plan_id:
+        sub.paypal_plan_id = paypal_plan_id
+
+    # Returning customer? Clear any prior cancellation flags.
+    sub.cancel_at_period_end = False
+    sub.canceled_at          = None
+
     sub.save()
     TenantActivity.objects.create(
         tenant=tenant,
         action=f"Subscribed to {plan_key} plan (${price}/mo) via {note}",
         action_type="plan",
     )
+    return sub
 
 
 def _apply_coupon(plan_key, coupon_code):
@@ -1065,6 +1134,89 @@ def _platform_creds():
     }
 
 
+PLAN_NAMES = {"starter": "Starter", "growth": "Growth", "scale": "Scale"}
+
+
+def _stripe_get_or_create_price(plan_key, amount_usd):
+    """
+    Idempotently locate (or create) a recurring monthly Stripe Price for the
+    given plan key + amount. Stripe doesn't allow editing a Price's amount, so
+    each (plan, amount) pair becomes its own Price object — that handles both
+    the base prices and any coupon-discounted variants.
+
+    Returns the price id (e.g. "price_xxx") or raises.
+    """
+    import stripe
+    plan_label = PLAN_NAMES.get(plan_key, plan_key.title())
+    product_lookup = f"dropsigma_plan_{plan_key}"
+    unit_amount = int(round(float(amount_usd) * 100))
+
+    # 1) Find existing Product for this plan (by metadata.lookup_key)
+    products = stripe.Product.list(limit=100, active=True).data
+    product = next((p for p in products if (p.metadata or {}).get("lookup_key") == product_lookup), None)
+    if not product:
+        product = stripe.Product.create(
+            name=f"Drop Sigma {plan_label} Plan",
+            metadata={"lookup_key": product_lookup, "plan_key": plan_key},
+        )
+
+    # 2) Find a recurring monthly Price on this Product for this amount
+    prices = stripe.Price.list(product=product.id, active=True, limit=100).data
+    for pr in prices:
+        rec = pr.get("recurring") or {}
+        if (
+            pr.unit_amount == unit_amount
+            and pr.currency == "usd"
+            and rec.get("interval") == "month"
+            and rec.get("interval_count") == 1
+        ):
+            return pr.id
+
+    # 3) Create it
+    new_price = stripe.Price.create(
+        product=product.id,
+        currency="usd",
+        unit_amount=unit_amount,
+        recurring={"interval": "month", "interval_count": 1},
+        metadata={"plan_key": plan_key},
+    )
+    return new_price.id
+
+
+def _stripe_customer_for_user(user):
+    """Find or create a Stripe Customer for this Django user."""
+    import stripe
+    from superadmin.models import Tenant, Subscription
+
+    try:
+        sub = user.tenant_profile.subscription
+        if sub.stripe_customer_id:
+            try:
+                cust = stripe.Customer.retrieve(sub.stripe_customer_id)
+                if not getattr(cust, "deleted", False):
+                    return cust.id
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+    # Search by email
+    if user.email:
+        try:
+            existing = stripe.Customer.list(email=user.email, limit=1).data
+            if existing:
+                return existing[0].id
+        except Exception:
+            pass
+
+    cust = stripe.Customer.create(
+        email=user.email or None,
+        name=user.get_full_name() or user.username,
+        metadata={"django_user_id": user.id},
+    )
+    return cust.id
+
+
 @login_required(login_url="/login/")
 @require_POST
 def stripe_create_session(request):
@@ -1081,38 +1233,51 @@ def stripe_create_session(request):
     coupon_code = request.POST.get("coupon_code", "")
     price, _    = _apply_coupon(plan_key, coupon_code)
 
-    PLAN_NAMES = {"starter": "Starter", "growth": "Growth", "scale": "Scale"}
-
     host   = request.get_host()
     scheme = "http" if host.split(":")[0] in ("localhost", "127.0.0.1") else "https"
     base   = f"{scheme}://{host}"
 
     try:
+        # Upsert recurring Price object + Customer for tenant
+        price_id    = _stripe_get_or_create_price(plan_key, price)
+        customer_id = _stripe_customer_for_user(request.user)
+
         session = stripe.checkout.Session.create(
+            mode="subscription",
             payment_method_types=["card"],
-            line_items=[{
-                "price_data": {
-                    "currency":     "usd",
-                    "unit_amount":  int(float(price) * 100),
-                    "product_data": {"name": f"Drop Sigma {PLAN_NAMES.get(plan_key, plan_key)} Plan"},
-                },
-                "quantity": 1,
-            }],
-            mode="payment",
+            customer=customer_id,
+            line_items=[{"price": price_id, "quantity": 1}],
             success_url=f"{base}/payment/stripe/success/?session_id={{CHECKOUT_SESSION_ID}}&plan={plan_key}&coupon={coupon_code}",
             cancel_url=f"{base}/upgrade/",
-            customer_email=request.user.email,
+            allow_promotion_codes=True,
+            client_reference_id=str(request.user.id),
+            metadata={
+                "django_user_id": str(request.user.id),
+                "plan_key": plan_key,
+                "coupon_code": coupon_code or "",
+            },
+            subscription_data={
+                "metadata": {
+                    "django_user_id": str(request.user.id),
+                    "plan_key": plan_key,
+                },
+            },
         )
         return redirect(session.url)
     except stripe.error.AuthenticationError:
         return redirect("/upgrade/?error=stripe_auth")
-    except Exception:
+    except Exception as e:
+        # Log to console in dev so we can see what failed; production safe.
+        try:
+            print(f"[stripe_create_session] {type(e).__name__}: {e}")
+        except Exception:
+            pass
         return redirect("/upgrade/?error=stripe_error")
 
 
 @login_required(login_url="/login/")
 def stripe_success(request):
-    import stripe
+    import stripe, datetime as _dt
     stripe.api_key = _platform_creds()["stripe_secret"]
 
     session_id  = request.GET.get("session_id", "")
@@ -1120,30 +1285,381 @@ def stripe_success(request):
     coupon_code = request.GET.get("coupon", "")
 
     try:
-        session = stripe.checkout.Session.retrieve(session_id)
-        if session.payment_status != "paid":
+        session = stripe.checkout.Session.retrieve(
+            session_id, expand=["subscription", "subscription.items.data.price"]
+        )
+        # For subscription mode, payment_status may stay "no_payment_required"
+        # immediately after checkout — the source of truth is session.status.
+        if session.status != "complete":
             return redirect("/upgrade/?error=payment_incomplete")
     except Exception:
         return redirect("/upgrade/?error=session_invalid")
 
+    # Pull recurring subscription identifiers from the session
+    sub_obj          = session.get("subscription")
+    customer_id      = session.get("customer") or ""
+    subscription_id  = sub_obj.id if hasattr(sub_obj, "id") else (sub_obj or "")
+    price_id         = ""
+    period_end_dt    = None
+
+    if hasattr(sub_obj, "items"):
+        try:
+            price_id = sub_obj["items"]["data"][0]["price"]["id"]
+        except Exception:
+            price_id = ""
+        try:
+            period_end_dt = _dt.datetime.fromtimestamp(
+                sub_obj["current_period_end"], tz=_dt.timezone.utc
+            )
+        except Exception:
+            period_end_dt = None
+
     price, label = _apply_coupon(plan_key, coupon_code)
-    _activate_subscription(request.user, plan_key, price, f"Stripe{label}")
+    _activate_subscription(
+        request.user, plan_key, price, f"Stripe{label}",
+        provider="stripe",
+        stripe_customer_id=customer_id,
+        stripe_subscription_id=subscription_id,
+        stripe_price_id=price_id,
+        current_period_end=period_end_dt,
+    )
     return redirect("/dashboard/")
 
 
 @csrf_exempt
 def stripe_webhook(request):
+    """
+    Stripe subscription lifecycle handler.
+
+    Events handled (the rest are acknowledged with 200 so Stripe doesn't retry):
+      - checkout.session.completed        → first activation (redundant w/ /success/)
+      - customer.subscription.created     → store sub_id + period_end
+      - customer.subscription.updated     → period renewal, plan change, cancel-at-period-end
+      - customer.subscription.deleted     → mark canceled, downgrade tenant
+      - invoice.paid                      → extend period_end, save invoice
+      - invoice.payment_failed            → mark past_due
+    """
+    import stripe, datetime as _dt
+    from superadmin.models import Subscription, Tenant, Invoice, TenantActivity
+
+    creds          = _platform_creds()
+    stripe.api_key = creds["stripe_secret"]
+    payload        = request.body
+    sig_header     = request.META.get("HTTP_STRIPE_SIGNATURE", "")
+    webhook_secret = creds["stripe_webhook"]
+
+    # Verify (skip strict check only if webhook secret not configured — useful
+    # for local dev when not yet wired through `stripe listen`).
+    try:
+        if webhook_secret:
+            event = stripe.Webhook.construct_event(payload, sig_header, webhook_secret)
+        else:
+            event = json.loads(payload.decode("utf-8") or "{}")
+    except Exception:
+        return JsonResponse({"error": "Invalid signature"}, status=400)
+
+    etype  = event.get("type", "")
+    data   = (event.get("data") or {}).get("object") or {}
+
+    def _utc(ts):
+        try:
+            return _dt.datetime.fromtimestamp(int(ts), tz=_dt.timezone.utc)
+        except Exception:
+            return None
+
+    def _find_sub_by_stripe_id(sub_id):
+        if not sub_id:
+            return None
+        return Subscription.objects.filter(stripe_subscription_id=sub_id).first()
+
+    def _find_sub_by_customer(cust_id):
+        if not cust_id:
+            return None
+        return Subscription.objects.filter(stripe_customer_id=cust_id).first()
+
+    try:
+        if etype == "checkout.session.completed":
+            # Redundant safety net — /success/ usually handles activation, but
+            # if the user closes the tab before redirect, this still runs.
+            user_id  = (data.get("metadata") or {}).get("django_user_id") or data.get("client_reference_id")
+            plan_key = (data.get("metadata") or {}).get("plan_key", "starter")
+            sub_id   = data.get("subscription") or ""
+            cust_id  = data.get("customer") or ""
+            if user_id:
+                from django.contrib.auth.models import User
+                user = User.objects.filter(id=int(user_id)).first()
+                if user:
+                    price, _ = _apply_coupon(plan_key, "")
+                    period_end_dt = None
+                    if sub_id:
+                        try:
+                            s = stripe.Subscription.retrieve(sub_id)
+                            period_end_dt = _utc(s.get("current_period_end"))
+                        except Exception:
+                            pass
+                    _activate_subscription(
+                        user, plan_key, price, "Stripe webhook",
+                        provider="stripe",
+                        stripe_customer_id=cust_id,
+                        stripe_subscription_id=sub_id,
+                        current_period_end=period_end_dt,
+                    )
+
+        elif etype in ("customer.subscription.created", "customer.subscription.updated"):
+            sub_id  = data.get("id") or ""
+            sub_row = _find_sub_by_stripe_id(sub_id) or _find_sub_by_customer(data.get("customer"))
+            if sub_row:
+                sub_row.provider = "stripe"
+                sub_row.stripe_subscription_id = sub_id
+                if data.get("customer"):
+                    sub_row.stripe_customer_id = data["customer"]
+                sub_row.current_period_end   = _utc(data.get("current_period_end")) or sub_row.current_period_end
+                sub_row.cancel_at_period_end = bool(data.get("cancel_at_period_end"))
+                stripe_status = data.get("status") or ""
+                if stripe_status:
+                    sub_row.status = stripe_status if stripe_status in dict(
+                        Subscription._meta.get_field("status").choices
+                    ) else sub_row.status
+                # Reflect cancellation in tenant if Stripe says canceled
+                if stripe_status == "canceled":
+                    sub_row.canceled_at = timezone.now()
+                if data.get("items") and data["items"].get("data"):
+                    try:
+                        sub_row.stripe_price_id = data["items"]["data"][0]["price"]["id"]
+                    except Exception:
+                        pass
+                if sub_row.current_period_end:
+                    sub_row.renews_on = sub_row.current_period_end.date()
+                sub_row.save()
+
+        elif etype == "customer.subscription.deleted":
+            sub_id  = data.get("id") or ""
+            sub_row = _find_sub_by_stripe_id(sub_id)
+            if sub_row:
+                sub_row.status               = "canceled"
+                sub_row.canceled_at          = timezone.now()
+                sub_row.cancel_at_period_end = False
+                sub_row.payment_status       = "failed"
+                sub_row.save()
+                # Downgrade tenant access
+                t = sub_row.tenant
+                t.status = "suspended"
+                t.save(update_fields=["status"])
+                TenantActivity.objects.create(
+                    tenant=t,
+                    action="Stripe subscription canceled — access suspended",
+                    action_type="plan",
+                )
+
+        elif etype == "invoice.paid":
+            cust_id = data.get("customer") or ""
+            sub_id  = data.get("subscription") or ""
+            sub_row = _find_sub_by_stripe_id(sub_id) or _find_sub_by_customer(cust_id)
+            if sub_row:
+                sub_row.payment_status = "paid"
+                sub_row.status         = "active"
+                # invoice line item gives the period_end of next billing cycle
+                try:
+                    line_pe = data["lines"]["data"][0]["period"]["end"]
+                    sub_row.current_period_end = _utc(line_pe) or sub_row.current_period_end
+                except Exception:
+                    pass
+                if sub_row.current_period_end:
+                    sub_row.renews_on = sub_row.current_period_end.date()
+                sub_row.last_invoice_id  = data.get("id") or ""
+                sub_row.last_invoice_url = data.get("hosted_invoice_url") or ""
+                sub_row.save()
+
+                # tenant access ON
+                t = sub_row.tenant
+                if t.status != "active":
+                    t.status = "active"
+                    t.save(update_fields=["status"])
+
+                # Invoice record
+                Invoice.objects.update_or_create(
+                    provider="stripe",
+                    external_id=data.get("id") or "",
+                    defaults={
+                        "tenant":       sub_row.tenant,
+                        "amount":       (data.get("amount_paid") or 0) / 100.0,
+                        "currency":     (data.get("currency") or "usd"),
+                        "status":       "paid",
+                        "period_start": _utc((data.get("lines") or {}).get("data", [{}])[0].get("period", {}).get("start")) if data.get("lines") else None,
+                        "period_end":   _utc((data.get("lines") or {}).get("data", [{}])[0].get("period", {}).get("end"))   if data.get("lines") else None,
+                        "invoice_url":  data.get("hosted_invoice_url") or "",
+                        "pdf_url":      data.get("invoice_pdf") or "",
+                        "description":  (data.get("lines") or {}).get("data", [{}])[0].get("description") or "Drop Sigma subscription",
+                    },
+                )
+
+        elif etype == "invoice.payment_failed":
+            cust_id = data.get("customer") or ""
+            sub_id  = data.get("subscription") or ""
+            sub_row = _find_sub_by_stripe_id(sub_id) or _find_sub_by_customer(cust_id)
+            if sub_row:
+                sub_row.payment_status = "failed"
+                sub_row.status         = "past_due"
+                sub_row.last_invoice_url = data.get("hosted_invoice_url") or sub_row.last_invoice_url
+                sub_row.save()
+                TenantActivity.objects.create(
+                    tenant=sub_row.tenant,
+                    action="Stripe payment failed — subscription past due",
+                    action_type="payment",
+                )
+
+    except Exception as e:
+        # Never 500 to Stripe — that triggers retries forever. Log and ack.
+        try:
+            print(f"[stripe_webhook] {etype} error: {type(e).__name__}: {e}")
+        except Exception:
+            pass
+
+    return JsonResponse({"received": True})
+
+
+# ── Tenant Billing Page + Stripe Customer Portal ─────────────────────────────
+
+@login_required(login_url="/login/")
+def billing_view(request):
+    """
+    Tenant-facing billing dashboard. Shows current plan, renewal date, last
+    payment status, and invoice history. Self-service actions (upgrade /
+    downgrade / cancel / update card / download invoice) all delegate to
+    Stripe's hosted Customer Portal via stripe_portal_session.
+    """
+    from superadmin.models import Tenant, Subscription, Invoice
+
+    user = request.user
+    if not user.is_staff:
+        return redirect("/login/")
+
+    tenant = getattr(user, "tenant_profile", None)
+    sub    = None
+    if tenant:
+        try:
+            sub = tenant.subscription
+        except Exception:
+            sub = None
+
+    plan_label = PLAN_NAMES.get(
+        {"basic": "starter", "pro": "growth", "enterprise": "scale"}.get(
+            (sub.plan if sub else "trial"), "trial"
+        ),
+        (sub.plan if sub else "Trial").title(),
+    )
+
+    invoices = []
+    if tenant:
+        invoices = list(Invoice.objects.filter(tenant=tenant).order_by("-created_at")[:24])
+
+    # Is this tenant on a real recurring subscription?
+    has_stripe_sub = bool(sub and sub.stripe_subscription_id)
+
+    creds = _platform_creds()
+    portal_enabled = bool(creds["stripe_secret"] and not creds["stripe_secret"].startswith("sk_test_your"))
+
+    ctx = {
+        "tenant":             tenant,
+        "sub":                sub,
+        "plan_label":         plan_label,
+        "invoices":           invoices,
+        "has_stripe_sub":     has_stripe_sub,
+        "portal_enabled":     portal_enabled,
+        "is_subscribed":      _is_subscribed(user),
+    }
+    return render(request, "billing.html", ctx)
+
+
+@login_required(login_url="/login/")
+@require_POST
+def stripe_portal_session(request):
+    """
+    Create a Stripe Customer Portal session and redirect there. The portal
+    lets the tenant upgrade, downgrade, cancel, update card, and download
+    invoices — all on Stripe's hosted, PCI-compliant UI.
+    """
     import stripe
     creds = _platform_creds()
     stripe.api_key = creds["stripe_secret"]
-    payload    = request.body
-    sig_header = request.META.get("HTTP_STRIPE_SIGNATURE", "")
+
+    if not stripe.api_key or stripe.api_key.startswith("sk_test_your"):
+        return redirect("/billing/?error=stripe_not_configured")
+
     try:
-        event = stripe.Webhook.construct_event(payload, sig_header, creds["stripe_webhook"])
+        sub = request.user.tenant_profile.subscription
+        customer_id = sub.stripe_customer_id
     except Exception:
-        return JsonResponse({"error": "Invalid signature"}, status=400)
-    # Handle completed sessions if needed (for reliability)
-    return JsonResponse({"received": True})
+        return redirect("/billing/?error=no_subscription")
+
+    if not customer_id:
+        return redirect("/billing/?error=no_customer")
+
+    host   = request.get_host()
+    scheme = "http" if host.split(":")[0] in ("localhost", "127.0.0.1") else "https"
+    base   = f"{scheme}://{host}"
+
+    try:
+        portal = stripe.billing_portal.Session.create(
+            customer=customer_id,
+            return_url=f"{base}/billing/",
+        )
+        return redirect(portal.url)
+    except Exception as e:
+        try:
+            print(f"[stripe_portal_session] {type(e).__name__}: {e}")
+        except Exception:
+            pass
+        return redirect("/billing/?error=portal_failed")
+
+
+@login_required(login_url="/login/")
+@require_POST
+def stripe_cancel_subscription(request):
+    """
+    One-click cancel — sets cancel_at_period_end=true so the tenant keeps
+    access until the current period ends, then auto-downgrades via webhook.
+    """
+    import stripe
+    creds = _platform_creds()
+    stripe.api_key = creds["stripe_secret"]
+
+    try:
+        sub_row = request.user.tenant_profile.subscription
+        if not sub_row.stripe_subscription_id:
+            return JsonResponse({"ok": False, "error": "No active subscription."}, status=400)
+        stripe.Subscription.modify(
+            sub_row.stripe_subscription_id,
+            cancel_at_period_end=True,
+        )
+        sub_row.cancel_at_period_end = True
+        sub_row.save(update_fields=["cancel_at_period_end"])
+        return JsonResponse({"ok": True})
+    except Exception as e:
+        return JsonResponse({"ok": False, "error": str(e)}, status=500)
+
+
+@login_required(login_url="/login/")
+@require_POST
+def stripe_resume_subscription(request):
+    """Undo a pending cancel — keeps the subscription rolling."""
+    import stripe
+    creds = _platform_creds()
+    stripe.api_key = creds["stripe_secret"]
+
+    try:
+        sub_row = request.user.tenant_profile.subscription
+        if not sub_row.stripe_subscription_id:
+            return JsonResponse({"ok": False, "error": "No active subscription."}, status=400)
+        stripe.Subscription.modify(
+            sub_row.stripe_subscription_id,
+            cancel_at_period_end=False,
+        )
+        sub_row.cancel_at_period_end = False
+        sub_row.save(update_fields=["cancel_at_period_end"])
+        return JsonResponse({"ok": True})
+    except Exception as e:
+        return JsonResponse({"ok": False, "error": str(e)}, status=500)
 
 
 # ── PayPal ────────────────────────────────────────────────────────────────────

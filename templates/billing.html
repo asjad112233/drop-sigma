@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Billing & Subscription — Drop Sigma</title>
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
+<link rel="apple-touch-icon" href="/static/favicon.svg" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;}
+body{font-family:'Inter',system-ui,sans-serif;background:#f4f6fb;color:#0f172a;-webkit-font-smoothing:antialiased;}
+
+/* Topbar */
+.topbar{height:54px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;border-bottom:1px solid #e8eaf2;background:#fff;position:sticky;top:0;z-index:10;}
+.back-btn{display:inline-flex;align-items:center;gap:7px;color:#64748b;text-decoration:none;font-size:13px;font-weight:600;padding:7px 13px;border-radius:9px;border:1px solid #e2e8f0;transition:all .15s;}
+.back-btn:hover{color:#0f172a;background:#f8fafc;border-color:#cbd5e1;}
+.topbar-logo{display:flex;align-items:center;gap:9px;text-decoration:none;}
+.logo-mark{width:30px;height:30px;background:linear-gradient(135deg,#6366f1,#a855f7);border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;color:#fff;}
+.logo-text{font-size:14px;font-weight:700;color:#0f172a;}
+
+/* Page */
+.page{max-width:980px;margin:0 auto;padding:32px 24px 80px;}
+h1{font-size:22px;font-weight:900;color:#0f172a;margin-bottom:4px;}
+.subtitle{font-size:14px;color:#64748b;margin-bottom:28px;}
+
+/* Cards */
+.card{background:#fff;border:1px solid #e8eaf2;border-radius:16px;padding:24px;margin-bottom:16px;box-shadow:0 1px 4px rgba(15,23,42,.04);}
+.card-title{font-size:11px;font-weight:800;color:#6366f1;text-transform:uppercase;letter-spacing:1.3px;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+
+/* Plan summary */
+.plan-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;margin-bottom:18px;}
+.plan-cell{padding:14px;background:#f8fafc;border:1px solid #eef1f6;border-radius:11px;}
+.plan-cell .lbl{font-size:10px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px;}
+.plan-cell .val{font-size:18px;font-weight:800;color:#0f172a;}
+.plan-cell .val.small{font-size:14px;font-weight:700;}
+.plan-cell .sub{font-size:11.5px;color:#64748b;margin-top:3px;}
+
+/* Status pill */
+.pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700;}
+.pill-active{background:#dcfce7;color:#15803d;}
+.pill-trialing{background:#fef3c7;color:#92400e;}
+.pill-past_due{background:#fee2e2;color:#b91c1c;}
+.pill-canceled{background:#f1f5f9;color:#64748b;}
+.pill-incomplete{background:#fee2e2;color:#b91c1c;}
+.pill-unpaid{background:#fee2e2;color:#b91c1c;}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:7px;padding:10px 16px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;border:none;text-decoration:none;transition:all .15s;}
+.btn-primary{background:linear-gradient(135deg,#6366f1,#7c3aed);color:#fff;}
+.btn-primary:hover{filter:brightness(1.06);box-shadow:0 6px 18px rgba(99,102,241,.32);}
+.btn-secondary{background:#f1f5f9;color:#0f172a;border:1px solid #e2e8f0;}
+.btn-secondary:hover{background:#e2e8f0;}
+.btn-danger{background:#fff;color:#b91c1c;border:1px solid #fecaca;}
+.btn-danger:hover{background:#fef2f2;border-color:#fca5a5;}
+.btn-row{display:flex;gap:10px;flex-wrap:wrap;}
+
+/* Cancel notice banner */
+.notice{background:#fff7ed;border:1px solid #fdba74;color:#9a3412;padding:14px 16px;border-radius:11px;font-size:13px;font-weight:600;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;gap:14px;}
+.notice .msg{flex:1;}
+.notice .resume-link{color:#9a3412;text-decoration:underline;cursor:pointer;font-weight:700;font-size:13px;background:none;border:none;padding:0;}
+
+/* Error/success flashes */
+.flash{padding:11px 14px;border-radius:10px;font-size:13px;font-weight:600;margin-bottom:14px;}
+.flash-err{background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;}
+.flash-ok{background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;}
+
+/* Invoice table */
+.inv-table{width:100%;border-collapse:collapse;}
+.inv-table th{font-size:10.5px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.07em;text-align:left;padding:10px 14px;border-bottom:1px solid #eef1f6;background:#f8fafc;}
+.inv-table td{font-size:13px;color:#0f172a;padding:14px;border-bottom:1px solid #f1f5f9;}
+.inv-table tr:last-child td{border-bottom:none;}
+.inv-amount{font-weight:700;}
+.inv-link{color:#6366f1;text-decoration:none;font-weight:600;}
+.inv-link:hover{text-decoration:underline;}
+
+.empty{padding:40px 20px;text-align:center;color:#94a3b8;font-size:13px;}
+.empty .emoji{font-size:32px;display:block;margin-bottom:10px;opacity:.6;}
+
+/* No-sub call-to-action */
+.cta{background:linear-gradient(135deg,#eef2ff,#f5f3ff);border:1px solid #e0e7ff;border-radius:16px;padding:28px;text-align:center;margin-bottom:16px;}
+.cta h2{font-size:20px;font-weight:900;color:#312e81;margin-bottom:8px;}
+.cta p{font-size:14px;color:#4338ca;margin-bottom:18px;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="/dashboard/" class="back-btn">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+    Back to Dashboard
+  </a>
+  <a href="/" class="topbar-logo">
+    <div class="logo-mark">DS</div>
+    <span class="logo-text">Drop Sigma</span>
+  </a>
+</div>
+
+<div class="page">
+  <h1>Billing & Subscription</h1>
+  <p class="subtitle">Manage your plan, payment method, and download invoices.</p>
+
+  {% if request.GET.error %}
+    <div class="flash flash-err">
+      {% if request.GET.error == 'stripe_not_configured' %}Stripe is not yet configured on this account.
+      {% elif request.GET.error == 'no_subscription' %}You don't have an active subscription yet.
+      {% elif request.GET.error == 'no_customer' %}No Stripe customer linked. Please subscribe first.
+      {% elif request.GET.error == 'portal_failed' %}Could not open Stripe portal. Please try again.
+      {% else %}Something went wrong: {{ request.GET.error }}{% endif %}
+    </div>
+  {% endif %}
+
+  {% if sub and sub.cancel_at_period_end %}
+    <div class="notice">
+      <div class="msg">
+        ⚠ Your subscription will end on
+        <strong>{% if sub.current_period_end %}{{ sub.current_period_end|date:"F j, Y" }}{% else %}your next renewal date{% endif %}</strong>.
+        You'll keep full access until then.
+      </div>
+      <button class="resume-link" onclick="resumeSubscription()">Resume subscription</button>
+    </div>
+  {% endif %}
+
+  {% if has_stripe_sub %}
+    <!-- Plan summary -->
+    <div class="card">
+      <div class="card-title">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/></svg>
+        Current Plan
+      </div>
+
+      <div class="plan-row">
+        <div class="plan-cell">
+          <div class="lbl">Plan</div>
+          <div class="val">{{ plan_label }}</div>
+          <div class="sub">${{ sub.price }}/month</div>
+        </div>
+        <div class="plan-cell">
+          <div class="lbl">Status</div>
+          <div class="val small"><span class="pill pill-{{ sub.status|default:'active' }}">{{ sub.get_status_display|default:"Active" }}</span></div>
+          <div class="sub">{% if sub.provider == 'stripe' %}Stripe{% elif sub.provider == 'paypal' %}PayPal{% else %}—{% endif %}</div>
+        </div>
+        <div class="plan-cell">
+          <div class="lbl">Next Renewal</div>
+          <div class="val small">{% if sub.current_period_end %}{{ sub.current_period_end|date:"M j, Y" }}{% elif sub.renews_on %}{{ sub.renews_on|date:"M j, Y" }}{% else %}—{% endif %}</div>
+          <div class="sub">{% if sub.cancel_at_period_end %}Will not renew{% else %}Auto-renews{% endif %}</div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <form method="POST" action="/billing/portal/" style="display:inline;">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-primary">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+            Manage Subscription
+          </button>
+        </form>
+        {% if not sub.cancel_at_period_end %}
+          <button class="btn btn-danger" onclick="cancelSubscription()">Cancel Subscription</button>
+        {% endif %}
+      </div>
+
+      <p style="font-size:12px;color:#94a3b8;margin-top:14px;line-height:1.55;">
+        Manage Subscription opens Stripe's secure billing portal where you can upgrade or downgrade your plan,
+        update your payment method, and download past invoices.
+      </p>
+    </div>
+  {% else %}
+    <!-- Not yet subscribed -->
+    <div class="cta">
+      <h2>You're not on a recurring plan yet</h2>
+      <p>Upgrade to a monthly subscription to keep your dashboard active.</p>
+      <a href="/upgrade/" class="btn btn-primary">Choose a Plan</a>
+    </div>
+  {% endif %}
+
+  <!-- Invoice history -->
+  <div class="card">
+    <div class="card-title">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="14" x2="15" y2="14"/><line x1="9" y1="18" x2="13" y2="18"/></svg>
+      Invoice History
+    </div>
+
+    {% if invoices %}
+      <table class="inv-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Description</th>
+            <th>Amount</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for inv in invoices %}
+            <tr>
+              <td>{{ inv.created_at|date:"M j, Y" }}</td>
+              <td>{{ inv.description|default:"Drop Sigma subscription" }}</td>
+              <td class="inv-amount">${{ inv.amount }}</td>
+              <td><span class="pill pill-{% if inv.status == 'paid' %}active{% elif inv.status == 'failed' %}past_due{% else %}canceled{% endif %}">{{ inv.get_status_display }}</span></td>
+              <td>
+                {% if inv.pdf_url %}<a class="inv-link" href="{{ inv.pdf_url }}" target="_blank" rel="noopener">Download PDF</a>{% elif inv.invoice_url %}<a class="inv-link" href="{{ inv.invoice_url }}" target="_blank" rel="noopener">View</a>{% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <div class="empty">
+        <span class="emoji">📭</span>
+        No invoices yet. They'll appear here after your first payment.
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+function getCsrf() {
+  const m = document.cookie.match(/csrftoken=([^;]+)/);
+  if (m) return m[1];
+  const el = document.querySelector('[name=csrfmiddlewaretoken]');
+  return el ? el.value : '';
+}
+
+async function cancelSubscription() {
+  if (!confirm("Cancel your subscription? You'll keep access until the end of the current billing period.")) return;
+  try {
+    const res = await fetch('/billing/cancel/', {
+      method: 'POST',
+      headers: {'X-CSRFToken': getCsrf(), 'Content-Type': 'application/json'},
+    });
+    const data = await res.json();
+    if (data.ok) {
+      window.location.reload();
+    } else {
+      alert('Could not cancel: ' + (data.error || 'unknown error'));
+    }
+  } catch (e) {
+    alert('Network error: ' + e.message);
+  }
+}
+
+async function resumeSubscription() {
+  try {
+    const res = await fetch('/billing/resume/', {
+      method: 'POST',
+      headers: {'X-CSRFToken': getCsrf(), 'Content-Type': 'application/json'},
+    });
+    const data = await res.json();
+    if (data.ok) {
+      window.location.reload();
+    } else {
+      alert('Could not resume: ' + (data.error || 'unknown error'));
+    }
+  } catch (e) {
+    alert('Network error: ' + e.message);
+  }
+}
+</script>
+
+</body>
+</html>

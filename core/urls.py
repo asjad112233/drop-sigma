@@ -58,6 +58,12 @@ urlpatterns = [
     path("payment/paypal/create-order/",  views.paypal_create_order,  name="paypal_create"),
     path("payment/paypal/capture-order/", views.paypal_capture_order, name="paypal_capture"),
 
+    # Tenant billing & self-service (Stripe Customer Portal)
+    path("billing/",         views.billing_view,                name="billing"),
+    path("billing/portal/",  views.stripe_portal_session,       name="stripe_portal"),
+    path("billing/cancel/",  views.stripe_cancel_subscription,  name="stripe_cancel"),
+    path("billing/resume/",  views.stripe_resume_subscription,  name="stripe_resume"),
+
     # Apps
     path("stores/", include("stores.urls")),
     path("orders/", include("orders.urls")),

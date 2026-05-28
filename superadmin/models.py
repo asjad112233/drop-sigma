@@ -60,6 +60,22 @@ class Tenant(models.Model):
         return f"{self.name} ({self.plan})"
 
 
+SUBSCRIPTION_STATUS_CHOICES = [
+    ("trialing",      "Trialing"),
+    ("active",        "Active"),
+    ("past_due",      "Past Due"),
+    ("canceled",      "Canceled"),
+    ("incomplete",    "Incomplete"),
+    ("unpaid",        "Unpaid"),
+]
+
+PROVIDER_CHOICES = [
+    ("none",   "None / Manual"),
+    ("stripe", "Stripe"),
+    ("paypal", "PayPal"),
+]
+
+
 class Subscription(models.Model):
     tenant         = models.OneToOneField(Tenant, on_delete=models.CASCADE, related_name="subscription")
     plan           = models.CharField(max_length=20, choices=PLAN_CHOICES, default="trial")
@@ -70,8 +86,62 @@ class Subscription(models.Model):
     created_at     = models.DateTimeField(auto_now_add=True)
     updated_at     = models.DateTimeField(auto_now=True)
 
+    # ─── Recurring billing fields ────────────────────────────────────────
+    provider               = models.CharField(max_length=10, choices=PROVIDER_CHOICES, default="none")
+    status                 = models.CharField(max_length=20, choices=SUBSCRIPTION_STATUS_CHOICES, default="active")
+    # Stripe identifiers (allow per-tenant Customer + Subscription tracking)
+    stripe_customer_id     = models.CharField(max_length=120, blank=True, default="")
+    stripe_subscription_id = models.CharField(max_length=120, blank=True, default="")
+    stripe_price_id        = models.CharField(max_length=120, blank=True, default="")
+    # PayPal identifiers (Phase 2 — PayPal recurring)
+    paypal_subscription_id = models.CharField(max_length=120, blank=True, default="")
+    paypal_plan_id         = models.CharField(max_length=120, blank=True, default="")
+    # Period tracking — current_period_end drives access enforcement
+    current_period_end     = models.DateTimeField(null=True, blank=True)
+    cancel_at_period_end   = models.BooleanField(default=False)
+    canceled_at            = models.DateTimeField(null=True, blank=True)
+    last_invoice_id        = models.CharField(max_length=120, blank=True, default="")
+    last_invoice_url       = models.URLField(blank=True, default="")
+
+    @property
+    def is_recurring(self):
+        return self.provider in ("stripe", "paypal") and bool(
+            self.stripe_subscription_id or self.paypal_subscription_id
+        )
+
     def __str__(self):
         return f"{self.tenant} — {self.plan}"
+
+
+class Invoice(models.Model):
+    """Subscription invoice history. Populated by webhook (Stripe / PayPal)."""
+    INVOICE_STATUS_CHOICES = [
+        ("draft",  "Draft"),
+        ("open",   "Open"),
+        ("paid",   "Paid"),
+        ("void",   "Void"),
+        ("failed", "Failed"),
+    ]
+
+    tenant       = models.ForeignKey(Tenant, on_delete=models.CASCADE, related_name="invoices")
+    provider     = models.CharField(max_length=10, choices=PROVIDER_CHOICES, default="stripe")
+    external_id  = models.CharField(max_length=120, db_index=True)
+    amount       = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    currency     = models.CharField(max_length=10, default="usd")
+    status       = models.CharField(max_length=20, choices=INVOICE_STATUS_CHOICES, default="paid")
+    period_start = models.DateTimeField(null=True, blank=True)
+    period_end   = models.DateTimeField(null=True, blank=True)
+    invoice_url  = models.URLField(blank=True, default="")
+    pdf_url      = models.URLField(blank=True, default="")
+    description  = models.CharField(max_length=255, blank=True, default="")
+    created_at   = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        unique_together = [("provider", "external_id")]
+
+    def __str__(self):
+        return f"{self.tenant.name} — ${self.amount} ({self.status})"
 
 
 class TenantActivity(models.Model):
