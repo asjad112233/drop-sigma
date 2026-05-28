@@ -20195,18 +20195,56 @@ function setThreadReadState(contact, isUnread){
   renderEmails();
 }
 
-function markThreadAsRead(contact){
+async function markThreadAsRead(contact){
   if(!contact) contact = currentThreadContact;
   if(!contact) return;
-  setThreadReadState(contact, false);
   closeThreadMenus();
+  // Optimistic UI: instant local feedback via localStorage override
+  setThreadReadState(contact, false);
+  // Persist to server — without this the Unread/All folder filters (which
+  // read `t.unread_count` straight from the API) never reflect the change,
+  // so the row vanishes from "Unread" only after a hard reload.
+  await _persistThreadReadState(contact, 'read');
 }
 
-function markThreadAsUnread(contact){
+async function markThreadAsUnread(contact){
   if(!contact) contact = currentThreadContact;
   if(!contact) return;
-  setThreadReadState(contact, true);
   closeThreadMenus();
+  // Optimistic UI: instant local feedback via localStorage override
+  setThreadReadState(contact, true);
+  // Persist to server so the Unread folder *immediately* surfaces this thread.
+  await _persistThreadReadState(contact, 'unread');
+}
+
+/* Server-side flip for a single thread's read/unread state, then refresh
+   the thread list + folder badges so the change shows up in folder filters
+   that read straight from the API (Unread / All / per-folder counts). */
+async function _persistThreadReadState(contact, state){
+  try{
+    const r = await fetch('/emails/api/threads/bulk-mark-read/', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json', 'X-CSRFToken': getCSRFToken()},
+      credentials: 'same-origin',
+      body: JSON.stringify({
+        store_id: selectedStoreId,
+        contacts: [contact],
+        state: state,
+      }),
+    });
+    if(!r.ok){
+      console.warn('[mark-' + state + '] server returned ' + r.status + ' for', contact);
+      return;
+    }
+    // Refresh thread list so server-side unread_count reflects the new state
+    if(typeof loadEmails === 'function'){
+      await loadEmails({silent:true, preserveSelection:true});
+    }
+    // Refresh folder badge counts
+    try{ if(typeof loadEmailThreadStats === 'function') loadEmailThreadStats(); }catch(_){}
+  }catch(e){
+    console.warn('[mark-' + state + '] network error:', e);
+  }
 }
 
 async function deleteThread(contact){
