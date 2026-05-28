@@ -858,9 +858,10 @@ def upgrade_view(request):
         return redirect("/login/")
     if _is_subscribed(request.user):
         return redirect("/dashboard/")
+    creds = _platform_creds()
     return render(request, "upgrade.html", {
         "plans":            PLANS,
-        "paypal_client_id": settings.PAYPAL_CLIENT_ID,
+        "paypal_client_id": creds["paypal_client_id"],
     })
 
 
@@ -874,14 +875,21 @@ def checkout_view(request):
     plan_key = request.GET.get("plan", "starter")
     plan     = next((p for p in PLANS if p["key"] == plan_key), PLANS[0])
 
-    stripe_ok  = bool(settings.STRIPE_SECRET_KEY and not settings.STRIPE_SECRET_KEY.startswith("sk_test_your"))
-    paypal_ok  = bool(settings.PAYPAL_CLIENT_ID  and not settings.PAYPAL_CLIENT_ID.startswith("your_paypal"))
+    # Resolve from DB-saved superadmin keys first, env-var fallback.
+    # A button is rendered ONLY if real credentials exist (not the placeholder
+    # "sk_test_your..." / "your_paypal..." defaults from settings.py).
+    creds = _platform_creds()
+    stripe_secret = creds["stripe_secret"]
+    paypal_cid    = creds["paypal_client_id"]
+
+    stripe_ok = bool(stripe_secret and not stripe_secret.startswith("sk_test_your"))
+    paypal_ok = bool(paypal_cid    and not paypal_cid.startswith("your_paypal"))
 
     return render(request, "checkout.html", {
         "plan":             plan,
         "stripe_ok":        stripe_ok,
         "paypal_ok":        paypal_ok,
-        "paypal_client_id": settings.PAYPAL_CLIENT_ID if paypal_ok else "",
+        "paypal_client_id": paypal_cid if paypal_ok else "",
         "user":             request.user,
     })
 
@@ -1029,15 +1037,45 @@ def _apply_coupon(plan_key, coupon_code):
 
 # ── Stripe ────────────────────────────────────────────────────────────────────
 
+def _platform_creds():
+    """
+    Live credential resolver. Reads superadmin-saved keys from the
+    PlatformPaymentSettings singleton when set, otherwise falls back to
+    env-var values from settings.py — keeps old behaviour intact while
+    letting the superadmin override per provider from the UI.
+    """
+    try:
+        from superadmin.models import PlatformPaymentSettings
+        row = PlatformPaymentSettings.load()
+    except Exception:
+        row = None
+
+    def pick(db_val, env_val):
+        return db_val if (row and db_val) else env_val
+
+    return {
+        # Stripe — only consider DB values if Stripe is enabled in the panel
+        "stripe_secret":       pick(row.stripe_secret_key if row and row.stripe_enabled else "", settings.STRIPE_SECRET_KEY),
+        "stripe_publishable":  pick(row.stripe_publishable_key if row and row.stripe_enabled else "", settings.STRIPE_PUBLISHABLE_KEY),
+        "stripe_webhook":      pick(row.stripe_webhook_secret if row and row.stripe_enabled else "", settings.STRIPE_WEBHOOK_SECRET),
+        # PayPal — same gating on paypal_enabled
+        "paypal_client_id":    pick(row.paypal_client_id if row and row.paypal_enabled else "", settings.PAYPAL_CLIENT_ID),
+        "paypal_client_secret":pick(row.paypal_client_secret if row and row.paypal_enabled else "", settings.PAYPAL_CLIENT_SECRET),
+        "paypal_mode":         (row.paypal_mode if row and row.paypal_enabled and row.paypal_client_id else settings.PAYPAL_MODE),
+    }
+
+
 @login_required(login_url="/login/")
 @require_POST
 def stripe_create_session(request):
     import stripe
+    creds = _platform_creds()
+    secret = creds["stripe_secret"]
 
-    if not settings.STRIPE_SECRET_KEY or settings.STRIPE_SECRET_KEY.startswith("sk_test_your"):
+    if not secret or secret.startswith("sk_test_your"):
         return redirect("/upgrade/?error=stripe_not_configured")
 
-    stripe.api_key = settings.STRIPE_SECRET_KEY
+    stripe.api_key = secret
 
     plan_key    = request.POST.get("plan", "starter")
     coupon_code = request.POST.get("coupon_code", "")
@@ -1075,7 +1113,7 @@ def stripe_create_session(request):
 @login_required(login_url="/login/")
 def stripe_success(request):
     import stripe
-    stripe.api_key = settings.STRIPE_SECRET_KEY
+    stripe.api_key = _platform_creds()["stripe_secret"]
 
     session_id  = request.GET.get("session_id", "")
     plan_key    = request.GET.get("plan", "starter")
@@ -1096,11 +1134,12 @@ def stripe_success(request):
 @csrf_exempt
 def stripe_webhook(request):
     import stripe
-    stripe.api_key = settings.STRIPE_SECRET_KEY
+    creds = _platform_creds()
+    stripe.api_key = creds["stripe_secret"]
     payload    = request.body
     sig_header = request.META.get("HTTP_STRIPE_SIGNATURE", "")
     try:
-        event = stripe.Webhook.construct_event(payload, sig_header, settings.STRIPE_WEBHOOK_SECRET)
+        event = stripe.Webhook.construct_event(payload, sig_header, creds["stripe_webhook"])
     except Exception:
         return JsonResponse({"error": "Invalid signature"}, status=400)
     # Handle completed sessions if needed (for reliability)
@@ -1118,13 +1157,14 @@ def paypal_create_order(request):
     coupon_code = data.get("coupon_code", "")
     price, _    = _apply_coupon(plan_key, coupon_code)
 
-    # Get PayPal access token
-    mode     = settings.PAYPAL_MODE
+    # Get PayPal access token (DB-saved credentials override env vars)
+    creds    = _platform_creds()
+    mode     = creds["paypal_mode"]
     base_url = "https://api-m.sandbox.paypal.com" if mode == "sandbox" else "https://api-m.paypal.com"
 
     token_res = _req.post(
         f"{base_url}/v1/oauth2/token",
-        auth=(settings.PAYPAL_CLIENT_ID, settings.PAYPAL_CLIENT_SECRET),
+        auth=(creds["paypal_client_id"], creds["paypal_client_secret"]),
         data={"grant_type": "client_credentials"},
         timeout=15,
     )
@@ -1158,12 +1198,13 @@ def paypal_capture_order(request):
     plan_key    = data.get("plan", "starter")
     coupon_code = data.get("coupon_code", "")
 
-    mode     = settings.PAYPAL_MODE
+    creds    = _platform_creds()
+    mode     = creds["paypal_mode"]
     base_url = "https://api-m.sandbox.paypal.com" if mode == "sandbox" else "https://api-m.paypal.com"
 
     token_res = _req.post(
         f"{base_url}/v1/oauth2/token",
-        auth=(settings.PAYPAL_CLIENT_ID, settings.PAYPAL_CLIENT_SECRET),
+        auth=(creds["paypal_client_id"], creds["paypal_client_secret"]),
         data={"grant_type": "client_credentials"},
         timeout=15,
     )

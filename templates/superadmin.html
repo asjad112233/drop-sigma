@@ -306,6 +306,7 @@ a{color:inherit;text-decoration:none;}
     <button class="nav-item" data-page="coupons"><span class="ico">🏷</span> Coupons</button>
     <button class="nav-item" data-page="locations"><span class="ico">📍</span> Locations</button>
     <button class="nav-item" data-page="diagnostics"><span class="ico">🩺</span> Diagnostics</button>
+    <button class="nav-item" data-page="gateways"><span class="ico">💳</span> Payment Gateways</button>
 
     <div class="me-card">
       <div class="who">Owner Mode</div>
@@ -557,6 +558,7 @@ function setTitle(page){
     plans:     ['Plans',         'Super Admin · Manage'],
     locations: ['Locations',     'Super Admin · IP & Location Intelligence'],
     diagnostics: ['Diagnostics', 'Super Admin · System Health'],
+    gateways:  ['Payment Gateways', 'Super Admin · Charge Tenants via Stripe / PayPal'],
   };
   const [t,c] = map[page] || ['Super Admin',''];
   document.getElementById('pageTitle').textContent  = t;
@@ -603,6 +605,7 @@ async function renderPage(){
     case 'coupons':   await renderCoupons(c); break;
     case 'locations': await renderLocations(c); break;
     case 'diagnostics': await renderDiagnostics(c); break;
+    case 'gateways':  await renderGateways(c); break;
     default: c.innerHTML = '<div class="empty"><p>Page not found.</p></div>';
   }
 }
@@ -2292,6 +2295,332 @@ async function tfLoadDevices(){
 /* ═══════════════════════════════════════════════════════
    DIAGNOSTICS — System Health Dashboard
 ═══════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════
+   PAYMENT GATEWAYS — Stripe + PayPal (platform-owner keys)
+═══════════════════════════════════════════════════════ */
+let GATEWAY_DATA = null;
+
+async function renderGateways(c){
+  c.innerHTML = `
+    <div class="gw-wrap" style="display:flex;flex-direction:column;gap:18px;max-width:980px;">
+      <div class="gw-banner" style="background:linear-gradient(135deg,rgba(99,102,241,.10),rgba(168,85,247,.10));border:1px solid rgba(99,102,241,.25);border-radius:14px;padding:18px 22px;">
+        <div style="font-size:15px;font-weight:800;color:#0f172a;margin-bottom:4px;">Charge your tenants via your own payment accounts</div>
+        <div style="font-size:13px;color:#475569;line-height:1.55;">
+          Connect <b>your own Stripe and PayPal</b> here. Every tenant subscription
+          payment will go to <b>these accounts</b>. Credentials are stored in your
+          local database — leave a section empty to fall back to environment
+          variables.
+        </div>
+      </div>
+
+      <div id="gwLoading" class="empty"><div class="ic">⏳</div><p>Loading payment gateway settings…</p></div>
+      <div id="gwBody" style="display:none;flex-direction:column;gap:18px;"></div>
+    </div>
+  `;
+
+  try {
+    const r = await fetch('/superadmin/api/payment-gateways/', {headers:{'X-Requested-With':'XMLHttpRequest'}});
+    GATEWAY_DATA = await r.json();
+    document.getElementById('gwLoading').style.display = 'none';
+    const body = document.getElementById('gwBody');
+    body.style.display = 'flex';
+    body.innerHTML = gwStripeCard(GATEWAY_DATA.stripe) + gwPaypalCard(GATEWAY_DATA.paypal);
+  } catch(e){
+    document.getElementById('gwLoading').innerHTML = '<div class="ic">❌</div><p>Failed to load gateways: ' + e.message + '</p>';
+  }
+}
+
+function gwCardShell(provider, brand, brandGrad, title, body){
+  return `
+    <div class="gw-card" data-provider="${provider}" style="background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:16px;padding:0;overflow:hidden;box-shadow:0 1px 2px rgba(15,23,42,.06),0 12px 32px -10px rgba(15,23,42,.10);">
+      <div class="gw-card-hdr" style="padding:18px 22px;border-bottom:1px solid rgba(15,23,42,.06);display:flex;align-items:center;gap:14px;background:${brandGrad};color:#fff;">
+        <div style="font-size:22px;font-weight:800;">${brand}</div>
+        <div style="flex:1;">
+          <div style="font-size:15px;font-weight:800;letter-spacing:-.2px;">${title}</div>
+        </div>
+        ${gwStatusPill(provider)}
+      </div>
+      <div class="gw-card-body" style="padding:22px;">${body}</div>
+    </div>
+  `;
+}
+
+function gwStatusPill(provider){
+  const d = GATEWAY_DATA[provider];
+  // Compact pill — full account info banner is rendered separately
+  if (d.last_test_ok)                 return '<span style="padding:5px 12px;border-radius:100px;background:rgba(16,185,129,.95);color:#fff;font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;">● Connected</span>';
+  if (d.last_test_message)            return '<span style="padding:5px 12px;border-radius:100px;background:rgba(220,38,38,.95);color:#fff;font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;">⚠ Error</span>';
+  return '<span style="padding:5px 12px;border-radius:100px;background:rgba(255,255,255,.25);color:#fff;font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;">○ Not Connected</span>';
+}
+
+/* WordPress-plugin-style connection-status banner. Shows the connected
+   account email / business name prominently, or a clear error. */
+function gwStatusBanner(provider){
+  const d = GATEWAY_DATA[provider];
+  const tested = d.last_tested_at ? new Date(d.last_tested_at).toLocaleString() : '';
+
+  // Case 1 — Fully connected, account info available
+  if (d.last_test_ok && d.account_label){
+    // For PayPal: the API never exposes merchant email via client-credentials,
+    // so prefer the superadmin-entered email when it exists.
+    let primary, secondary;
+    if (provider === 'paypal' && d.merchant_email){
+      primary = d.merchant_email;
+      secondary = d.account_label;
+    } else {
+      const parts = d.account_label.split(' · ');
+      primary = parts[0] || '';
+      secondary = parts.slice(1).join(' · ');
+    }
+    return `
+      <div style="background:linear-gradient(135deg,rgba(16,185,129,.10),rgba(16,185,129,.05));border:1.5px solid rgba(16,185,129,.30);border-radius:12px;padding:14px 18px;margin-bottom:18px;display:flex;align-items:center;gap:14px;">
+        <div style="width:42px;height:42px;border-radius:50%;background:#10b981;color:#fff;display:grid;place-items:center;font-size:20px;font-weight:900;flex-shrink:0;">✓</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:11px;font-weight:800;color:#047857;letter-spacing:1.2px;text-transform:uppercase;font-family:'Space Grotesk',sans-serif;margin-bottom:3px;">Connected Account</div>
+          <div style="font-size:15px;font-weight:800;color:#0f172a;letter-spacing:-.2px;word-break:break-all;">${primary}</div>
+          ${secondary ? `<div style="font-size:12px;color:#475569;margin-top:2px;font-family:'Space Grotesk',sans-serif;">${secondary}</div>` : ''}
+          ${tested ? `<div style="font-size:10.5px;color:#64748b;margin-top:4px;font-family:'Space Grotesk',sans-serif;">Verified ${tested}</div>` : ''}
+        </div>
+      </div>
+    `;
+  }
+
+  // Case 2 — Error / rejection
+  if (d.last_test_message && !d.last_test_ok){
+    return `
+      <div style="background:linear-gradient(135deg,rgba(220,38,38,.08),rgba(220,38,38,.04));border:1.5px solid rgba(220,38,38,.30);border-radius:12px;padding:14px 18px;margin-bottom:18px;display:flex;align-items:flex-start;gap:14px;">
+        <div style="width:42px;height:42px;border-radius:50%;background:#dc2626;color:#fff;display:grid;place-items:center;font-size:22px;font-weight:900;flex-shrink:0;">!</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:11px;font-weight:800;color:#b91c1c;letter-spacing:1.2px;text-transform:uppercase;font-family:'Space Grotesk',sans-serif;margin-bottom:3px;">Connection Failed</div>
+          <div style="font-size:13.5px;font-weight:600;color:#0f172a;line-height:1.55;">${d.last_test_message}</div>
+          ${tested ? `<div style="font-size:10.5px;color:#64748b;margin-top:6px;font-family:'Space Grotesk',sans-serif;">Checked ${tested}</div>` : ''}
+        </div>
+      </div>
+    `;
+  }
+
+  // Case 3 — Not yet attempted
+  return `
+    <div style="background:#f8fafc;border:1.5px dashed rgba(15,23,42,.18);border-radius:12px;padding:14px 18px;margin-bottom:18px;display:flex;align-items:center;gap:14px;">
+      <div style="width:42px;height:42px;border-radius:50%;background:#cbd5e1;color:#475569;display:grid;place-items:center;font-size:20px;font-weight:900;flex-shrink:0;">?</div>
+      <div style="flex:1;">
+        <div style="font-size:13.5px;font-weight:700;color:#0f172a;">Not yet connected</div>
+        <div style="font-size:12px;color:#64748b;margin-top:3px;font-family:'Space Grotesk',sans-serif;">Enter your credentials below and click <b>Save Changes</b> — we'll verify the connection automatically.</div>
+      </div>
+    </div>
+  `;
+}
+
+function gwInput(opts){
+  const id = opts.id, label = opts.label, val = opts.value || '', isSecret = !!opts.secret, placeholder = opts.placeholder || '';
+  const help = opts.help ? `<div style="font-size:11px;color:#64748b;margin-top:4px;font-family:'Space Grotesk',sans-serif;">${opts.help}</div>` : '';
+  const type = isSecret ? 'password' : 'text';
+  const setMark = opts.alreadySet ? '<span style="font-size:10px;font-weight:700;color:#059669;letter-spacing:.6px;text-transform:uppercase;margin-left:8px;">✓ saved</span>' : '';
+  return `
+    <div style="margin-bottom:14px;">
+      <label style="display:block;font-size:11.5px;font-weight:700;color:#1e293b;text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;font-family:'Space Grotesk',sans-serif;">${label}${setMark}</label>
+      <div style="display:flex;gap:8px;">
+        <input id="${id}" type="${type}" placeholder="${placeholder}" value="${(val).replace(/"/g,'&quot;')}" autocomplete="off" spellcheck="false"
+          style="flex:1;padding:10px 13px;background:#f8fafc;border:1.5px solid rgba(15,23,42,.10);border-radius:9px;font-size:13.5px;color:#0f172a;font-family:'Space Grotesk',monospace;font-weight:600;outline:none;transition:border-color .2s;"
+          onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='rgba(15,23,42,.10)'">
+        ${isSecret ? `<button type="button" onclick="gwToggleSecret('${id}')" style="padding:0 12px;background:#f1f5f9;border:1.5px solid rgba(15,23,42,.10);border-radius:9px;cursor:pointer;font-size:14px;">👁</button>` : ''}
+      </div>
+      ${help}
+    </div>
+  `;
+}
+
+function gwToggleSecret(id){
+  const el = document.getElementById(id);
+  el.type = el.type === 'password' ? 'text' : 'password';
+}
+
+function gwActions(provider){
+  return `
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:18px;padding-top:18px;border-top:1px solid rgba(15,23,42,.06);">
+      <button id="gwSaveBtn_${provider}" onclick="gwSave('${provider}')" style="padding:10px 22px;background:linear-gradient(135deg,#6366f1,#06b6d4);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;letter-spacing:.3px;box-shadow:0 6px 16px -4px rgba(99,102,241,.45);">💾 Save &amp; Verify</button>
+      <button id="gwTestBtn_${provider}" onclick="gwTest('${provider}')" style="padding:10px 22px;background:#fff;color:#0f172a;border:1.5px solid rgba(15,23,42,.10);border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.3px;">🔌 Test Again</button>
+      <label style="margin-left:auto;display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;color:#1e293b;cursor:pointer;">
+        <input type="checkbox" id="gwEnable_${provider}" ${GATEWAY_DATA[provider].enabled ? 'checked':''} onchange="gwToggleEnable('${provider}', this.checked)" style="width:18px;height:18px;cursor:pointer;accent-color:#6366f1;">
+        Use this gateway for tenant billing
+      </label>
+    </div>
+  `;
+}
+
+function gwStripeCard(d){
+  const modeBadge = d.mode === 'live'
+    ? '<span style="padding:3px 9px;border-radius:6px;background:rgba(5,150,105,.10);color:#047857;font-size:10.5px;font-weight:800;letter-spacing:.5px;font-family:Space Grotesk,sans-serif;">LIVE</span>'
+    : '<span style="padding:3px 9px;border-radius:6px;background:rgba(217,119,6,.10);color:#92400e;font-size:10.5px;font-weight:800;letter-spacing:.5px;font-family:Space Grotesk,sans-serif;">TEST</span>';
+  const acctLabel = d.account_label ? `<div style="font-size:12px;color:#475569;margin-top:6px;font-family:Space Grotesk,sans-serif;">Connected as: <b style="color:#0f172a;">${d.account_label}</b></div>` : '';
+
+  const body = `
+    ${gwStatusBanner('stripe')}
+
+    <div style="margin-bottom:18px;display:flex;align-items:center;gap:12px;">
+      <div>
+        <div style="font-size:13px;font-weight:800;color:#0f172a;">Mode ${modeBadge}</div>
+      </div>
+      <div style="margin-left:auto;display:flex;gap:6px;">
+        <button onclick="gwSetMode('stripe','test')" style="padding:6px 14px;border-radius:8px;border:1.5px solid ${d.mode==='test'?'#6366f1':'rgba(15,23,42,.10)'};background:${d.mode==='test'?'#eef2ff':'#fff'};color:${d.mode==='test'?'#4338ca':'#475569'};font-size:12px;font-weight:700;cursor:pointer;font-family:'Space Grotesk',sans-serif;">Test</button>
+        <button onclick="gwSetMode('stripe','live')" style="padding:6px 14px;border-radius:8px;border:1.5px solid ${d.mode==='live'?'#059669':'rgba(15,23,42,.10)'};background:${d.mode==='live'?'#ecfdf5':'#fff'};color:${d.mode==='live'?'#047857':'#475569'};font-size:12px;font-weight:700;cursor:pointer;font-family:'Space Grotesk',sans-serif;">Live</button>
+      </div>
+    </div>
+
+    ${gwInput({id:'stripe_pub', label:'Publishable Key', value:d.publishable_key, placeholder:'pk_test_... or pk_live_...', help:'Safe to expose — used by the checkout page frontend.'})}
+    ${gwInput({id:'stripe_sec', label:'Secret Key', secret:true, placeholder:d.secret_key_set ? d.secret_key_masked + ' (leave blank to keep)' : 'sk_test_... or sk_live_...', alreadySet:d.secret_key_set, help:'Server-side only. Never exposed to the browser.'})}
+    ${gwInput({id:'stripe_wh',  label:'Webhook Signing Secret', secret:true, placeholder:d.webhook_secret_set ? d.webhook_secret_masked + ' (leave blank to keep)' : 'whsec_...', alreadySet:d.webhook_secret_set, help:'From Stripe dashboard → Developers → Webhooks. Optional but recommended.'})}
+
+    ${gwActions('stripe')}
+  `;
+  return gwCardShell('stripe', '$', 'linear-gradient(135deg,#635bff,#7a73ff)', 'Stripe', body);
+}
+
+function gwPaypalCard(d){
+  const modeBadge = d.mode === 'live'
+    ? '<span style="padding:3px 9px;border-radius:6px;background:rgba(5,150,105,.10);color:#047857;font-size:10.5px;font-weight:800;letter-spacing:.5px;font-family:Space Grotesk,sans-serif;">LIVE</span>'
+    : '<span style="padding:3px 9px;border-radius:6px;background:rgba(217,119,6,.10);color:#92400e;font-size:10.5px;font-weight:800;letter-spacing:.5px;font-family:Space Grotesk,sans-serif;">SANDBOX</span>';
+  const acctLabel = d.account_label ? `<div style="font-size:12px;color:#475569;margin-top:6px;font-family:Space Grotesk,sans-serif;">${d.account_label}</div>` : '';
+
+  const body = `
+    ${gwStatusBanner('paypal')}
+
+    <div style="margin-bottom:18px;display:flex;align-items:center;gap:12px;">
+      <div>
+        <div style="font-size:13px;font-weight:800;color:#0f172a;">Mode ${modeBadge}</div>
+      </div>
+      <div style="margin-left:auto;display:flex;gap:6px;">
+        <button onclick="gwSetMode('paypal','sandbox')" style="padding:6px 14px;border-radius:8px;border:1.5px solid ${d.mode==='sandbox'?'#6366f1':'rgba(15,23,42,.10)'};background:${d.mode==='sandbox'?'#eef2ff':'#fff'};color:${d.mode==='sandbox'?'#4338ca':'#475569'};font-size:12px;font-weight:700;cursor:pointer;font-family:'Space Grotesk',sans-serif;">Sandbox</button>
+        <button onclick="gwSetMode('paypal','live')" style="padding:6px 14px;border-radius:8px;border:1.5px solid ${d.mode==='live'?'#059669':'rgba(15,23,42,.10)'};background:${d.mode==='live'?'#ecfdf5':'#fff'};color:${d.mode==='live'?'#047857':'#475569'};font-size:12px;font-weight:700;cursor:pointer;font-family:'Space Grotesk',sans-serif;">Live</button>
+      </div>
+    </div>
+
+    ${gwInput({id:'paypal_id',  label:'Client ID', value:d.client_id, placeholder:'AaBb...', help:'From PayPal Developer dashboard → Apps & Credentials.'})}
+    ${gwInput({id:'paypal_sec', label:'Client Secret', secret:true, placeholder:d.client_secret_set ? d.client_secret_masked + ' (leave blank to keep)' : 'ELxx...', alreadySet:d.client_secret_set, help:'Used server-side to fetch OAuth access tokens.'})}
+
+    <div style="background:#fef9c3;border:1px solid #fde68a;border-radius:10px;padding:11px 14px;margin-bottom:14px;display:flex;gap:10px;align-items:flex-start;font-size:12px;line-height:1.55;color:#713f12;">
+      <div style="font-size:16px;flex-shrink:0;">ⓘ</div>
+      <div>
+        <b>Why no email auto-fetched?</b> PayPal's REST API doesn't return the merchant email when authenticating with Client ID + Secret (privacy by design — unlike WordPress's OAuth flow that asks you to log in via browser). Type your PayPal merchant email below so the dashboard shows it as the connected account label.
+      </div>
+    </div>
+
+    ${gwInput({id:'paypal_email', label:'Your PayPal Merchant Email (optional, for display)', value:d.merchant_email || '', placeholder:'merchant@yourbusiness.com', help:'Shown on this card so you remember which PayPal account these keys belong to. Not used for charges.'})}
+
+    ${gwActions('paypal')}
+  `;
+  return gwCardShell('paypal', '◆', 'linear-gradient(135deg,#003087,#0070ba)', 'PayPal', body);
+}
+
+// ─── Stripe + PayPal action handlers ───
+function _gwSetBtn(provider, label, disabled){
+  const b1 = document.getElementById('gwSaveBtn_'+provider);
+  const b2 = document.getElementById('gwTestBtn_'+provider);
+  if (b1){ b1.disabled = !!disabled; b1.style.opacity = disabled ? '.6' : '1'; b1.style.cursor = disabled ? 'wait' : 'pointer'; if(label) b1.textContent = label; }
+  if (b2){ b2.disabled = !!disabled; b2.style.opacity = disabled ? '.6' : '1'; b2.style.cursor = disabled ? 'wait' : 'pointer'; }
+}
+
+function _gwRepaint(){
+  document.getElementById('gwBody').innerHTML = gwStripeCard(GATEWAY_DATA.stripe) + gwPaypalCard(GATEWAY_DATA.paypal);
+}
+
+async function gwSave(provider){
+  const fields = (provider === 'stripe') ? {
+    mode:            (GATEWAY_DATA.stripe.mode || 'test'),
+    publishable_key: document.getElementById('stripe_pub').value,
+    secret_key:      document.getElementById('stripe_sec').value,
+    webhook_secret:  document.getElementById('stripe_wh').value,
+  } : {
+    mode:           (GATEWAY_DATA.paypal.mode || 'sandbox'),
+    client_id:      document.getElementById('paypal_id').value,
+    client_secret:  document.getElementById('paypal_sec').value,
+    merchant_email: (document.getElementById('paypal_email') || {}).value || '',
+  };
+
+  _gwSetBtn(provider, '💾 Saving…', true);
+  try {
+    const r = await fetch('/superadmin/api/payment-gateways/save/', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},
+      body: JSON.stringify({provider, fields}),
+    });
+    const j = await r.json();
+    if (!j.ok){
+      _gwSetBtn(provider, '💾 Save & Verify', false);
+      _toast('⚠ Save failed: ' + (j.error || 'unknown error'));
+      return;
+    }
+    GATEWAY_DATA = j.data;
+    // Now automatically verify the credentials we just saved — this is the
+    // "WordPress feel": user pastes keys, hits Save, sees their email pop up.
+    _gwSetBtn(provider, '🔌 Verifying connection…', true);
+    const t = await fetch('/superadmin/api/payment-gateways/test/', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},
+      body: JSON.stringify({provider}),
+    });
+    const tj = await t.json();
+    GATEWAY_DATA = tj.data;
+    _gwRepaint();
+    _toast(tj.ok ? `✓ ${provider === 'stripe' ? 'Stripe' : 'PayPal'} connected successfully` : `⚠ ${tj.message || 'Verification failed'}`);
+  } catch(e){
+    _gwSetBtn(provider, '💾 Save & Verify', false);
+    _toast('⚠ Network error: ' + e.message);
+  }
+}
+
+async function gwTest(provider){
+  _gwSetBtn(provider, '', true);
+  const btn = document.getElementById('gwTestBtn_'+provider);
+  if (btn) btn.textContent = '🔌 Testing…';
+  try {
+    const r = await fetch('/superadmin/api/payment-gateways/test/', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},
+      body: JSON.stringify({provider}),
+    });
+    const j = await r.json();
+    GATEWAY_DATA = j.data;
+    _gwRepaint();
+    _toast(j.ok ? '✓ Connection successful' : '⚠ ' + (j.message || 'Test failed'));
+  } catch(e){
+    _gwSetBtn(provider, '', false);
+    _toast('⚠ Network error: ' + e.message);
+  }
+}
+
+async function gwToggleEnable(provider, enabled){
+  const r = await fetch('/superadmin/api/payment-gateways/toggle/', {
+    method:'POST',
+    headers:{'Content-Type':'application/json','X-CSRFToken':getCsrf()},
+    body: JSON.stringify({provider, enabled}),
+  });
+  const j = await r.json();
+  if (j.ok){
+    GATEWAY_DATA = j.data;
+    document.getElementById('gwBody').innerHTML = gwStripeCard(GATEWAY_DATA.stripe) + gwPaypalCard(GATEWAY_DATA.paypal);
+    _toast(enabled ? `${provider} enabled` : `${provider} disabled`);
+  }
+}
+
+function gwSetMode(provider, mode){
+  GATEWAY_DATA[provider].mode = mode;
+  document.getElementById('gwBody').innerHTML = gwStripeCard(GATEWAY_DATA.stripe) + gwPaypalCard(GATEWAY_DATA.paypal);
+}
+
+// Lightweight toast — reuses any existing _toast helper or falls back to console
+if (typeof window._toast !== 'function'){
+  window._toast = function(msg){
+    let t = document.getElementById('_dsToast');
+    if (!t){ t = document.createElement('div'); t.id = '_dsToast';
+      t.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#0f172a;color:#fff;padding:12px 22px;border-radius:10px;font-size:13px;font-weight:600;z-index:9999;box-shadow:0 12px 32px rgba(0,0,0,.3);transition:opacity .3s;';
+      document.body.appendChild(t);
+    }
+    t.textContent = msg; t.style.opacity = '1';
+    clearTimeout(t._h); t._h = setTimeout(()=>{ t.style.opacity='0'; }, 2400);
+  };
+}
+
 let DIAG_DATA = null;
 let DIAG_RUNNING = false;
 let DIAG_LAST_RAN_AT = 0;

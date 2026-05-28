@@ -23,4 +23,10 @@ urlpatterns = [
     path("api/visitors/map/",        views.api_visitors_map,        name="sa_visitors_map"),
     path("api/visitors/top-pages/",  views.api_visitors_top_pages,  name="sa_visitors_top_pages"),
     path("api/visitors/devices/",    views.api_visitors_devices,    name="sa_visitors_devices"),
+
+    # ─── Platform Payment Gateways (superadmin's own Stripe + PayPal) ───
+    path("api/payment-gateways/",         views.api_payment_gateways,        name="sa_payment_gateways"),
+    path("api/payment-gateways/save/",    views.api_payment_gateways_save,   name="sa_payment_gateways_save"),
+    path("api/payment-gateways/toggle/",  views.api_payment_gateways_toggle, name="sa_payment_gateways_toggle"),
+    path("api/payment-gateways/test/",    views.api_payment_gateways_test,   name="sa_payment_gateways_test"),
 ]

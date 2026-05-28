@@ -16,7 +16,7 @@ from orders.models import Order
 from vendors.models import Vendor
 from teamapp.models import TeamMember
 
-from .models import Tenant, Subscription, TenantActivity, PLAN_PRICES, Coupon, UserIPLog
+from .models import Tenant, Subscription, TenantActivity, PLAN_PRICES, Coupon, UserIPLog, PlatformPaymentSettings
 
 
 # ── Email Templates ───────────────────────────────────────────────────────────
@@ -1182,3 +1182,306 @@ def api_visitors_devices(request):
         "os":       os_list,
         "devices":  devices,
     })
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Platform Payment Gateways (Stripe + PayPal credentials owned by the
+# superadmin — used to charge tenants for their subscriptions)
+# ─────────────────────────────────────────────────────────────────────
+
+def _mask(secret):
+    """Show only the last 4 chars of a secret — never echo the full key."""
+    if not secret:
+        return ""
+    if len(secret) <= 8:
+        return "•" * len(secret)
+    return ("•" * (len(secret) - 4)) + secret[-4:]
+
+
+def _gateway_payload(settings_row):
+    """Serialise PlatformPaymentSettings for the UI — secrets are masked."""
+    s = settings_row
+    return {
+        "stripe": {
+            "enabled":            s.stripe_enabled,
+            "mode":               s.stripe_mode,
+            "publishable_key":    s.stripe_publishable_key,                 # publishable = safe to show
+            "secret_key_masked":  _mask(s.stripe_secret_key),
+            "secret_key_set":     bool(s.stripe_secret_key),
+            "webhook_secret_masked": _mask(s.stripe_webhook_secret),
+            "webhook_secret_set": bool(s.stripe_webhook_secret),
+            "account_label":      s.stripe_account_label,
+            "last_tested_at":     s.stripe_last_tested_at.isoformat() if s.stripe_last_tested_at else None,
+            "last_test_ok":       s.stripe_last_test_ok,
+            "last_test_message":  s.stripe_last_test_message,
+        },
+        "paypal": {
+            "enabled":            s.paypal_enabled,
+            "mode":               s.paypal_mode,
+            "client_id":          s.paypal_client_id,                        # client id is half-secret; shown for clarity
+            "client_secret_masked": _mask(s.paypal_client_secret),
+            "client_secret_set":  bool(s.paypal_client_secret),
+            "account_label":      s.paypal_account_label,
+            "merchant_email":     s.paypal_merchant_email,                   # superadmin-typed override
+            "last_tested_at":     s.paypal_last_tested_at.isoformat() if s.paypal_last_tested_at else None,
+            "last_test_ok":       s.paypal_last_test_ok,
+            "last_test_message":  s.paypal_last_test_message,
+        },
+        "updated_at": s.updated_at.isoformat() if s.updated_at else None,
+    }
+
+
+@superadmin_required
+@require_GET
+def api_payment_gateways(request):
+    """Return current platform payment settings (secrets masked)."""
+    return JsonResponse(_gateway_payload(PlatformPaymentSettings.load()))
+
+
+@superadmin_required
+@require_POST
+def api_payment_gateways_save(request):
+    """
+    Update Stripe or PayPal credentials.
+    Body JSON: {provider: 'stripe'|'paypal', fields: {...}}
+    Only fields explicitly present are updated — empty strings are treated
+    as "no change" UNLESS the field is `_clear: true`.
+    """
+    try:
+        data = json.loads(request.body or b"{}")
+    except Exception:
+        return JsonResponse({"ok": False, "error": "Invalid JSON"}, status=400)
+
+    provider = (data.get("provider") or "").lower()
+    fields   = data.get("fields") or {}
+    if provider not in ("stripe", "paypal"):
+        return JsonResponse({"ok": False, "error": "provider must be 'stripe' or 'paypal'"}, status=400)
+
+    s = PlatformPaymentSettings.load()
+
+    if provider == "stripe":
+        if "mode" in fields and fields["mode"] in ("test", "live"):
+            s.stripe_mode = fields["mode"]
+        if "publishable_key" in fields:
+            s.stripe_publishable_key = (fields["publishable_key"] or "").strip()
+        # Secret-style fields: only overwrite if non-empty (so the masked
+        # display in the UI can be left untouched)
+        for db_field, ui_field in (
+            ("stripe_secret_key",     "secret_key"),
+            ("stripe_webhook_secret", "webhook_secret"),
+        ):
+            if ui_field in fields:
+                val = (fields[ui_field] or "").strip()
+                if val:
+                    setattr(s, db_field, val)
+    else:  # paypal
+        if "mode" in fields and fields["mode"] in ("sandbox", "live"):
+            s.paypal_mode = fields["mode"]
+        if "client_id" in fields:
+            s.paypal_client_id = (fields["client_id"] or "").strip()
+        if "client_secret" in fields:
+            val = (fields["client_secret"] or "").strip()
+            if val:
+                s.paypal_client_secret = val
+        if "merchant_email" in fields:
+            # Always accept (including empty string — that's the user clearing it)
+            s.paypal_merchant_email = (fields["merchant_email"] or "").strip()[:200]
+
+    s.save()
+    return JsonResponse({"ok": True, "data": _gateway_payload(s)})
+
+
+@superadmin_required
+@require_POST
+def api_payment_gateways_toggle(request):
+    """Enable / disable a provider. Body: {provider, enabled: bool}"""
+    try:
+        data = json.loads(request.body or b"{}")
+    except Exception:
+        return JsonResponse({"ok": False, "error": "Invalid JSON"}, status=400)
+
+    provider = (data.get("provider") or "").lower()
+    enabled  = bool(data.get("enabled"))
+    if provider not in ("stripe", "paypal"):
+        return JsonResponse({"ok": False, "error": "provider must be 'stripe' or 'paypal'"}, status=400)
+
+    s = PlatformPaymentSettings.load()
+    if provider == "stripe":
+        s.stripe_enabled = enabled
+    else:
+        s.paypal_enabled = enabled
+    s.save()
+    return JsonResponse({"ok": True, "data": _gateway_payload(s)})
+
+
+@superadmin_required
+@require_POST
+def api_payment_gateways_test(request):
+    """
+    Verify credentials actually work by hitting each provider's auth endpoint.
+    Body: {provider}
+    For Stripe: stripe.Account.retrieve() — validates secret key, returns account.
+    For PayPal: POST /v1/oauth2/token — validates client_id + secret, returns token.
+    """
+    try:
+        data = json.loads(request.body or b"{}")
+    except Exception:
+        return JsonResponse({"ok": False, "error": "Invalid JSON"}, status=400)
+
+    provider = (data.get("provider") or "").lower()
+    if provider not in ("stripe", "paypal"):
+        return JsonResponse({"ok": False, "error": "provider must be 'stripe' or 'paypal'"}, status=400)
+
+    s = PlatformPaymentSettings.load()
+
+    if provider == "stripe":
+        if not s.stripe_secret_key:
+            s.stripe_last_test_ok = False
+            s.stripe_last_test_message = "Add your Stripe Secret Key first."
+            s.stripe_account_label = ""
+            s.stripe_last_tested_at = timezone.now()
+            s.save()
+            return JsonResponse({"ok": False, "message": s.stripe_last_test_message, "data": _gateway_payload(s)})
+
+        # Sanity-check the secret prefix matches the selected mode
+        secret = s.stripe_secret_key.strip()
+        if s.stripe_mode == "live" and secret.startswith("sk_test_"):
+            s.stripe_last_test_ok = False
+            s.stripe_last_test_message = "Mode is set to Live but the secret key is a Test key (sk_test_…). Switch mode or paste your Live key."
+            s.stripe_account_label = ""
+            s.stripe_last_tested_at = timezone.now()
+            s.save()
+            return JsonResponse({"ok": False, "message": s.stripe_last_test_message, "data": _gateway_payload(s)})
+        if s.stripe_mode == "test" and secret.startswith("sk_live_"):
+            s.stripe_last_test_ok = False
+            s.stripe_last_test_message = "Mode is set to Test but the secret key is a Live key (sk_live_…). Switch mode or paste your Test key."
+            s.stripe_account_label = ""
+            s.stripe_last_tested_at = timezone.now()
+            s.save()
+            return JsonResponse({"ok": False, "message": s.stripe_last_test_message, "data": _gateway_payload(s)})
+
+        try:
+            import stripe as _stripe
+            _stripe.api_key = secret
+            acc = _stripe.Account.retrieve()
+
+            # Stripe stores the account email in different places depending on
+            # the account type (standard vs Express vs Custom vs Connect).
+            # Walk every plausible location so we land on SOMETHING usable.
+            def _g(d, *path):
+                cur = d
+                for k in path:
+                    if not isinstance(cur, dict): return ""
+                    cur = cur.get(k)
+                    if cur is None: return ""
+                return cur or ""
+
+            email = (
+                _g(acc, "email")
+                or _g(acc, "individual", "email")
+                or _g(acc, "company", "support_email")
+                or _g(acc, "business_profile", "support_email")
+                or _g(acc, "settings", "dashboard", "display_name")  # last-ditch
+                or ""
+            )
+            biz_name     = _g(acc, "business_profile", "name") or _g(acc, "company", "name")
+            display_name = _g(acc, "settings", "dashboard", "display_name")
+            country      = (acc.get("country") or "").upper()
+            ccy          = (acc.get("default_currency") or "").upper()
+            acct_id      = acc.get("id", "")
+
+            primary = email or biz_name or display_name or acct_id
+            # Structured: "email · BizName · US · USD"  (skip blanks, dedupe primary)
+            extras = [p for p in [biz_name or display_name, country, ccy] if p and p != primary]
+            label_parts = [primary] + extras
+            s.stripe_account_label = " · ".join(label_parts)[:200]
+            s.stripe_last_test_ok = True
+            note = "" if email else " (Stripe did not return an email for this account type — showing best alternative)"
+            s.stripe_last_test_message = f"Connected to Stripe account {acct_id}{note}"
+        except Exception as exc:
+            err = str(exc)
+            # Friendlier messages for common Stripe errors
+            if "Invalid API Key" in err or "No such API key" in err or "authentication" in err.lower():
+                msg = "Stripe rejected the secret key — please double-check it was copied correctly (no trailing spaces)."
+            elif "expired" in err.lower():
+                msg = "This Stripe secret key has been revoked or expired. Generate a new one in the Stripe Dashboard."
+            else:
+                msg = f"Stripe error: {err[:280]}"
+            s.stripe_last_test_ok = False
+            s.stripe_last_test_message = msg
+            s.stripe_account_label = ""
+        s.stripe_last_tested_at = timezone.now()
+        s.save()
+        return JsonResponse({"ok": s.stripe_last_test_ok, "message": s.stripe_last_test_message, "data": _gateway_payload(s)})
+
+    # ── PayPal ──────────────────────────────────────────────────────
+    if not (s.paypal_client_id and s.paypal_client_secret):
+        s.paypal_last_test_ok = False
+        s.paypal_last_test_message = "Both Client ID and Client Secret are required."
+        s.paypal_account_label = ""
+        s.paypal_last_tested_at = timezone.now()
+        s.save()
+        return JsonResponse({"ok": False, "message": s.paypal_last_test_message, "data": _gateway_payload(s)})
+    try:
+        import requests as _req
+        base = "https://api-m.sandbox.paypal.com" if s.paypal_mode == "sandbox" else "https://api-m.paypal.com"
+
+        # Step 1 — get an access token (validates the credentials)
+        r = _req.post(
+            f"{base}/v1/oauth2/token",
+            auth=(s.paypal_client_id, s.paypal_client_secret),
+            data={"grant_type": "client_credentials"},
+            headers={"Accept": "application/json", "Accept-Language": "en_US"},
+            timeout=15,
+        )
+        if r.status_code != 200 or not r.json().get("access_token"):
+            err_body = {}
+            try: err_body = r.json()
+            except Exception: pass
+            err_name = err_body.get("error") or "auth_failed"
+            err_desc = err_body.get("error_description") or r.text[:200] or "Unknown error"
+            # Friendlier messages
+            if err_name == "invalid_client":
+                msg = "PayPal rejected the credentials — the Client ID or Secret is wrong, or doesn't match the selected mode (Sandbox vs Live)."
+            else:
+                msg = f"PayPal rejected the credentials: {err_desc}"
+            s.paypal_last_test_ok = False
+            s.paypal_last_test_message = msg
+            s.paypal_account_label = ""
+        else:
+            tok_data = r.json()
+            access_token = tok_data["access_token"]
+            app_id = tok_data.get("app_id", "")
+            expires_in = tok_data.get("expires_in", 0)
+
+            # Step 2 — try to pull the merchant info using userinfo endpoint
+            # (works in sandbox; in live it requires the app to have the "openid" scope.
+            # If it fails we still consider auth successful — we just won't have the email.)
+            owner_email = ""
+            try:
+                ui = _req.get(
+                    f"{base}/v1/identity/oauth2/userinfo?schema=paypalv1.1",
+                    headers={"Authorization": f"Bearer {access_token}"},
+                    timeout=10,
+                )
+                if ui.status_code == 200:
+                    u = ui.json()
+                    owner_email = u.get("email") or (u.get("emails", [{}])[0].get("value") if u.get("emails") else "")
+            except Exception:
+                pass
+
+            parts = []
+            if owner_email: parts.append(owner_email)
+            parts.append(f"App {app_id}" if app_id else "PayPal app")
+            parts.append("Sandbox" if s.paypal_mode == "sandbox" else "Live")
+            s.paypal_account_label = " · ".join(parts)[:200]
+            s.paypal_last_test_ok = True
+            label_for_msg = owner_email or f"app {app_id}" if app_id else "PayPal app"
+            s.paypal_last_test_message = f"Connected — authenticated as {label_for_msg} ({s.paypal_mode} mode, token valid {expires_in//60} min)."
+    except Exception as exc:
+        s.paypal_last_test_ok = False
+        s.paypal_last_test_message = f"Network / library error: {str(exc)[:280]}"
+        s.paypal_account_label = ""
+    s.paypal_last_tested_at = timezone.now()
+    s.save()
+    return JsonResponse({"ok": s.paypal_last_test_ok, "message": s.paypal_last_test_message, "data": _gateway_payload(s)})

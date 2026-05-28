@@ -254,3 +254,63 @@ class IPGeoCache(models.Model):
 
     def __str__(self):
         return f"{self.ip_address} → {self.country_code or '?'}"
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Platform-owned payment gateway credentials
+# Singleton row (always pk=1) holding the SUPERADMIN'S OWN Stripe +
+# PayPal API keys. These charge the platform's tenants — not the
+# tenants' customers. Falls back to env vars when row is empty so
+# nothing breaks during initial setup.
+# ─────────────────────────────────────────────────────────────────────
+class PlatformPaymentSettings(models.Model):
+    STRIPE_MODE_CHOICES = [("test", "Test mode"), ("live", "Live mode")]
+    PAYPAL_MODE_CHOICES = [("sandbox", "Sandbox"), ("live", "Live")]
+
+    # ── Stripe ──────────────────────────────────────────────────────
+    stripe_enabled            = models.BooleanField(default=False)
+    stripe_mode               = models.CharField(max_length=10, choices=STRIPE_MODE_CHOICES, default="test")
+    stripe_publishable_key    = models.CharField(max_length=255, blank=True, default="")
+    stripe_secret_key         = models.CharField(max_length=255, blank=True, default="")
+    stripe_webhook_secret     = models.CharField(max_length=255, blank=True, default="")
+    stripe_last_tested_at     = models.DateTimeField(null=True, blank=True)
+    stripe_last_test_ok       = models.BooleanField(default=False)
+    stripe_last_test_message  = models.TextField(blank=True, default="")
+    stripe_account_label      = models.CharField(max_length=200, blank=True, default="")
+
+    # ── PayPal ──────────────────────────────────────────────────────
+    paypal_enabled            = models.BooleanField(default=False)
+    paypal_mode               = models.CharField(max_length=10, choices=PAYPAL_MODE_CHOICES, default="sandbox")
+    paypal_client_id          = models.CharField(max_length=255, blank=True, default="")
+    paypal_client_secret      = models.CharField(max_length=255, blank=True, default="")
+    paypal_last_tested_at     = models.DateTimeField(null=True, blank=True)
+    paypal_last_test_ok       = models.BooleanField(default=False)
+    paypal_last_test_message  = models.TextField(blank=True, default="")
+    paypal_account_label      = models.CharField(max_length=200, blank=True, default="")
+    # Manual override — PayPal's client_credentials grant deliberately hides
+    # the merchant email for privacy. Superadmin can type their own merchant
+    # email here so the UI shows it instead of just the bare app_id.
+    paypal_merchant_email     = models.CharField(max_length=200, blank=True, default="")
+
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Platform payment settings"
+        verbose_name_plural = "Platform payment settings"
+
+    @classmethod
+    def load(cls):
+        """Singleton accessor — always returns row 1, creating it on first call."""
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+    def save(self, *args, **kwargs):
+        # Force singleton: only one row with pk=1 ever exists
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        bits = []
+        if self.stripe_enabled: bits.append(f"Stripe[{self.stripe_mode}]")
+        if self.paypal_enabled: bits.append(f"PayPal[{self.paypal_mode}]")
+        return "Platform payment: " + (", ".join(bits) or "none active")
