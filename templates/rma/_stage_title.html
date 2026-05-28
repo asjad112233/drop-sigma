@@ -1,0 +1,10 @@
+{% if rma.status == 'pending' %}Awaiting Review
+{% elif rma.status == 'approved' %}Your return is approved
+{% elif rma.status == 'tracking_submitted' %}Tracking received — waiting for carrier
+{% elif rma.status == 'in_transit' %}Package in transit
+{% elif rma.status == 'received' %}Received — inspecting your return
+{% elif rma.status == 'refunded' %}Refund processed
+{% elif rma.status == 'resolved' %}Return resolved
+{% elif rma.status == 'rejected' %}Return not approved
+{% elif rma.status == 'canceled' %}Canceled
+{% else %}Return Update{% endif %}

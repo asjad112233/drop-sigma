@@ -1,0 +1,9 @@
+{% if rma.status == 'pending' %}We've received your request and will review it within 24 hours.
+{% elif rma.status == 'approved' %}Please ship the item back, then use the button below to share your tracking info.
+{% elif rma.status == 'tracking_submitted' %}Thanks — we have your tracking. We'll mark it received once it arrives.
+{% elif rma.status == 'in_transit' %}We're tracking your package — the refund will start once it arrives.
+{% elif rma.status == 'received' %}Your item has been received. Refund usually processes in 1-2 business days.
+{% elif rma.status == 'refunded' %}Your refund of ${{ rma.refund_amount }} has been sent. It can take 3-5 business days to appear on your statement.
+{% elif rma.status == 'resolved' %}Your case is closed. Thank you for shopping with us!
+{% elif rma.status == 'rejected' %}{{ rma.reject_note|default:"Please see your return policy for details, or message us below." }}
+{% else %}Check below for the latest status.{% endif %}

@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>{% block title %}Returns & Refunds — Drop Sigma{% endblock %}</title>
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
+<style>
+:root{
+  --bg:#f5f6fa;--surface:#fff;--surface-2:#f8fafc;--surface-3:#f1f5f9;
+  --line:#e5e7eb;--line-soft:#eef2f7;
+  --text:#0a0d1c;--muted:#5b6478;--faint:#94a3b8;
+  --brand:#6366f1;--brand-2:#8b5cf6;--brand-3:#a855f7;
+  --grad:linear-gradient(135deg,#6366f1 0%,#8b5cf6 55%,#a855f7 100%);
+  --grad-dark:linear-gradient(135deg,#0f172a 0%,#1e1b4b 60%,#312e81 100%);
+  --green:#10b981;--green-soft:#d1fae5;
+  --amber:#f59e0b;--amber-soft:#fef3c7;
+  --red:#ef4444;--red-soft:#fee2e2;
+  --blue:#3b82f6;--blue-soft:#dbeafe;
+  --shadow-sm:0 1px 3px rgba(15,23,42,.05);
+  --shadow:0 8px 24px -8px rgba(15,23,42,.12),0 2px 8px rgba(15,23,42,.04);
+  --radius:14px;--radius-lg:20px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;}
+
+/* Topbar — links back to dashboard, matches profile.html pattern */
+.topbar{height:54px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;border-bottom:1px solid #e8eaf2;background:#fff;position:sticky;top:0;z-index:50;}
+.back-btn{display:inline-flex;align-items:center;gap:7px;color:#64748b;text-decoration:none;font-size:13px;font-weight:600;padding:7px 13px;border-radius:9px;border:1px solid #e2e8f0;transition:all .15s;}
+.back-btn:hover{color:#0f172a;background:#f8fafc;border-color:#cbd5e1;}
+.topbar-logo{display:flex;align-items:center;gap:9px;text-decoration:none;}
+.logo-mark{width:30px;height:30px;background:var(--grad);border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;color:#fff;}
+.logo-text{font-size:14px;font-weight:700;color:#0f172a;}
+
+.app{display:flex;min-height:calc(100vh - 54px);}
+.sidebar{width:240px;background:#0f172a;color:#cbd5e1;flex-shrink:0;padding:18px 12px;}
+.sidebar .brand{display:flex;align-items:center;gap:9px;padding:6px 8px 18px;}
+.sidebar .brand-mark{width:30px;height:30px;background:var(--grad);border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;color:#fff;}
+.sidebar .brand-text{font-size:13.5px;font-weight:800;color:#fff;}
+.sidebar .nav-section{font-size:10px;color:#475569;font-weight:800;text-transform:uppercase;letter-spacing:.1em;padding:14px 12px 6px;}
+.sidebar .nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:9px;font-size:13px;font-weight:600;color:#94a3b8;text-decoration:none;cursor:pointer;transition:all .15s;margin-bottom:2px;}
+.sidebar .nav-item:hover{background:#1e293b;color:#fff;}
+.sidebar .nav-item.active{background:rgba(99,102,241,.18);color:#a5b4fc;}
+.sidebar .nav-item i{width:16px;opacity:.7;}
+.sidebar .nav-badge{margin-left:auto;background:#ef4444;color:#fff;font-size:10px;font-weight:800;padding:2px 7px;border-radius:999px;}
+
+.main{flex:1;padding:24px 32px 60px;overflow-x:hidden;min-width:0;}
+.page-head{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:22px;flex-wrap:wrap;gap:12px;}
+.page-title{font-size:23px;font-weight:900;color:var(--text);letter-spacing:-.01em;}
+.page-sub{font-size:13.5px;color:var(--muted);margin-top:3px;}
+
+/* Stat cards */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;}
+.stat-card{background:#fff;border:1px solid var(--line-soft);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow-sm);position:relative;overflow:hidden;}
+.stat-card::after{content:"";position:absolute;top:0;left:0;height:3px;width:100%;background:var(--grad);opacity:.7;}
+.stat-card .label{font-size:10.5px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;}
+.stat-card .value{font-size:24px;font-weight:900;color:var(--text);}
+.stat-card .delta{font-size:11.5px;color:var(--muted);font-weight:600;margin-top:3px;}
+.stat-card .icon-circle{position:absolute;top:14px;right:14px;width:32px;height:32px;background:var(--surface-3);border-radius:9px;display:flex;align-items:center;justify-content:center;color:var(--brand);font-size:14px;}
+
+/* Tabs */
+.tabs{display:flex;gap:4px;background:var(--surface-3);padding:4px;border-radius:11px;margin-bottom:18px;width:fit-content;max-width:100%;overflow-x:auto;}
+.tab{padding:7px 14px;font-size:12.5px;font-weight:700;color:var(--muted);border-radius:8px;cursor:pointer;text-decoration:none;display:flex;align-items:center;gap:7px;white-space:nowrap;}
+.tab:hover{color:var(--text);}
+.tab.active{background:#fff;color:var(--text);box-shadow:var(--shadow-sm);}
+.tab .count{background:var(--surface-3);font-size:10.5px;font-weight:800;padding:1px 7px;border-radius:999px;color:var(--muted);}
+.tab.active .count{background:var(--brand);color:#fff;}
+
+/* Toolbar */
+.toolbar{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+.search-box{flex:1;max-width:380px;display:flex;align-items:center;gap:9px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 13px;}
+.search-box input{border:none;outline:none;font-size:13px;flex:1;font-family:inherit;background:transparent;}
+.search-box i{color:var(--faint);font-size:12px;}
+.tool-btn{padding:8px 14px;background:#fff;border:1px solid var(--line);border-radius:10px;font-size:12.5px;font-weight:600;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:7px;font-family:inherit;text-decoration:none;}
+.tool-btn:hover{background:var(--surface-2);}
+.tool-btn.primary{background:var(--grad);color:#fff;border-color:transparent;}
+
+/* Tables */
+.table-card{background:#fff;border:1px solid var(--line-soft);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-sm);}
+.tbl{width:100%;border-collapse:collapse;}
+.tbl th{font-size:10.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;text-align:left;padding:13px 16px;background:var(--surface-2);border-bottom:1px solid var(--line-soft);}
+.tbl td{padding:14px 16px;border-bottom:1px solid var(--line-soft);font-size:13px;color:var(--text);vertical-align:middle;}
+.tbl tr:last-child td{border-bottom:none;}
+.tbl tr.clickable{cursor:pointer;}
+.tbl tr.clickable:hover td{background:var(--surface-2);}
+
+.rma-id{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:var(--brand);background:rgba(99,102,241,.08);padding:3px 9px;border-radius:6px;display:inline-block;}
+.customer{display:flex;align-items:center;gap:9px;}
+.avatar{width:30px;height:30px;border-radius:50%;background:var(--grad);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:800;flex-shrink:0;}
+.customer .name{font-weight:700;font-size:13px;}
+.customer .email{font-size:11px;color:var(--muted);margin-top:1px;}
+
+.pill{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;}
+.pill::before{content:"";width:6px;height:6px;border-radius:50%;}
+.pill-pending{background:var(--amber-soft);color:#92400e;}
+.pill-pending::before{background:var(--amber);}
+.pill-approved{background:var(--blue-soft);color:#1e40af;}
+.pill-approved::before{background:var(--blue);}
+.pill-in_transit{background:#e0e7ff;color:#3730a3;}
+.pill-in_transit::before{background:#6366f1;}
+.pill-received{background:#fae8ff;color:#86198f;}
+.pill-received::before{background:#d946ef;}
+.pill-refunded{background:var(--green-soft);color:#065f46;}
+.pill-refunded::before{background:var(--green);}
+.pill-rejected{background:var(--red-soft);color:#991b1b;}
+.pill-rejected::before{background:var(--red);}
+.pill-canceled{background:var(--surface-3);color:var(--muted);}
+.pill-canceled::before{background:var(--faint);}
+
+.reason-chip{font-size:11.5px;color:var(--muted);background:var(--surface-3);padding:3px 9px;border-radius:6px;font-weight:600;display:inline-block;}
+.row-action{padding:5px 11px;font-size:11.5px;font-weight:700;border-radius:7px;border:1px solid var(--line);background:#fff;cursor:pointer;color:var(--text);font-family:inherit;text-decoration:none;display:inline-block;}
+.row-action:hover{background:var(--surface-2);}
+.row-action.green{color:#065f46;border-color:#a7f3d0;background:#ecfdf5;}
+.row-action.red{color:#991b1b;border-color:#fecaca;background:#fef2f2;}
+
+/* Buttons */
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:11px 16px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;border:none;width:100%;font-family:inherit;transition:all .15s;}
+.btn+.btn{margin-top:8px;}
+.btn-primary{background:var(--grad);color:#fff;box-shadow:0 6px 18px rgba(99,102,241,.28);}
+.btn-primary:hover{filter:brightness(1.06);}
+.btn-success{background:#10b981;color:#fff;}
+.btn-success:hover{background:#059669;}
+.btn-danger{background:#fff;color:#b91c1c;border:1px solid #fecaca;}
+.btn-danger:hover{background:#fef2f2;}
+.btn-ghost{background:#fff;color:var(--text);border:1px solid var(--line);}
+.btn-ghost:hover{background:var(--surface-2);}
+.btn[disabled]{opacity:.55;cursor:not-allowed;}
+
+/* Empty state */
+.empty{padding:60px 24px;text-align:center;color:var(--muted);}
+.empty .icon{font-size:36px;color:var(--faint);margin-bottom:14px;}
+.empty .t{font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px;}
+.empty .h{font-size:13px;color:var(--muted);}
+
+/* Flash */
+.flash{padding:11px 14px;border-radius:10px;font-size:13px;font-weight:600;margin-bottom:14px;}
+.flash-err{background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;}
+.flash-ok{background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;}
+
+@media(max-width:900px){
+  .app{flex-direction:column;}
+  .sidebar{width:100%;}
+  .stats-row{grid-template-columns:repeat(2,1fr);}
+}
+
+{% block extra_style %}{% endblock %}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="/dashboard/" class="back-btn">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+    Back to Dashboard
+  </a>
+  <a href="/" class="topbar-logo">
+    <div class="logo-mark">DS</div>
+    <span class="logo-text">Drop Sigma</span>
+  </a>
+</div>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">DS</div>
+      <div class="brand-text">Drop Sigma</div>
+    </div>
+
+    <div class="nav-section">Returns</div>
+    <a href="/rma/" class="nav-item {% block nav_inbox %}{% endblock %}"><i class="fa-solid fa-inbox"></i> Inbox</a>
+    <a href="/rma/analytics/" class="nav-item {% block nav_analytics %}{% endblock %}"><i class="fa-solid fa-chart-line"></i> Analytics</a>
+    <a href="/rma/settings/" class="nav-item {% block nav_settings %}{% endblock %}"><i class="fa-solid fa-gear"></i> Settings</a>
+
+    <div class="nav-section">Quick Links</div>
+    <a href="/dashboard/" class="nav-item"><i class="fa-solid fa-house"></i> Dashboard</a>
+    <a href="/billing/" class="nav-item"><i class="fa-solid fa-credit-card"></i> Billing</a>
+    <a href="/profile/" class="nav-item"><i class="fa-solid fa-user"></i> Profile</a>
+  </aside>
+
+  <main class="main">
+    {% block content %}{% endblock %}
+  </main>
+</div>
+
+<script>
+window.getCsrf = function(){
+  const m = document.cookie.match(/csrftoken=([^;]+)/);
+  if (m) return m[1];
+  const el = document.querySelector('[name=csrfmiddlewaretoken]');
+  return el ? el.value : '';
+};
+window.api = async function(url, body, method='POST'){
+  const res = await fetch(url, {
+    method,
+    headers: {'X-CSRFToken': getCsrf(), 'Content-Type':'application/json'},
+    body: body ? JSON.stringify(body) : null,
+  });
+  let data = {};
+  try { data = await res.json(); } catch(e){}
+  return { ok: res.ok && data.ok !== false, data, status: res.status };
+};
+</script>
+
+{% block extra_script %}{% endblock %}
+
+</body>
+</html>

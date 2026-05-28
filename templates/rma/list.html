@@ -1,0 +1,213 @@
+{% extends "rma/_base.html" %}
+{% block title %}Returns Inbox — Drop Sigma{% endblock %}
+{% block nav_inbox %}active{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1 class="page-title">Returns & Refunds</h1>
+    <p class="page-sub">Review return requests, approve, generate shipping labels, and process refunds.</p>
+  </div>
+  <button class="tool-btn primary" onclick="openCreateModal()"><i class="fa-solid fa-plus"></i> Create Manual RMA</button>
+</div>
+
+<!-- Stats -->
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="icon-circle"><i class="fa-solid fa-clock"></i></div>
+    <div class="label">Pending Review</div>
+    <div class="value">{{ stat_pending }}</div>
+    <div class="delta">awaiting action</div>
+  </div>
+  <div class="stat-card">
+    <div class="icon-circle"><i class="fa-solid fa-percent"></i></div>
+    <div class="label">Return Rate (30d)</div>
+    <div class="value">{{ stat_return_rate }}%</div>
+    <div class="delta">of orders returned</div>
+  </div>
+  <div class="stat-card">
+    <div class="icon-circle"><i class="fa-solid fa-stopwatch"></i></div>
+    <div class="label">Avg Approval Time</div>
+    <div class="value">{% if stat_avg_hours %}{{ stat_avg_hours }}h{% else %}—{% endif %}</div>
+    <div class="delta">{% if stat_avg_hours %}past 30 days{% else %}no data yet{% endif %}</div>
+  </div>
+  <div class="stat-card">
+    <div class="icon-circle"><i class="fa-solid fa-dollar-sign"></i></div>
+    <div class="label">Refunded This Month</div>
+    <div class="value">${{ stat_refunded|floatformat:2 }}</div>
+    <div class="delta">{{ stat_refund_count }} refund{{ stat_refund_count|pluralize }}</div>
+  </div>
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+  {% with t=active_tab %}
+    <a class="tab {% if t == 'all' %}active{% endif %}" href="?status=all{% if search %}&q={{ search }}{% endif %}">All <span class="count">{{ tab_counts.all }}</span></a>
+    <a class="tab {% if t == 'pending' %}active{% endif %}" href="?status=pending{% if search %}&q={{ search }}{% endif %}">Pending <span class="count">{{ tab_counts.pending }}</span></a>
+    <a class="tab {% if t == 'approved' %}active{% endif %}" href="?status=approved{% if search %}&q={{ search }}{% endif %}">Approved <span class="count">{{ tab_counts.approved }}</span></a>
+    <a class="tab {% if t == 'in_transit' %}active{% endif %}" href="?status=in_transit{% if search %}&q={{ search }}{% endif %}">In Transit <span class="count">{{ tab_counts.in_transit }}</span></a>
+    <a class="tab {% if t == 'received' %}active{% endif %}" href="?status=received{% if search %}&q={{ search }}{% endif %}">Received <span class="count">{{ tab_counts.received }}</span></a>
+    <a class="tab {% if t == 'refunded' %}active{% endif %}" href="?status=refunded{% if search %}&q={{ search }}{% endif %}">Refunded <span class="count">{{ tab_counts.refunded }}</span></a>
+    <a class="tab {% if t == 'rejected' %}active{% endif %}" href="?status=rejected{% if search %}&q={{ search }}{% endif %}">Rejected <span class="count">{{ tab_counts.rejected }}</span></a>
+  {% endwith %}
+</div>
+
+<!-- Toolbar -->
+<form method="get" class="toolbar">
+  <input type="hidden" name="status" value="{{ active_tab }}"/>
+  <div class="search-box">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <input name="q" value="{{ search }}" placeholder="Search by RMA ID, customer, order #, or email…"/>
+  </div>
+  <button class="tool-btn" type="submit"><i class="fa-solid fa-filter"></i> Apply</button>
+  {% if search or active_tab and active_tab != 'all' %}
+    <a class="tool-btn" href="/rma/"><i class="fa-solid fa-xmark"></i> Clear</a>
+  {% endif %}
+</form>
+
+<!-- Table -->
+<div class="table-card">
+  {% if rmas %}
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>RMA</th>
+          <th>Customer</th>
+          <th>Order</th>
+          <th>Items / Amount</th>
+          <th>Reason</th>
+          <th>Status</th>
+          <th>Age</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rmas %}
+          <tr class="clickable" onclick="window.location='/rma/{{ r.pk }}/'">
+            <td><span class="rma-id">{{ r.rma_number }}</span></td>
+            <td>
+              <div class="customer">
+                <div class="avatar">{{ r.customer_name|default:r.customer_email|slice:":2"|upper }}</div>
+                <div>
+                  <div class="name">{{ r.customer_name|default:"—" }}</div>
+                  <div class="email">{{ r.customer_email }}</div>
+                </div>
+              </div>
+            </td>
+            <td>
+              {% if r.order %}
+                <strong>#{{ r.order.external_order_id }}</strong>
+                <div style="font-size:11.5px;color:var(--muted);">{{ r.order.created_at|date:"M j" }}</div>
+              {% else %}
+                <span style="color:var(--muted);">Manual</span>
+              {% endif %}
+            </td>
+            <td>{{ r.items_count }} item{{ r.items_count|pluralize }} · <strong>${{ r.items_total|floatformat:2 }}</strong></td>
+            <td><span class="reason-chip">{{ r.reason_label }}</span></td>
+            <td><span class="pill pill-{{ r.status }}">{{ r.get_status_display }}</span></td>
+            <td>{{ r.age_label }}</td>
+            <td onclick="event.stopPropagation();">
+              {% if r.status == 'pending' %}
+                <a class="row-action green" href="/rma/{{ r.pk }}/">Review</a>
+              {% elif r.status == 'received' %}
+                <button class="row-action green" onclick="event.stopPropagation();quickRefund({{ r.pk }})">Refund ${{ r.refund_amount|default:r.items_total|floatformat:2 }}</button>
+              {% else %}
+                <a class="row-action" href="/rma/{{ r.pk }}/">View</a>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div class="empty">
+      <div class="icon"><i class="fa-solid fa-rotate-left"></i></div>
+      <div class="t">No returns to show</div>
+      <div class="h">
+        {% if search or active_tab and active_tab != 'all' %}
+          Try clearing the filter or search.
+        {% else %}
+          When customers submit return requests, they'll appear here.
+        {% endif %}
+      </div>
+    </div>
+  {% endif %}
+</div>
+
+<!-- Create Manual RMA Modal -->
+<div id="createModal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.65);z-index:200;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#fff;border-radius:18px;padding:28px 30px;max-width:520px;width:100%;box-shadow:0 24px 60px -16px rgba(15,23,42,.45);">
+    <h2 style="font-size:18px;font-weight:900;margin-bottom:6px;">Create Manual RMA</h2>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:18px;">Use this when a customer contacts you directly instead of using the return portal.</p>
+
+    <div class="field" style="margin-bottom:14px;">
+      <label style="display:block;font-size:11px;font-weight:800;color:var(--text);text-transform:uppercase;letter-spacing:.06em;margin-bottom:7px;">Order Number (your store's order ID)</label>
+      <input id="m_order_id" placeholder="e.g. 10472" style="width:100%;padding:10px 14px;border:1px solid var(--line);border-radius:10px;font-size:13.5px;font-family:inherit;outline:none;"/>
+    </div>
+    <div class="field" style="margin-bottom:14px;">
+      <label style="display:block;font-size:11px;font-weight:800;color:var(--text);text-transform:uppercase;letter-spacing:.06em;margin-bottom:7px;">Reason</label>
+      <select id="m_reason" style="width:100%;padding:10px 14px;border:1px solid var(--line);border-radius:10px;font-size:13.5px;font-family:inherit;outline:none;background:#fff;">
+        <option value="defective">Defective / Not working</option>
+        <option value="wrong_size">Wrong size</option>
+        <option value="damaged">Damaged in transit</option>
+        <option value="not_described">Not as described</option>
+        <option value="changed_mind">Changed mind</option>
+        <option value="wrong_item">Wrong item shipped</option>
+      </select>
+    </div>
+    <div class="field" style="margin-bottom:18px;">
+      <label style="display:block;font-size:11px;font-weight:800;color:var(--text);text-transform:uppercase;letter-spacing:.06em;margin-bottom:7px;">Note (optional)</label>
+      <textarea id="m_note" rows="3" placeholder="Why the return is being requested…" style="width:100%;padding:10px 14px;border:1px solid var(--line);border-radius:10px;font-size:13.5px;font-family:inherit;outline:none;resize:vertical;"></textarea>
+    </div>
+    <div id="m_err" style="display:none;font-size:12.5px;color:#b91c1c;background:#fef2f2;border:1px solid #fecaca;padding:9px 12px;border-radius:8px;margin-bottom:12px;"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button class="tool-btn" onclick="closeCreateModal()">Cancel</button>
+      <button class="tool-btn primary" onclick="submitCreate()">Create RMA</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function openCreateModal(){ document.getElementById('createModal').style.display='flex'; }
+function closeCreateModal(){ document.getElementById('createModal').style.display='none'; }
+
+async function submitCreate(){
+  const order_id = document.getElementById('m_order_id').value.trim();
+  const reason   = document.getElementById('m_reason').value;
+  const note     = document.getElementById('m_note').value.trim();
+  const errBox   = document.getElementById('m_err');
+  errBox.style.display = 'none';
+
+  if (!order_id) {
+    errBox.textContent = 'Order number is required.';
+    errBox.style.display = 'block';
+    return;
+  }
+
+  // Look up Order.id from external_order_id — we send external_order_id and server resolves via the user's stores.
+  // (For now we expect the user to enter the EXTERNAL order id and server-side does the resolution.)
+  const res = await fetch('/rma/create/', {
+    method:'POST',
+    headers: {'X-CSRFToken': getCsrf(), 'Content-Type':'application/json'},
+    body: JSON.stringify({order_external_id: order_id, reason, note}),
+  });
+  const data = await res.json();
+  if (data.ok && data.rma_id) {
+    window.location = '/rma/' + data.rma_id + '/';
+  } else {
+    errBox.textContent = data.error || 'Could not create RMA.';
+    errBox.style.display = 'block';
+  }
+}
+
+async function quickRefund(pk){
+  if (!confirm('Process refund now? This will charge the refund to the original payment method.')) return;
+  const {ok, data} = await api('/rma/' + pk + '/refund/');
+  if (ok) {
+    window.location.reload();
+  } else {
+    alert(data.error || 'Refund failed');
+  }
+}
+</script>
+{% endblock %}

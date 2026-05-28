@@ -14,6 +14,9 @@ media/
 # Sample/mockup HTML files (preview-only, not deployed)
 *_sample.html
 *_mockup.html
+sample_*.html
+templates/sample_*.html
+templates/*_mockup.html
 
 # ── Local-only promo / ad video templates and routes ──
 # These animated pages exist purely for local screen-capture → MP4

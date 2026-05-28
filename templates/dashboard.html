@@ -4867,6 +4867,11 @@ document.addEventListener("DOMContentLoaded", () => {
       <svg class="sb-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
       Tasks
     </button>
+    <button id="navRMA" data-tip="Returns & Refunds" onclick="showSection('rma')" style="position:relative;">
+      <svg class="sb-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6a2 2 0 0 0 2 2h10"/><path d="M21 17v-6a2 2 0 0 0-2-2H9"/><polyline points="6 4 3 7 6 10"/><polyline points="18 14 21 17 18 20"/></svg>
+      Returns & Refunds
+      <span id="rmaNavBadge" style="display:none;position:absolute;top:8px;right:8px;background:#ef4444;color:#fff;font-size:9px;font-weight:900;border-radius:999px;padding:1px 5px;min-width:16px;text-align:center;line-height:1.4;"></span>
+    </button>
 
     <div class="sb-divider"></div>
 
@@ -9833,6 +9838,332 @@ document.addEventListener("DOMContentLoaded", () => {
     <!-- ══════════════════ END AI TRAINING STUDIO V2 SECTION ══════════════════ -->
 
 
+    <!-- ══════════════════ RETURNS & REFUNDS (RMA) SECTION ══════════════════ -->
+    <style>
+      #rmaSection{padding:24px 28px 60px;}
+      #rmaSection .rma-head{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:12px;}
+      #rmaSection .rma-h1{font-size:22px;font-weight:900;letter-spacing:-.01em;color:var(--vf-text,#0f172a);}
+      #rmaSection .rma-sub{font-size:13px;color:var(--vf-muted,#64748b);margin-top:3px;}
+      #rmaSection .rma-tabs{display:flex;gap:4px;background:var(--vf-surface-2,#f1f5f9);padding:4px;border-radius:11px;width:fit-content;}
+      #rmaSection .rma-tab{padding:7px 14px;font-size:12.5px;font-weight:700;color:var(--vf-muted,#64748b);border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:7px;border:none;background:none;font-family:inherit;}
+      #rmaSection .rma-tab.active{background:#fff;color:var(--vf-text,#0f172a);box-shadow:0 1px 3px rgba(15,23,42,.05);}
+      #rmaSection .rma-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;}
+      #rmaSection .rma-stat{background:#fff;border:1px solid var(--vf-line,#eef1f6);border-radius:14px;padding:15px 17px;position:relative;overflow:hidden;}
+      #rmaSection .rma-stat::after{content:"";position:absolute;top:0;left:0;height:3px;width:100%;background:linear-gradient(135deg,#6366f1,#8b5cf6,#a855f7);opacity:.75;}
+      #rmaSection .rma-stat .l{font-size:10.5px;color:var(--vf-muted,#64748b);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px;}
+      #rmaSection .rma-stat .v{font-size:22px;font-weight:900;color:var(--vf-text,#0f172a);}
+      #rmaSection .rma-stat .d{font-size:11.5px;color:var(--vf-muted,#64748b);margin-top:3px;}
+      #rmaSection .rma-stat .ic{position:absolute;top:13px;right:13px;width:30px;height:30px;background:#f1f5f9;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#6366f1;font-size:13px;}
+      #rmaSection .rma-filter-tabs{display:flex;gap:4px;background:#f1f5f9;padding:4px;border-radius:11px;width:fit-content;max-width:100%;overflow-x:auto;margin-bottom:14px;}
+      #rmaSection .rma-ftab{padding:7px 13px;font-size:12px;font-weight:700;color:#64748b;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:7px;white-space:nowrap;border:none;background:none;font-family:inherit;}
+      #rmaSection .rma-ftab.active{background:#fff;color:#0f172a;box-shadow:0 1px 3px rgba(15,23,42,.05);}
+      #rmaSection .rma-ftab .ct{background:#f1f5f9;font-size:10px;font-weight:800;padding:1px 6px;border-radius:999px;color:#64748b;}
+      #rmaSection .rma-ftab.active .ct{background:#6366f1;color:#fff;}
+      #rmaSection .rma-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+      #rmaSection .rma-search{flex:1;max-width:380px;display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:8px 13px;}
+      #rmaSection .rma-search input{border:none;outline:none;font-size:13px;flex:1;font-family:inherit;background:transparent;color:#0f172a;}
+      #rmaSection .rma-btn{padding:8px 14px;background:#fff;border:1px solid #e5e7eb;border-radius:10px;font-size:12.5px;font-weight:600;color:#0f172a;cursor:pointer;display:flex;align-items:center;gap:7px;font-family:inherit;}
+      #rmaSection .rma-btn:hover{background:#f8fafc;}
+      #rmaSection .rma-btn.primary{background:linear-gradient(135deg,#6366f1,#8b5cf6,#a855f7);color:#fff;border-color:transparent;}
+      #rmaSection .rma-card{background:#fff;border:1px solid #eef1f6;border-radius:14px;overflow:hidden;box-shadow:0 1px 3px rgba(15,23,42,.05);}
+      #rmaSection table.rma-tbl{width:100%;border-collapse:collapse;}
+      #rmaSection table.rma-tbl th{font-size:10.5px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.06em;text-align:left;padding:13px 16px;background:#f8fafc;border-bottom:1px solid #eef1f6;}
+      #rmaSection table.rma-tbl td{padding:13px 16px;border-bottom:1px solid #eef1f6;font-size:13px;color:#0f172a;vertical-align:middle;}
+      #rmaSection table.rma-tbl tr:last-child td{border-bottom:none;}
+      #rmaSection table.rma-tbl tr.click{cursor:pointer;}
+      #rmaSection table.rma-tbl tr.click:hover td{background:#f8fafc;}
+      #rmaSection .rma-num{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;font-weight:700;color:#6366f1;background:rgba(99,102,241,.08);padding:3px 9px;border-radius:6px;display:inline-block;}
+      #rmaSection .rma-cust{display:flex;align-items:center;gap:9px;}
+      #rmaSection .rma-av{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;}
+      #rmaSection .rma-pill{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;}
+      #rmaSection .rma-pill::before{content:"";width:6px;height:6px;border-radius:50%;}
+      #rmaSection .rma-pill.pending{background:#fef3c7;color:#92400e;}
+      #rmaSection .rma-pill.pending::before{background:#f59e0b;}
+      #rmaSection .rma-pill.approved{background:#dbeafe;color:#1e40af;}
+      #rmaSection .rma-pill.approved::before{background:#3b82f6;}
+      #rmaSection .rma-pill.in_transit{background:#e0e7ff;color:#3730a3;}
+      #rmaSection .rma-pill.in_transit::before{background:#6366f1;}
+      #rmaSection .rma-pill.received{background:#fae8ff;color:#86198f;}
+      #rmaSection .rma-pill.received::before{background:#d946ef;}
+      #rmaSection .rma-pill.tracking_submitted{background:#cffafe;color:#155e75;}
+      #rmaSection .rma-pill.tracking_submitted::before{background:#06b6d4;}
+      #rmaSection .rma-pill.refunded{background:#d1fae5;color:#065f46;}
+      #rmaSection .rma-pill.refunded::before{background:#10b981;}
+      #rmaSection .rma-pill.resolved{background:#dcfce7;color:#14532d;}
+      #rmaSection .rma-pill.resolved::before{background:#22c55e;}
+      #rmaSection .rma-pill.rejected{background:#fee2e2;color:#991b1b;}
+      #rmaSection .rma-pill.rejected::before{background:#ef4444;}
+      #rmaSection .rma-pill.canceled{background:#f1f5f9;color:#64748b;}
+      #rmaSection .rma-pill.canceled::before{background:#94a3b8;}
+      #rmaSection .rma-reason{font-size:11px;color:#64748b;background:#f1f5f9;padding:3px 8px;border-radius:6px;font-weight:600;display:inline-block;}
+      #rmaSection .rma-rowact{padding:5px 11px;font-size:11.5px;font-weight:700;border-radius:7px;border:1px solid #e5e7eb;background:#fff;cursor:pointer;color:#0f172a;font-family:inherit;}
+      #rmaSection .rma-rowact:hover{background:#f8fafc;}
+      #rmaSection .rma-rowact.green{color:#065f46;border-color:#a7f3d0;background:#ecfdf5;}
+      #rmaSection .rma-empty{padding:60px 24px;text-align:center;color:#64748b;}
+      #rmaSection .rma-empty .icn{font-size:36px;color:#cbd5e1;margin-bottom:14px;}
+      #rmaSection .rma-empty .tt{font-size:15px;font-weight:700;color:#0f172a;margin-bottom:6px;}
+      #rmaSection .rma-empty .hh{font-size:13px;color:#64748b;}
+
+      /* Detail view (loaded into same section) */
+      #rmaSection .rma-detail-grid{display:grid;grid-template-columns:1fr 360px;gap:18px;margin-top:8px;}
+      #rmaSection .rma-detail-left{display:flex;flex-direction:column;gap:16px;min-width:0;}
+      #rmaSection .rma-detail-right{display:flex;flex-direction:column;gap:14px;}
+      #rmaSection .rma-sec{background:#fff;border:1px solid #eef1f6;border-radius:14px;padding:18px 20px;box-shadow:0 1px 3px rgba(15,23,42,.05);}
+      #rmaSection .rma-sec h3{font-size:11px;font-weight:800;color:#6366f1;text-transform:uppercase;letter-spacing:.1em;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+      #rmaSection .rma-kv-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 22px;}
+      #rmaSection .rma-kv .k{font-size:10.5px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;}
+      #rmaSection .rma-kv .v{font-size:13.5px;color:#0f172a;font-weight:600;}
+      #rmaSection .rma-item{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid #eef1f6;align-items:flex-start;}
+      #rmaSection .rma-item:last-child{border-bottom:none;padding-bottom:0;}
+      #rmaSection .rma-item:first-child{padding-top:0;}
+      #rmaSection .rma-item-img{width:60px;height:60px;border-radius:10px;background:linear-gradient(135deg,#fef3c7,#fde68a);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;border:1px solid #eef1f6;background-size:cover;background-position:center;}
+      #rmaSection .rma-photos{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+      #rmaSection .rma-pthumb{aspect-ratio:1;border-radius:9px;background:#f8fafc;border:1px solid #eef1f6;overflow:hidden;cursor:pointer;}
+      #rmaSection .rma-pthumb img{width:100%;height:100%;object-fit:cover;}
+      #rmaSection .rma-tl{position:relative;padding-left:24px;}
+      #rmaSection .rma-tl::before{content:"";position:absolute;left:7px;top:6px;bottom:6px;width:2px;background:#e5e7eb;}
+      #rmaSection .rma-tl-item{position:relative;padding-bottom:14px;}
+      #rmaSection .rma-tl-item:last-child{padding-bottom:0;}
+      #rmaSection .rma-tl-dot{position:absolute;left:-22px;top:2px;width:16px;height:16px;border-radius:50%;background:#10b981;border:2px solid #10b981;}
+      #rmaSection .rma-tl-dot::after{content:"✓";font-size:9px;color:#fff;position:absolute;left:1.5px;top:-0.5px;font-weight:900;}
+      #rmaSection .rma-tl-title{font-size:13px;font-weight:700;}
+      #rmaSection .rma-tl-meta{font-size:11.5px;color:#64748b;margin-top:2px;line-height:1.5;}
+      #rmaSection .rma-totalrow{display:flex;justify-content:space-between;padding:7px 0;font-size:13px;}
+      #rmaSection .rma-totalrow.big{font-size:15px;font-weight:800;border-top:1px dashed #e5e7eb;margin-top:8px;padding-top:13px;}
+      #rmaSection .rma-totalrow input{width:90px;padding:5px 8px;border:1px solid #e5e7eb;border-radius:6px;font-size:12.5px;font-family:inherit;text-align:right;}
+      #rmaSection .rma-bigbtn{display:flex;align-items:center;justify-content:center;gap:8px;padding:11px 16px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;border:none;width:100%;font-family:inherit;}
+      #rmaSection .rma-bigbtn+.rma-bigbtn{margin-top:8px;}
+      #rmaSection .rma-bigbtn.primary{background:linear-gradient(135deg,#6366f1,#8b5cf6,#a855f7);color:#fff;box-shadow:0 6px 18px rgba(99,102,241,.28);}
+      #rmaSection .rma-bigbtn.success{background:#10b981;color:#fff;}
+      #rmaSection .rma-bigbtn.danger{background:#fff;color:#b91c1c;border:1px solid #fecaca;}
+      #rmaSection .rma-bigbtn.ghost{background:#fff;color:#0f172a;border:1px solid #e5e7eb;}
+      #rmaSection .rma-msg{padding:11px 14px;border-radius:11px;font-size:13px;line-height:1.5;margin-bottom:6px;max-width:80%;}
+      #rmaSection .rma-msg.customer{background:#f1f5f9;color:#0f172a;border-bottom-left-radius:4px;}
+      #rmaSection .rma-msg.tenant{background:linear-gradient(135deg,#6366f1,#8b5cf6,#a855f7);color:#fff;border-bottom-right-radius:4px;margin-left:auto;}
+      #rmaSection .rma-msg-time{font-size:10.5px;color:#94a3b8;margin:-2px 4px 8px;}
+      #rmaSection .rma-msginput{display:flex;gap:8px;margin-top:14px;border-top:1px solid #eef1f6;padding-top:14px;}
+      #rmaSection .rma-msginput input{flex:1;padding:9px 13px;border:1px solid #e5e7eb;border-radius:10px;font-size:13px;font-family:inherit;outline:none;}
+      #rmaSection .rma-msginput button{padding:9px 16px;background:linear-gradient(135deg,#6366f1,#8b5cf6,#a855f7);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;}
+      #rmaSection .rma-note{background:#fffbeb;border:1px dashed #fcd34d;border-radius:10px;padding:12px 14px;font-size:12.5px;color:#78350f;line-height:1.5;margin-bottom:8px;}
+      #rmaSection .rma-note strong{display:block;font-size:10.5px;color:#92400e;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;font-weight:800;}
+      #rmaSection .rma-noteinput{display:flex;gap:8px;margin-top:10px;}
+      #rmaSection .rma-noteinput input{flex:1;padding:8px 11px;border:1px solid #fcd34d;border-radius:8px;font-size:12px;font-family:inherit;background:#fff;outline:none;}
+      #rmaSection .rma-noteinput button{padding:8px 13px;background:#92400e;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;}
+      #rmaSection .rma-labelbox{background:linear-gradient(135deg,#1e293b,#0f172a);color:#fff;padding:14px 16px;border-radius:11px;margin-top:10px;}
+      #rmaSection .rma-labelbox .t{font-size:10px;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px;}
+      #rmaSection .rma-labelbox .v{font-size:13px;font-weight:800;}
+      #rmaSection .rma-labelbox a{display:inline-block;margin-top:8px;color:#a5b4fc;font-size:12px;font-weight:700;text-decoration:none;}
+      #rmaSection .rma-breadcrumb{display:flex;align-items:center;gap:8px;font-size:12.5px;color:#64748b;margin-bottom:6px;}
+      #rmaSection .rma-breadcrumb a{color:#6366f1;cursor:pointer;text-decoration:none;}
+
+      /* Analytics */
+      #rmaSection .rma-chart{background:#fff;border:1px solid #eef1f6;border-radius:14px;padding:18px 20px;box-shadow:0 1px 3px rgba(15,23,42,.05);margin-bottom:12px;}
+      #rmaSection .rma-chart h4{font-size:13px;font-weight:800;margin-bottom:14px;}
+      #rmaSection .rma-bars{display:flex;align-items:flex-end;gap:7px;height:140px;padding:0 4px;}
+      #rmaSection .rma-bar{flex:1;background:linear-gradient(180deg,#a5b4fc,#6366f1);border-radius:7px 7px 2px 2px;min-height:6px;position:relative;transition:all .2s;}
+      #rmaSection .rma-bar:hover{filter:brightness(1.1);}
+      #rmaSection .rma-bar::after{content:attr(data-x);position:absolute;bottom:-22px;left:50%;transform:translateX(-50%);font-size:11px;color:#64748b;font-weight:600;}
+      #rmaSection .rma-reasonline{display:flex;align-items:center;gap:11px;font-size:13px;margin-bottom:8px;}
+      #rmaSection .rma-reasonline .lb{width:140px;font-weight:600;}
+      #rmaSection .rma-reasonline .tr{flex:1;background:#f1f5f9;height:8px;border-radius:999px;overflow:hidden;}
+      #rmaSection .rma-reasonline .fl{height:100%;background:linear-gradient(135deg,#6366f1,#8b5cf6,#a855f7);}
+      #rmaSection .rma-reasonline .vl{font-size:12px;font-weight:700;color:#64748b;width:50px;text-align:right;}
+
+      /* Settings */
+      #rmaSection .rma-field{margin-bottom:18px;}
+      #rmaSection .rma-field label{display:block;font-size:11px;font-weight:800;color:#0f172a;text-transform:uppercase;letter-spacing:.06em;margin-bottom:7px;}
+      #rmaSection .rma-field .hint{font-size:11.5px;color:#64748b;margin-top:5px;}
+      #rmaSection .rma-field input[type=text],#rmaSection .rma-field input[type=number],#rmaSection .rma-field textarea,#rmaSection .rma-field select{width:100%;padding:10px 14px;border:1px solid #e5e7eb;border-radius:10px;font-size:13.5px;font-family:inherit;outline:none;background:#fff;color:#0f172a;}
+      #rmaSection .rma-field textarea{resize:vertical;min-height:80px;}
+      #rmaSection .rma-fieldrow{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+      #rmaSection .rma-fieldrow3{display:grid;grid-template-columns:2fr 1fr 1fr;gap:14px;}
+      #rmaSection .rma-togrow{display:flex;align-items:center;justify-content:space-between;padding:11px 0;gap:14px;}
+      #rmaSection .rma-togrow+.rma-togrow{border-top:1px solid #eef1f6;}
+      #rmaSection .rma-tog-l{font-size:13.5px;font-weight:600;}
+      #rmaSection .rma-tog-d{font-size:11.5px;color:#64748b;margin-top:2px;}
+      #rmaSection .rma-sw{position:relative;width:38px;height:22px;background:#e5e7eb;border-radius:999px;cursor:pointer;transition:background .2s;flex-shrink:0;}
+      #rmaSection .rma-sw::after{content:"";position:absolute;left:2px;top:2px;width:18px;height:18px;background:#fff;border-radius:50%;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);}
+      #rmaSection .rma-sw.on{background:#6366f1;}
+      #rmaSection .rma-sw.on::after{transform:translateX(16px);}
+      #rmaSection .rma-rule{display:flex;align-items:center;gap:12px;padding:11px 14px;background:#f8fafc;border-radius:10px;margin-bottom:8px;border:1px solid #eef1f6;}
+      #rmaSection .rma-rule .nm{flex:1;font-size:13px;font-weight:600;}
+      #rmaSection .rma-rule .cf{font-size:11px;color:#64748b;margin-top:2px;}
+
+      @media (max-width:1180px){ #rmaSection .rma-detail-grid{grid-template-columns:1fr;} }
+      @media (max-width:780px){  #rmaSection .rma-stats{grid-template-columns:repeat(2,1fr);} }
+    </style>
+
+    <section id="rmaSection" class="section">
+
+      <!-- Top tabs: Inbox / Analytics / Settings -->
+      <div class="rma-head">
+        <div>
+          <h1 class="rma-h1">Returns & Refunds</h1>
+          <p class="rma-sub">Review return requests, generate shipping labels, and process refunds — all in one place.</p>
+        </div>
+        <div class="rma-tabs" id="rmaSubTabs">
+          <button class="rma-tab active" data-rmav="inbox"     onclick="rmaSwitchView('inbox')">📥 Inbox</button>
+          <button class="rma-tab"        data-rmav="triage"    onclick="rmaSwitchView('triage')">📧 Triage <span id="rmaTriageBadge" style="display:none;margin-left:4px;background:#ef4444;color:#fff;font-size:9px;font-weight:900;padding:1px 6px;border-radius:999px;">0</span></button>
+          <button class="rma-tab"        data-rmav="analytics" onclick="rmaSwitchView('analytics')">📊 Analytics</button>
+          <button class="rma-tab"        data-rmav="settings"  onclick="rmaSwitchView('settings')">⚙️ Settings</button>
+        </div>
+      </div>
+
+      <!-- ── INBOX VIEW ─────────────────────────────────────────── -->
+      <div id="rmaViewInbox">
+        <div class="rma-stats">
+          <div class="rma-stat">
+            <div class="ic"><i class="fa-solid fa-clock"></i></div>
+            <div class="l">Pending Review</div>
+            <div class="v" id="rmaStatPending">—</div>
+            <div class="d">awaiting action</div>
+          </div>
+          <div class="rma-stat">
+            <div class="ic"><i class="fa-solid fa-percent"></i></div>
+            <div class="l">Return Rate (30d)</div>
+            <div class="v" id="rmaStatRate">—</div>
+            <div class="d">of orders returned</div>
+          </div>
+          <div class="rma-stat">
+            <div class="ic"><i class="fa-solid fa-stopwatch"></i></div>
+            <div class="l">Avg Approval Time</div>
+            <div class="v" id="rmaStatAvg">—</div>
+            <div class="d">past 30 days</div>
+          </div>
+          <div class="rma-stat">
+            <div class="ic"><i class="fa-solid fa-dollar-sign"></i></div>
+            <div class="l">Refunded This Month</div>
+            <div class="v" id="rmaStatRefunded">—</div>
+            <div class="d" id="rmaStatRefundedCount">0 refunds</div>
+          </div>
+        </div>
+
+        <div class="rma-filter-tabs" id="rmaFilterTabs">
+          <button class="rma-ftab active" data-status="all"                onclick="rmaSetFilter('all')">All <span class="ct" id="rmaCt_all">0</span></button>
+          <button class="rma-ftab"        data-status="pending"            onclick="rmaSetFilter('pending')">Pending <span class="ct" id="rmaCt_pending">0</span></button>
+          <button class="rma-ftab"        data-status="approved"           onclick="rmaSetFilter('approved')">Approved <span class="ct" id="rmaCt_approved">0</span></button>
+          <button class="rma-ftab"        data-status="tracking_submitted" onclick="rmaSetFilter('tracking_submitted')">Tracking <span class="ct" id="rmaCt_tracking_submitted">0</span></button>
+          <button class="rma-ftab"        data-status="in_transit"         onclick="rmaSetFilter('in_transit')">In Transit <span class="ct" id="rmaCt_in_transit">0</span></button>
+          <button class="rma-ftab"        data-status="received"           onclick="rmaSetFilter('received')">Received <span class="ct" id="rmaCt_received">0</span></button>
+          <button class="rma-ftab"        data-status="resolved"           onclick="rmaSetFilter('resolved')">Resolved <span class="ct" id="rmaCt_resolved">0</span></button>
+          <button class="rma-ftab"        data-status="rejected"           onclick="rmaSetFilter('rejected')">Rejected <span class="ct" id="rmaCt_rejected">0</span></button>
+        </div>
+
+        <div class="rma-toolbar">
+          <div class="rma-search">
+            <i class="fa-solid fa-magnifying-glass" style="color:#94a3b8;font-size:12px;"></i>
+            <input id="rmaSearchInput" placeholder="Search by RMA, customer, email, or order #…"/>
+          </div>
+          <button class="rma-btn" onclick="rmaLoadList()"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
+          <button class="rma-btn primary" onclick="rmaOpenCreateModal()"><i class="fa-solid fa-plus"></i> Create Manual RMA</button>
+        </div>
+
+        <div class="rma-card" id="rmaListCard">
+          <div class="rma-empty"><div class="icn"><i class="fa-solid fa-spinner fa-spin"></i></div><div class="tt">Loading…</div></div>
+        </div>
+      </div>
+
+      <!-- ── TRIAGE VIEW (refund-category emails awaiting action) ── -->
+      <div id="rmaViewTriage" style="display:none;">
+        <div style="background:linear-gradient(135deg,#eef2ff,#f5f3ff);border:1px solid #c7d2fe;border-radius:14px;padding:16px 20px;margin-bottom:14px;display:flex;align-items:center;gap:14px;">
+          <div style="width:42px;height:42px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;flex-shrink:0;">
+            <i class="fa-solid fa-envelope-open-text"></i>
+          </div>
+          <div style="flex:1;">
+            <div style="font-size:14px;font-weight:800;color:#3730a3;margin-bottom:3px;">Return / Refund Emails — Awaiting Triage</div>
+            <div style="font-size:12.5px;color:#4338ca;line-height:1.5;">Emails categorised as <b>refund</b> appear here. Click <b>Start Return</b> to create an RMA and automatically email the customer a return-form link. Click <b>Dismiss</b> if it's not a real return.</div>
+          </div>
+        </div>
+        <div id="rmaTriageList" class="rma-card">
+          <div class="rma-empty"><div class="icn"><i class="fa-solid fa-spinner fa-spin"></i></div><div class="tt">Loading…</div></div>
+        </div>
+      </div>
+
+      <!-- ── DETAIL VIEW (replaces inbox when row clicked) ──────── -->
+      <div id="rmaViewDetail" style="display:none;"></div>
+
+      <!-- ── ANALYTICS VIEW ─────────────────────────────────────── -->
+      <div id="rmaViewAnalytics" style="display:none;">
+        <div class="rma-stats">
+          <div class="rma-stat">
+            <div class="ic"><i class="fa-solid fa-percent"></i></div>
+            <div class="l">Return Rate</div>
+            <div class="v" id="rmaAnaRate">—</div>
+            <div class="d">of orders</div>
+          </div>
+          <div class="rma-stat">
+            <div class="ic"><i class="fa-solid fa-thumbs-up"></i></div>
+            <div class="l">Approval Rate</div>
+            <div class="v" id="rmaAnaApprove">—</div>
+            <div class="d">approved vs resolved</div>
+          </div>
+          <div class="rma-stat">
+            <div class="ic"><i class="fa-solid fa-stopwatch"></i></div>
+            <div class="l">Avg Processing</div>
+            <div class="v" id="rmaAnaAvgDays">—</div>
+            <div class="d">request → approval</div>
+          </div>
+          <div class="rma-stat">
+            <div class="ic"><i class="fa-solid fa-money-bill-wave"></i></div>
+            <div class="l">Total Refunded</div>
+            <div class="v" id="rmaAnaRefunded">—</div>
+            <div class="d" id="rmaAnaRefundedCount">0 refunds</div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:2fr 1fr;gap:14px;">
+          <div class="rma-chart">
+            <h4>Returns over time <span style="float:right;font-size:11.5px;color:#64748b;font-weight:600;">Last 14 days</span></h4>
+            <div class="rma-bars" id="rmaBars"></div>
+            <div style="margin-top:30px;"></div>
+          </div>
+          <div class="rma-chart">
+            <h4>Top Return Reasons</h4>
+            <div id="rmaReasons"></div>
+          </div>
+        </div>
+
+        <div class="rma-chart">
+          <h4>Top returned products <span style="float:right;font-size:11.5px;color:#64748b;font-weight:600;">Last 30 days</span></h4>
+          <div id="rmaTopProducts"></div>
+        </div>
+      </div>
+
+      <!-- ── SETTINGS VIEW ──────────────────────────────────────── -->
+      <div id="rmaViewSettings" style="display:none;">
+        <div id="rmaSettingsBody">
+          <div class="rma-empty"><div class="icn"><i class="fa-solid fa-spinner fa-spin"></i></div><div class="tt">Loading settings…</div></div>
+        </div>
+      </div>
+
+      <!-- ── Create Manual RMA modal ────────────────────────────── -->
+      <div id="rmaCreateModal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.65);z-index:5000;align-items:center;justify-content:center;padding:20px;">
+        <div style="background:#fff;border-radius:18px;padding:28px 30px;max-width:500px;width:100%;box-shadow:0 24px 60px -16px rgba(15,23,42,.45);">
+          <h2 style="font-size:18px;font-weight:900;margin-bottom:6px;">Create Manual RMA</h2>
+          <p style="font-size:13px;color:#64748b;margin-bottom:18px;">Use this when a customer contacts you directly instead of the return portal.</p>
+          <div class="rma-field"><label>Order Number</label><input id="rmaMOrder" type="text" placeholder="e.g. 10472"/></div>
+          <div class="rma-field"><label>Reason</label>
+            <select id="rmaMReason">
+              <option value="defective">Defective / Not working</option>
+              <option value="wrong_size">Wrong size</option>
+              <option value="damaged">Damaged in transit</option>
+              <option value="not_described">Not as described</option>
+              <option value="changed_mind">Changed mind</option>
+              <option value="wrong_item">Wrong item shipped</option>
+            </select>
+          </div>
+          <div class="rma-field"><label>Note (optional)</label><textarea id="rmaMNote" rows="3" placeholder="Context for the return…"></textarea></div>
+          <div id="rmaMErr" style="display:none;font-size:12.5px;color:#b91c1c;background:#fef2f2;border:1px solid #fecaca;padding:9px 12px;border-radius:8px;margin-bottom:12px;"></div>
+          <div style="display:flex;gap:10px;justify-content:flex-end;">
+            <button class="rma-btn" onclick="rmaCloseCreateModal()">Cancel</button>
+            <button class="rma-btn primary" onclick="rmaSubmitCreate()">Create RMA</button>
+          </div>
+        </div>
+      </div>
+
+    </section>
+    <!-- ══════════════════ END RMA SECTION ══════════════════ -->
+
 
     <!-- ══════════════════ AI SETUP WIZARD MODAL ══════════════════ -->
     <style>
@@ -12315,6 +12646,789 @@ function showSection(section){
     if (typeof v2InitOnOpen === 'function') v2InitOnOpen();
   }
 
+  if(section === "rma"){
+    document.getElementById("rmaSection").classList.add("active");
+    document.getElementById("navRMA").classList.add("active");
+    if (typeof rmaInitOnOpen === 'function') rmaInitOnOpen();
+  }
+
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Returns & Refunds (RMA) — in-dashboard section
+   ─────────────────────────────────────────────────────────────── */
+
+let _rmaState = {
+  view:   'inbox',        // inbox | detail | analytics | settings
+  filter: 'all',
+  search: '',
+  rma:    null,           // currently open RMA payload
+  searchTimer: null,
+};
+
+function rmaCsrf(){
+  const m = document.cookie.match(/csrftoken=([^;]+)/);
+  return m ? m[1] : '';
+}
+
+async function rmaApi(url, body, method='POST'){
+  try {
+    const res = await fetch(url, {
+      method,
+      headers: {'X-CSRFToken': rmaCsrf(), 'Content-Type':'application/json'},
+      body: body ? JSON.stringify(body) : null,
+    });
+    let data = {};
+    try { data = await res.json(); } catch(e) {}
+    return { ok: res.ok && data.ok !== false, status: res.status, data };
+  } catch (e) {
+    return { ok: false, status: 0, data: { error: e.message } };
+  }
+}
+
+function rmaEsc(s){
+  if (s == null) return '';
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function rmaInitOnOpen(){
+  // Default to inbox on first open
+  rmaSwitchView(_rmaState.view || 'inbox');
+  // Refresh triage badge count in background
+  rmaRefreshTriageBadge();
+}
+
+async function rmaRefreshTriageBadge(){
+  try {
+    const { ok, data } = await rmaApi('/rma/api/triage/', null, 'GET');
+    if (!ok) return;
+    const badge = document.getElementById('rmaTriageBadge');
+    if (!badge) return;
+    if (data.count > 0){ badge.style.display='inline-block'; badge.textContent = data.count; }
+    else { badge.style.display='none'; }
+  } catch(e) {}
+}
+
+function rmaSwitchView(name){
+  _rmaState.view = name;
+  // Toggle top sub-tabs
+  document.querySelectorAll('#rmaSubTabs .rma-tab').forEach(b => b.classList.toggle('active', b.dataset.rmav === name));
+  // Hide all views
+  ['rmaViewInbox','rmaViewTriage','rmaViewDetail','rmaViewAnalytics','rmaViewSettings'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+  if (name === 'inbox')      { document.getElementById('rmaViewInbox').style.display='';      rmaLoadList(); }
+  if (name === 'triage')     { document.getElementById('rmaViewTriage').style.display='';    rmaLoadTriage(); }
+  if (name === 'detail')     { document.getElementById('rmaViewDetail').style.display='';     /* loaded explicitly */ }
+  if (name === 'analytics')  { document.getElementById('rmaViewAnalytics').style.display='';  rmaLoadAnalytics(); }
+  if (name === 'settings')   { document.getElementById('rmaViewSettings').style.display='';   rmaLoadSettings(); }
+}
+
+async function rmaLoadTriage(){
+  const list = document.getElementById('rmaTriageList');
+  list.innerHTML = '<div class="rma-empty"><div class="icn"><i class="fa-solid fa-spinner fa-spin"></i></div><div class="tt">Loading…</div></div>';
+  const { ok, data } = await rmaApi('/rma/api/triage/', null, 'GET');
+  if (!ok) { list.innerHTML = `<div class="rma-empty"><div class="icn">⚠️</div><div class="tt">Could not load triage</div></div>`; return; }
+
+  // Update triage badge on the sub-tab
+  const badge = document.getElementById('rmaTriageBadge');
+  if (badge){
+    if (data.count > 0){ badge.style.display='inline-block'; badge.textContent = data.count; }
+    else { badge.style.display='none'; }
+  }
+
+  if (!data.emails || data.emails.length === 0){
+    list.innerHTML = `<div class="rma-empty">
+      <div class="icn"><i class="fa-solid fa-inbox"></i></div>
+      <div class="tt">No emails awaiting triage</div>
+      <div class="hh">When customers send return / refund emails, they will appear here.</div>
+    </div>`;
+    return;
+  }
+
+  list.innerHTML = `
+    <table class="rma-tbl">
+      <thead><tr><th>From</th><th>Subject</th><th>Preview</th><th>Received</th><th></th></tr></thead>
+      <tbody>${data.emails.map(e => `
+        <tr>
+          <td><div style="font-weight:700;font-size:13px;">${rmaEsc(e.from || '—')}</div></td>
+          <td><div style="font-weight:600;font-size:13px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${rmaEsc(e.subject || '(no subject)')}</div></td>
+          <td><div style="font-size:12px;color:#64748b;max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${rmaEsc(e.preview)}</div></td>
+          <td><div style="font-size:11.5px;color:#64748b;">${rmaEsc(e.ts_display || '')}</div></td>
+          <td>
+            <div style="display:flex;gap:6px;justify-content:flex-end;">
+              <button class="rma-rowact green" onclick="rmaTriageStart(${e.id})"><i class="fa-solid fa-play"></i> Start Return</button>
+              <button class="rma-rowact" onclick="rmaTriageDismiss(${e.id})">Dismiss</button>
+            </div>
+          </td>
+        </tr>`).join('')}</tbody>
+    </table>`;
+}
+
+async function rmaTriageStart(emailId){
+  if (!confirm('Create a return case from this email and send the customer the return-form link?')) return;
+  const { ok, data } = await rmaApi('/rma/api/triage/' + emailId + '/start/');
+  if (ok) {
+    if (data.duplicate) {
+      alert('Return case already exists for this email: ' + data.rma_number);
+    } else if (!data.email_sent) {
+      alert('RMA created (' + data.rma_number + ') but email could not be sent: ' + (data.send_error || 'unknown'));
+    }
+    // Open the new RMA detail
+    rmaOpenDetail(data.rma_id);
+  } else {
+    alert(data.error || 'Could not start return.');
+  }
+}
+
+async function rmaTriageDismiss(emailId){
+  if (!confirm('Dismiss this email from triage? You can still find it in your normal Emails inbox.')) return;
+  const { ok, data } = await rmaApi('/rma/api/triage/' + emailId + '/dismiss/');
+  if (ok) { rmaLoadTriage(); } else { alert(data.error || 'Could not dismiss.'); }
+}
+
+function rmaSetFilter(status){
+  _rmaState.filter = status;
+  document.querySelectorAll('#rmaFilterTabs .rma-ftab').forEach(b => b.classList.toggle('active', b.dataset.status === status));
+  rmaLoadList();
+}
+
+/* ── INBOX ─────────────────────────────────────────────────── */
+
+async function rmaLoadList(){
+  const cardEl = document.getElementById('rmaListCard');
+  cardEl.innerHTML = '<div class="rma-empty"><div class="icn"><i class="fa-solid fa-spinner fa-spin"></i></div><div class="tt">Loading…</div></div>';
+
+  const params = new URLSearchParams();
+  if (_rmaState.filter && _rmaState.filter !== 'all') params.set('status', _rmaState.filter);
+  if (_rmaState.search) params.set('q', _rmaState.search);
+  const url = '/rma/api/list/' + (params.toString() ? '?'+params.toString() : '');
+
+  const { ok, data } = await rmaApi(url, null, 'GET');
+  if (!ok) {
+    cardEl.innerHTML = `<div class="rma-empty"><div class="icn">⚠️</div><div class="tt">Could not load returns</div><div class="hh">${rmaEsc(data.error||'Network error')}</div></div>`;
+    return;
+  }
+
+  // Stats
+  document.getElementById('rmaStatPending').textContent  = data.stats.pending;
+  document.getElementById('rmaStatRate').textContent     = data.stats.return_rate + '%';
+  document.getElementById('rmaStatAvg').textContent      = data.stats.avg_hours != null ? (data.stats.avg_hours + 'h') : '—';
+  document.getElementById('rmaStatRefunded').textContent = '$' + Number(data.stats.refunded_total||0).toFixed(2);
+  document.getElementById('rmaStatRefundedCount').textContent = (data.stats.refunded_count||0) + ' refund' + (data.stats.refunded_count===1?'':'s');
+
+  // Sidebar badge for pending count
+  const badge = document.getElementById('rmaNavBadge');
+  if (badge){
+    if (data.stats.pending > 0){ badge.style.display='inline-block'; badge.textContent=data.stats.pending; }
+    else { badge.style.display='none'; }
+  }
+
+  // Tab counts
+  ['all','pending','approved','tracking_submitted','in_transit','received','refunded','resolved','rejected'].forEach(k => {
+    const el = document.getElementById('rmaCt_'+k);
+    if (el) el.textContent = (data.tab_counts && data.tab_counts[k]) || 0;
+  });
+
+  // List
+  if (!data.rmas || data.rmas.length === 0) {
+    cardEl.innerHTML = `<div class="rma-empty">
+      <div class="icn"><i class="fa-solid fa-rotate-left"></i></div>
+      <div class="tt">No returns to show</div>
+      <div class="hh">${ _rmaState.filter !== 'all' || _rmaState.search ? 'Try clearing the filter or search.' : 'When customers submit return requests, they will appear here.' }</div>
+    </div>`;
+    return;
+  }
+
+  const rows = data.rmas.map(r => {
+    const initials = (r.customer_name || r.customer_email || '').slice(0,2).toUpperCase();
+    let rowAction;
+    if (r.status === 'pending')
+      rowAction = `<button class="rma-rowact green" onclick="event.stopPropagation();rmaOpenDetail(${r.id})">Review</button>`;
+    else if (r.status === 'received')
+      rowAction = `<button class="rma-rowact green" onclick="event.stopPropagation();rmaQuickRefund(${r.id})">Refund $${(r.refund_amount||r.items_total).toFixed(2)}</button>`;
+    else if (r.status === 'tracking_submitted')
+      rowAction = `<button class="rma-rowact green" onclick="event.stopPropagation();rmaOpenDetail(${r.id})">Track</button>`;
+    else
+      rowAction = `<button class="rma-rowact" onclick="event.stopPropagation();rmaOpenDetail(${r.id})">View</button>`;
+    const orderCell = r.order_id
+      ? `<strong>#${rmaEsc(r.order_id)}</strong><div style="font-size:11px;color:#64748b;">${rmaEsc(r.order_date)}</div>`
+      : `<span style="color:#94a3b8;">Manual</span>`;
+    return `
+      <tr class="click" onclick="rmaOpenDetail(${r.id})">
+        <td><span class="rma-num">${rmaEsc(r.rma_number)}</span></td>
+        <td><div class="rma-cust"><div class="rma-av">${rmaEsc(initials)}</div><div><div style="font-weight:700;font-size:13px;">${rmaEsc(r.customer_name||'—')}</div><div style="font-size:11px;color:#64748b;">${rmaEsc(r.customer_email)}</div></div></div></td>
+        <td>${orderCell}</td>
+        <td>${r.items_count} item${r.items_count===1?'':'s'} · <strong>$${(r.items_total||0).toFixed(2)}</strong></td>
+        <td><span class="rma-reason">${rmaEsc(r.reason_label)}</span></td>
+        <td><span class="rma-pill ${r.status}">${rmaEsc(r.status_display)}</span></td>
+        <td>${rmaEsc(r.age_label)}</td>
+        <td>${rowAction}</td>
+      </tr>`;
+  }).join('');
+
+  cardEl.innerHTML = `
+    <table class="rma-tbl">
+      <thead><tr>
+        <th>RMA</th><th>Customer</th><th>Order</th><th>Items / Amount</th>
+        <th>Reason</th><th>Status</th><th>Age</th><th></th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+/* Bind search input on init (after DOM ready) */
+document.addEventListener('DOMContentLoaded', () => {
+  const si = document.getElementById('rmaSearchInput');
+  if (si) {
+    si.addEventListener('input', () => {
+      clearTimeout(_rmaState.searchTimer);
+      _rmaState.searchTimer = setTimeout(() => {
+        _rmaState.search = si.value.trim();
+        rmaLoadList();
+      }, 250);
+    });
+  }
+});
+
+/* ── DETAIL ────────────────────────────────────────────────── */
+
+async function rmaOpenDetail(pk){
+  _rmaState.view = 'detail';
+  // Switch to detail view, hide others
+  ['rmaViewInbox','rmaViewAnalytics','rmaViewSettings'].forEach(id => document.getElementById(id).style.display='none');
+  document.querySelectorAll('#rmaSubTabs .rma-tab').forEach(b => b.classList.remove('active'));
+  // Hint detail tab? No — keep top-tabs neutral. Inbox tab gets re-enabled via breadcrumb.
+  const dv = document.getElementById('rmaViewDetail');
+  dv.style.display = '';
+  dv.innerHTML = '<div class="rma-empty"><div class="icn"><i class="fa-solid fa-spinner fa-spin"></i></div><div class="tt">Loading return…</div></div>';
+
+  const { ok, data } = await rmaApi('/rma/api/' + pk + '/', null, 'GET');
+  if (!ok) {
+    dv.innerHTML = `<div class="rma-empty"><div class="icn">⚠️</div><div class="tt">Could not load return</div><div class="hh">${rmaEsc(data.error||'Network error')}</div></div>`;
+    return;
+  }
+  _rmaState.rma = data;
+  rmaRenderDetail(data);
+}
+
+function rmaBackToInbox(){
+  rmaSwitchView('inbox');
+}
+
+function rmaRenderDetail(d){
+  const r = d.rma;
+  const initials = (r.customer_name || r.customer_email || '').slice(0,2).toUpperCase();
+  // Items
+  const itemsHtml = (d.items || []).map(it => `
+    <div class="rma-item">
+      <div class="rma-item-img" ${it.image_url ? `style="background-image:url('${rmaEsc(it.image_url)}');background-size:cover;"` : ''}>${it.image_url ? '' : '📦'}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13.5px;font-weight:700;margin-bottom:3px;">${rmaEsc(it.product_name)}</div>
+        ${(it.variant_label || it.sku) ? `<div style="font-size:11.5px;color:#64748b;margin-bottom:5px;">${rmaEsc(it.variant_label||'')}${it.variant_label && it.sku ? ' · ' : ''}${it.sku ? 'SKU: '+rmaEsc(it.sku) : ''}</div>` : ''}
+        <div style="display:flex;justify-content:space-between;align-items:flex-end;">
+          <div style="font-size:11.5px;color:#64748b;">Quantity: ${it.quantity}</div>
+          <div style="font-size:13px;font-weight:700;">$${(it.line_total||0).toFixed(2)}</div>
+        </div>
+      </div>
+    </div>`).join('') || '<p style="font-size:12.5px;color:#64748b;">No items listed.</p>';
+
+  // Photos
+  const photosHtml = (d.photos && d.photos.length)
+    ? `<div class="rma-sec"><h3><i class="fa-solid fa-camera"></i> Photo Evidence (${d.photos.length})</h3>
+        <div class="rma-photos">${d.photos.map(p => `<a class="rma-pthumb" href="${rmaEsc(p.url)}" target="_blank"><img src="${rmaEsc(p.url)}"/></a>`).join('')}</div>
+       </div>` : '';
+
+  // Conversation thread
+  const threadHtml = (d.thread || []).map(m => `
+    <div class="rma-msg ${m.direction==='customer'?'customer':'tenant'}">${rmaEsc(m.body).replace(/\n/g,'<br>')}</div>
+    <div class="rma-msg-time" style="text-align:${m.direction==='customer'?'left':'right'};">${rmaEsc(m.sender||'—')} · ${rmaEsc(m.age||'')} ago</div>`).join('') ||
+    '<p style="font-size:12.5px;color:#64748b;">No messages yet. Replies sent here are visible on the customer\'s tracking page and emailed to them.</p>';
+
+  // Timeline
+  const tlHtml = (d.events || []).map(e => `
+    <div class="rma-tl-item">
+      <div class="rma-tl-dot"></div>
+      <div class="rma-tl-title">${rmaEsc(e.type_label)}</div>
+      <div class="rma-tl-meta">${rmaEsc(e.ts_display)}${e.actor ? ' · '+rmaEsc(e.actor) : ''}${e.message ? '<br><span style="color:#0f172a;">'+rmaEsc(e.message)+'</span>' : ''}</div>
+    </div>`).join('') || '<p style="font-size:12.5px;color:#64748b;">No events yet.</p>';
+
+  // Internal notes
+  const notesHtml = (d.internal || []).map(n => `
+    <div class="rma-note">
+      <strong>From ${rmaEsc(n.sender||'—')} · ${rmaEsc(n.ts_display)}</strong>
+      ${rmaEsc(n.body).replace(/\n/g,'<br>')}
+    </div>`).join('') || '<p style="font-size:12.5px;color:#64748b;">No internal notes yet.</p>';
+
+  // Action buttons by status
+  let actions = '';
+  if (r.status === 'pending'){
+    actions = `<button class="rma-bigbtn success" onclick="rmaApprove(${r.id})"><i class="fa-solid fa-check"></i> Approve Return</button>
+               <button class="rma-bigbtn danger" onclick="rmaReject(${r.id})"><i class="fa-solid fa-xmark"></i> Reject Request</button>`;
+  } else if (r.status === 'approved'){
+    actions = `<button class="rma-bigbtn ghost" onclick="rmaMarkInTransit(${r.id})"><i class="fa-solid fa-truck"></i> Mark In Transit</button>
+               <button class="rma-bigbtn ghost" onclick="rmaMarkReceived(${r.id})"><i class="fa-solid fa-box"></i> Mark Received</button>`;
+  } else if (r.status === 'tracking_submitted'){
+    actions = `<button class="rma-bigbtn success" onclick="rmaMarkInTransit(${r.id})"><i class="fa-solid fa-truck"></i> Mark In Transit</button>
+               <button class="rma-bigbtn ghost" onclick="rmaMarkReceived(${r.id})"><i class="fa-solid fa-box"></i> Mark Received</button>`;
+  } else if (r.status === 'in_transit'){
+    actions = `<button class="rma-bigbtn success" onclick="rmaMarkReceived(${r.id})"><i class="fa-solid fa-box"></i> Mark Received</button>`;
+  } else if (r.status === 'received'){
+    actions = `<button class="rma-bigbtn primary" onclick="rmaProcessRefund(${r.id})"><i class="fa-solid fa-money-bill-wave"></i> Process Refund $<span id="rmaBtnAmt">${(r.total_refund||0).toFixed(2)}</span></button>
+               <button class="rma-bigbtn ghost" onclick="rmaResolve(${r.id})"><i class="fa-solid fa-check-double"></i> Mark Resolved (no refund)</button>`;
+  } else if (r.status === 'refunded'){
+    actions = `<div style="text-align:center;padding:10px;font-size:13px;color:#10b981;font-weight:700;">
+      <i class="fa-solid fa-circle-check"></i> Refunded ${r.refunded_at ? new Date(r.refunded_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : ''}
+      ${r.stripe_refund_id ? `<div style="font-size:11px;color:#64748b;font-weight:500;margin-top:3px;font-family:'JetBrains Mono';">Stripe: ${rmaEsc(r.stripe_refund_id)}</div>`:''}
+    </div>
+    <button class="rma-bigbtn ghost" style="margin-top:10px;" onclick="rmaResolve(${r.id})"><i class="fa-solid fa-check-double"></i> Mark Resolved</button>`;
+  } else if (r.status === 'resolved'){
+    actions = `<div style="text-align:center;padding:10px;font-size:13px;color:#22c55e;font-weight:700;">
+      <i class="fa-solid fa-circle-check"></i> Resolved — case closed
+    </div>
+    <button class="rma-bigbtn ghost" onclick="rmaReopen(${r.id})"><i class="fa-solid fa-rotate-left"></i> Reopen</button>`;
+  } else if (r.status === 'rejected'){
+    actions = `<div style="text-align:center;padding:10px;font-size:13px;color:#ef4444;font-weight:700;">
+      <i class="fa-solid fa-circle-xmark"></i> Rejected ${r.rejected_at ? new Date(r.rejected_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : ''}
+      ${r.reject_note ? `<div style="font-size:11px;color:#64748b;font-weight:500;margin-top:5px;">"${rmaEsc(r.reject_note)}"</div>`:''}
+    </div>
+    <button class="rma-bigbtn ghost" onclick="rmaReopen(${r.id})"><i class="fa-solid fa-rotate-left"></i> Reopen</button>`;
+  }
+
+  // Mark Resolved is also available at any non-terminal stage as an override
+  if (!r.is_terminal && r.status !== 'pending' && r.status !== 'received'){
+    actions += `<button class="rma-bigbtn ghost" style="margin-top:10px;border-style:dashed;" onclick="rmaResolve(${r.id})"><i class="fa-solid fa-check-double"></i> Mark Resolved</button>`;
+  }
+
+  // Label box
+  const labelBox = (r.return_label_url && r.return_tracking_no) ? `
+    <div class="rma-labelbox">
+      <div class="t">Return Shipping Label</div>
+      <div class="v">${rmaEsc(r.return_carrier||'Carrier')} · ${rmaEsc(r.return_tracking_no)}</div>
+      <a href="${rmaEsc(r.return_label_url)}" target="_blank"><i class="fa-solid fa-download"></i> Download Label</a>
+    </div>` : '';
+
+  const isTerminal = r.is_terminal;
+  const detailHtml = `
+    <div class="rma-breadcrumb">
+      <a onclick="rmaBackToInbox()">← Returns</a>
+      <i class="fa-solid fa-chevron-right" style="font-size:9px;"></i>
+      <span>${rmaEsc(r.rma_number)}</span>
+    </div>
+
+    <div class="rma-head">
+      <div>
+        <h1 class="rma-h1" style="display:flex;align-items:center;gap:13px;flex-wrap:wrap;">
+          <span class="rma-num" style="font-size:14px;padding:6px 12px;">${rmaEsc(r.rma_number)}</span>
+          <span class="rma-pill ${r.status}">${rmaEsc(r.status_display)}</span>
+        </h1>
+        <p class="rma-sub">Submitted by ${rmaEsc(r.customer_name||r.customer_email)}${r.order ? ' · Order #'+rmaEsc(r.order.external_id) : ''}</p>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <a class="rma-btn" href="/r/${rmaEsc(r.token)}/" target="_blank"><i class="fa-solid fa-external-link"></i> Customer View</a>
+        <button class="rma-btn" onclick="rmaCopyTrackLink('${rmaEsc(r.token)}')"><i class="fa-solid fa-link"></i> Copy Link</button>
+      </div>
+    </div>
+
+    <div class="rma-detail-grid">
+      <div class="rma-detail-left">
+
+        <!-- Customer + order -->
+        <div class="rma-sec">
+          <h3><i class="fa-solid fa-user"></i> Customer & Order</h3>
+          <div class="rma-kv-grid">
+            <div class="rma-kv">
+              <div class="k">Customer</div>
+              <div class="v" style="display:flex;align-items:center;gap:9px;">
+                <div class="rma-av">${rmaEsc(initials)}</div>
+                <div>${rmaEsc(r.customer_name||'—')}<br><span style="font-size:11px;color:#64748b;font-weight:500;">${rmaEsc(r.customer_email)} · ${d.prior_orders} prior order${d.prior_orders===1?'':'s'}</span></div>
+              </div>
+            </div>
+            <div class="rma-kv">
+              <div class="k">Order</div>
+              <div class="v">${r.order ? `<a href="#" style="color:#6366f1;text-decoration:none;">#${rmaEsc(r.order.external_id)}</a> · ${rmaEsc(r.order.created_at)}` : '<span style="color:#64748b;">Manual RMA</span>'}</div>
+            </div>
+            ${r.order ? `<div class="rma-kv"><div class="k">Order Total</div><div class="v">$${(r.order.total||0).toFixed(2)} ${rmaEsc(r.order.currency||'USD')}</div></div>` : ''}
+            ${r.order && r.order.delivered_at ? `<div class="rma-kv"><div class="k">Delivered</div><div class="v">${rmaEsc(r.order.delivered_at)}</div></div>` : ''}
+          </div>
+        </div>
+
+        <!-- Items -->
+        <div class="rma-sec">
+          <h3><i class="fa-solid fa-box-open"></i> Items Being Returned (${d.items.length})</h3>
+          ${itemsHtml}
+        </div>
+
+        <!-- Reason -->
+        <div class="rma-sec">
+          <h3><i class="fa-solid fa-comment-dots"></i> Customer's Reason</h3>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+            <span class="rma-reason" style="font-size:13px;padding:5px 12px;background:#fee2e2;color:#991b1b;">${rmaEsc(r.reason_emoji)} ${rmaEsc(r.reason_label)}</span>
+          </div>
+          ${r.customer_note ? `<div style="background:#f8fafc;padding:14px 16px;border-radius:11px;font-size:13.5px;line-height:1.6;color:#0f172a;font-style:italic;border-left:3px solid #6366f1;">"${rmaEsc(r.customer_note)}"</div>` : '<p style="font-size:12.5px;color:#64748b;">Customer did not add a note.</p>'}
+        </div>
+
+        ${photosHtml}
+
+        <!-- Customer tracking (after they ship back) -->
+        ${r.customer_tracking_id ? `
+        <div class="rma-sec">
+          <h3><i class="fa-solid fa-truck-fast"></i> Customer's Return Shipment</h3>
+          <div style="background:#f8fafc;border:1px solid #eef1f6;border-radius:11px;padding:14px 16px;font-size:13px;line-height:1.7;">
+            <div style="display:flex;justify-content:space-between;"><span style="color:#64748b;font-weight:600;">Carrier</span><span style="font-weight:700;">${rmaEsc(r.customer_tracking_company)}</span></div>
+            <div style="display:flex;justify-content:space-between;"><span style="color:#64748b;font-weight:600;">Tracking ID</span><span style="font-weight:700;font-family:'JetBrains Mono',monospace;font-size:12px;">${rmaEsc(r.customer_tracking_id)}</span></div>
+            ${r.customer_tracking_url ? `<div style="display:flex;justify-content:space-between;margin-top:4px;"><span style="color:#64748b;font-weight:600;">Track</span><a href="${rmaEsc(r.customer_tracking_url)}" target="_blank" style="color:#6366f1;font-weight:700;text-decoration:none;">Open carrier page →</a></div>` : ''}
+            ${r.customer_tracking_at ? `<div style="margin-top:6px;font-size:11.5px;color:#94a3b8;">Submitted ${new Date(r.customer_tracking_at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</div>` : ''}
+          </div>
+        </div>` : ''}
+
+        <!-- Conversation -->
+        <div class="rma-sec">
+          <h3><i class="fa-solid fa-comments"></i> Conversation with Customer</h3>
+          <div>${threadHtml}</div>
+          ${(!r.is_terminal && Object.keys(d.quick_snippets||{}).length) ? `
+            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;padding-top:12px;border-top:1px solid #eef1f6;">
+              <div style="font-size:10.5px;color:#64748b;font-weight:800;text-transform:uppercase;letter-spacing:.06em;width:100%;margin-bottom:3px;">Quick send:</div>
+              ${d.quick_snippets.address ? `<button class="rma-rowact" onclick="rmaInsertSnippet('address')"><i class="fa-solid fa-map-marker-alt"></i> Send Return Address</button>` : ''}
+              ${d.quick_snippets.label ? `<button class="rma-rowact" onclick="rmaInsertSnippet('label')"><i class="fa-solid fa-tag"></i> Send Label</button>` : ''}
+              ${d.quick_snippets.carrier_tracking ? `<button class="rma-rowact" onclick="rmaInsertSnippet('carrier_tracking')"><i class="fa-solid fa-link"></i> Send Tracking Link</button>` : ''}
+            </div>` : ''}
+          ${!r.is_terminal ? `
+            <div class="rma-msginput">
+              <input id="rmaMsgInput" placeholder="Reply to ${rmaEsc(r.customer_name||'customer')}…" onkeypress="if(event.key==='Enter')rmaSendMessage(${r.id})"/>
+              <button onclick="rmaSendMessage(${r.id})">Send</button>
+            </div>` : '<p style="font-size:12.5px;color:#64748b;margin-top:12px;border-top:1px solid #eef1f6;padding-top:12px;">🔒 This case is closed. Chat is disabled.</p>'}
+        </div>
+
+      </div>
+      <div class="rma-detail-right">
+
+        <!-- Refund summary + actions -->
+        <div class="rma-sec">
+          <h3><i class="fa-solid fa-bolt"></i> Refund Summary</h3>
+          <div class="rma-totalrow"><span>Items total</span><span style="font-weight:700;" id="rmaTotalItems">$${(r.items_total||0).toFixed(2)}</span></div>
+          <div class="rma-totalrow"><span>Refund shipping</span><span style="font-weight:700;">$<input type="number" id="rmaFldShip" step="0.01" value="${(r.refund_shipping||0).toFixed(2)}" ${isTerminal?'disabled':''}/></span></div>
+          <div class="rma-totalrow"><span>Restocking fee</span><span style="font-weight:700;">−$<input type="number" id="rmaFldRest" step="0.01" value="${(r.restocking_fee||0).toFixed(2)}" ${isTerminal?'disabled':''}/></span></div>
+          <div class="rma-totalrow big"><span>Refund Amount</span><span style="font-weight:800;color:#6366f1;" id="rmaTotalRefund">$${(r.total_refund||0).toFixed(2)}</span></div>
+          <div style="margin-top:14px;">${actions}</div>
+          ${labelBox}
+        </div>
+
+        <!-- Timeline -->
+        <div class="rma-sec">
+          <h3><i class="fa-solid fa-timeline"></i> Status Timeline</h3>
+          <div class="rma-tl">${tlHtml}</div>
+        </div>
+
+        <!-- Internal notes -->
+        <div class="rma-sec">
+          <h3><i class="fa-solid fa-lock"></i> Internal Notes <span style="font-size:9.5px;color:#64748b;font-weight:600;text-transform:none;margin-left:5px;">(team only)</span></h3>
+          <div>${notesHtml}</div>
+          <div class="rma-noteinput">
+            <input id="rmaNoteInput" placeholder="Add a team-only note…"/>
+            <button onclick="rmaAddNote(${r.id})">Add</button>
+          </div>
+        </div>
+
+      </div>
+    </div>`;
+
+  document.getElementById('rmaViewDetail').innerHTML = detailHtml;
+
+  // Wire up live refund recompute
+  const ship = document.getElementById('rmaFldShip');
+  const rest = document.getElementById('rmaFldRest');
+  const recompute = () => {
+    const items = r.items_total || 0;
+    const s = parseFloat(ship?.value||0) || 0;
+    const rs = parseFloat(rest?.value||0) || 0;
+    const t = (items + s - rs).toFixed(2);
+    const tot = document.getElementById('rmaTotalRefund'); if (tot) tot.textContent = '$' + t;
+    const btn = document.getElementById('rmaBtnAmt');      if (btn) btn.textContent = t;
+  };
+  if (ship) ship.addEventListener('input', recompute);
+  if (rest) rest.addEventListener('input', recompute);
+}
+
+/* ── Detail actions ────────────────────────────────────────── */
+
+async function rmaApprove(pk){
+  if (!confirm('Approve this return? The customer will get a label by email.')) return;
+  const payload = {
+    refund_shipping: parseFloat(document.getElementById('rmaFldShip')?.value||0) || 0,
+    restocking_fee:  parseFloat(document.getElementById('rmaFldRest')?.value||0) || 0,
+  };
+  const { ok, data } = await rmaApi('/rma/' + pk + '/approve/', payload);
+  if (ok) rmaOpenDetail(pk); else alert(data.error || 'Could not approve.');
+}
+
+async function rmaReject(pk){
+  const reason = prompt('Why are you rejecting this return? (sent to the customer)');
+  if (reason === null) return;
+  const { ok, data } = await rmaApi('/rma/' + pk + '/reject/', {reason});
+  if (ok) rmaOpenDetail(pk); else alert(data.error || 'Could not reject.');
+}
+
+async function rmaMarkInTransit(pk){
+  const { ok, data } = await rmaApi('/rma/' + pk + '/in-transit/');
+  if (ok) rmaOpenDetail(pk); else alert(data.error || 'Could not update.');
+}
+
+async function rmaMarkReceived(pk){
+  const { ok, data } = await rmaApi('/rma/' + pk + '/received/');
+  if (ok) rmaOpenDetail(pk); else alert(data.error || 'Could not update.');
+}
+
+async function rmaProcessRefund(pk){
+  if (!confirm('Process refund now? This will trigger a Stripe refund if a charge is linked, and mark the case Resolved.')) return;
+  const amt = parseFloat((document.getElementById('rmaTotalRefund')?.textContent||'0').replace(/[^0-9.]/g,''));
+  const { ok, data } = await rmaApi('/rma/' + pk + '/refund/', {amount: amt});
+  if (ok) {
+    if (data.stripe_attempted && !data.stripe_ok) alert('Refund marked but Stripe failed: ' + (data.stripe_error||'unknown'));
+    rmaOpenDetail(pk);
+  } else { alert(data.error || 'Could not process refund.'); }
+}
+
+async function rmaResolve(pk){
+  if (!confirm('Mark this return as Resolved? The customer\'s link will close.')) return;
+  const { ok, data } = await rmaApi('/rma/' + pk + '/resolve/');
+  if (ok) rmaOpenDetail(pk); else alert(data.error || 'Could not mark resolved.');
+}
+
+async function rmaReopen(pk){
+  if (!confirm('Reopen this return? It will move back to its previous active state.')) return;
+  const { ok, data } = await rmaApi('/rma/' + pk + '/reopen/');
+  if (ok) rmaOpenDetail(pk); else alert(data.error || 'Could not reopen.');
+}
+
+function rmaInsertSnippet(key){
+  const d = _rmaState.rma;
+  if (!d || !d.quick_snippets || !d.quick_snippets[key]) return;
+  const input = document.getElementById('rmaMsgInput');
+  if (!input) return;
+  input.value = d.quick_snippets[key];
+  input.focus();
+}
+
+async function rmaQuickRefund(pk){
+  if (!confirm('Process refund now? This will charge the refund to the original payment method.')) return;
+  const { ok, data } = await rmaApi('/rma/' + pk + '/refund/');
+  if (ok) { rmaLoadList(); } else { alert(data.error || 'Could not refund.'); }
+}
+
+async function rmaSendMessage(pk){
+  const input = document.getElementById('rmaMsgInput');
+  const body = (input?.value||'').trim();
+  if (!body) return;
+  const { ok, data } = await rmaApi('/rma/' + pk + '/message/', {body});
+  if (ok) { input.value=''; rmaOpenDetail(pk); }
+  else alert(data.error || 'Could not send.');
+}
+
+async function rmaAddNote(pk){
+  const input = document.getElementById('rmaNoteInput');
+  const body = (input?.value||'').trim();
+  if (!body) return;
+  const { ok, data } = await rmaApi('/rma/' + pk + '/note/', {body});
+  if (ok) { input.value=''; rmaOpenDetail(pk); }
+  else alert(data.error || 'Could not add.');
+}
+
+function rmaCopyTrackLink(token){
+  const url = window.location.origin + '/r/' + token + '/';
+  navigator.clipboard.writeText(url).then(()=> alert('Customer tracking link copied:\n' + url));
+}
+
+/* ── Create manual RMA modal ───────────────────────────────── */
+
+function rmaOpenCreateModal(){ document.getElementById('rmaCreateModal').style.display='flex'; document.getElementById('rmaMErr').style.display='none'; }
+function rmaCloseCreateModal(){ document.getElementById('rmaCreateModal').style.display='none'; }
+
+async function rmaSubmitCreate(){
+  const order_external_id = document.getElementById('rmaMOrder').value.trim();
+  const reason            = document.getElementById('rmaMReason').value;
+  const note              = document.getElementById('rmaMNote').value.trim();
+  const errBox = document.getElementById('rmaMErr');
+  errBox.style.display = 'none';
+  if (!order_external_id){ errBox.textContent = 'Order number is required.'; errBox.style.display='block'; return; }
+  const { ok, data } = await rmaApi('/rma/create/', { order_external_id, reason, note });
+  if (ok && data.rma_id) {
+    rmaCloseCreateModal();
+    rmaOpenDetail(data.rma_id);
+  } else {
+    errBox.textContent = data.error || 'Could not create RMA.';
+    errBox.style.display = 'block';
+  }
+}
+
+/* ── ANALYTICS ─────────────────────────────────────────────── */
+
+async function rmaLoadAnalytics(){
+  const { ok, data } = await rmaApi('/rma/api/analytics/', null, 'GET');
+  if (!ok) return;
+  document.getElementById('rmaAnaRate').textContent     = data.return_rate + '%';
+  document.getElementById('rmaAnaApprove').textContent  = data.approval_rate + '%';
+  document.getElementById('rmaAnaAvgDays').textContent  = data.avg_days ? (data.avg_days + ' days') : '—';
+  document.getElementById('rmaAnaRefunded').textContent = '$' + Number(data.refunded_total||0).toFixed(2);
+  document.getElementById('rmaAnaRefundedCount').textContent = data.refunded_count + ' refund' + (data.refunded_count===1?'':'s');
+
+  // Bars
+  document.getElementById('rmaBars').innerHTML = (data.days||[]).map(d =>
+    `<div class="rma-bar" style="height:${d.height}%;" data-x="${d.x}" title="${d.count} return${d.count===1?'':'s'}"></div>`
+  ).join('');
+
+  // Reasons
+  document.getElementById('rmaReasons').innerHTML = (data.reasons||[]).map(r => `
+    <div class="rma-reasonline">
+      <div class="lb">${rmaEsc(r.label)}</div>
+      <div class="tr"><div class="fl" style="width:${r.percent}%;"></div></div>
+      <div class="vl">${r.percent}%</div>
+    </div>`).join('') || '<p style="font-size:12.5px;color:#64748b;">No data yet.</p>';
+
+  // Top products
+  const tp = data.top_products||[];
+  if (tp.length){
+    document.getElementById('rmaTopProducts').innerHTML = `
+      <table class="rma-tbl"><thead><tr><th>Product</th><th>Units Returned</th></tr></thead>
+      <tbody>${tp.map(p => `<tr><td><strong>${rmaEsc(p.product_name)}</strong></td><td>${p.returned}</td></tr>`).join('')}</tbody></table>`;
+  } else {
+    document.getElementById('rmaTopProducts').innerHTML = '<p style="font-size:12.5px;color:#64748b;padding:10px;">No returned products yet.</p>';
+  }
+}
+
+/* ── SETTINGS ──────────────────────────────────────────────── */
+
+async function rmaLoadSettings(){
+  const body = document.getElementById('rmaSettingsBody');
+  body.innerHTML = '<div class="rma-empty"><div class="icn"><i class="fa-solid fa-spinner fa-spin"></i></div><div class="tt">Loading settings…</div></div>';
+  const { ok, data } = await rmaApi('/rma/api/settings/', null, 'GET');
+  if (!ok) { body.innerHTML = '<div class="rma-empty"><div class="icn">⚠️</div><div class="tt">Could not load settings</div></div>'; return; }
+
+  if (data.no_store){
+    body.innerHTML = `<div class="rma-sec" style="text-align:center;padding:40px 20px;">
+      <i class="fa-solid fa-store" style="font-size:32px;color:#cbd5e1;margin-bottom:14px;"></i>
+      <div style="font-size:15px;font-weight:700;margin-bottom:6px;">Connect a store first</div>
+      <p style="font-size:13px;color:#64748b;">Return policy settings live per store. <a onclick="showSection('stores')" style="color:#6366f1;cursor:pointer;">Connect a store</a> to get started.</p>
+    </div>`;
+    return;
+  }
+
+  const s = data.sett;
+  const reasonRules = (data.default_reasons||[]).map(r => `
+    <div class="rma-rule">
+      <span style="font-size:18px;">${r.emoji}</span>
+      <div class="nm">${rmaEsc(r.label)}<div class="cf">${r.photo?'Photo required · ':''}${r.pays==='tenant'?'Free shipping':'Customer pays shipping'}${r.auto_eligible?' · Auto-approve eligible':''}</div></div>
+      <div class="rma-sw ${s.enabled_reasons.includes(r.key)?'on':''}" data-reason="${r.key}" onclick="this.classList.toggle('on')"></div>
+    </div>`).join('');
+
+  const policyOptions = (data.shipping_policy_choices||[]).map(([k,label]) => `<option value="${k}" ${s.shipping_policy===k?'selected':''}>${rmaEsc(label)}</option>`).join('');
+
+  body.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <p style="font-size:13px;color:#64748b;">Configure return window, allowed reasons, auto-approval rules, and your return address.</p>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span id="rmaSaveStatus" style="font-size:12px;font-weight:700;"></span>
+        <button class="rma-btn primary" onclick="rmaSaveSettings()"><i class="fa-solid fa-save"></i> Save Changes</button>
+      </div>
+    </div>
+
+    <div class="rma-sec">
+      <h3><i class="fa-solid fa-shield-halved"></i> Return Policy</h3>
+      <div class="rma-fieldrow">
+        <div class="rma-field"><label>Acceptance Window (days)</label><input id="rmaF_window" type="number" value="${s.return_window_days}"/><div class="hint">Customers can request a return within this many days of delivery.</div></div>
+        <div class="rma-field"><label>Restocking Fee (%)</label><input id="rmaF_restock" type="number" step="0.01" value="${s.restocking_fee_percent}"/><div class="hint">0 = free returns.</div></div>
+      </div>
+      <div class="rma-field"><label>Return Shipping Policy</label><select id="rmaF_ship">${policyOptions}</select></div>
+      <div class="rma-field"><label>Public Return Policy Text</label><textarea id="rmaF_policy">${rmaEsc(s.policy_text)}</textarea><div class="hint">Shown to customers on the public return form.</div></div>
+    </div>
+
+    <div class="rma-sec">
+      <h3><i class="fa-solid fa-map-marker-alt"></i> Return Address</h3>
+      <div class="rma-field"><label>Address Line 1</label><input id="rmaF_addr1" type="text" value="${rmaEsc(s.return_address_line1)}"/></div>
+      <div class="rma-field"><label>Address Line 2</label><input id="rmaF_addr2" type="text" value="${rmaEsc(s.return_address_line2)}"/></div>
+      <div class="rma-fieldrow3">
+        <div class="rma-field"><label>City</label><input id="rmaF_city" type="text" value="${rmaEsc(s.return_city)}"/></div>
+        <div class="rma-field"><label>State</label><input id="rmaF_state" type="text" value="${rmaEsc(s.return_state)}"/></div>
+        <div class="rma-field"><label>Postcode</label><input id="rmaF_post" type="text" value="${rmaEsc(s.return_postcode)}"/></div>
+      </div>
+      <div class="rma-field"><label>Country</label><input id="rmaF_country" type="text" value="${rmaEsc(s.return_country)}"/></div>
+    </div>
+
+    <div class="rma-sec">
+      <h3><i class="fa-solid fa-list-check"></i> Allowed Return Reasons</h3>
+      ${reasonRules}
+    </div>
+
+    <div class="rma-sec">
+      <h3><i class="fa-solid fa-robot"></i> Auto-Approval Rules</h3>
+      <div class="rma-field"><label>Auto-approve defects under (USD)</label><input id="rmaF_auto_under" type="number" step="0.01" value="${s.auto_approve_defects_under}"/><div class="hint">Defective claims under this amount skip manual review. 0 = disabled.</div></div>
+      <div class="rma-togrow">
+        <div><div class="rma-tog-l">Auto-approve VIP customers (3+ orders)</div><div class="rma-tog-d">Reward loyal customers with instant approval on defects, damages, and wrong-item claims.</div></div>
+        <div class="rma-sw ${s.auto_approve_vip?'on':''}" id="rmaSw_vip" onclick="this.classList.toggle('on')"></div>
+      </div>
+      <div class="rma-togrow">
+        <div><div class="rma-tog-l">Auto-flag suspicious patterns</div><div class="rma-tog-d">Tag returns from customers with high prior-return rates for manual review.</div></div>
+        <div class="rma-sw ${s.auto_flag_suspicious?'on':''}" id="rmaSw_flag" onclick="this.classList.toggle('on')"></div>
+      </div>
+      <div class="rma-togrow">
+        <div><div class="rma-tog-l">Auto-generate shipping label on approval</div><div class="rma-tog-d">Generate a pre-paid USPS return label automatically when you approve a return.</div></div>
+        <div class="rma-sw ${s.auto_generate_label?'on':''}" id="rmaSw_label" onclick="this.classList.toggle('on')"></div>
+      </div>
+    </div>
+
+    <div class="rma-sec">
+      <h3><i class="fa-solid fa-envelope"></i> Auto-Reply Email Template <span style="font-size:9.5px;color:#64748b;font-weight:600;text-transform:none;margin-left:5px;">(sent when you click "Start Return" from triage)</span></h3>
+      <div class="rma-togrow" style="border-top:none;">
+        <div><div class="rma-tog-l">Send auto-template email on Start Return</div><div class="rma-tog-d">When enabled, clicking "Start Return" on a triaged email automatically emails the customer the return-form link using the template below.</div></div>
+        <div class="rma-sw ${s.auto_email_enabled?'on':''}" id="rmaSw_autoemail" onclick="this.classList.toggle('on')"></div>
+      </div>
+      <div class="rma-field"><label>Subject</label><input id="rmaF_email_subj" type="text" value="${rmaEsc(s.auto_email_subject||'')}"/>
+        <div class="hint">Variables: <code>{{subject}}</code>, <code>{{customer_name}}</code>, <code>{{store_name}}</code>, <code>{{order_id}}</code></div>
+      </div>
+      <div class="rma-field"><label>Body</label><textarea id="rmaF_email_body" rows="8" style="font-family:inherit;line-height:1.55;">${rmaEsc(s.auto_email_body||'')}</textarea>
+        <div class="hint">Use <code>{{return_link}}</code> to insert the customer's tracking link. Also supports <code>{{customer_name}}</code>, <code>{{store_name}}</code>, <code>{{order_id}}</code>, <code>{{subject}}</code>.</div>
+      </div>
+    </div>`;
+}
+
+async function rmaSaveSettings(){
+  const ss = document.getElementById('rmaSaveStatus');
+  ss.textContent = 'Saving…'; ss.style.color = '#64748b';
+
+  const enabled = Array.from(document.querySelectorAll('#rmaViewSettings .rma-sw[data-reason]'))
+    .filter(s => s.classList.contains('on'))
+    .map(s => s.dataset.reason);
+
+  const payload = {
+    return_window_days:        parseInt(document.getElementById('rmaF_window').value) || 30,
+    restocking_fee_percent:    parseFloat(document.getElementById('rmaF_restock').value) || 0,
+    shipping_policy:           document.getElementById('rmaF_ship').value,
+    policy_text:               document.getElementById('rmaF_policy').value,
+    return_address_line1:      document.getElementById('rmaF_addr1').value,
+    return_address_line2:      document.getElementById('rmaF_addr2').value,
+    return_city:               document.getElementById('rmaF_city').value,
+    return_state:              document.getElementById('rmaF_state').value,
+    return_postcode:           document.getElementById('rmaF_post').value,
+    return_country:            document.getElementById('rmaF_country').value,
+    auto_approve_defects_under:parseFloat(document.getElementById('rmaF_auto_under').value) || 0,
+    auto_approve_vip:          document.getElementById('rmaSw_vip').classList.contains('on'),
+    auto_flag_suspicious:      document.getElementById('rmaSw_flag').classList.contains('on'),
+    auto_generate_label:       document.getElementById('rmaSw_label').classList.contains('on'),
+    enabled_reasons:           enabled,
+    auto_email_enabled:        document.getElementById('rmaSw_autoemail') ? document.getElementById('rmaSw_autoemail').classList.contains('on') : false,
+    auto_email_subject:        document.getElementById('rmaF_email_subj') ? document.getElementById('rmaF_email_subj').value : undefined,
+    auto_email_body:           document.getElementById('rmaF_email_body') ? document.getElementById('rmaF_email_body').value : undefined,
+  };
+
+  const { ok, data } = await rmaApi('/rma/settings/save/', payload);
+  if (ok) {
+    ss.textContent = '✓ Saved'; ss.style.color = '#10b981';
+    setTimeout(() => { ss.textContent=''; }, 2500);
+  } else {
+    ss.textContent = '✗ Save failed'; ss.style.color = '#ef4444';
+    alert(data.error || 'Save failed.');
+  }
 }
 
 

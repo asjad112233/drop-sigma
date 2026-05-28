@@ -64,6 +64,10 @@ urlpatterns = [
     path("billing/cancel/",  views.stripe_cancel_subscription,  name="stripe_cancel"),
     path("billing/resume/",  views.stripe_resume_subscription,  name="stripe_resume"),
 
+    # Returns & Refunds (RMA)
+    path("rma/", include("rma.urls")),
+    path("r/",   include("rma.urls_customer")),
+
     # Apps
     path("stores/", include("stores.urls")),
     path("orders/", include("orders.urls")),

@@ -1,0 +1,367 @@
+{% extends "rma/_base.html" %}
+{% block title %}{{ rma.rma_number }} — Drop Sigma{% endblock %}
+{% block nav_inbox %}active{% endblock %}
+
+{% block extra_style %}
+.detail-grid{display:grid;grid-template-columns:1fr 360px;gap:18px;margin-top:8px;}
+.detail-left{display:flex;flex-direction:column;gap:16px;min-width:0;}
+.detail-right{display:flex;flex-direction:column;gap:14px;}
+.section-card{background:#fff;border:1px solid var(--line-soft);border-radius:var(--radius);padding:18px 20px;box-shadow:var(--shadow-sm);}
+.section-card h3{font-size:11px;font-weight:800;color:var(--brand);text-transform:uppercase;letter-spacing:.1em;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.kv-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 22px;}
+.kv .k{font-size:10.5px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;}
+.kv .v{font-size:13.5px;color:var(--text);font-weight:600;}
+.kv .v a{color:var(--brand);text-decoration:none;}
+.item-row{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid var(--line-soft);align-items:flex-start;}
+.item-row:last-child{border-bottom:none;padding-bottom:0;}
+.item-row:first-child{padding-top:0;}
+.item-img{width:62px;height:62px;border-radius:10px;background:linear-gradient(135deg,#fef3c7,#fde68a);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;border:1px solid var(--line-soft);background-size:cover;background-position:center;color:#999;}
+.item-meta{flex:1;min-width:0;}
+.item-name{font-size:13.5px;font-weight:700;margin-bottom:3px;}
+.item-vars{font-size:11.5px;color:var(--muted);margin-bottom:5px;}
+.item-price{font-size:13px;font-weight:700;}
+.item-qty{font-size:11.5px;color:var(--muted);}
+.photos-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+.photo-thumb{aspect-ratio:1;border-radius:9px;background:var(--surface-2);display:flex;align-items:center;justify-content:center;font-size:24px;cursor:pointer;border:1px solid var(--line-soft);overflow:hidden;}
+.photo-thumb img{width:100%;height:100%;object-fit:cover;}
+.timeline{position:relative;padding-left:24px;}
+.timeline::before{content:"";position:absolute;left:7px;top:6px;bottom:6px;width:2px;background:var(--line);}
+.tl-item{position:relative;padding-bottom:14px;}
+.tl-item:last-child{padding-bottom:0;}
+.tl-dot{position:absolute;left:-22px;top:2px;width:16px;height:16px;border-radius:50%;background:#fff;border:2px solid var(--line);}
+.tl-item.done .tl-dot{border-color:var(--green);background:var(--green);}
+.tl-item.done .tl-dot::after{content:"✓";font-size:9px;color:#fff;position:absolute;left:1.5px;top:-0.5px;font-weight:900;}
+.tl-item.current .tl-dot{border-color:var(--brand);background:var(--brand);box-shadow:0 0 0 4px rgba(99,102,241,.2);}
+.tl-title{font-size:13px;font-weight:700;}
+.tl-meta{font-size:11.5px;color:var(--muted);margin-top:2px;}
+.action-block{background:#fff;border:1px solid var(--line-soft);border-radius:var(--radius);padding:18px 20px;box-shadow:var(--shadow-sm);}
+.action-block .total-row{display:flex;justify-content:space-between;padding:7px 0;font-size:13px;}
+.action-block .total-row.bigger{font-size:15px;font-weight:800;border-top:1px dashed var(--line);margin-top:8px;padding-top:13px;}
+.action-block .total-row .v{font-weight:700;}
+.action-block input[type=number]{width:90px;padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:12.5px;font-family:inherit;text-align:right;}
+.msg{padding:13px 16px;border-radius:12px;font-size:13px;line-height:1.5;margin-bottom:6px;max-width:80%;}
+.msg-customer{background:var(--surface-2);color:var(--text);border-bottom-left-radius:4px;}
+.msg-team{background:var(--grad);color:#fff;border-bottom-right-radius:4px;margin-left:auto;}
+.msg-time{font-size:10.5px;color:var(--faint);margin:-2px 4px 8px;}
+.msg-customer + .msg-time{text-align:left;}
+.msg-team + .msg-time{text-align:right;}
+.msg-input{display:flex;gap:8px;margin-top:14px;border-top:1px solid var(--line-soft);padding-top:14px;}
+.msg-input input{flex:1;padding:9px 13px;border:1px solid var(--line);border-radius:10px;font-size:13px;font-family:inherit;outline:none;}
+.msg-input input:focus{border-color:var(--brand);}
+.msg-input button{padding:9px 16px;background:var(--grad);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;}
+.note-pad{background:#fffbeb;border:1px dashed #fcd34d;border-radius:10px;padding:12px 14px;font-size:12.5px;color:#78350f;line-height:1.5;margin-bottom:8px;}
+.note-pad strong{display:block;font-size:10.5px;color:#92400e;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;font-weight:800;}
+.note-pad-input{display:flex;gap:8px;margin-top:10px;}
+.note-pad-input input{flex:1;padding:8px 11px;border:1px solid #fcd34d;border-radius:8px;font-size:12px;font-family:inherit;background:#fff;outline:none;}
+.note-pad-input button{padding:8px 13px;background:#92400e;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;}
+.share-link{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--brand);background:rgba(99,102,241,.08);padding:8px 11px;border-radius:8px;word-break:break-all;}
+.label-box{background:linear-gradient(135deg,#1e293b,#0f172a);color:#fff;padding:14px 16px;border-radius:11px;margin-top:10px;}
+.label-box .t{font-size:10px;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px;}
+.label-box .v{font-size:13px;font-weight:800;}
+@media(max-width:1180px){ .detail-grid{grid-template-columns:1fr;} }
+{% endblock %}
+
+{% block content %}
+
+<div style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);margin-bottom:6px;">
+  <a href="/rma/" style="color:var(--brand);text-decoration:none;">Returns</a>
+  <i class="fa-solid fa-chevron-right" style="font-size:9px;"></i>
+  <span>{{ rma.rma_number }}</span>
+</div>
+
+<div class="page-head">
+  <div>
+    <h1 class="page-title" style="display:flex;align-items:center;gap:13px;flex-wrap:wrap;">
+      <span class="rma-id" style="font-size:14px;padding:6px 12px;">{{ rma.rma_number }}</span>
+      <span class="pill pill-{{ rma.status }}">{{ rma.get_status_display }}</span>
+    </h1>
+    <p class="page-sub">
+      Submitted by {{ rma.customer_name|default:rma.customer_email }} · {{ rma.submitted_at|timesince }} ago
+      {% if rma.order %} · Order #{{ rma.order.external_order_id }}{% endif %}
+    </p>
+  </div>
+  <div style="display:flex;gap:8px;">
+    <a class="tool-btn" href="/r/{{ rma.token }}/" target="_blank"><i class="fa-solid fa-external-link"></i> Customer View</a>
+    <button class="tool-btn" onclick="copyTrackLink()"><i class="fa-solid fa-link"></i> Copy Track Link</button>
+  </div>
+</div>
+
+<div class="detail-grid">
+
+  <!-- LEFT COLUMN -->
+  <div class="detail-left">
+
+    <!-- Customer + Order -->
+    <div class="section-card">
+      <h3><i class="fa-solid fa-user"></i> Customer & Order</h3>
+      <div class="kv-grid">
+        <div class="kv">
+          <div class="k">Customer</div>
+          <div class="v" style="display:flex;align-items:center;gap:9px;">
+            <div class="avatar">{{ rma.customer_name|default:rma.customer_email|slice:":2"|upper }}</div>
+            <div>{{ rma.customer_name|default:"—" }}<br><span style="font-size:11.5px;color:var(--muted);font-weight:500;">{{ rma.customer_email }} · {{ prior_orders }} prior order{{ prior_orders|pluralize }}</span></div>
+          </div>
+        </div>
+        <div class="kv">
+          <div class="k">Order Number</div>
+          <div class="v">
+            {% if rma.order %}
+              <span>#{{ rma.order.external_order_id }}</span> · Placed {{ rma.order.created_at|date:"M j, Y" }}
+            {% else %}<span style="color:var(--muted);">Manual RMA</span>{% endif %}
+          </div>
+        </div>
+        {% if rma.order %}
+          <div class="kv">
+            <div class="k">Order Total</div>
+            <div class="v">${{ rma.order.total_price }} {{ rma.order.currency }}</div>
+          </div>
+          <div class="kv">
+            <div class="k">Delivered</div>
+            <div class="v">{% if rma.order.delivered_at %}{{ rma.order.delivered_at|date:"M j, Y" }}{% else %}—{% endif %}</div>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Items returning -->
+    <div class="section-card">
+      <h3><i class="fa-solid fa-box-open"></i> Items Being Returned ({{ items|length }})</h3>
+      {% for it in items %}
+        <div class="item-row">
+          <div class="item-img" {% if it.image_url %}style="background-image:url('{{ it.image_url }}');background-size:cover;"{% endif %}>
+            {% if not it.image_url %}📦{% endif %}
+          </div>
+          <div class="item-meta">
+            <div class="item-name">{{ it.product_name }}</div>
+            {% if it.variant_label or it.sku %}
+              <div class="item-vars">{{ it.variant_label }}{% if it.variant_label and it.sku %} · {% endif %}{% if it.sku %}SKU: {{ it.sku }}{% endif %}</div>
+            {% endif %}
+            <div style="display:flex;justify-content:space-between;align-items:flex-end;">
+              <div class="item-qty">Quantity: {{ it.quantity }}</div>
+              <div class="item-price">${{ it.line_total|floatformat:2 }}</div>
+            </div>
+          </div>
+        </div>
+      {% empty %}
+        <p style="font-size:12.5px;color:var(--muted);">No items listed.</p>
+      {% endfor %}
+    </div>
+
+    <!-- Reason + note -->
+    <div class="section-card">
+      <h3><i class="fa-solid fa-comment-dots"></i> Customer's Reason</h3>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+        <span class="reason-chip" style="font-size:13px;padding:5px 12px;background:var(--red-soft);color:#991b1b;">{{ rma.reason_emoji }} {{ rma.reason_label }}</span>
+      </div>
+      {% if rma.customer_note %}
+        <div style="background:var(--surface-2);padding:14px 16px;border-radius:11px;font-size:13.5px;line-height:1.6;color:var(--text);font-style:italic;border-left:3px solid var(--brand);">
+          "{{ rma.customer_note }}"
+        </div>
+      {% else %}
+        <p style="font-size:12.5px;color:var(--muted);">Customer didn't add a note.</p>
+      {% endif %}
+    </div>
+
+    <!-- Photos -->
+    {% if photos %}
+    <div class="section-card">
+      <h3><i class="fa-solid fa-camera"></i> Photo Evidence ({{ photos|length }})</h3>
+      <div class="photos-grid">
+        {% for p in photos %}
+          <a class="photo-thumb" href="{{ p.image.url }}" target="_blank">
+            <img src="{{ p.image.url }}" alt=""/>
+          </a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Conversation -->
+    <div class="section-card">
+      <h3><i class="fa-solid fa-comments"></i> Conversation with Customer</h3>
+      <div id="threadList">
+        {% for m in msgs_thread %}
+          <div class="msg msg-{% if m.direction == 'customer' %}customer{% else %}team{% endif %}">{{ m.body|linebreaksbr }}</div>
+          <div class="msg-time">{{ m.sender_name|default:"—" }} · {{ m.created_at|timesince }} ago</div>
+        {% empty %}
+          <p style="font-size:12.5px;color:var(--muted);">No messages yet. Replies sent here are visible on the customer's tracking page and emailed to them.</p>
+        {% endfor %}
+      </div>
+      <div class="msg-input">
+        <input id="msgInput" placeholder="Reply to {{ rma.customer_name|default:'customer' }}…"/>
+        <button onclick="sendMessage()">Send</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT COLUMN -->
+  <div class="detail-right">
+
+    <!-- Refund summary + actions -->
+    <div class="action-block">
+      <h3 style="font-size:11px;font-weight:800;color:var(--brand);text-transform:uppercase;letter-spacing:.1em;margin-bottom:14px;"><i class="fa-solid fa-bolt"></i> Refund Summary</h3>
+      <div class="total-row"><span>Items total</span><span class="v">${{ rma.items_total|floatformat:2 }}</span></div>
+      <div class="total-row"><span>Refund shipping</span><span class="v">$<input type="number" id="fldShipping" step="0.01" value="{{ rma.refund_shipping|floatformat:2 }}" {% if rma.is_terminal %}disabled{% endif %}/></span></div>
+      <div class="total-row"><span>Restocking fee</span><span class="v">−$<input type="number" id="fldRestock" step="0.01" value="{{ rma.restocking_fee|floatformat:2 }}" {% if rma.is_terminal %}disabled{% endif %}/></span></div>
+      <div class="total-row bigger"><span>Refund Amount</span><span class="v" style="color:var(--brand);" id="totalRefund">${{ rma.total_refund|floatformat:2 }}</span></div>
+
+      <div style="margin-top:14px;">
+        {% if rma.status == 'pending' %}
+          <button class="btn btn-success" onclick="approveRMA()"><i class="fa-solid fa-check"></i> Approve Return</button>
+          <button class="btn btn-danger" onclick="rejectRMA()"><i class="fa-solid fa-xmark"></i> Reject Request</button>
+        {% elif rma.status == 'approved' %}
+          <button class="btn btn-ghost" onclick="markInTransit()"><i class="fa-solid fa-truck"></i> Mark In Transit</button>
+          <button class="btn btn-ghost" onclick="markReceived()"><i class="fa-solid fa-box"></i> Mark Received</button>
+        {% elif rma.status == 'in_transit' %}
+          <button class="btn btn-success" onclick="markReceived()"><i class="fa-solid fa-box"></i> Mark Received</button>
+        {% elif rma.status == 'received' %}
+          <button class="btn btn-primary" onclick="processRefund()"><i class="fa-solid fa-money-bill-wave"></i> Process Refund $<span id="btnAmt">{{ rma.total_refund|floatformat:2 }}</span></button>
+        {% elif rma.status == 'refunded' %}
+          <div style="text-align:center;padding:10px;font-size:13px;color:var(--green);font-weight:700;">
+            <i class="fa-solid fa-check-circle"></i> Refunded {{ rma.refunded_at|date:"M j" }}
+            {% if rma.stripe_refund_id %}<div style="font-size:11px;color:var(--muted);font-weight:500;margin-top:3px;font-family:'JetBrains Mono';">Stripe: {{ rma.stripe_refund_id }}</div>{% endif %}
+          </div>
+        {% elif rma.status == 'rejected' %}
+          <div style="text-align:center;padding:10px;font-size:13px;color:var(--red);font-weight:700;">
+            <i class="fa-solid fa-circle-xmark"></i> Rejected {{ rma.rejected_at|date:"M j" }}
+            {% if rma.reject_note %}<div style="font-size:11px;color:var(--muted);font-weight:500;margin-top:5px;">"{{ rma.reject_note }}"</div>{% endif %}
+          </div>
+        {% endif %}
+      </div>
+
+      {% if rma.return_label_url and rma.return_tracking_no %}
+        <div class="label-box">
+          <div class="t">Return Shipping Label</div>
+          <div class="v">{{ rma.return_carrier|default:"Carrier" }} · {{ rma.return_tracking_no }}</div>
+          <a href="{{ rma.return_label_url }}" target="_blank" style="display:inline-block;margin-top:8px;color:#a5b4fc;font-size:12px;font-weight:700;text-decoration:none;"><i class="fa-solid fa-download"></i> Download Label</a>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Timeline -->
+    <div class="action-block">
+      <h3 style="font-size:11px;font-weight:800;color:var(--brand);text-transform:uppercase;letter-spacing:.1em;margin-bottom:14px;"><i class="fa-solid fa-timeline"></i> Status Timeline</h3>
+      <div class="timeline">
+        {% for e in events %}
+          <div class="tl-item done">
+            <div class="tl-dot"></div>
+            <div class="tl-title">{{ e.get_event_type_display }}</div>
+            <div class="tl-meta">{{ e.created_at|date:"M j · g:i A" }}{% if e.actor_label %} · {{ e.actor_label }}{% endif %}{% if e.message %}<br><span style="color:var(--text);">{{ e.message }}</span>{% endif %}</div>
+          </div>
+        {% empty %}
+          <p style="font-size:12.5px;color:var(--muted);">No timeline events yet.</p>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Internal notes -->
+    <div class="action-block">
+      <h3 style="font-size:11px;font-weight:800;color:var(--brand);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px;"><i class="fa-solid fa-lock"></i> Internal Notes <span style="font-size:9.5px;color:var(--muted);font-weight:600;text-transform:none;margin-left:5px;">(team only)</span></h3>
+      <div id="notesList">
+        {% for n in msgs_internal %}
+          <div class="note-pad">
+            <strong>From {{ n.sender_name }} · {{ n.created_at|timesince }} ago</strong>
+            {{ n.body|linebreaksbr }}
+          </div>
+        {% empty %}
+          <p style="font-size:12.5px;color:var(--muted);">No internal notes yet.</p>
+        {% endfor %}
+      </div>
+      <div class="note-pad-input">
+        <input id="noteInput" placeholder="Add a team-only note…"/>
+        <button onclick="addNote()">Add</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const PK = {{ rma.pk }};
+const TOKEN = "{{ rma.token }}";
+
+// Live refund recompute
+function recomputeRefund(){
+  const items = {{ rma.items_total }};
+  const ship  = parseFloat(document.getElementById('fldShipping').value) || 0;
+  const rest  = parseFloat(document.getElementById('fldRestock').value) || 0;
+  const tot   = (items + ship - rest).toFixed(2);
+  document.getElementById('totalRefund').textContent = '$' + tot;
+  const btnAmt = document.getElementById('btnAmt');
+  if (btnAmt) btnAmt.textContent = tot;
+}
+['fldShipping','fldRestock'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('input', recomputeRefund);
+});
+
+async function approveRMA(){
+  if (!confirm('Approve this return? The customer will get a label by email.')) return;
+  const payload = {
+    refund_shipping: parseFloat(document.getElementById('fldShipping').value) || 0,
+    restocking_fee:  parseFloat(document.getElementById('fldRestock').value) || 0,
+  };
+  const {ok, data} = await api('/rma/' + PK + '/approve/', payload);
+  if (ok) window.location.reload();
+  else alert(data.error || 'Could not approve.');
+}
+
+async function rejectRMA(){
+  const reason = prompt('Why are you rejecting this return? (sent to the customer)');
+  if (reason === null) return;
+  const {ok, data} = await api('/rma/' + PK + '/reject/', {reason: reason});
+  if (ok) window.location.reload();
+  else alert(data.error || 'Could not reject.');
+}
+
+async function markInTransit(){
+  const {ok, data} = await api('/rma/' + PK + '/in-transit/');
+  if (ok) window.location.reload();
+  else alert(data.error || 'Could not update.');
+}
+
+async function markReceived(){
+  const {ok, data} = await api('/rma/' + PK + '/received/');
+  if (ok) window.location.reload();
+  else alert(data.error || 'Could not update.');
+}
+
+async function processRefund(){
+  if (!confirm('Process refund now? This will trigger a Stripe refund if a charge is linked.')) return;
+  const amount = parseFloat(document.getElementById('totalRefund').textContent.replace(/[^0-9.]/g,''));
+  const {ok, data} = await api('/rma/' + PK + '/refund/', {amount: amount});
+  if (ok) {
+    if (data.stripe_attempted && !data.stripe_ok) {
+      alert('Refund marked but Stripe failed: ' + (data.stripe_error || 'unknown'));
+    }
+    window.location.reload();
+  } else {
+    alert(data.error || 'Could not process refund.');
+  }
+}
+
+async function sendMessage(){
+  const input = document.getElementById('msgInput');
+  const body = input.value.trim();
+  if (!body) return;
+  const {ok, data} = await api('/rma/' + PK + '/message/', {body: body});
+  if (ok) { input.value = ''; window.location.reload(); }
+  else alert(data.error || 'Could not send.');
+}
+
+async function addNote(){
+  const input = document.getElementById('noteInput');
+  const body = input.value.trim();
+  if (!body) return;
+  const {ok, data} = await api('/rma/' + PK + '/note/', {body: body});
+  if (ok) { input.value = ''; window.location.reload(); }
+  else alert(data.error || 'Could not add note.');
+}
+
+function copyTrackLink(){
+  const url = window.location.origin + '/r/' + TOKEN + '/';
+  navigator.clipboard.writeText(url).then(() => alert('Customer tracking link copied:\n' + url));
+}
+</script>
+{% endblock %}
