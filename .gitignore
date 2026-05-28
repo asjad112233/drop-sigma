@@ -14,3 +14,14 @@ media/
 # Sample/mockup HTML files (preview-only, not deployed)
 *_sample.html
 *_mockup.html
+
+# ── Local-only promo / ad video templates and routes ──
+# These animated pages exist purely for local screen-capture → MP4
+# production. They must NEVER ship to dropsigma.com — keeping them
+# gitignored guarantees nobody accidentally pushes a video URL live.
+templates/promo*.html
+templates/ad_*.html
+core/local_promo.py
+tools/render-promo/
+tools/voiceover/
+tools/voiceover-intro/

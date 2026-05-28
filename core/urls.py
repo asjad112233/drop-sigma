@@ -28,7 +28,6 @@ urlpatterns = [
     path("refund/",   views.refund_page,   name="refund_page"),
     path("docs/",     views.docs_page,     name="docs_page"),
     path("features/", views.features_page, name="features_page"),
-    path("promo/",    views.promo_page,    name="promo_page"),
     path("dashboard/", views.dashboard_page, name="dashboard"),
     # Embeddable emails-only view for the employee portal iframe
     path("dashboard/embed/emails/", views.dashboard_embed_emails, name="dashboard_embed_emails"),
@@ -77,3 +76,16 @@ urlpatterns = [
     path("superadmin/", include("superadmin.urls")),
     path("notifications/", include("notifications.urls")),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+
+# ── Local-only promo/ad routes (never deployed) ──────────────────────
+# The file `core/local_promo.py` is intentionally gitignored. It holds
+# every animated promo, cinematic intro, walkthrough, and 9:16 paid-ad
+# template used for screen-capture → MP4 export on the dev server only.
+# On Railway production the file is absent → ImportError is swallowed
+# → those routes simply don't exist. dropsigma.com stays clean.
+try:
+    from .local_promo import local_promo_patterns
+    urlpatterns += local_promo_patterns
+except ImportError:
+    pass
