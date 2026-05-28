@@ -129,9 +129,23 @@ TEMPLATES = [
 WSGI_APPLICATION = 'core.wsgi.application'
 
 # Database — PostgreSQL on Railway via DATABASE_URL, fallback to SQLite locally
+#
+# conn_max_age=60 (was 600): keep idle connections for only 1 minute instead of 10.
+#   Railway's small Postgres caps max_connections around 97; long-held persistent
+#   connections from multiple gunicorn workers + background tasks were exhausting
+#   the pool and causing "FATAL: sorry, too many clients already" 500s on /login/
+#   and any other DB-touching view (2026-05-28 incident).
+#
+# conn_health_checks=True (Django 4.1+): on each new request, ping the cached
+#   connection before reuse and silently re-open if it's dead. Stops stale-
+#   connection errors after Postgres restarts or short network blips.
 _db_url = os.getenv("DATABASE_URL")
 if _db_url:
-    DATABASES = {"default": dj_database_url.parse(_db_url, conn_max_age=600)}
+    DATABASES = {"default": dj_database_url.parse(
+        _db_url,
+        conn_max_age=60,
+        conn_health_checks=True,
+    )}
 else:
     DATABASES = {
         "default": {
