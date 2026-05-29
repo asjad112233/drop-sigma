@@ -20,6 +20,8 @@ urlpatterns = [
     path("api/<int:order_id>/tracking/", views.save_order_tracking_api, name="save_order_tracking"),
     path("api/<int:order_id>/fetch-tracking-status/", views.fetch_live_tracking_api, name="fetch_live_tracking"),
     path("api/<int:order_id>/update-status/", views.update_order_status_api, name="update_order_status_api"),
+    path("api/statuses/", views.order_statuses_api, name="order_statuses_api"),
+    path("api/<int:order_id>/status-template-preview/", views.status_template_preview_api, name="status_template_preview_api"),
 
     # 🔥 AUTO ASSIGN (TEAM)
     path("api/auto-assign/", views.auto_assign_orders_api, name="auto_assign_orders_api"),

@@ -3083,12 +3083,115 @@ body.vf-dark-mode .pox-stat4{background:var(--vf-surface);border-color:var(--vf-
 /* Portal-derived status pills — single pill shown in Status column.
    Store's raw payment+fulfillment statuses appear on hover via the tooltip. */
 .pox-portal-pill{cursor:default;}
+.pox-portal-pill.pox-portal-clickable{cursor:pointer;transition:.12s;padding-right:7px;}
+.pox-portal-pill.pox-portal-clickable:hover{filter:brightness(.97);box-shadow:0 0 0 3px rgba(99,102,241,.10);}
+.pox-portal-chev{display:inline-block;margin-left:4px;font-size:8px;opacity:.55;transform:translateY(-1px);}
+
+/* ── Order-Status dropdown ──────────────────────────────────────────── */
+.ods-popover{position:fixed;z-index:10500;background:var(--vf-surface,#fff);border:1px solid var(--vf-line,#e5eaf2);border-radius:14px;box-shadow:0 24px 60px -10px rgba(15,23,42,.25),0 6px 16px rgba(15,23,42,.08);width:300px;font-family:inherit;animation:odsPopIn .15s ease-out;overflow:hidden;display:flex;flex-direction:column;}
+/* Backdrop — blocks background scroll + clicks while popover is open. */
+.ods-backdrop{position:fixed;inset:0;z-index:10400;background:rgba(15,23,42,.18);backdrop-filter:blur(1.5px);-webkit-backdrop-filter:blur(1.5px);animation:odsPopIn .15s ease-out;}
+/* Highlight ring on the originating trigger so the user can see which order
+   the popover belongs to. */
+.ods-origin-highlight{position:relative;z-index:10450;outline:2px solid rgba(99,102,241,.65);outline-offset:2px;border-radius:8px;box-shadow:0 0 0 6px rgba(99,102,241,.18);transition:outline-color .15s, box-shadow .15s;}
+.ods-popover .ods-head, .ods-popover .ods-foot, .ods-popover .ods-warn, .ods-popover #odsSendRow, .ods-popover #odsNoTemplate{flex:0 0 auto;}
+.ods-popover .ods-list{flex:1 1 auto;min-height:0;}
+@keyframes odsPopIn{from{opacity:0;transform:translateY(-4px) scale(.97);}to{opacity:1;transform:none;}}
+.ods-head{padding:14px 16px 9px;font-size:11px;font-weight:800;color:var(--vf-muted,#64748b);text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid var(--vf-line,#f1f5f9);}
+.ods-list{max-height:280px;overflow-y:auto;padding:6px;display:flex;flex-direction:column;gap:2px;}
+.ods-loading{padding:24px;text-align:center;color:var(--vf-muted,#64748b);font-size:12.5px;}
+.ods-opt{display:flex;align-items:center;gap:9px;padding:8px 11px;border-radius:8px;cursor:pointer;border:none;background:transparent;font-family:inherit;font-size:13px;font-weight:600;color:var(--vf-text,#0f172a);text-align:left;transition:.1s;width:100%;}
+.ods-opt:hover{background:var(--vf-surface-2,#f8fafc);}
+.ods-opt.on{background:rgba(99,102,241,.09);color:#4338ca;}
+.ods-opt.on::after{content:"✓";margin-left:auto;font-weight:800;color:#6366f1;font-size:13px;}
+.ods-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.ods-opt-name{flex:1;min-width:0;line-height:1.2;}
+.ods-opt-tr{font-size:9.5px;color:var(--vf-muted,#64748b);background:#f1f5f9;padding:1px 6px;border-radius:99px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;}
+.ods-send-row{display:flex;align-items:flex-start;gap:9px;padding:12px 16px;border-top:1px solid var(--vf-line,#f1f5f9);cursor:pointer;user-select:none;background:var(--vf-surface-2,#f8fafc);}
+.ods-send-row input[type=checkbox]{width:15px;height:15px;accent-color:#6366f1;cursor:pointer;margin-top:1px;}
+.ods-send-text{display:flex;flex-direction:column;gap:1px;flex:1;min-width:0;}
+.ods-send-title{font-size:12.5px;font-weight:700;color:var(--vf-text,#0f172a);}
+.ods-send-sub{font-size:11px;color:var(--vf-muted,#64748b);}
+.ods-warn{margin:10px 16px 0;padding:9px 12px;background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;font-size:11.5px;color:#78350f;line-height:1.45;font-weight:600;}
+.ods-no-template{display:flex;align-items:center;gap:7px;padding:10px 16px;background:var(--vf-surface-2,#f8fafc);border-top:1px solid var(--vf-line,#f1f5f9);font-size:11.5px;color:var(--vf-muted,#64748b);font-weight:600;line-height:1.4;}
+.ods-no-template-ic{width:16px;height:16px;border-radius:50%;background:#e2e8f0;color:#64748b;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;font-family:Georgia,serif;}
+.ods-actions{display:flex;gap:8px;justify-content:flex-end;padding:12px 16px;border-top:1px solid var(--vf-line,#f1f5f9);}
+.ods-btn{padding:7px 14px;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;border:1px solid var(--vf-line,#e5eaf2);background:#fff;color:var(--vf-text,#0f172a);font-family:inherit;transition:.1s;}
+.ods-btn.ghost:hover{background:var(--vf-surface-2,#f8fafc);}
+.ods-btn.primary{background:linear-gradient(135deg,#6366f1,#8b5cf6,#a855f7);color:#fff;border-color:transparent;box-shadow:0 4px 14px rgba(99,102,241,.28);}
+.ods-btn.primary:hover{filter:brightness(1.06);}
+.ods-btn.primary:disabled{opacity:.55;cursor:wait;}
+.ods-expand-btn{border:1px solid #c7d2fe;background:#eef2ff;color:#4338ca;font-size:10.5px;font-weight:800;padding:4px 9px;border-radius:7px;cursor:pointer;letter-spacing:.03em;font-family:inherit;text-transform:uppercase;transition:.12s;}
+.ods-expand-btn:hover{background:#e0e7ff;box-shadow:0 2px 8px rgba(99,102,241,.18);}
+
+/* ─── Full-screen Status Editor Modal ─────────────────────────────────────── */
+.odm-overlay{position:fixed;inset:0;z-index:11000;background:rgba(15,23,42,.55);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:24px;animation:odsPopIn .18s ease-out;}
+.odm-modal{width:min(1100px,96vw);height:min(720px,92vh);background:#fff;border-radius:18px;box-shadow:0 30px 80px -10px rgba(15,23,42,.45);display:flex;flex-direction:column;overflow:hidden;font-family:inherit;animation:odsPopIn .22s ease-out;}
+.odm-head{display:flex;align-items:flex-start;justify-content:space-between;padding:18px 22px 14px;border-bottom:1px solid #f1f5f9;background:linear-gradient(135deg,#fafbff,#f5f3ff);}
+.odm-head-left{display:flex;flex-direction:column;gap:3px;min-width:0;}
+.odm-title{font-size:18px;font-weight:800;color:#0f172a;letter-spacing:-.01em;}
+.odm-subtitle{font-size:12.5px;color:#64748b;font-weight:500;}
+.odm-close{width:34px;height:34px;border-radius:9px;border:1px solid #e2e8f0;background:#fff;color:#64748b;font-size:16px;cursor:pointer;transition:.12s;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.odm-close:hover{background:#f1f5f9;color:#0f172a;}
+.odm-body{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:340px 1fr;gap:0;}
+.odm-left{border-right:1px solid #f1f5f9;display:flex;flex-direction:column;min-height:0;padding:16px 18px 10px;background:#fafbff;}
+.odm-right{display:flex;flex-direction:column;min-height:0;padding:16px 22px 10px;}
+.odm-section-head{font-size:10.5px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;}
+.odm-status-list{flex:1 1 auto;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:3px;padding-right:4px;}
+.odm-status-list::-webkit-scrollbar{width:6px;}
+.odm-status-list::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px;}
+.odm-status-opt{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:9px;border:1px solid transparent;background:#fff;font-size:13px;font-weight:600;color:#0f172a;cursor:pointer;text-align:left;font-family:inherit;transition:.1s;}
+.odm-status-opt:hover{background:#f1f5f9;}
+.odm-status-opt.on{background:#eef2ff;border-color:#c7d2fe;color:#4338ca;}
+.odm-status-opt.on::after{content:"✓";margin-left:auto;color:#6366f1;font-weight:800;}
+.odm-status-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.odm-status-tr{font-size:9px;font-weight:800;color:#94a3b8;background:#f1f5f9;padding:2px 6px;border-radius:4px;letter-spacing:.04em;text-transform:uppercase;margin-left:auto;}
+.odm-status-opt.on .odm-status-tr{background:#dbeafe;color:#1d4ed8;}
+.odm-meta{padding-top:10px;border-top:1px solid #f1f5f9;margin-top:10px;font-size:11.5px;color:#64748b;line-height:1.55;}
+.odm-meta b{color:#0f172a;}
+.odm-preview-host{flex:1 1 auto;min-height:0;border:1px solid #e2e8f0;border-radius:12px;background:#fff;overflow:hidden;display:flex;flex-direction:column;}
+.odm-preview-empty,.odm-preview-none,.odm-preview-loading{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;}
+.odm-preview-card{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;overflow:hidden;}
+.odm-prev-row{display:flex;gap:10px;padding:9px 14px;border-bottom:1px solid #f1f5f9;font-size:12.5px;align-items:flex-start;}
+.odm-prev-lbl{width:60px;color:#94a3b8;font-weight:800;text-transform:uppercase;letter-spacing:.06em;font-size:10px;padding-top:2px;flex-shrink:0;}
+.odm-prev-val{color:#0f172a;font-weight:600;word-break:break-word;flex:1;}
+.odm-prev-subject{font-weight:800;font-size:13.5px;color:#0f172a;}
+.odm-prev-divider{height:6px;background:#f8fafc;border-bottom:1px solid #f1f5f9;}
+.odm-prev-body{flex:1 1 auto;min-height:0;overflow:auto;padding:18px 22px;background:#fff;font-size:13.5px;line-height:1.6;color:#1e293b;}
+.odm-prev-body img{max-width:100%;height:auto;}
+.odm-prev-body a{color:#6366f1;}
+.odm-warn{margin-top:10px;padding:10px 13px;background:#fef3c7;border:1px solid #fcd34d;border-radius:9px;font-size:12px;color:#78350f;line-height:1.5;font-weight:600;}
+.odm-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 22px;border-top:1px solid #f1f5f9;background:#fafbff;}
+.odm-foot-left,.odm-foot-right{display:flex;gap:10px;align-items:center;}
+.odm-btn{padding:9px 16px;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;border:1px solid #e2e8f0;background:#fff;color:#0f172a;font-family:inherit;transition:.12s;}
+.odm-btn.ghost:hover{background:#f1f5f9;}
+.odm-btn.secondary{background:#fff;color:#475569;border-color:#cbd5e1;}
+.odm-btn.secondary:hover{background:#f1f5f9;}
+.odm-btn.primary{background:linear-gradient(135deg,#6366f1,#8b5cf6,#a855f7);color:#fff;border-color:transparent;box-shadow:0 6px 18px rgba(99,102,241,.32);}
+.odm-btn.primary:hover{filter:brightness(1.06);}
+.odm-btn:disabled{opacity:.5;cursor:wait;}
+.odm-spinner{width:32px;height:32px;border:3px solid #e2e8f0;border-top-color:#6366f1;border-radius:50%;animation:odmSpin .8s linear infinite;}
+@keyframes odmSpin{to{transform:rotate(360deg);}}
+@media (max-width:780px){
+  .odm-body{grid-template-columns:1fr;grid-template-rows:auto 1fr;}
+  .odm-left{border-right:none;border-bottom:1px solid #f1f5f9;max-height:38vh;}
+}
+
+/* Prominent Change-Status button shown at the top of the Order Detail page */
+.od-status-trigger{display:inline-flex;align-items:center;gap:7px;padding:5px 11px 5px 9px;background:linear-gradient(135deg,#eef2ff,#f5f3ff);border:1px solid #c7d2fe;border-radius:99px;font-size:12px;font-weight:800;color:#4338ca;cursor:pointer;font-family:inherit;letter-spacing:.01em;transition:.12s;line-height:1.5;}
+.od-status-trigger:hover{background:linear-gradient(135deg,#e0e7ff,#ede9fe);box-shadow:0 4px 12px rgba(99,102,241,.18);}
+.od-status-trigger-dot{width:7px;height:7px;border-radius:50%;background:#6366f1;display:inline-block;box-shadow:0 0 0 2px rgba(99,102,241,.18);}
+.od-status-trigger-label{text-transform:uppercase;letter-spacing:.04em;}
+.od-status-trigger-chev{font-size:9px;opacity:.65;margin-left:1px;transform:translateY(-1px);}
 .pox-portal-awaiting{background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;}.pox-portal-awaiting .pox-dot{background:#ef4444;}
 .pox-portal-processing{background:#fff7e6;color:#b45309;border:1px solid #fcd34d;}.pox-portal-processing .pox-dot{background:#f59e0b;}
 .pox-portal-transit{background:#e5f4fe;color:#0284c7;border:1px solid #bae6fd;}.pox-portal-transit .pox-dot{background:#3b82f6;}
 .pox-portal-delivered{background:#e7f8f1;color:#059669;border:1px solid #a7f3d0;}.pox-portal-delivered .pox-dot{background:#10b981;}
 .pox-portal-cancelled{background:#fee7e7;color:#b91c1c;border:1px solid #fecaca;}.pox-portal-cancelled .pox-dot{background:#ef4444;}
 .pox-portal-refunded{background:#ede9fe;color:#6d28d9;border:1px solid #ddd6fe;}.pox-portal-refunded .pox-dot{background:#8b5cf6;}
+.pox-portal-dispute{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;}.pox-portal-dispute .pox-dot{background:#b91c1c;}
+.pox-portal-returned{background:#cffafe;color:#0e7490;border:1px solid #a5f3fc;}.pox-portal-returned .pox-dot{background:#0891b2;}
+.pox-portal-onhold{background:#f3e8ff;color:#7e22ce;border:1px solid #e9d5ff;}.pox-portal-onhold .pox-dot{background:#a855f7;}
 .pox-va-popover{position:fixed;z-index:9999;background:var(--vf-surface);border:1px solid var(--vf-line);border-radius:12px;box-shadow:0 8px 28px rgba(15,23,42,.16);padding:11px;width:200px;animation:poxVaIn .12s ease;}
 @keyframes poxVaIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
 .pox-va-title{font-size:11px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:7px;}
@@ -3280,7 +3383,23 @@ tr:hover .pox-refresh-mini{opacity:.7;}
 
 /* Period selector bar */
 .ov-period-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;}
-.ov-period-left{display:flex;align-items:center;gap:10px;}
+.ov-period-left{display:flex;align-items:center;gap:10px;position:relative;}
+
+/* Custom date range popover */
+.ov-custom-panel{position:absolute;top:calc(100% + 8px);left:0;z-index:40;background:var(--vf-surface);border:1px solid var(--vf-line);border-radius:12px;padding:14px;box-shadow:0 12px 32px rgba(15,23,42,.15);display:flex;align-items:flex-end;gap:10px;min-width:330px;}
+.ov-custom-field{display:flex;flex-direction:column;gap:5px;}
+.ov-custom-field label{font-size:10px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.06em;}
+.ov-custom-field input{padding:7px 10px;border:1px solid var(--vf-line);border-radius:8px;font-size:12.5px;font-family:inherit;background:var(--vf-surface);color:var(--vf-text);outline:none;}
+.ov-custom-field input:focus{border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.08);}
+.ov-custom-actions{display:flex;gap:6px;}
+.ov-custom-btn{padding:7px 13px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;border:1px solid var(--vf-line);transition:.12s;}
+.ov-custom-btn.ghost{background:var(--vf-surface);color:var(--vf-text);}
+.ov-custom-btn.ghost:hover{background:var(--vf-surface-2,#f8fafc);}
+.ov-custom-btn.primary{background:#0f172a;color:#fff;border-color:transparent;}
+.ov-custom-btn.primary:hover{background:#1e293b;}
+@media(max-width:560px){
+  .ov-custom-panel{min-width:auto;width:calc(100vw - 40px);left:0;right:0;flex-wrap:wrap;}
+}
 .ov-period-label{font-size:11px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.06em;}
 .ov-period-pills{display:inline-flex;background:var(--vf-surface);border:1px solid var(--vf-line);border-radius:10px;padding:3px;gap:2px;}
 .ov-pp{padding:6px 13px;font-size:12px;font-weight:700;color:var(--vf-muted);border:none;background:none;border-radius:7px;cursor:pointer;font-family:inherit;transition:.12s;}
@@ -3354,6 +3473,17 @@ tr:hover .pox-refresh-mini{opacity:.7;}
 .ov-act-text{font-size:12px;color:var(--vf-text);line-height:1.4;}
 .ov-act-text b{font-weight:700;}
 .ov-act-time{font-size:10.5px;color:var(--vf-muted);margin-top:2px;font-weight:500;}
+
+/* Stripe-style revenue line chart */
+.ov-stripe-chart{position:relative;width:100%;padding:6px 0 2px;cursor:crosshair;}
+.ov-stripe-chart-svg{width:100%;height:170px;display:block;overflow:visible;}
+.ov-stripe-axis{position:relative;height:18px;font-size:10.5px;color:var(--vf-muted);font-weight:600;margin-top:6px;}
+.ov-stripe-axis span{position:absolute;transform:translateX(-50%);white-space:nowrap;letter-spacing:-.005em;}
+.ov-stripe-tip{position:absolute;display:none;background:#0f172a;color:#fff;padding:7px 12px;border-radius:8px;font-family:inherit;pointer-events:none;box-shadow:0 8px 22px rgba(15,23,42,.28);z-index:5;min-width:100px;transform:translate(-50%,-100%);}
+.ov-stripe-tip::after{content:"";position:absolute;left:50%;transform:translateX(-50%);bottom:-4px;width:8px;height:8px;background:#0f172a;rotate:45deg;}
+.ov-stripe-tip-date{font-size:10px;font-weight:700;opacity:.7;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;}
+.ov-stripe-tip-amt{font-size:14px;font-weight:800;letter-spacing:-.01em;line-height:1.2;}
+.ov-stripe-tip-sub{font-size:10.5px;color:rgba(255,255,255,.7);margin-top:2px;font-weight:600;}
 
 /* Responsive */
 @media(max-width:1280px){
@@ -6170,13 +6300,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     <section id="overviewSection" class="section">
 
-      <!-- DASHBOARD HEADER -->
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
-        <div>
-          <div style="font-size:12px;font-weight:700;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;" id="ovDayLabel">—</div>
-          <h1 style="margin:0;font-size:28px;font-weight:900;letter-spacing:-.5px;">Dashboard</h1>
-          <p style="margin:4px 0 0;color:var(--vf-muted);font-size:13.5px;">Live overview · <span id="ovStoreName">All stores</span></p>
-        </div>
+      <!-- DASHBOARD HEADER (compact single-line) -->
+      <div style="display:flex;align-items:baseline;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
+        <h1 style="margin:0;font-size:22px;font-weight:900;letter-spacing:-.02em;color:var(--vf-text);">Dashboard</h1>
+        <span style="color:var(--vf-muted);font-size:12.5px;font-weight:500;line-height:1.4;">
+          Live overview · <span id="ovStoreName" style="font-weight:700;color:var(--vf-text);">—</span> · <span id="ovDayLabel" style="text-transform:capitalize;">—</span>
+        </span>
       </div>
 
       <!-- SETUP WIZARD -->
@@ -6271,7 +6400,7 @@ document.addEventListener("DOMContentLoaded", () => {
       </div>
 
       <!-- ════════════════════════════════════════════════════════════
-           PERIOD SELECTOR — pill segmented control
+           PERIOD SELECTOR — segmented control + Custom date range
            ════════════════════════════════════════════════════════════ -->
       <div class="ov-period-bar">
         <div class="ov-period-left">
@@ -6282,6 +6411,25 @@ document.addEventListener("DOMContentLoaded", () => {
             <button class="ov-pp" data-p="30d" onclick="ovSetPeriod(this,'30d')">30 days</button>
             <button class="ov-pp" data-p="90d" onclick="ovSetPeriod(this,'90d')">90 days</button>
             <button class="ov-pp" data-p="all" onclick="ovSetPeriod(this,'all')">All time</button>
+            <button class="ov-pp" data-p="custom" id="ovPpCustom" onclick="ovOpenCustom(this, event)" style="display:flex;align-items:center;gap:5px;">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              <span id="ovPpCustomLabel">Custom</span>
+            </button>
+          </div>
+          <!-- Custom date range popover (hidden until 'Custom' clicked) -->
+          <div id="ovCustomPanel" class="ov-custom-panel" style="display:none;">
+            <div class="ov-custom-field">
+              <label>From</label>
+              <input type="date" id="ovCustomFrom"/>
+            </div>
+            <div class="ov-custom-field">
+              <label>To</label>
+              <input type="date" id="ovCustomTo"/>
+            </div>
+            <div class="ov-custom-actions">
+              <button class="ov-custom-btn ghost" onclick="ovCancelCustom()">Cancel</button>
+              <button class="ov-custom-btn primary" onclick="ovApplyCustom()">Apply</button>
+            </div>
           </div>
         </div>
         <div class="ov-period-right">
@@ -7049,6 +7197,94 @@ document.addEventListener("DOMContentLoaded", () => {
       </div>
 
       <!-- Vendor Assign Popover -->
+      <!-- Status dropdown (shared singleton, positioned dynamically) -->
+      <div class="ods-popover" id="odsPopover" style="display:none;" onclick="event.stopPropagation()">
+        <div class="ods-head" style="display:flex;align-items:center;justify-content:space-between;">
+          <span>Change status</span>
+          <button type="button" class="ods-expand-btn" onclick="odsExpand()" title="Open full editor with email preview">⛶ Expand</button>
+        </div>
+        <div class="ods-list" id="odsList"><div class="ods-loading">Loading…</div></div>
+        <label class="ods-send-row" id="odsSendRow">
+          <input type="checkbox" id="odsSendEmail"/>
+          <span class="ods-send-text">
+            <span class="ods-send-title">Send email to customer</span>
+            <span class="ods-send-sub" id="odsSendSub">Status-template email sent on save</span>
+          </span>
+        </label>
+        <div class="ods-no-template" id="odsNoTemplate" style="display:none;">
+          <span class="ods-no-template-ic">ⓘ</span>
+          <span>No customer email is sent for this status.</span>
+        </div>
+        <div class="ods-warn" id="odsWarn" style="display:none;">
+          ⚠ <span id="odsWarnText"></span>
+        </div>
+        <div class="ods-actions">
+          <button class="ods-btn ghost" onclick="odsClose()">Cancel</button>
+          <button class="ods-btn primary" id="odsApplyBtn" onclick="odsApply()">Apply</button>
+        </div>
+      </div>
+
+      <!-- ─── Full-screen Status Editor with Email Preview ──────────────────── -->
+      <div class="odm-overlay" id="odmOverlay" style="display:none;" onclick="if(event.target===this)odmClose()">
+        <div class="odm-modal" role="dialog" aria-modal="true" aria-labelledby="odmTitle">
+          <div class="odm-head">
+            <div class="odm-head-left">
+              <div class="odm-title" id="odmTitle">Change order status</div>
+              <div class="odm-subtitle" id="odmSubtitle">Pick a new status and preview the email that will be sent.</div>
+            </div>
+            <button class="odm-close" type="button" onclick="odmClose()" aria-label="Close">✕</button>
+          </div>
+          <div class="odm-body">
+            <!-- LEFT: status picker -->
+            <div class="odm-left">
+              <div class="odm-section-head">Status</div>
+              <div class="odm-status-list" id="odmStatusList"><div class="ods-loading">Loading…</div></div>
+              <div class="odm-meta" id="odmMeta"></div>
+            </div>
+            <!-- RIGHT: email preview -->
+            <div class="odm-right">
+              <div class="odm-section-head" id="odmRightHead">Email preview</div>
+              <div class="odm-preview-host" id="odmPreviewHost">
+                <div class="odm-preview-empty" id="odmPreviewEmpty">
+                  <div style="font-size:32px;margin-bottom:6px;opacity:.4;">✉️</div>
+                  <div style="font-weight:700;color:#475569;">Select a status to preview the email</div>
+                  <div style="font-size:12px;color:#94a3b8;margin-top:4px;">Subject and body will be rendered with this order's data.</div>
+                </div>
+                <div class="odm-preview-card" id="odmPreviewCard" style="display:none;">
+                  <div class="odm-prev-row"><span class="odm-prev-lbl">From</span><span class="odm-prev-val" id="odmFrom"></span></div>
+                  <div class="odm-prev-row"><span class="odm-prev-lbl">To</span><span class="odm-prev-val" id="odmTo"></span></div>
+                  <div class="odm-prev-row"><span class="odm-prev-lbl">Subject</span><span class="odm-prev-val odm-prev-subject" id="odmSubject"></span></div>
+                  <div class="odm-prev-divider"></div>
+                  <div class="odm-prev-body" id="odmBody"></div>
+                </div>
+                <div class="odm-preview-none" id="odmPreviewNone" style="display:none;">
+                  <div style="font-size:28px;opacity:.4;">ⓘ</div>
+                  <div style="font-weight:700;color:#475569;margin-top:4px;">No email template for this status</div>
+                  <div style="font-size:12px;color:#94a3b8;margin-top:2px;">The status will still be updated — just no customer email goes out.</div>
+                </div>
+                <div class="odm-preview-loading" id="odmPreviewLoading" style="display:none;">
+                  <div class="odm-spinner"></div>
+                  <div style="font-size:12px;color:#94a3b8;margin-top:8px;">Rendering preview…</div>
+                </div>
+              </div>
+              <div class="odm-warn" id="odmWarn" style="display:none;">
+                ⚠ <span id="odmWarnText"></span>
+              </div>
+            </div>
+          </div>
+          <div class="odm-foot">
+            <div class="odm-foot-left">
+              <button class="odm-btn ghost" type="button" onclick="odmPreviewRefresh()" title="Re-render the email preview">↻ Preview Template</button>
+            </div>
+            <div class="odm-foot-right">
+              <button class="odm-btn ghost" type="button" onclick="odmClose()">Cancel</button>
+              <button class="odm-btn primary" type="button" id="odmSendBtn" onclick="odmSend()">Send & Update</button>
+              <button class="odm-btn secondary" type="button" id="odmUpdateOnlyBtn" onclick="odmUpdateOnly()" title="Update status without sending email">Update only</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="pox-va-popover" id="poxVaPopover" style="display:none" onclick="event.stopPropagation()">
         <div class="pox-va-title">Assign Vendor</div>
         <select class="pox-va-select" id="poxVaSelect"><option value="">Select vendor…</option></select>
@@ -15868,11 +16104,30 @@ async function loadOverview(){
     const now = new Date();
     document.getElementById("ovDayLabel").textContent = `${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
 
-    const storeName = document.getElementById("poxStoreNameLabel")?.textContent || "All stores";
+    // Use the actually-selected store name from the sidebar project switcher
+    // (Drop Sigma is single-store-per-view). Falls back through:
+    //   1. <select id="projectSwitcher"> selected option's text
+    //   2. <span id="poxStoreNameLabel"> on Orders page
+    //   3. "—" (never "All stores" — the model always has one store selected)
+    const switcher = document.getElementById("projectSwitcher");
+    let storeName = "";
+    if (switcher && switcher.selectedIndex >= 0) {
+      const opt = switcher.options[switcher.selectedIndex];
+      if (opt && opt.text && opt.text !== "Loading…") storeName = opt.text.trim();
+    }
+    if (!storeName) {
+      const lbl = document.getElementById("poxStoreNameLabel");
+      if (lbl && lbl.textContent && lbl.textContent !== "—") storeName = lbl.textContent.trim();
+    }
     const storeEl = document.getElementById("ovStoreName");
-    if(storeEl) storeEl.textContent = storeName && storeName !== "—" ? storeName : "All stores";
+    if (storeEl) storeEl.textContent = storeName || "—";
 
-    const r = await fetch(`/orders/overview/?store_id=${selectedStoreId||""}`);
+    // Sync the active period pill on every load (handles page refresh + first paint)
+    try { _ovSyncPills(); } catch(_){}
+    // Build URL with store_id + period (today/7d/30d/90d/all/custom + from/to)
+    const periodQuery = (typeof _ovPeriodQuery === 'function') ? _ovPeriodQuery() : "";
+    const url = `/orders/overview/?store_id=${selectedStoreId||""}${periodQuery ? "&" + periodQuery : ""}`;
+    const r = await fetch(url);
     const d = await r.json();
     if(!d.success) return;
 
@@ -15902,23 +16157,13 @@ async function loadOverview(){
       }
     }
 
-    // Revenue Chart
+    // Revenue Chart — Stripe-style smooth line with hover crosshair + tooltip
     const chartData = d.revenue_7_days || [];
-    const maxRev = Math.max(...chartData.map(x=>x.revenue), 1);
     const chartEl = document.getElementById("ovRevenueChart");
     const totalW = chartData.reduce((s,x)=>s+x.revenue,0);
-    document.getElementById("ovChartTotal").textContent = fmtMoney(totalW) + " this week";
-    if(chartEl){
-      chartEl.innerHTML = `<div class="ov-chart-bar-wrap">${chartData.map(day=>{
-        const pct = Math.max(4, Math.round((day.revenue/maxRev)*100));
-        const tip = `${day.date}: ${fmtMoney(day.revenue)} (${day.count} orders)`;
-        return `<div class="ov-chart-bar-col" title="${tip}">
-          <div style="font-size:9px;color:var(--vf-muted);font-weight:700;margin-bottom:2px;">${day.revenue>0?fmtMoney(day.revenue):""}</div>
-          <div class="ov-chart-bar" style="height:${pct}%;" title="${tip}"></div>
-          <div class="ov-chart-label">${day.date}</div>
-        </div>`;
-      }).join("")}</div>`;
-    }
+    const periodLabel = {today:"today", "7d":"this week", "30d":"last 30 days", "90d":"last 90 days", all:"all time", custom:"selected range"}[_ovPeriod.period] || "this week";
+    document.getElementById("ovChartTotal").textContent = fmtMoney(totalW) + " " + periodLabel;
+    if (chartEl) ovRenderLineChart(chartEl, chartData, fmtMoney);
 
     // Recent Orders
     const FS = {shipped:"background:#d1fae5;color:#065f46",completed:"background:#dbeafe;color:#1e40af",cancelled:"background:#fee2e2;color:#991b1b",processing:"background:#fef9c3;color:#713f12",pending:"background:#f1f5f9;color:#475569"};
@@ -16041,6 +16286,154 @@ async function loadOverview(){
   }catch(e){
     console.error("Overview error:", e);
   }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   STRIPE-STYLE REVENUE CHART
+   Smooth bezier line + gradient area fill. Mouse-follow crosshair with
+   a dot at the closest data point and a floating tooltip showing date +
+   revenue + order count.
+   ════════════════════════════════════════════════════════════════════ */
+function ovRenderLineChart(container, data, fmtMoney){
+  if (!data || !data.length){
+    container.innerHTML = `<div style="text-align:center;padding:30px;color:var(--vf-muted);font-size:12px;">No data for this period yet.</div>`;
+    return;
+  }
+  const _money = fmtMoney || ((n) => "$" + Math.round(parseFloat(n||0)).toLocaleString());
+
+  // ── viewport / padding ─────────────────────────────────────────
+  const VB_W = 1000, VB_H = 160;
+  const PAD_T = 18, PAD_B = 12, PAD_X = 4;
+  const innerW = VB_W - 2 * PAD_X;
+  const innerH = VB_H - PAD_T - PAD_B;
+  const n = data.length;
+  const maxRev = Math.max(...data.map(d => d.revenue), 1);
+  const minRev = Math.min(...data.map(d => d.revenue), 0);
+  const range = Math.max(maxRev - minRev, 1);
+
+  // ── coordinate points ──────────────────────────────────────────
+  const xStep = n > 1 ? innerW / (n - 1) : 0;
+  const pts = data.map((day, i) => {
+    const x = PAD_X + i * xStep;
+    const y = PAD_T + (1 - (day.revenue - minRev) / range) * innerH;
+    return { x, y, day };
+  });
+
+  // ── angular path — straight segments between points (Search Console style) ──
+  let linePath = `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`;
+  for (let i = 1; i < pts.length; i++){
+    const p1 = pts[i];
+    linePath += ` L ${p1.x.toFixed(1)} ${p1.y.toFixed(1)}`;
+  }
+  const baselineY = PAD_T + innerH;
+  const areaPath = linePath + ` L ${pts[pts.length-1].x.toFixed(1)} ${baselineY} L ${pts[0].x.toFixed(1)} ${baselineY} Z`;
+
+  // ── x-axis labels (smart density: max ~7 labels) ──────────────
+  //    First label anchored left, last anchored right, middle ones
+  //    centered. Middle labels are skipped if they would crowd the
+  //    edges — prevents overlaps like "28 May / 29 May" at right edge.
+  const labelSlots = Math.min(n, 7);
+  const stride = Math.max(1, Math.floor(n / labelSlots));
+  const minGap = Math.max(1, Math.floor(stride / 2));
+  const xLabelsHtml = data.map((d, i) => {
+    const show = (
+      i === 0 ||
+      i === n - 1 ||
+      (i % stride === 0 && i >= minGap && (n - 1 - i) >= minGap)
+    );
+    if (!show) return "";
+    const leftPct = n > 1 ? (i / (n - 1)) * 100 : 50;
+    let tf = "translateX(-50%)";
+    if (i === 0)        tf = "translateX(0)";
+    else if (i === n-1) tf = "translateX(-100%)";
+    return `<span style="left:${leftPct.toFixed(2)}%;transform:${tf};">${d.date}</span>`;
+  }).join("");
+
+  // ── render ────────────────────────────────────────────────────
+  container.innerHTML = `
+    <div class="ov-stripe-chart">
+      <svg class="ov-stripe-chart-svg" viewBox="0 0 ${VB_W} ${VB_H}" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="ovStripeGrad" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%"  stop-color="#6366f1" stop-opacity="0.22"/>
+            <stop offset="60%" stop-color="#6366f1" stop-opacity="0.06"/>
+            <stop offset="100%" stop-color="#6366f1" stop-opacity="0"/>
+          </linearGradient>
+          <linearGradient id="ovStripeLine" x1="0" x2="1" y1="0" y2="0">
+            <stop offset="0%"   stop-color="#6366f1"/>
+            <stop offset="50%"  stop-color="#8b5cf6"/>
+            <stop offset="100%" stop-color="#a855f7"/>
+          </linearGradient>
+        </defs>
+        <path d="${areaPath}" fill="url(#ovStripeGrad)"/>
+        <path d="${linePath}" fill="none" stroke="url(#ovStripeLine)" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
+        <g class="ov-stripe-hover" style="display:none;pointer-events:none;">
+          <line class="ov-stripe-hover-line" stroke="#6366f1" stroke-width="1" stroke-dasharray="3 4" y1="${PAD_T}" y2="${PAD_T + innerH}"/>
+          <circle class="ov-stripe-hover-dot" r="5" fill="#fff" stroke="#6366f1" stroke-width="2.5"/>
+        </g>
+      </svg>
+      <div class="ov-stripe-axis">${xLabelsHtml}</div>
+      <div class="ov-stripe-tip"></div>
+    </div>
+  `;
+
+  // ── hover interactivity ──────────────────────────────────────
+  const stage = container.querySelector(".ov-stripe-chart");
+  const svg   = container.querySelector(".ov-stripe-chart-svg");
+  const hover = container.querySelector(".ov-stripe-hover");
+  const hLine = container.querySelector(".ov-stripe-hover-line");
+  const hDot  = container.querySelector(".ov-stripe-hover-dot");
+  const tip   = container.querySelector(".ov-stripe-tip");
+  if (!svg || !stage || !tip) return;
+
+  const onMove = (e) => {
+    const rect = svg.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    const xPct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    // VB x-coord that aligns with the cursor
+    const xVB = PAD_X + xPct * innerW;
+    // Find nearest data point
+    let nearest = 0, minDist = Infinity;
+    for (let i = 0; i < pts.length; i++){
+      const dist = Math.abs(pts[i].x - xVB);
+      if (dist < minDist){ minDist = dist; nearest = i; }
+    }
+    const p = pts[nearest];
+    hover.style.display = "";
+    hLine.setAttribute("x1", p.x); hLine.setAttribute("x2", p.x);
+    hDot.setAttribute("cx", p.x); hDot.setAttribute("cy", p.y);
+
+    // Position tooltip in pixel space within the stage container
+    const stageRect = stage.getBoundingClientRect();
+    const leftPx = (p.x / VB_W) * rect.width;  // pixel offset from svg origin
+    const topPx  = (p.y / VB_H) * rect.height;
+    tip.style.display = "block";
+    tip.style.left = leftPx + "px";
+    tip.style.top  = (topPx - 14) + "px";
+    tip.innerHTML = `
+      <div class="ov-stripe-tip-date">${p.day.date}</div>
+      <div class="ov-stripe-tip-amt">${_money(p.day.revenue)}</div>
+      ${p.day.count !== undefined ? `<div class="ov-stripe-tip-sub">${p.day.count} order${p.day.count === 1 ? '' : 's'}</div>` : ''}
+    `;
+    // Edge collision: flip alignment
+    const tipRect = tip.getBoundingClientRect();
+    if (leftPx + tipRect.width / 2 > rect.width - 8){
+      tip.style.transform = "translate(-100%, -100%)";
+    } else if (leftPx - tipRect.width / 2 < 8){
+      tip.style.transform = "translate(0, -100%)";
+    } else {
+      tip.style.transform = "translate(-50%, -100%)";
+    }
+  };
+  const onLeave = () => {
+    hover.style.display = "none";
+    tip.style.display   = "none";
+  };
+  // Use the whole stage for hover so cursor doesn't need to hit the thin line
+  stage.addEventListener("mousemove", onMove);
+  stage.addEventListener("mouseleave", onLeave);
+  stage.addEventListener("touchmove", (e) => { if (e.touches[0]) onMove(e.touches[0]); }, {passive:true});
+  stage.addEventListener("touchend", onLeave);
 }
 
 /* ════════════════════════════════════════════════════════════════════
@@ -16258,13 +16651,103 @@ async function ovFetchEmailTriageCount(){
   if (el && unreadEl) el.textContent = unreadEl.textContent || "0";
 }
 
-/* Period selector — sets the period filter; loadOverview re-fetches */
-let _ovPeriod = "7d";
+/* ── Period selector — fully functional ──────────────────────────
+   State persists in localStorage so the choice survives reloads. */
+let _ovPeriod = { period: "7d", from: "", to: "" };
+try {
+  const saved = localStorage.getItem("ds_ovPeriod");
+  if (saved) _ovPeriod = Object.assign(_ovPeriod, JSON.parse(saved));
+} catch(_){}
+
+function _ovSavePeriod(){
+  try { localStorage.setItem("ds_ovPeriod", JSON.stringify(_ovPeriod)); } catch(_){}
+}
+
+function _ovSyncPills(){
+  document.querySelectorAll("#ovPeriodPills .ov-pp").forEach(x => x.classList.toggle("ov-pp-on", x.dataset.p === _ovPeriod.period));
+}
+
 function ovSetPeriod(btn, p){
-  _ovPeriod = p;
+  _ovPeriod.period = p;
+  if (p !== "custom") { _ovPeriod.from = ""; _ovPeriod.to = ""; }
   document.querySelectorAll("#ovPeriodPills .ov-pp").forEach(x => x.classList.toggle("ov-pp-on", x === btn));
-  // Re-load with new period (backend will need to support ?period=… later)
+  _ovSavePeriod();
+  // Reset Custom label if user picked a preset
+  if (p !== "custom") {
+    const lab = document.getElementById("ovPpCustomLabel");
+    if (lab) lab.textContent = "Custom";
+  }
+  // Close custom panel if open
+  const panel = document.getElementById("ovCustomPanel");
+  if (panel) panel.style.display = "none";
   loadOverview();
+}
+
+function ovOpenCustom(btn, e){
+  if (e) { e.stopPropagation(); }
+  const panel = document.getElementById("ovCustomPanel");
+  if (!panel) return;
+  // Pre-fill with sensible defaults (last 7 days) if first time
+  const fromEl = document.getElementById("ovCustomFrom");
+  const toEl   = document.getElementById("ovCustomTo");
+  if (fromEl && !fromEl.value) {
+    if (_ovPeriod.from) fromEl.value = _ovPeriod.from;
+    else { const d = new Date(); d.setDate(d.getDate() - 6); fromEl.value = d.toISOString().slice(0,10); }
+  }
+  if (toEl && !toEl.value) {
+    if (_ovPeriod.to) toEl.value = _ovPeriod.to;
+    else { toEl.value = new Date().toISOString().slice(0,10); }
+  }
+  panel.style.display = panel.style.display === "flex" ? "none" : "flex";
+}
+
+function ovCancelCustom(){
+  const panel = document.getElementById("ovCustomPanel");
+  if (panel) panel.style.display = "none";
+}
+
+function ovApplyCustom(){
+  const from = document.getElementById("ovCustomFrom").value;
+  const to   = document.getElementById("ovCustomTo").value;
+  if (!from || !to) { alert("Please pick both dates."); return; }
+  if (from > to)   { alert("'From' date must be before 'To' date."); return; }
+  _ovPeriod.period = "custom";
+  _ovPeriod.from = from;
+  _ovPeriod.to = to;
+  _ovSavePeriod();
+  // Update Custom button label to show the range
+  const lab = document.getElementById("ovPpCustomLabel");
+  if (lab) {
+    const f = new Date(from);  const t = new Date(to);
+    const fmt = (d) => d.toLocaleDateString("en-US", {month:"short", day:"numeric"});
+    lab.textContent = `${fmt(f)} – ${fmt(t)}`;
+  }
+  _ovSyncPills();
+  const panel = document.getElementById("ovCustomPanel");
+  if (panel) panel.style.display = "none";
+  loadOverview();
+}
+
+// Click-outside to close the custom panel
+document.addEventListener("click", (e) => {
+  const panel = document.getElementById("ovCustomPanel");
+  if (!panel || panel.style.display !== "flex") return;
+  if (panel.contains(e.target)) return;
+  const trigger = document.getElementById("ovPpCustom");
+  if (trigger && trigger.contains(e.target)) return;
+  panel.style.display = "none";
+});
+
+/* Public helper: build the query string for /orders/overview/ from current
+   period state. Called by loadOverview() — see the modified fetch below. */
+function _ovPeriodQuery(){
+  const q = new URLSearchParams();
+  if (_ovPeriod.period) q.set("period", _ovPeriod.period);
+  if (_ovPeriod.period === "custom") {
+    if (_ovPeriod.from) q.set("from", _ovPeriod.from);
+    if (_ovPeriod.to)   q.set("to",   _ovPeriod.to);
+  }
+  return q.toString();
 }
 
 // ─── SETUP WIZARD ────────────────────────────────────────────────────────────
@@ -16638,9 +17121,33 @@ function getFilteredOrders(){
   if(vendor!=="all"){orders=orders.filter(o=>String(o.assigned_vendor||"")===String(vendor));}
   if(quick==="pending")orders=orders.filter(o=>String(o.payment_status||o.fulfillment_status||"").toLowerCase().includes("pending")||String(o.fulfillment_status||"").toLowerCase().includes("processing"));
   if(quick==="selected")orders=orders.filter(o=>selectedOrderIds.has(Number(o.id)) || selectedOrderIds.has(String(o.id)));
-  if(quick==="unassigned")orders=orders.filter(o=>!(o.assigned_vendor_name||o.vendor_name||o.assigned_vendor));
-  if(quick==="vendor_assigned")orders=orders.filter(o=>(o.assigned_vendor_name||o.vendor_name||o.assigned_vendor));
-  if(quick==="no_tracking")orders=orders.filter(o=>!o.tracking_number||String(o.tracking_number).toLowerCase().includes("no tracking")||String(o.tracking_number).toLowerCase()==="pending");
+  // 🔥 Statuses where vendor assignment is irrelevant — hidden from both
+  //    "Unassigned" and "Assigned" filters.
+  //    (Delivered, Returned, Failed, Cancelled, Completed, Shipped, Awaiting, Dispute.)
+  const _isVendorIrrelevant = (o)=>{
+    try {
+      const lbl = (typeof poxGetPortalLabel === "function") ? poxGetPortalLabel(o) : "";
+      return ["Delivered","Returned","Failed","Cancelled","Completed","Shipped","Awaiting","Dispute"].includes(lbl);
+    } catch(_){ return false; }
+  };
+  if(quick==="unassigned")orders=orders.filter(o=>!(o.assigned_vendor_name||o.vendor_name||o.assigned_vendor) && !_isVendorIrrelevant(o));
+  if(quick==="vendor_assigned")orders=orders.filter(o=>(o.assigned_vendor_name||o.vendor_name||o.assigned_vendor) && !_isVendorIrrelevant(o));
+  if(quick==="no_tracking"){
+    // 🔥 Closed/terminal statuses are excluded — tracking is irrelevant for them.
+    // (Delivered, Returned, Failed, Cancelled, Completed.)
+    const _isClosed = (o)=>{
+      const f=String(o.fulfillment_status||"").toLowerCase();
+      const p=String(o.payment_status||"").toLowerCase();
+      return f.includes("deliver") || f.includes("return") || f.includes("complet")
+          || f==="failed" || f==="cancelled" || f==="canceled"
+          || p.includes("refund");
+    };
+    orders=orders.filter(o=>{
+      if(_isClosed(o)) return false;
+      const tn=String(o.tracking_number||"").toLowerCase();
+      return !o.tracking_number || tn.includes("no tracking") || tn==="pending";
+    });
+  }
   if(quick==="has_tracking")orders=orders.filter(o=>!!o.tracking_number && !String(o.tracking_number).toLowerCase().includes("no tracking") && String(o.tracking_number).toLowerCase()!=="pending");
   if(quick==="today"){
     const _n=new Date(), _y=_n.getFullYear(), _m=_n.getMonth(), _d=_n.getDate();
@@ -16651,7 +17158,13 @@ function getFilteredOrders(){
       return !isNaN(dt.getTime()) && dt.getFullYear()===_y && dt.getMonth()===_m && dt.getDate()===_d;
     });
   }
-  if(quick==="completed")orders=orders.filter(o=>String(o.vendor_status||"").toLowerCase()==="approved"||String(o.fulfillment_status||"").toLowerCase().includes("fulfill")||String(o.fulfillment_status||"").toLowerCase().includes("deliver")||String(o.fulfillment_status||"").toLowerCase().includes("complet"));
+  // 🔥 Completed filter — only orders displayed as "Completed" or "Delivered".
+  if(quick==="completed")orders=orders.filter(o=>{
+    try {
+      const lbl = (typeof poxGetPortalLabel === "function") ? poxGetPortalLabel(o) : "";
+      return lbl === "Completed" || lbl === "Delivered";
+    } catch(_){ return false; }
+  });
   return orders;
 }
 function getCurrencySymbol(code){
@@ -16688,6 +17201,23 @@ function poxGetPortalLabel(o){
   const ful=String(o.fulfillment_status||"").toLowerCase();
   const tn =String(o.tracking_number||"").toLowerCase();
   const hasTracking = tn && tn!=="pending" && !tn.includes("no tracking");
+  // 🔥 Explicit fulfillment statuses set by the user via the dropdown
+  //    take priority over the heuristic derivation below.
+  if (ful.includes("dispute"))                       return "Dispute";
+  if (ful.includes("return"))                        return "Returned";
+  if (ful.includes("on_hold") || ful.includes("on hold") || ful==="onhold") return "On Hold";
+  if (ful === "shipped")                             return "Shipped";
+  if (ful.includes("refund"))                        return "Refunded";
+  if (ful === "failed")                              return "Failed";
+  if (ful === "cancelled" || ful === "canceled")     return "Cancelled";
+  // 🔥 Explicit "happy-path" statuses set by the user via the dropdown also
+  //    win over payment-derived heuristics — otherwise a stale
+  //    payment_status="refunded" overrides Processing/Pending/Completed.
+  if (ful === "delivered")                           return "Delivered";
+  if (ful === "completed")                           return "Completed";
+  if (ful === "processing")                          return "Processing";
+  if (ful === "pending")                             return "Awaiting";
+  // Heuristic fallback (legacy behaviour)
   if (pay.includes("refund"))                        return "Refunded";
   if (pay.includes("fail") || pay.includes("cancel"))return "Cancelled";
   if (ful.includes("deliver"))                       return "Delivered";
@@ -16752,6 +17282,22 @@ function poxGetPortalClass(o){
   const ful=String(o.fulfillment_status||"").toLowerCase();
   const tn =String(o.tracking_number||"").toLowerCase();
   const hasTracking = tn && tn!=="pending" && !tn.includes("no tracking");
+  // 🔥 Explicit fulfillment statuses set by the user via the dropdown
+  //    take priority over the heuristic derivation below.
+  if (ful.includes("dispute"))                       return "pox-portal-dispute";
+  if (ful.includes("return"))                        return "pox-portal-returned";
+  if (ful.includes("on_hold") || ful.includes("on hold") || ful==="onhold") return "pox-portal-onhold";
+  if (ful === "shipped")                             return "pox-portal-transit";
+  if (ful.includes("refund"))                        return "pox-portal-refunded";
+  if (ful === "failed")                              return "pox-portal-cancelled";
+  if (ful === "cancelled" || ful === "canceled")     return "pox-portal-cancelled";
+  // 🔥 Explicit "happy-path" statuses set via the dropdown also win over
+  //    payment-derived heuristics.
+  if (ful === "delivered")                           return "pox-portal-delivered";
+  if (ful === "completed")                           return "pox-portal-delivered";
+  if (ful === "processing")                          return "pox-portal-processing";
+  if (ful === "pending")                             return "pox-portal-awaiting";
+  // Heuristic fallback (legacy behaviour)
   if (pay.includes("refund"))                        return "pox-portal-refunded";
   if (pay.includes("fail") || pay.includes("cancel"))return "pox-portal-cancelled";
   if (ful.includes("deliver"))                       return "pox-portal-delivered";
@@ -16832,7 +17378,7 @@ function renderPremiumOrders(){
   <td><div class="pox-customer">${customerCircle}<div><div class="pox-cname">${escapeHtml(order.customer_name||"—")}</div><div class="pox-cemail">${escapeHtml(order.customer_email||"")}</div></div></div></td>
   <td>${buildProductCellHTML(order)}</td>
   <td><span class="pox-amount">${escapeHtml(getCurrencySymbol(order.currency))}${escapeHtml(order.total_price||"0")}</span></td>
-  <td><span class="pox-pill pox-portal-pill ${poxGetPortalClass(order)}" title="Store status — Payment: ${payLabel} · Fulfillment: ${fulLabel}"><span class="pox-dot"></span>${poxGetPortalLabel(order)}</span></td>
+  <td onclick="event.stopPropagation();odsOpen(event, ${order.id})"><span class="pox-pill pox-portal-pill pox-portal-clickable ${poxGetPortalClass(order)}" title="Click to change status · ${escapeHtml(payLabel)} · ${escapeHtml(fulLabel)}"><span class="pox-dot"></span>${poxGetPortalLabel(order)}<span class="pox-portal-chev">▾</span></span></td>
   <td onclick="event.stopPropagation()">${vendorHtml}</td>
   <td onclick="event.stopPropagation()">${buildStockAssignCell(order)}</td>
   <td onmouseenter="poxShowTrackTip(event,this,${order.id})" onmouseleave="poxHideTrackTip()">${trackingHtml}</td>
@@ -16859,13 +17405,30 @@ function renderPremiumOrderStats(){
 
   // ───────── Tracking-based KPIs (user's spec) ─────────
   const hasTracking=(o)=> !!o.tracking_number && !String(o.tracking_number).toLowerCase().includes("no tracking") && String(o.tracking_number).toLowerCase()!=="pending";
-  const noTracking=orders.filter(o=>!hasTracking(o)).length;
+  // 🔥 Closed/terminal orders (Delivered, Returned, Failed, Cancelled, Completed,
+  //    Refunded) are excluded from the "No Tracking" KPI/chip — tracking is moot.
+  const _isClosedForTracking=(o)=>{
+    const f=String(o.fulfillment_status||"").toLowerCase();
+    const p=String(o.payment_status||"").toLowerCase();
+    return f.includes("deliver") || f.includes("return") || f.includes("complet")
+        || f==="failed" || f==="cancelled" || f==="canceled"
+        || p.includes("refund");
+  };
+  const noTracking=orders.filter(o=>!hasTracking(o) && !_isClosedForTracking(o)).length;
   const withTracking=orders.filter(o=>hasTracking(o)).length;
 
   // ───────── Other counts (for chips / hidden counters) ─────────
   const pending=orders.filter(o=>String(o.payment_status||o.fulfillment_status||"").toLowerCase().includes("pending")||String(o.fulfillment_status||"").toLowerCase().includes("processing")).length;
-  const assigned=orders.filter(o=>(o.assigned_vendor_name||o.vendor_name||o.assigned_vendor)).length;
-  const unassigned=total-assigned;
+  // 🔥 Statuses where vendor assignment is irrelevant — excluded from both
+  //    Assigned and Unassigned chips so the counts match the filter view.
+  const _vendorIrrelevant = (o)=>{
+    try {
+      const lbl = (typeof poxGetPortalLabel === "function") ? poxGetPortalLabel(o) : "";
+      return ["Delivered","Returned","Failed","Cancelled","Completed","Shipped","Awaiting","Dispute"].includes(lbl);
+    } catch(_){ return false; }
+  };
+  const assigned   = orders.filter(o=>(o.assigned_vendor_name||o.vendor_name||o.assigned_vendor) && !_vendorIrrelevant(o)).length;
+  const unassigned = orders.filter(o=>!(o.assigned_vendor_name||o.vendor_name||o.assigned_vendor) && !_vendorIrrelevant(o)).length;
   const failedPay=orders.filter(o=>String(o.payment_status||"").toLowerCase().includes("fail")).length;
 
   // Currency for revenue formatting (prefer today's, fall back to overall)
@@ -16894,7 +17457,13 @@ function renderPremiumOrderStats(){
   // hidden counts for chip filter
   set("ordersPendingCount",pending); set("ordersNoTrackingCount",noTracking);
   set("ordersUnassignedCount",unassigned); set("ordersSelectedCount",selectedOrderIds.size);
-  const completed=orders.filter(o=>String(o.vendor_status||"").toLowerCase()==="approved"||String(o.fulfillment_status||"").toLowerCase().includes("fulfill")||String(o.fulfillment_status||"").toLowerCase().includes("deliver")||String(o.fulfillment_status||"").toLowerCase().includes("complet")).length;
+  // 🔥 Completed chip — only orders displayed as "Completed" or "Delivered".
+  const completed=orders.filter(o=>{
+    try {
+      const lbl = (typeof poxGetPortalLabel === "function") ? poxGetPortalLabel(o) : "";
+      return lbl === "Completed" || lbl === "Delivered";
+    } catch(_){ return false; }
+  }).length;
   set("chipCountAll",total); set("chipCountPending",pending); set("chipCountNoTracking",noTracking);
   set("chipCountUnassigned",unassigned); set("chipCountAssigned",assigned); set("chipCountCompleted",completed);
   // attention bar
@@ -17114,6 +17683,656 @@ function poxCloseVendorAssign(){
   document.removeEventListener("click", _poxVaOutside);
   _poxVaOrderId = null;
 }
+
+/* ════════════════════════════════════════════════════════════════════
+   ORDER STATUS DROPDOWN — opens on status-pill click anywhere in the
+   Orders table. Talks to /orders/api/statuses/ + /update-status/.
+   Implements the tracking-gate logic: Send Email is auto-disabled
+   (with a warning) when the chosen status needs tracking and the
+   order has none. Status change goes through regardless.
+   ════════════════════════════════════════════════════════════════════ */
+let _odsOrderId = null;
+let _odsCatalogue = null;          // cached statuses
+let _odsSelected = "";
+let _odsCurrentStatus = "";
+let _odsHasTracking = false;
+let _odsCloseListener = null;
+let _odsOriginEl = null;           // trigger element being highlighted
+let _odsPrevBodyOverflow = "";     // restore on close
+
+async function _odsFetchCatalogue(){
+  if (_odsCatalogue) return _odsCatalogue;
+  try {
+    const r = await fetch("/orders/api/statuses/");
+    const d = await r.json();
+    if (d.success && Array.isArray(d.statuses)) _odsCatalogue = d.statuses;
+  } catch(_) {}
+  return _odsCatalogue || [];
+}
+
+async function odsOpen(event, orderId){
+  if (event) event.stopPropagation();
+  _odsOrderId = orderId;
+  // Look up the order in currentOrders to read its current status + tracking
+  const o = (typeof currentOrders !== "undefined" && currentOrders)
+    ? currentOrders.find(x => Number(x.id) === Number(orderId))
+    : null;
+  _odsCurrentStatus = (o && (o.fulfillment_status || "")) ? String(o.fulfillment_status).toLowerCase() : "";
+  const tn = o ? String(o.tracking_number || "").trim().toLowerCase() : "";
+  _odsHasTracking = !!tn && tn !== "pending" && !tn.includes("no tracking");
+
+  const pop = document.getElementById("odsPopover");
+  if (!pop) return;
+
+  // 🔥 Reset Apply button — if a previous save left it stuck on "Saving…"
+  // (e.g. user navigated away mid-save), restore it now.
+  const _resetBtn = document.getElementById("odsApplyBtn");
+  if (_resetBtn){ _resetBtn.disabled = false; _resetBtn.textContent = "Apply"; }
+
+  // CRITICAL: Move the popover to <body> so position:fixed works correctly.
+  // Any transformed ancestor (transform/filter/perspective/will-change) makes
+  // position:fixed coords relative to that ancestor instead of the viewport,
+  // which was causing the popover to appear way off the click point.
+  if (pop.parentElement !== document.body) {
+    document.body.appendChild(pop);
+  }
+
+  // 🔥 Backdrop — blocks background scroll + clicks while the popover is open
+  //    so the page can't be moved around and it's obvious the popover is modal.
+  let backdrop = document.getElementById("odsBackdrop");
+  if (!backdrop){
+    backdrop = document.createElement("div");
+    backdrop.id = "odsBackdrop";
+    backdrop.className = "ods-backdrop";
+    backdrop.addEventListener("click", odsClose);
+    document.body.appendChild(backdrop);
+  } else {
+    backdrop.style.display = "block";
+  }
+  // Lock page scroll
+  _odsPrevBodyOverflow = document.body.style.overflow;
+  document.body.style.overflow = "hidden";
+
+  pop.style.display = "flex";        // flex column so inner list shrinks
+  pop.style.visibility = "hidden";   // measure before paint
+  const POP_W = 300;
+
+  // Anchor to the clicked element's bounding rect — more reliable than the
+  // raw cursor coords (especially with text-clipping, padding, etc.).
+  let x;
+  const clickedEl = (event.currentTarget && event.currentTarget.getBoundingClientRect)
+    ? event.currentTarget
+    : (event.target && event.target.closest ? event.target.closest("td, button, .pox-portal-pill, .od-status-trigger") : null);
+  let triggerRect = null;
+  if (clickedEl && clickedEl.getBoundingClientRect){
+    triggerRect = clickedEl.getBoundingClientRect();
+    x = triggerRect.left;
+    // 🔥 Highlight the trigger so the user can see which order this is for.
+    //    Clear any previous highlight first (defensive — double-open guard).
+    document.querySelectorAll(".ods-origin-highlight").forEach(el => el.classList.remove("ods-origin-highlight"));
+    clickedEl.classList.add("ods-origin-highlight");
+    _odsOriginEl = clickedEl;
+  } else {
+    x = (event.clientX || 0);
+  }
+  // Clamp X (keep at least 12px margin from edges)
+  if (x + POP_W > window.innerWidth - 12) x = window.innerWidth - POP_W - 12;
+  if (x < 12) x = 12;
+
+  // Initial Y: just below the trigger. We'll reposition (flip if needed)
+  // AFTER the content is rendered and we can measure the real height.
+  const triggerTop    = triggerRect ? triggerRect.top    : (event.clientY || 0);
+  const triggerBottom = triggerRect ? triggerRect.bottom : (event.clientY || 0);
+
+  pop.style.left = x + "px";
+  pop.style.top  = (triggerBottom + 6) + "px";
+  // Remember the trigger position on the popover so _odsRepositionIfOverflow
+  // can flip it cleanly later (no height guessing needed).
+  pop.dataset.triggerTop = String(triggerTop);
+  pop.dataset.triggerBottom = String(triggerBottom);
+  pop.style.visibility = "visible";
+
+  // Fill in defaults
+  const sub = document.getElementById("odsSendSub");
+  if (sub) sub.textContent = "Status-template email sent on save";
+  const sendCb = document.getElementById("odsSendEmail");
+  if (sendCb) sendCb.checked = false;   // off by default — tenant opts in
+  const warn = document.getElementById("odsWarn");
+  if (warn) warn.style.display = "none";
+
+  // Render skeleton then fetch
+  const list = document.getElementById("odsList");
+  if (list) list.innerHTML = `<div class="ods-loading">Loading statuses…</div>`;
+
+  const cat = await _odsFetchCatalogue();
+  _odsRenderList(cat);
+
+  // Outside click closes
+  setTimeout(() => {
+    _odsCloseListener = (e) => {
+      if (!pop.contains(e.target)) odsClose();
+    };
+    document.addEventListener("click", _odsCloseListener);
+  }, 30);
+}
+
+function _odsRenderList(cat){
+  const list = document.getElementById("odsList");
+  if (!list) return;
+  _odsSelected = _odsCurrentStatus || (cat[0] && cat[0].key) || "";
+  list.innerHTML = cat.map(s => {
+    const on = s.key === _odsSelected;
+    const trBadge = s.tracking_required ? `<span class="ods-opt-tr" title="Tracking number required for the email">tracking</span>` : "";
+    return `<button class="ods-opt ${on?'on':''}" data-key="${s.key}" data-tr="${s.tracking_required?'1':'0'}" onclick="odsPick('${s.key}', this)">
+      <span class="ods-dot" style="background:${s.color||'#94a3b8'};"></span>
+      <span class="ods-opt-name">${s.label}</span>
+      ${trBadge}
+    </button>`;
+  }).join("");
+  _odsRefreshWarning();
+  // Content is now real — flip the popover above the trigger if it would
+  // overflow the bottom of the viewport.
+  requestAnimationFrame(_odsRepositionIfOverflow);
+}
+
+function _odsRepositionIfOverflow(){
+  const pop = document.getElementById("odsPopover");
+  if (!pop || pop.style.display === "none") return;
+  // Reset any previous height clamp so we measure the natural size first.
+  pop.style.maxHeight = "";
+  let rect = pop.getBoundingClientRect();
+  const triggerTop    = parseFloat(pop.dataset.triggerTop)    || 0;
+  const triggerBottom = parseFloat(pop.dataset.triggerBottom) || 0;
+  const vh = window.innerHeight;
+  const MARGIN = 12;
+
+  // 🔥 If the popover itself is taller than the viewport, clamp its height
+  //    so it fits — the inner list (flex:1) will scroll inside.
+  if (rect.height > vh - 2*MARGIN){
+    pop.style.maxHeight = (vh - 2*MARGIN) + "px";
+    rect = pop.getBoundingClientRect();
+  }
+
+  // Overflowing bottom? Try to flip above the trigger.
+  if (rect.bottom > vh - MARGIN){
+    const above = triggerTop - rect.height - 6;
+    if (above >= MARGIN){
+      pop.style.top = above + "px";
+    } else {
+      // Not enough space above either — pin so the bottom touches the
+      // viewport edge (header/footer stay on-screen, list scrolls).
+      pop.style.top = Math.max(MARGIN, vh - rect.height - MARGIN) + "px";
+    }
+  }
+}
+
+function odsPick(key, btn){
+  _odsSelected = key;
+  document.querySelectorAll("#odsList .ods-opt").forEach(el => el.classList.toggle("on", el.dataset.key === key));
+  _odsRefreshWarning();
+}
+
+function _odsRefreshWarning(){
+  const cat = _odsCatalogue || [];
+  const picked = cat.find(s => s.key === _odsSelected);
+  const trackingRequired = !!(picked && picked.tracking_required);
+  const hasTemplate      = !!(picked && picked.has_email_template);
+  const sendRow    = document.getElementById("odsSendRow");
+  const noTemplate = document.getElementById("odsNoTemplate");
+  const warn    = document.getElementById("odsWarn");
+  const warnTxt = document.getElementById("odsWarnText");
+
+  // Send-email checkbox only shown for statuses that ship with a template.
+  if (sendRow)    sendRow.style.display    = hasTemplate ? "flex" : "none";
+  if (noTemplate) noTemplate.style.display = hasTemplate ? "none" : "flex";
+
+  // Tracking warning only applies when an email would actually be sent.
+  if (hasTemplate && trackingRequired && !_odsHasTracking){
+    if (warn)    warn.style.display = "block";
+    if (warnTxt) warnTxt.innerHTML  = `<b>Tracking not added</b> — the email cannot be sent. The status will still be updated to <b>${picked.label}</b>.`;
+  } else {
+    if (warn) warn.style.display = "none";
+  }
+}
+
+function odsClose(){
+  const pop = document.getElementById("odsPopover");
+  if (pop){
+    pop.style.display = "none";
+    pop.style.maxHeight = "";   // clear any height clamp from overflow logic
+  }
+  if (_odsCloseListener){
+    document.removeEventListener("click", _odsCloseListener);
+    _odsCloseListener = null;
+  }
+  // 🔥 Remove backdrop + restore page scroll
+  const backdrop = document.getElementById("odsBackdrop");
+  if (backdrop) backdrop.remove();
+  document.body.style.overflow = _odsPrevBodyOverflow || "";
+  _odsPrevBodyOverflow = "";
+  // 🔥 Remove highlight on the originating trigger
+  if (_odsOriginEl){
+    try { _odsOriginEl.classList.remove("ods-origin-highlight"); } catch(_){}
+    _odsOriginEl = null;
+  } else {
+    // Defensive cleanup in case the open path missed it
+    document.querySelectorAll(".ods-origin-highlight").forEach(el => el.classList.remove("ods-origin-highlight"));
+  }
+  _odsOrderId = null;
+}
+
+/* ─── Full-screen Status Editor (with email preview) ──────────────────────── */
+let _odmOrderId = null;
+let _odmOrder = null;          // the order object snapshot for context
+let _odmCatalogue = null;      // status catalogue
+let _odmSelected = "";
+let _odmPreviewCache = {};     // key=statusKey → {to,subject,body_html,has_template}
+let _odmPreviewSeq = 0;        // race guard for preview fetches
+let _odmEscListener = null;
+
+/* Called from the small popover header — promotes the current selection
+   into the full-screen editor. */
+function odsExpand(){
+  const orderId = Number(_odsOrderId);
+  const preselect = _odsSelected || _odsCurrentStatus || "";
+  // Close the popover first (this also clears highlight + backdrop)
+  odsClose();
+  odmOpen(orderId, preselect);
+}
+
+async function odmOpen(orderId, preselect){
+  _odmOrderId = Number(orderId);
+  _odmSelected = (preselect || "").toLowerCase();
+  _odmPreviewCache = {};
+
+  // Snapshot the order for context (tracking, customer email, etc.)
+  _odmOrder = (typeof currentOrders !== "undefined" && currentOrders)
+    ? currentOrders.find(x => Number(x.id) === _odmOrderId) || null
+    : null;
+
+  const overlay = document.getElementById("odmOverlay");
+  if (!overlay) return;
+  overlay.style.display = "flex";
+
+  // Lock background scroll (modal is its own scroll context)
+  _odsPrevBodyOverflow = _odsPrevBodyOverflow || document.body.style.overflow;
+  document.body.style.overflow = "hidden";
+
+  // ESC closes
+  _odmEscListener = (e) => { if (e.key === "Escape") odmClose(); };
+  document.addEventListener("keydown", _odmEscListener);
+
+  // Title + subtitle
+  const tEl = document.getElementById("odmTitle");
+  const sEl = document.getElementById("odmSubtitle");
+  if (_odmOrder){
+    const num = _odmOrder.external_order_id || _odmOrder.id;
+    const cust = _odmOrder.customer_name || "—";
+    if (tEl) tEl.textContent = `Change status · Order #${num}`;
+    if (sEl) sEl.textContent = `Customer: ${cust} · ${_odmOrder.customer_email || "(no email)"} · pick a new status and preview the email that will be sent.`;
+  } else {
+    if (tEl) tEl.textContent = "Change order status";
+    if (sEl) sEl.textContent = "Pick a new status and preview the email that will be sent.";
+  }
+
+  // Fetch catalogue (re-uses the same backend as the small popover)
+  const cat = await _odsFetchCatalogue();
+  _odmCatalogue = cat;
+  if (!_odmSelected && cat.length) _odmSelected = cat[0].key;
+  _odmRenderList();
+  _odmRenderMeta();
+  _odmRefreshPreview();
+}
+
+function _odmRenderList(){
+  const host = document.getElementById("odmStatusList");
+  if (!host || !_odmCatalogue) return;
+  host.innerHTML = _odmCatalogue.map(s => {
+    const on = s.key === _odmSelected;
+    const trBadge = s.tracking_required ? `<span class="odm-status-tr">tracking</span>` : "";
+    return `<button type="button" class="odm-status-opt ${on?'on':''}" data-key="${s.key}" onclick="odmPick('${s.key}')">
+      <span class="odm-status-dot" style="background:${s.color||'#94a3b8'};"></span>
+      <span>${s.label}</span>
+      ${trBadge}
+    </button>`;
+  }).join("");
+}
+
+function _odmRenderMeta(){
+  const m = document.getElementById("odmMeta");
+  if (!m) return;
+  const o = _odmOrder || {};
+  const cat = _odmCatalogue || [];
+  const picked = cat.find(s => s.key === _odmSelected);
+  const trackingNeeded = !!(picked && picked.tracking_required);
+  const hasTpl        = !!(picked && picked.has_email_template);
+  const tn = String(o.tracking_number || "").trim().toLowerCase();
+  const hasTracking = !!tn && tn !== "pending" && !tn.includes("no tracking");
+  let html = `<b>Current status:</b> ${escapeHtml(o.fulfillment_status || "—")}<br>`;
+  html += `<b>Tracking:</b> ${hasTracking ? escapeHtml(o.tracking_number) : "<span style='color:#b45309;'>none</span>"}<br>`;
+  html += `<b>Email template:</b> ${hasTpl ? "<span style='color:#059669;'>available</span>" : "<span style='color:#64748b;'>none for this status</span>"}`;
+  if (trackingNeeded && !hasTracking && hasTpl){
+    html += `<br><span style="color:#b45309;font-weight:700;">⚠ Tracking required to send this email</span>`;
+  }
+  m.innerHTML = html;
+}
+
+function odmPick(key){
+  _odmSelected = key;
+  _odmRenderList();
+  _odmRenderMeta();
+  _odmRefreshPreview();
+}
+
+async function _odmRefreshPreview(){
+  const empty   = document.getElementById("odmPreviewEmpty");
+  const card    = document.getElementById("odmPreviewCard");
+  const none    = document.getElementById("odmPreviewNone");
+  const loading = document.getElementById("odmPreviewLoading");
+  const warn    = document.getElementById("odmWarn");
+  const warnTxt = document.getElementById("odmWarnText");
+
+  const cat = _odmCatalogue || [];
+  const picked = cat.find(s => s.key === _odmSelected);
+  const hasTpl = !!(picked && picked.has_email_template);
+  const trackingNeeded = !!(picked && picked.tracking_required);
+  const tn = String((_odmOrder && _odmOrder.tracking_number) || "").trim().toLowerCase();
+  const hasTracking = !!tn && tn !== "pending" && !tn.includes("no tracking");
+
+  // Hide all
+  empty.style.display = "none";
+  card.style.display = "none";
+  none.style.display = "none";
+  loading.style.display = "none";
+
+  if (!_odmSelected){ empty.style.display = "flex"; return; }
+  if (!hasTpl){
+    none.style.display = "flex";
+    if (warn) warn.style.display = "none";
+    _odmUpdateSendButtons(false, false);
+    return;
+  }
+
+  // Cached?
+  const cached = _odmPreviewCache[_odmSelected];
+  if (cached){
+    _odmShowPreview(cached);
+    _odmShowWarn(trackingNeeded && !hasTracking, picked.label);
+    _odmUpdateSendButtons(true, !(trackingNeeded && !hasTracking));
+    return;
+  }
+
+  loading.style.display = "flex";
+  const seq = ++_odmPreviewSeq;
+  try {
+    const url = `/orders/api/${_odmOrderId}/status-template-preview/?status=${encodeURIComponent(_odmSelected)}`;
+    const r = await fetch(url, { headers: {"X-CSRFToken": getCSRFToken()} });
+    if (seq !== _odmPreviewSeq) return; // a newer pick has been made
+    const d = await r.json();
+    loading.style.display = "none";
+    if (!d.success){
+      none.style.display = "flex";
+      _odmUpdateSendButtons(false, false);
+      return;
+    }
+    if (!d.has_template){
+      none.style.display = "flex";
+      _odmUpdateSendButtons(false, false);
+      return;
+    }
+    _odmPreviewCache[_odmSelected] = d;
+    _odmShowPreview(d);
+    _odmShowWarn(trackingNeeded && !hasTracking, picked.label);
+    _odmUpdateSendButtons(true, !(trackingNeeded && !hasTracking));
+  } catch(_){
+    if (seq !== _odmPreviewSeq) return;
+    loading.style.display = "none";
+    none.style.display = "flex";
+    _odmUpdateSendButtons(false, false);
+  }
+}
+
+function _odmShowPreview(d){
+  const card = document.getElementById("odmPreviewCard");
+  card.style.display = "flex";
+  const fromTxt = d.from_name ? `${d.from_name} <${d.from_email}>` : (d.from_email || "(tenant Gmail)");
+  document.getElementById("odmFrom").textContent = fromTxt;
+  document.getElementById("odmTo").textContent = d.to || "(no customer email)";
+  document.getElementById("odmSubject").textContent = d.subject || "(no subject)";
+  // Body comes back as already-rendered HTML — drop it straight in.
+  document.getElementById("odmBody").innerHTML = d.body_html || "<i style='color:#94a3b8;'>(empty body)</i>";
+}
+
+function _odmShowWarn(show, label){
+  const warn = document.getElementById("odmWarn");
+  const txt  = document.getElementById("odmWarnText");
+  if (!warn) return;
+  if (show){
+    warn.style.display = "block";
+    txt.innerHTML = `<b>Tracking not added</b> — the email cannot be sent. You can still <b>Update only</b> to set the status to <b>${escapeHtml(label)}</b>.`;
+  } else {
+    warn.style.display = "none";
+  }
+}
+
+function _odmUpdateSendButtons(hasTemplate, canSend){
+  const sendBtn = document.getElementById("odmSendBtn");
+  const updBtn  = document.getElementById("odmUpdateOnlyBtn");
+  if (sendBtn){
+    sendBtn.disabled = !(hasTemplate && canSend);
+    sendBtn.style.display = hasTemplate ? "" : "none";
+  }
+  if (updBtn){
+    updBtn.textContent = hasTemplate ? "Update only" : "Update status";
+  }
+}
+
+function odmPreviewRefresh(){
+  // Force a re-render by busting the cache for the current key
+  if (_odmSelected) delete _odmPreviewCache[_odmSelected];
+  _odmRefreshPreview();
+}
+
+function odmClose(){
+  const overlay = document.getElementById("odmOverlay");
+  if (overlay) overlay.style.display = "none";
+  document.body.style.overflow = _odsPrevBodyOverflow || "";
+  _odsPrevBodyOverflow = "";
+  if (_odmEscListener){
+    document.removeEventListener("keydown", _odmEscListener);
+    _odmEscListener = null;
+  }
+  _odmOrderId = null;
+  _odmOrder = null;
+  _odmSelected = "";
+  _odmPreviewCache = {};
+}
+
+async function odmSend(){
+  await _odmCommit(true);
+}
+async function odmUpdateOnly(){
+  await _odmCommit(false);
+}
+
+async function _odmCommit(sendEmail){
+  if (!_odmOrderId || !_odmSelected) return;
+  const cat = _odmCatalogue || [];
+  const picked = cat.find(s => s.key === _odmSelected) || {label:_odmSelected, color:"#64748b"};
+  const sendBtn = document.getElementById("odmSendBtn");
+  const updBtn  = document.getElementById("odmUpdateOnlyBtn");
+  const targetBtn = sendEmail ? sendBtn : updBtn;
+  const prevText = targetBtn ? targetBtn.textContent : "";
+  if (targetBtn){ targetBtn.disabled = true; targetBtn.textContent = "Saving…"; }
+  if (sendBtn) sendBtn.disabled = true;
+  if (updBtn)  updBtn.disabled  = true;
+
+  try {
+    const res = await fetch(`/orders/api/${_odmOrderId}/update-status/`, {
+      method:"POST",
+      headers:{"Content-Type":"application/json", "X-CSRFToken":getCSRFToken()},
+      body: JSON.stringify({ fulfillment_status: _odmSelected, send_email: !!sendEmail }),
+    });
+    const data = await res.json();
+    if (!data.success){
+      _toast(data.message || "Could not update status.", "error");
+      if (sendBtn){ sendBtn.disabled = false; }
+      if (updBtn) { updBtn.disabled  = false; updBtn.textContent  = "Update only"; }
+      if (targetBtn) targetBtn.textContent = prevText;
+      return;
+    }
+    if (data.email_status === "sent"){
+      _toast(`Status changed to ${picked.label} · email sent ✓`, "success");
+    } else if (data.email_status === "blocked_no_tracking"){
+      _toast(`Status updated to ${picked.label}. Email NOT sent — tracking missing.`, "warn");
+    } else if (data.email_status === "no_template"){
+      _toast(`Status updated to ${picked.label}. No template for this status.`, "warn");
+    } else if (data.email_status === "failed"){
+      _toast(`Status updated. Email send failed — check logs.`, "warn");
+    } else {
+      _toast(`Status changed to ${picked.label}.`, "success");
+    }
+
+    const targetOrderId = _odmOrderId;
+    const newStatusKey  = _odmSelected;
+    const newStatusLbl  = picked.label || _odmSelected;
+    const newStatusColor= picked.color || "#64748b";
+
+    odmClose();
+
+    // Optimistic + real refresh
+    try {
+      if (typeof currentOrders !== "undefined" && Array.isArray(currentOrders)){
+        const idx = currentOrders.findIndex(o => Number(o.id) === targetOrderId);
+        if (idx !== -1){
+          currentOrders[idx].fulfillment_status = newStatusKey;
+          currentOrders[idx].fulfillment_status_label = newStatusLbl;
+          currentOrders[idx].fulfillment_status_color = newStatusColor;
+          if (typeof renderPremiumOrders === "function") renderPremiumOrders();
+        }
+      }
+    } catch(_){}
+    if (typeof loadOrders === "function") loadOrders();
+    try {
+      const modal = document.getElementById("orderModal");
+      if (modal && modal.style.display !== "none"
+          && typeof currentOrderId !== "undefined"
+          && Number(currentOrderId) === Number(targetOrderId)
+          && typeof openOrderDetail === "function"){
+        setTimeout(() => openOrderDetail(targetOrderId), 350);
+      }
+    } catch(_){}
+  } catch(e){
+    _toast("Network error — try again.", "error");
+    if (sendBtn){ sendBtn.disabled = false; }
+    if (updBtn) { updBtn.disabled  = false; updBtn.textContent  = "Update only"; }
+    if (targetBtn) targetBtn.textContent = prevText;
+  }
+}
+
+async function odsApply(){
+  if (!_odsOrderId || !_odsSelected) return;
+  const cat = _odsCatalogue || [];
+  const picked = cat.find(s => s.key === _odsSelected);
+  const hasTemplate = !!(picked && picked.has_email_template);
+  const sendCb = document.getElementById("odsSendEmail");
+  // Honour the Send Email checkbox ONLY when this status actually has a
+  // template — otherwise force it off so the backend doesn't try to send.
+  const wantsEmail = hasTemplate && !!(sendCb && sendCb.checked);
+  const btn = document.getElementById("odsApplyBtn");
+  if (btn){ btn.disabled = true; btn.textContent = "Saving…"; }
+
+  try {
+    const res = await fetch(`/orders/api/${_odsOrderId}/update-status/`, {
+      method:"POST",
+      headers:{"Content-Type":"application/json", "X-CSRFToken":getCSRFToken()},
+      body: JSON.stringify({ fulfillment_status: _odsSelected, send_email: wantsEmail }),
+    });
+    const data = await res.json();
+    if (!data.success){
+      _toast(data.message || "Could not update status.", "error");
+      if (btn){ btn.disabled = false; btn.textContent = "Apply"; }
+      return;
+    }
+    // Toast based on email_status
+    const cat = _odsCatalogue || [];
+    const picked = cat.find(s => s.key === _odsSelected) || {label: _odsSelected};
+    if (data.email_status === "sent"){
+      _toast(`Status changed to ${picked.label} · email sent ✓`, "success");
+    } else if (data.email_status === "blocked_no_tracking"){
+      _toast(`Status updated to ${picked.label}. Email NOT sent — tracking missing.`, "warn");
+    } else if (data.email_status === "no_template"){
+      _toast(`Status updated to ${picked.label}. No template found for this status.`, "warn");
+    } else if (data.email_status === "failed"){
+      _toast(`Status updated. Email send failed — check logs.`, "warn");
+    } else {
+      _toast(`Status changed to ${picked.label}.`, "success");
+    }
+    // 🔥 Capture the order id BEFORE odsClose() nukes _odsOrderId
+    const targetOrderId = Number(_odsOrderId);
+    const newStatusKey  = _odsSelected;
+    const newStatusLbl  = picked.label || _odsSelected;
+    const newStatusColor= picked.color || "#64748b";
+    // 🔥 Restore Apply button so the next open isn't stuck on "Saving…"
+    if (btn){ btn.disabled = false; btn.textContent = "Apply"; }
+    odsClose();
+
+    // 1) Optimistically update the row in the orders list so the user
+    //    sees the new status immediately, even before the refetch lands.
+    //    `currentOrders` is a top-level `let` in this script — same scope.
+    try {
+      if (typeof currentOrders !== "undefined" && Array.isArray(currentOrders)){
+        const idx = currentOrders.findIndex(o => Number(o.id) === targetOrderId);
+        if (idx !== -1){
+          currentOrders[idx].fulfillment_status = newStatusKey;
+          currentOrders[idx].fulfillment_status_label = newStatusLbl;
+          currentOrders[idx].fulfillment_status_color = newStatusColor;
+          // Re-render immediately so the pill flips before the refetch lands
+          if (typeof renderPremiumOrders === "function") renderPremiumOrders();
+        }
+      }
+    } catch(_){}
+
+    // 2) Refresh orders list to reflect new status from the server
+    if (typeof loadOrders === "function") loadOrders();
+
+    // 3) If the Order Detail modal is open on the same order, re-render its header
+    try {
+      const modal = document.getElementById("orderModal");
+      if (modal && modal.style.display !== "none"
+          && typeof currentOrderId !== "undefined"
+          && Number(currentOrderId) === targetOrderId
+          && typeof openOrderDetail === "function"){
+        // Small delay so loadOrders' fetch finishes first
+        setTimeout(() => openOrderDetail(targetOrderId), 350);
+      }
+    } catch(_){}
+  } catch(e){
+    _toast("Network error — try again.", "error");
+    if (btn){ btn.disabled = false; btn.textContent = "Apply"; }
+  }
+}
+
+/* Minimal toast helper (uses _alert if it exists, otherwise a slim popup) */
+function _toast(msg, kind){
+  try {
+    let host = document.getElementById("_dsToastHost");
+    if (!host){
+      host = document.createElement("div");
+      host.id = "_dsToastHost";
+      host.style.cssText = "position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:5000;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;";
+      document.body.appendChild(host);
+    }
+    const bgMap = { success:"#0f172a", warn:"#9a3412", error:"#7f1d1d" };
+    const t = document.createElement("div");
+    t.style.cssText = `background:${bgMap[kind]||"#0f172a"};color:#fff;padding:10px 18px;border-radius:10px;font-size:13px;font-weight:600;box-shadow:0 10px 30px rgba(0,0,0,.25);max-width:520px;line-height:1.45;font-family:inherit;transform:translateY(8px);opacity:0;transition:.18s;`;
+    t.textContent = msg;
+    host.appendChild(t);
+    requestAnimationFrame(() => { t.style.transform = "translateY(0)"; t.style.opacity = "1"; });
+    setTimeout(() => { t.style.opacity = "0"; t.style.transform = "translateY(8px)"; setTimeout(() => t.remove(), 220); }, 3600);
+  } catch(_){ alert(msg); }
+}
+
 async function poxSubmitVendorAssign(){
   const vendorId = document.getElementById("poxVaSelect")?.value;
   const permanent = document.getElementById("poxVaPermanent")?.checked || false;
@@ -18276,7 +19495,16 @@ async function openOrderDetail(orderId){
     document.getElementById("odOrderNum").innerText = `Order ${orderLabel}`;
     document.getElementById("odStoreMeta").innerText = `Placed ${dateText}  ·  ${o.customer_name||""}  ·  ${o.store_name||""}  ·  ${lineItems.length} item${lineItems.length!==1?"s":""}  ·  ${getCurrencySymbol(o.currency)}${o.total_price||"0"}`;
 
+    // Prominent clickable status control (opens the same Change-Status dropdown).
+    const _fulCurr = String(o.fulfillment_status || "pending");
+    const _fulPretty = _fulCurr.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+    const _statusBtn = `<button class="od-status-trigger" onclick="event.stopPropagation();odsOpen(event, ${o.id})" title="Click to change status">
+        <span class="od-status-trigger-dot"></span>
+        <span class="od-status-trigger-label">${escapeHtml(_fulPretty)}</span>
+        <span class="od-status-trigger-chev">▾</span>
+      </button>`;
     document.getElementById("odStatusRow").innerHTML =
+      _statusBtn + " " +
       odBadge(o.payment_status||"unknown", odPayBadge(payStatus)) + " " +
       (hasTracking ? odBadge("Tracking Added","s-green") : odBadge("No Tracking","s-orange")) + " " +
       odBadge(o.platform||"Store","s-blue");

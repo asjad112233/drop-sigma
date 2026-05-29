@@ -263,7 +263,7 @@ def delete_order_api(request, order_id):
 
 @api_view(["GET"])
 def overview_api(request):
-    from datetime import timedelta
+    from datetime import timedelta, date as _date_cls
     from vendors.models import VendorTrackingSubmission
 
     if not request.user.is_authenticated:
@@ -276,18 +276,67 @@ def overview_api(request):
 
     today = timezone.now().date()
     today_qs = orders.filter(created_at__date=today)
-
-    total_revenue = float(orders.aggregate(s=Sum("total_price"))["s"] or 0)
     today_revenue = float(today_qs.aggregate(s=Sum("total_price"))["s"] or 0)
 
-    unassigned = orders.filter(assigned_vendor__isnull=True, fulfillment_status__in=["processing", "pending"]).count()
-    no_tracking = orders.filter(tracking_number__isnull=True).exclude(tracking_number="").exclude(fulfillment_status__in=["cancelled", "refunded"]).count()
-    no_tracking2 = orders.filter(tracking_number="").exclude(fulfillment_status__in=["cancelled", "refunded"]).count()
+    # ── Period filter ────────────────────────────────────────────────
+    # Accepts:  ?period=today|7d|30d|90d|all|custom
+    #           ?from=YYYY-MM-DD  ?to=YYYY-MM-DD   (only when period=custom)
+    # Defaults to "all" (legacy behaviour) so existing callers keep working.
+    period   = (request.GET.get("period") or "all").strip().lower()
+    from_str = (request.GET.get("from") or "").strip()
+    to_str   = (request.GET.get("to")   or "").strip()
+    period_end   = today
+    period_start = None
+    if period == "today":
+        period_start = today
+    elif period == "7d":
+        period_start = today - timedelta(days=6)
+    elif period == "30d":
+        period_start = today - timedelta(days=29)
+    elif period == "90d":
+        period_start = today - timedelta(days=89)
+    elif period == "custom":
+        try:
+            if from_str:
+                period_start = _date_cls.fromisoformat(from_str)
+            if to_str:
+                period_end   = _date_cls.fromisoformat(to_str)
+        except (ValueError, TypeError):
+            period_start = None
+            period_end   = today
+    # period == "all" → no filter
 
-    # Revenue last 7 days
+    # Period-filtered queryset drives totals, attention counts, charts.
+    if period_start:
+        period_qs = orders.filter(
+            created_at__date__gte=period_start,
+            created_at__date__lte=period_end,
+        )
+    else:
+        period_qs = orders
+
+    total_revenue = float(period_qs.aggregate(s=Sum("total_price"))["s"] or 0)
+
+    unassigned = period_qs.filter(assigned_vendor__isnull=True, fulfillment_status__in=["processing", "pending"]).count()
+    no_tracking = period_qs.filter(tracking_number__isnull=True).exclude(tracking_number="").exclude(fulfillment_status__in=["cancelled", "refunded"]).count()
+    no_tracking2 = period_qs.filter(tracking_number="").exclude(fulfillment_status__in=["cancelled", "refunded"]).count()
+
+    # ── Revenue chart — adapts to selected period ────────────────────
+    # • today    → today's single bar
+    # • 7d/30d   → that many daily bars
+    # • 90d      → daily bars capped at last 30 days for readability
+    # • custom   → bars spanning the chosen range, capped at 30 days
+    # • all      → last 7 days as before (legacy)
+    if period_start:
+        days_span = (period_end - period_start).days + 1
+        chart_count = max(1, min(days_span, 30))
+        chart_start = period_end - timedelta(days=chart_count - 1)
+    else:
+        chart_count = 7
+        chart_start = today - timedelta(days=6)
     revenue_7 = []
-    for i in range(6, -1, -1):
-        day = today - timedelta(days=i)
+    for i in range(chart_count):
+        day = chart_start + timedelta(days=i)
         day_q = orders.filter(created_at__date=day)
         revenue_7.append({
             "date": day.strftime("%d %b"),
@@ -381,7 +430,12 @@ def overview_api(request):
 
     return Response({
         "success": True,
-        "total_orders": orders.count(),
+        # total_orders / total_revenue now reflect the SELECTED PERIOD
+        # (or all-time when period=all). today_* always reflects today.
+        "period": period,
+        "period_start": period_start.isoformat() if period_start else "",
+        "period_end":   period_end.isoformat(),
+        "total_orders": period_qs.count(),
         "today_orders": today_qs.count(),
         "total_revenue": total_revenue,
         "today_revenue": today_revenue,
@@ -1292,17 +1346,239 @@ def woocommerce_webhook(request, store_id):
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def update_order_status_api(request, order_id):
+    """
+    Update an order's fulfillment status.
+
+    Request body:
+      - fulfillment_status (str, required)
+      - send_email        (bool, optional, default false) — when true the
+                          status-template email is sent to the customer
+      - force             (bool, optional) — bypass the tracking guard
+                          (admin override; not used by the UI today)
+
+    Tracking validation:
+      Statuses listed in TRACKING_REQUIRED_STATUSES (e.g. "shipped",
+      "in_transit", "out_for_delivery") imply a tracking number was added.
+      If the tenant requests Send Email for such a status with no tracking
+      on the order, we still update the status but SKIP the email and
+      return email_status="blocked_no_tracking" so the UI can warn.
+
+    Response always includes:
+      - success
+      - fulfillment_status   (new value applied)
+      - email_status         ("sent" | "skipped" | "blocked_no_tracking"
+                              | "no_template" | "failed")
+      - tracking_required    (bool — did this status imply tracking?)
+      - has_tracking         (bool)
+    """
     order = get_object_or_404(Order, id=order_id)
     new_status = (request.data.get("fulfillment_status") or "").strip()
+    send_email = bool(request.data.get("send_email"))
+    force      = bool(request.data.get("force"))
     if not new_status:
         return Response({"success": False, "message": "fulfillment_status required."}, status=400)
+
     old_status = order.fulfillment_status or ""
+
+    # Tracking gate
+    tn = (order.tracking_number or "").strip()
+    has_tracking = bool(tn) and tn.lower() not in ("pending", "no tracking", "no tracking yet")
+    tracking_required = new_status.lower() in TRACKING_REQUIRED_STATUSES
+
+    # Apply the status change unconditionally.
     order.fulfillment_status = new_status
     order.save(update_fields=["fulfillment_status"])
-    log_activity(order, "status_changed", f"Status changed from '{old_status}' to '{new_status}'", actor="Admin")
-    if new_status.lower() != old_status.lower():
-        _fire_auto_email(order, new_status)
-    return Response({"success": True, "fulfillment_status": new_status})
+    log_activity(order, "status_changed",
+                 f"Status changed from '{old_status}' to '{new_status}'",
+                 actor="Admin")
+
+    # Email decision tree.
+    email_status = "skipped"
+    if send_email and new_status.lower() != old_status.lower():
+        if tracking_required and not has_tracking and not force:
+            email_status = "blocked_no_tracking"
+            log_activity(order, "auto_email_skipped",
+                         f"Auto-email for '{new_status}' skipped — tracking number missing.",
+                         actor="System")
+        else:
+            try:
+                from emails.views import send_auto_status_email
+                result = send_auto_status_email(order, new_status)
+                # send_auto_status_email may return falsy when no template exists
+                if result is False:
+                    email_status = "no_template"
+                else:
+                    email_status = "sent"
+            except Exception as e:
+                email_status = "failed"
+                log_activity(order, "auto_email_failed",
+                             f"Auto-email error for '{new_status}': {e}",
+                             actor="System")
+
+    return Response({
+        "success": True,
+        "fulfillment_status": new_status,
+        "old_status":  old_status,
+        "email_status": email_status,
+        "tracking_required": tracking_required,
+        "has_tracking": has_tracking,
+    })
+
+
+# ── Status catalogue ────────────────────────────────────────────────────
+# Single source of truth for the dropdown shown in the UI. Each entry
+# also reports whether changing to that status implies the customer is
+# expecting tracking information (so we can gate the auto-email).
+TRACKING_REQUIRED_STATUSES = {
+    "shipped", "delivered",
+}
+
+# Statuses that ship with a pre-built email template — only these expose
+# the "Send email to customer" checkbox in the UI. Update this list if a
+# new template lands.
+EMAIL_TEMPLATE_STATUSES = {
+    "processing", "shipped", "completed", "failed", "cancelled", "dispute",
+}
+
+ORDER_STATUS_CATALOGUE = [
+    {"key": "pending",    "label": "Pending",    "color": "#94a3b8", "tracking_required": False},
+    {"key": "processing", "label": "Processing", "color": "#f59e0b", "tracking_required": False},
+    {"key": "on_hold",    "label": "On Hold",    "color": "#a855f7", "tracking_required": False},
+    {"key": "shipped",    "label": "Shipped",    "color": "#3b82f6", "tracking_required": True},
+    {"key": "delivered",  "label": "Delivered",  "color": "#10b981", "tracking_required": True},
+    {"key": "completed",  "label": "Completed",  "color": "#059669", "tracking_required": False},
+    {"key": "cancelled",  "label": "Cancelled",  "color": "#ef4444", "tracking_required": False},
+    {"key": "failed",     "label": "Failed",     "color": "#dc2626", "tracking_required": False},
+    {"key": "dispute",    "label": "Dispute",    "color": "#b91c1c", "tracking_required": False},
+    {"key": "refunded",   "label": "Refunded",   "color": "#7c3aed", "tracking_required": False},
+    {"key": "returned",   "label": "Returned",   "color": "#0891b2", "tracking_required": False},
+]
+
+
+@api_view(["GET"])
+def order_statuses_api(request):
+    """List of available order statuses for the dropdown.
+
+    Includes both the canonical catalogue AND any status values that
+    already exist in the tenant's data (so legacy / custom store values
+    appear automatically without code changes).
+    """
+    if not request.user.is_authenticated:
+        return Response({"success": False}, status=401)
+
+    # Annotate each entry with whether a pre-built email template exists
+    # for it (drives whether the Send-Email checkbox is shown in the UI).
+    catalogue = [dict(s, has_email_template=(s["key"] in EMAIL_TEMPLATE_STATUSES)) for s in ORDER_STATUS_CATALOGUE]
+    known_keys = {s["key"] for s in catalogue}
+
+    # Discover any custom statuses currently in use by this tenant's orders.
+    extras = (
+        Order.objects.filter(store__user=request.user)
+        .exclude(fulfillment_status__isnull=True)
+        .exclude(fulfillment_status="")
+        .values_list("fulfillment_status", flat=True)
+        .distinct()
+    )
+    for raw in extras:
+        key = (raw or "").strip().lower().replace(" ", "_")
+        if not key or key in known_keys:
+            continue
+        known_keys.add(key)
+        catalogue.append({
+            "key": key,
+            "label": (raw or "").replace("_", " ").title(),
+            "color": "#64748b",
+            "tracking_required": False,
+            "has_email_template": False,
+        })
+
+    return Response({"success": True, "statuses": catalogue})
+
+
+# ─── Status-template preview (used by the full-screen status editor) ─────────
+@api_view(["GET"])
+def status_template_preview_api(request, order_id):
+    """Render the email that *would* be sent if this order's status were set
+    to ?status=<key>, returning the resolved {to, subject, body_html} so the
+    frontend can show a live preview before the user clicks Send.
+
+    Falls back to a sensible default subject if the template has no subject.
+    Returns has_template=False when no template exists for this status.
+    """
+    if not request.user.is_authenticated:
+        return Response({"success": False}, status=401)
+
+    try:
+        order = Order.objects.select_related("store").get(pk=order_id, store__user=request.user)
+    except Order.DoesNotExist:
+        return Response({"success": False, "message": "Order not found."}, status=404)
+
+    status_key = (request.GET.get("status") or "").strip().lower()
+    if not status_key:
+        return Response({"success": False, "message": "Missing ?status param."}, status=400)
+
+    # Local imports to avoid a circular import at module load.
+    from emails.views import STATUS_TO_CATEGORY
+    from emails.services import build_template_context, render_template_content
+    from emails.models import EmailTemplate, EmailAccount
+    from django.db.models import Q
+
+    category = STATUS_TO_CATEGORY.get(status_key)
+    if not category:
+        return Response({
+            "success": True,
+            "has_template": False,
+            "reason": "no_category",
+            "to": order.customer_email or "",
+        })
+
+    template = (
+        EmailTemplate.objects
+        .filter(is_category_default=True, status="active", category=category)
+        .filter(Q(store=order.store) | Q(is_global=True))
+        .first()
+    )
+    if not template:
+        return Response({
+            "success": True,
+            "has_template": False,
+            "reason": "no_template",
+            "to": order.customer_email or "",
+        })
+
+    try:
+        context = build_template_context(order.store, order=order)
+        subject = render_template_content(
+            template.subject or f"Order Update: {status_key.title()}", context
+        )
+        body_html = render_template_content(template.body_html or "", context)
+    except Exception as e:
+        return Response({"success": False, "message": f"Could not render template: {e}"}, status=500)
+
+    # Resolve sender (the tenant's own connected Gmail account, per project rule).
+    sender_email = ""
+    sender_name = ""
+    try:
+        acct = EmailAccount.objects.filter(store=order.store, is_active=True).first()
+        if acct:
+            sender_email = acct.email or ""
+            sender_name = getattr(acct, "display_name", "") or getattr(acct, "name", "") or ""
+    except Exception:
+        pass
+
+    return Response({
+        "success": True,
+        "has_template": True,
+        "category": category,
+        "template_id": template.id,
+        "template_name": getattr(template, "name", "") or "",
+        "to": order.customer_email or "",
+        "from_email": sender_email,
+        "from_name": sender_name,
+        "subject": subject,
+        "body_html": body_html,
+    })
+
 
 @api_view(["GET"])
 def order_lookup_by_number_api(request):
