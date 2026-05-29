@@ -770,11 +770,9 @@ def classify_email(subject, body):
            "track my order", "package status", "in transit"):
         return "shipping"
 
-    if has("change address", "wrong address", "update my address",
-           "change shipping", "wrong shipping address"):
-        return "order_edit"
-
     # 6) Default — let a human triage. Never force a category.
+    #    Address-change / order-edit / other sensitive requests are
+    #    intentionally NOT auto-routed; a human should handle them.
     return "needs_human"
 
 
