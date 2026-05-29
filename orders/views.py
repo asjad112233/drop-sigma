@@ -873,15 +873,36 @@ def order_notes_api(request, order_id):
         })
 
     # ── GET: merged timeline ──────────────────────────────────────────────
+    # Scope per tenant request: ONLY show payment-related events + tenant
+    # notes here. Vendor assignments, auto-routes, tracking submissions,
+    # and generic system events are tracked elsewhere and don't belong on
+    # this panel.
+    PAYMENT_KEYWORDS = (
+        "payment", "paid", "declined", "failed", "refund", "captured",
+        "authorized", "charge", "instrument", "voided", "void",
+        "transaction", "card was", "settled", "stripe", "paypal",
+    )
+    NOTE_TYPES = {"note_private", "note_customer", "note"}
+    PAYMENT_ACTIVITY_TYPES = {
+        "payment", "payment_received", "payment_failed",
+        "payment_refunded", "refund", "refunded",
+    }
+    def _is_payment_text(text):
+        t = (text or "").lower()
+        return any(k in t for k in PAYMENT_KEYWORDS)
+
     merged = []
 
-    # 1) Drop Sigma OrderActivity rows
+    # 1) Drop Sigma OrderActivity rows — keep tenant notes + payment events.
     current_username = request.user.username
     for a in order.activities.all():
+        atype = (a.activity_type or "").lower()
+        is_note = atype in NOTE_TYPES
+        is_payment = atype in PAYMENT_ACTIVITY_TYPES or _is_payment_text(a.description)
+        if not (is_note or is_payment):
+            continue
         kind = _classify_activity_kind(a.activity_type, a.description)
-        # Allow delete only on tenant-added notes by the same actor (or superuser)
-        is_tenant_note = a.activity_type in ("note_private", "note_customer", "note")
-        actor_owns = is_tenant_note and (
+        actor_owns = is_note and (
             request.user.is_superuser
             or (a.actor and (
                 a.actor == current_username
@@ -891,7 +912,7 @@ def order_notes_api(request, order_id):
         merged.append({
             "id":         a.id,
             "kind":       kind,
-            "label":      None,  # falls back to UI default per kind
+            "label":      None,
             "body":       a.description,
             "actor":      a.actor or "—",
             "source":     "Drop Sigma",
@@ -899,22 +920,26 @@ def order_notes_api(request, order_id):
             "can_delete": bool(actor_owns),
         })
 
-    # 2) WooCommerce order notes
+    # 2) WooCommerce order notes — keep ONLY payment-related notes
+    #    (declined, refunded, paid, captured…) and customer-authored notes.
     wc_synced = False
     wc_notes = _fetch_wc_notes(order)
     if wc_notes:
         wc_synced = True
     for wn in wc_notes:
+        body = wn.get("note") or ""
+        if not (_is_payment_text(body) or wn.get("customer_note")):
+            continue
         kind = _classify_wc_note_kind(wn)
         merged.append({
-            "id":         f"wc-{wn.get('id')}",  # string so we don't collide with local int ids
+            "id":         f"wc-{wn.get('id')}",
             "kind":       kind,
             "label":      None,
-            "body":       wn.get("note") or "",
+            "body":       body,
             "actor":      wn.get("author") or "WooCommerce",
             "source":     "WooCommerce",
             "at":         wn.get("date_created_gmt") or wn.get("date_created") or "",
-            "can_delete": False,  # WC notes are immutable from here
+            "can_delete": False,
         })
 
     # Sort newest first

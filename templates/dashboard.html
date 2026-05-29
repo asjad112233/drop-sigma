@@ -2888,11 +2888,74 @@ body.vf-dark-mode{background:#eef7ff!important;color:#0f172a!important;}
 #ordersSection .pox-table thead th{position:sticky!important;top:0!important;z-index:30!important;background:var(--vf-surface-2)!important;box-shadow:0 2px 6px rgba(15,23,42,.1)!important;}
 
 /* ===== POX: Premium Orders Redesign ===== */
-.pox-topbar{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;}
-.pox-title{font-size:32px;font-weight:900;letter-spacing:-1px;color:var(--vf-text);margin:0;}
-.pox-sub{font-size:13px;color:var(--vf-muted);margin:4px 0 0;}
-.pox-topbar-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
-.pox-role-pill{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;background:rgba(99,102,241,.10);color:#6366f1;border:1px solid rgba(99,102,241,.22);}
+.pox-topbar{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;gap:18px;}
+.pox-topbar-clean{align-items:center;margin-bottom:18px;padding-right:72px;}
+/* The global notification bell is position:fixed at top:14px right:20px (42px wide).
+   Reserve that space on the Orders topbar so action buttons don't slide under it. */
+@media(max-width:780px){.pox-topbar-clean{padding-right:0;}}
+.pox-topbar-l{min-width:0;}
+.pox-title-row{display:flex;align-items:center;gap:10px;}
+.pox-title{font-size:24px;font-weight:800;letter-spacing:-.02em;color:var(--vf-text);margin:0;}
+.pox-sub{font-size:13px;color:var(--vf-muted);margin:3px 0 0;}
+.pox-topbar-actions{display:flex;gap:7px;align-items:center;flex-wrap:wrap;}
+.pox-role-pill{display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:999px;font-size:11px;font-weight:700;background:rgba(99,102,241,.10);color:#6366f1;border:1px solid rgba(99,102,241,.22);}
+
+/* Refined action buttons (Import / Export / Refresh / Auto Assign) */
+.pox-action-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 13px;border-radius:9px;font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid var(--vf-line);background:var(--vf-surface);color:var(--vf-text);font-family:inherit;transition:.15s ease;line-height:1;}
+.pox-action-btn:hover{background:var(--vf-surface-2);border-color:#cbd5e1;}
+.pox-action-btn svg{flex-shrink:0;}
+.pox-action-btn-primary{background:linear-gradient(135deg,#6366f1,#8b5cf6,#a855f7) !important;color:#fff !important;border-color:transparent !important;box-shadow:0 4px 14px rgba(99,102,241,.25);}
+.pox-action-btn-primary:hover{filter:brightness(1.06);box-shadow:0 6px 18px rgba(99,102,241,.35);}
+
+/* Single-row toolbar — search + chips */
+.pox-toolbar-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;}
+
+/* Compact toolbar: search + chips + refine dropdowns all on one line.
+   Wraps gracefully if window narrows. */
+.pox-toolbar-row.pox-toolbar-compact{background:var(--vf-surface);border:1px solid var(--vf-line);border-radius:12px;padding:7px 12px;margin-bottom:10px;gap:8px;box-shadow:0 1px 2px rgba(15,23,42,.03);}
+.pox-toolbar-row.pox-toolbar-compact .pox-search-box{background:var(--vf-surface-2,#f8fafc);border:1px solid transparent;height:32px;padding:0 11px;min-width:200px;max-width:280px;border-radius:8px;}
+.pox-toolbar-row.pox-toolbar-compact .pox-search-box:focus-within{background:var(--vf-surface);border-color:#6366f1;}
+.pox-toolbar-refine{display:inline-flex;align-items:center;gap:6px;margin-left:auto;}
+.pox-refine-select-inline{padding:6px 28px 6px 11px;border:1px solid var(--vf-line);border-radius:8px;background:var(--vf-surface);font-size:12.5px;font-weight:600;color:var(--vf-text);font-family:inherit;cursor:pointer;outline:none;height:32px;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");background-repeat:no-repeat;background-position:right 8px center;}
+.pox-refine-select-inline:hover{border-color:#cbd5e1;}
+.pox-refine-select-inline:focus{border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.08);}
+
+/* Slim KPI strip — horizontal row, each item = icon + value + label */
+.pox-kpi-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;}
+.pox-kpi-item{background:var(--vf-surface);border:1px solid var(--vf-line);border-radius:10px;padding:9px 14px;cursor:pointer;display:flex;align-items:center;gap:11px;transition:.15s ease;min-width:0;}
+.pox-kpi-item:hover{border-color:#cbd5e1;box-shadow:0 2px 8px rgba(15,23,42,.05);}
+.pox-kpi-item.active{border-color:#6366f1 !important;box-shadow:0 0 0 2px rgba(99,102,241,.10) !important;}
+.pox-kpi-ic{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.pox-kpi-meta{min-width:0;display:flex;flex-direction:column;line-height:1.2;}
+.pox-kpi-val{font-size:16px;font-weight:800;color:var(--vf-text);letter-spacing:-.01em;display:flex;align-items:baseline;gap:5px;}
+.pox-kpi-sub{font-size:10.5px;color:var(--vf-muted);font-weight:500;}
+.pox-kpi-val-warn{color:#b45309;}
+.pox-kpi-label{font-size:10px;color:var(--vf-muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-top:1px;}
+.pox-kpi-item-alert{background:linear-gradient(180deg,rgba(245,158,11,.04),var(--vf-surface)) !important;border-color:rgba(245,158,11,.30) !important;}
+
+/* DEPRECATED — keep selectors for backward compat (legacy clients with
+   cached HTML); they no-op since the markup is gone. */
+.pox-panel-card{display:contents;}
+.pox-panel-card .pox-card-head, .pox-panel-card .pox-card-stats, .pox-panel-card .pox-card-toolbar{padding:0;border:none;}
+.pox-collapse-toggle-wrap{display:none;}
+.pox-collapse-toggle-wrap-top{display:none;}
+.pox-collapse-toggle-wrap::before{display:none;}
+.pox-collapse-toggle{position:relative;z-index:1;display:inline-flex;align-items:center;gap:7px;padding:5px 14px;background:var(--vf-surface);border:1px solid var(--vf-line);border-radius:99px;font-size:11.5px;font-weight:600;color:var(--vf-muted);cursor:pointer;font-family:inherit;transition:all .15s;}
+.pox-collapse-toggle:hover{background:var(--vf-surface-2);color:var(--vf-text);border-color:#cbd5e1;}
+.pox-collapse-toggle svg{flex-shrink:0;}
+/* Collapsed state — hide KPI cards + Refine/Bulk panel cleanly */
+.pox-filters-collapsed .pox-collapsible-area{display:none !important;}
+.pox-filters-collapsed #poxCollapseToggleIcon{transform:rotate(180deg);}
+
+/* 2-column refine + bulk panel */
+.pox-panel-2col{display:grid;grid-template-columns:1fr 1fr;gap:18px;background:var(--vf-surface);border:1px solid var(--vf-line);border-radius:12px;padding:16px 18px;margin-bottom:16px;box-shadow:0 1px 2px rgba(15,23,42,.03);}
+.pox-panel-block{min-width:0;}
+.pox-panel-label{font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--vf-muted);margin-bottom:9px;}
+.pox-panel-fields{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+.pox-panel-fields .pox-refine-select{flex:1;min-width:140px;}
+@media(max-width:780px){
+  .pox-panel-2col{grid-template-columns:1fr;}
+}
 .pox-view-toggle{display:flex;background:var(--vf-surface-2);border:1px solid var(--vf-line);border-radius:10px;padding:3px;gap:1px;}
 .pox-vt{padding:6px 11px;border-radius:7px;font-size:11.5px;font-weight:700;color:var(--vf-muted);cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:.12s;white-space:nowrap;}
 .pox-vt:hover{color:var(--vf-text);}
@@ -2902,36 +2965,74 @@ body.vf-dark-mode{background:#eef7ff!important;color:#0f172a!important;}
 body.vf-dark-mode .pox-view-toggle{background:rgba(255,255,255,.06);}
 body.vf-dark-mode .pox-vt-active{background:rgba(255,255,255,.12);}
 body.vf-dark-mode .pox-icon-btn{background:rgba(255,255,255,.06);border-color:var(--vf-line);}
-.pox-stats-4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;}
-.pox-stat4{background:var(--vf-surface);border:1px solid var(--vf-line);border-radius:14px;padding:12px 16px;cursor:pointer;transition:.18s ease;backdrop-filter:blur(14px);}
-.pox-stat4:hover{transform:translateY(-2px);border-color:#93c5fd;box-shadow:0 10px 28px rgba(37,99,235,.09);}
-.pox-stat4.order-kpi-card.active{border:2px solid #35d04f !important;box-shadow:0 0 0 3px rgba(53,208,79,.12),0 10px 28px rgba(15,23,42,.07) !important;}
-.pox-s4-label{font-size:11px;color:var(--vf-muted);font-weight:700;margin-bottom:3px;display:flex;align-items:center;gap:4px;}
-.pox-s4-val{font-size:24px;font-weight:900;letter-spacing:-.5px;color:var(--vf-text);margin-bottom:2px;}
+/* KPI section header */
+.pox-kpi-head{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:10px;padding:0 2px;}
+.pox-kpi-head-l{display:flex;flex-direction:column;}
+.pox-kpi-head-title{font-size:13px;font-weight:800;color:var(--vf-text);letter-spacing:-.01em;}
+.pox-kpi-head-sub{font-size:11.5px;color:var(--vf-muted);font-weight:500;margin-top:1px;}
+.pox-kpi-head-toggle{background:transparent;border:1px solid var(--vf-line);border-radius:8px;padding:5px 11px;font-size:11.5px;font-weight:600;color:var(--vf-muted);cursor:pointer;display:inline-flex;align-items:center;gap:5px;font-family:inherit;transition:all .15s;}
+.pox-kpi-head-toggle:hover{background:var(--vf-surface-2);color:var(--vf-text);}
+
+.pox-stats-4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;}
+.pox-stat4{background:var(--vf-surface);border:1px solid var(--vf-line);border-radius:10px;padding:9px 12px;cursor:pointer;transition:.15s ease;position:relative;overflow:hidden;}
+.pox-stat4:hover{border-color:#cbd5e1;box-shadow:0 2px 8px rgba(15,23,42,.05);}
+.pox-stat4.order-kpi-card.active{border:1px solid #6366f1 !important;box-shadow:0 0 0 2px rgba(99,102,241,.10) !important;}
+.pox-s4-ic{display:none;}
+.pox-s4-label{font-size:10px;color:var(--vf-muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px;display:block;line-height:1.2;}
+.pox-s4-val{font-size:17px;font-weight:800;letter-spacing:-.01em;color:var(--vf-text);margin-bottom:1px;line-height:1.15;}
 .pox-s4-val-warn{color:#b45309;}
-.pox-s4-delta{font-size:11px;font-weight:700;color:#10b981;}
+.pox-s4-delta{font-size:10.5px;font-weight:500;color:var(--vf-muted);line-height:1.2;}
 .pox-delta-warn{color:#f59e0b !important;}
 .pox-delta-bad{color:#ef4444 !important;}
-.pox-stat4-alert{border-color:rgba(245,158,11,.4) !important;background:linear-gradient(135deg,rgba(245,158,11,.04),var(--vf-surface)) !important;}
+.pox-stat4-alert{border-color:rgba(245,158,11,.35) !important;background:linear-gradient(180deg,rgba(245,158,11,.04),var(--vf-surface)) !important;}
 body.vf-dark-mode .pox-stat4{background:var(--vf-surface);border-color:var(--vf-line);}
 @media(max-width:900px){.pox-stats-4{grid-template-columns:repeat(2,1fr)!important;}}
 @media(max-width:560px){.pox-stats-4{grid-template-columns:1fr!important;}}
-.pox-attention{background:linear-gradient(90deg,rgba(245,158,11,.08),rgba(239,68,68,.05));border:1px solid rgba(245,158,11,.28);border-radius:14px;padding:12px 16px;display:flex;align-items:center;gap:12px;font-size:12.5px;margin-bottom:14px;}
-.pox-attention-icon{color:#b45309;font-size:16px;flex-shrink:0;}
-.pox-attention-msg{flex:1;color:var(--vf-text);}
-.pox-attention-msg b{color:var(--vf-text);}
-.pox-attention button{padding:5px 12px;border-radius:7px;font-size:11.5px;font-weight:700;background:var(--vf-text);color:white;border:none;cursor:pointer;}
-.pox-filter-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;}
-.pox-search-box{display:flex;align-items:center;gap:8px;background:var(--vf-surface);border:1px solid var(--vf-line);border-radius:14px;padding:9px 14px;min-width:260px;transition:.15s;}
-.pox-search-box:focus-within{border-color:#60a5fa;box-shadow:0 0 0 3px rgba(37,99,235,.10);}
+
+/* Slim attention bar */
+.pox-attention{background:linear-gradient(90deg,#fef3c7,#fffbeb);border:1px solid #fcd34d;border-radius:10px;padding:9px 14px;display:flex;align-items:center;gap:10px;font-size:12.5px;margin-bottom:14px;}
+.pox-attention-icon{color:#b45309;display:inline-flex;flex-shrink:0;}
+.pox-attention-msg{flex:1;color:#78350f;font-weight:500;line-height:1.4;}
+.pox-attention-msg b{color:#7c2d12;font-weight:700;}
+.pox-attention button{padding:5px 11px;border-radius:7px;font-size:11px;font-weight:700;background:rgba(120,53,15,.9);color:white;border:none;cursor:pointer;letter-spacing:.02em;}
+.pox-attention button:hover{background:#7c2d12;}
+
+/* Filter rows */
+.pox-filter-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;}
+.pox-filter-row-2{margin-bottom:14px;justify-content:space-between;background:var(--vf-surface-2,#f6f8fb);border:1px solid var(--vf-line);border-radius:11px;padding:8px 10px;}
+
+/* Search box — refined */
+.pox-search-box{display:flex;align-items:center;gap:8px;background:var(--vf-surface);border:1px solid var(--vf-line);border-radius:10px;padding:7px 13px;min-width:260px;transition:.15s;}
+.pox-search-box:focus-within{border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.10);}
 .pox-search-box input{background:transparent !important;border:none !important;outline:none !important;flex:1;font-size:13px;color:var(--vf-text) !important;width:100%;box-shadow:none !important;padding:0 !important;height:auto !important;border-radius:0 !important;}
-.pox-chips{display:flex;gap:6px;flex-wrap:wrap;}
-.pox-chip{padding:7px 12px;border-radius:999px;font-size:12px;font-weight:700;background:var(--vf-surface);border:1px solid var(--vf-line);color:var(--vf-muted);cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:.15s;white-space:nowrap;}
-.pox-chip:hover{background:var(--vf-surface-2);color:var(--vf-text);}
-.pox-chip-active{background:var(--vf-text) !important;color:white !important;border-color:var(--vf-text) !important;}
-.pox-chip-warn{color:#b91c1c;border-color:rgba(239,68,68,.3);background:rgba(254,231,231,.6);}
-.pox-chip-count{padding:1px 6px;border-radius:999px;font-size:10px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.15);}
-.pox-chip:not(.pox-chip-active) .pox-chip-count{background:var(--vf-surface-2);color:var(--vf-muted);border:1px solid var(--vf-line);}
+
+/* Chips — clean, single-line with colored dot */
+.pox-chips{display:flex;gap:5px;flex-wrap:wrap;}
+.pox-chip{padding:6px 11px;border-radius:8px;font-size:12px;font-weight:600;background:var(--vf-surface);border:1px solid var(--vf-line);color:var(--vf-text);cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:.15s;white-space:nowrap;}
+.pox-chip:hover{background:var(--vf-surface-2);border-color:#cbd5e1;}
+.pox-chip-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;display:inline-block;}
+.pox-chip-active{background:#0f172a !important;color:#fff !important;border-color:#0f172a !important;}
+.pox-chip-active .pox-chip-dot{box-shadow:0 0 0 1.5px rgba(255,255,255,.25);}
+.pox-chip-warn{color:#7f1d1d;border-color:#fecaca;background:#fef2f2;}
+.pox-chip-warn:hover{background:#fee2e2;}
+.pox-chip-count{padding:1px 7px;border-radius:99px;font-size:10px;font-weight:700;background:var(--vf-surface-2);color:var(--vf-muted);border:1px solid var(--vf-line);min-width:18px;text-align:center;line-height:14px;}
+.pox-chip-active .pox-chip-count{background:rgba(255,255,255,.18);color:#fff;border-color:rgba(255,255,255,.22);}
+.pox-chip-warn .pox-chip-count{background:rgba(239,68,68,.1);color:#991b1b;border-color:rgba(239,68,68,.2);}
+
+/* Refine / Bulk Assign group (filter row 2) */
+.pox-refine-group, .pox-bulk-group{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.pox-refine-label{font-size:10.5px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.07em;padding:0 4px;}
+.pox-refine-select{padding:6px 10px;border:1px solid var(--vf-line);border-radius:8px;background:var(--vf-surface);font-size:12.5px;font-weight:600;color:var(--vf-text);font-family:inherit;cursor:pointer;outline:none;min-width:130px;transition:.15s;}
+.pox-refine-select:hover{border-color:#cbd5e1;}
+.pox-refine-select:focus{border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.10);}
+.pox-bulk-divider{width:1px;height:24px;background:var(--vf-line);margin:0 4px;}
+.pox-perm-check{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--vf-text);font-weight:600;cursor:pointer;padding:0 4px;user-select:none;}
+.pox-perm-check input{width:14px;height:14px;accent-color:#6366f1;cursor:pointer;}
+.pox-assign-btn{padding:7px 16px !important;font-size:12.5px !important;border-radius:8px !important;font-weight:700 !important;}
+@media(max-width:780px){
+  .pox-filter-row-2{flex-direction:column;align-items:stretch;gap:8px;}
+  .pox-bulk-divider{display:none;}
+}
 .pox-filter-extras{display:flex;gap:8px;align-items:center;margin-left:auto;}
 .pox-filter-extras select{height:38px !important;border-radius:12px !important;font-size:12px !important;padding:0 10px !important;font-weight:700;width:auto !important;}
 .pox-table-panel{background:var(--vf-surface);border:1px solid var(--vf-line);border-radius:24px;box-shadow:var(--vf-shadow);overflow:hidden;}
@@ -2962,6 +3063,7 @@ body.vf-dark-mode .pox-stat4{background:var(--vf-surface);border-color:var(--vf-
 .pox-order-date{font-size:10.5px;color:var(--vf-muted);margin-top:2px;}
 .pox-customer{display:flex;align-items:center;gap:9px;}
 .pox-avatar{width:32px;height:32px;border-radius:50%;color:white;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.pox-avatar.pox-flag-av{background:var(--vf-surface-2,#f8fafc);border:1px solid var(--vf-line,#e2e8f0);font-size:18px;line-height:1;color:initial;font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif;}
 .pox-av1{background:linear-gradient(135deg,#6D5BFF,#3DB7FF)}.pox-av2{background:linear-gradient(135deg,#F472B6,#FB923C)}.pox-av3{background:linear-gradient(135deg,#10B981,#3DB7FF)}.pox-av4{background:linear-gradient(135deg,#FB923C,#F59E0B)}.pox-av5{background:linear-gradient(135deg,#F472B6,#6D5BFF)}.pox-av6{background:linear-gradient(135deg,#3DB7FF,#10B981)}.pox-av7{background:linear-gradient(135deg,#0EA5E9,#6D5BFF)}
 .pox-cname{font-weight:700;font-size:12.5px;color:var(--vf-text);}
 .pox-cemail{font-size:10.5px;color:var(--vf-muted);margin-top:1px;}
@@ -2977,6 +3079,16 @@ body.vf-dark-mode .pox-stat4{background:var(--vf-surface);border-color:var(--vf-
 .pox-ful-proc{background:#e5f4fe;color:#0284c7;}.pox-ful-proc .pox-dot{background:#3db7ff;}
 .pox-ful-fail{background:#fee7e7;color:#b91c1c;}.pox-ful-fail .pox-dot{background:#ef4444;}
 .pox-ful-pend{background:var(--vf-surface-2);color:var(--vf-muted);border:1px solid var(--vf-line);}
+
+/* Portal-derived status pills — single pill shown in Status column.
+   Store's raw payment+fulfillment statuses appear on hover via the tooltip. */
+.pox-portal-pill{cursor:default;}
+.pox-portal-awaiting{background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;}.pox-portal-awaiting .pox-dot{background:#ef4444;}
+.pox-portal-processing{background:#fff7e6;color:#b45309;border:1px solid #fcd34d;}.pox-portal-processing .pox-dot{background:#f59e0b;}
+.pox-portal-transit{background:#e5f4fe;color:#0284c7;border:1px solid #bae6fd;}.pox-portal-transit .pox-dot{background:#3b82f6;}
+.pox-portal-delivered{background:#e7f8f1;color:#059669;border:1px solid #a7f3d0;}.pox-portal-delivered .pox-dot{background:#10b981;}
+.pox-portal-cancelled{background:#fee7e7;color:#b91c1c;border:1px solid #fecaca;}.pox-portal-cancelled .pox-dot{background:#ef4444;}
+.pox-portal-refunded{background:#ede9fe;color:#6d28d9;border:1px solid #ddd6fe;}.pox-portal-refunded .pox-dot{background:#8b5cf6;}
 .pox-va-popover{position:fixed;z-index:9999;background:var(--vf-surface);border:1px solid var(--vf-line);border-radius:12px;box-shadow:0 8px 28px rgba(15,23,42,.16);padding:11px;width:200px;animation:poxVaIn .12s ease;}
 @keyframes poxVaIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
 .pox-va-title{font-size:11px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:7px;}
@@ -2992,10 +3104,13 @@ body.vf-dark-mode .pox-stat4{background:var(--vf-surface);border-color:var(--vf-
 body.vf-dark-mode .pox-va-popover{background:#1a1f2e;border-color:rgba(255,255,255,.12);}
 body.vf-dark-mode .pox-va-perm-row{background:rgba(255,255,255,.06);}
 .pox-vendor-cell{display:flex;align-items:center;gap:7px;}
-.pox-vendor-name{font-weight:700;font-size:12px;color:var(--vf-text);}
+.pox-vendor-name{font-weight:700;font-size:12.5px;color:var(--vf-text);}
+.pox-vendor-auto-pill{display:inline-flex;align-items:center;font-size:9.5px;font-weight:800;color:#6d28d9;background:#ede9fe;border:1px solid #ddd6fe;padding:1px 7px 1px 5px;border-radius:99px;letter-spacing:.04em;text-transform:uppercase;line-height:1.4;}
 .pox-vendor-unassigned{padding:4px 10px;border-radius:999px;background:var(--vf-surface-2);border:1px dashed var(--vf-line);font-size:11px;font-weight:700;color:var(--vf-muted);display:inline-flex;align-items:center;gap:4px;cursor:pointer;transition:.15s;}
 .pox-vendor-unassigned:hover{color:#2563eb;border-color:#2563eb;border-style:solid;}
 .pox-vendor-blocked{padding:4px 10px;border-radius:999px;background:#fee7e7;border:1px solid rgba(239,68,68,.3);font-size:11px;font-weight:700;color:#b91c1c;display:inline-flex;align-items:center;gap:4px;}
+/* Legacy classes preserved for compatibility (kept thin so nothing breaks
+   if some other code path renders the old structure). */
 .pox-tracking{display:flex;flex-direction:column;gap:3px;}
 .pox-tracking-row{display:flex;align-items:center;gap:6px;}
 .pox-tracking-courier{font-size:9.5px;color:var(--vf-muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-right:4px;}
@@ -3005,6 +3120,30 @@ body.vf-dark-mode .pox-va-perm-row{background:rgba(255,255,255,.06);}
 .pox-check-status-btn{background:none;border:1px solid var(--vf-line);border-radius:5px;padding:1px 5px;font-size:11px;cursor:pointer;color:var(--vf-muted);transition:.15s;}
 .pox-check-status-btn:hover{background:var(--vf-surface-2);color:var(--vf-text);}
 .pox-check-status-btn:disabled{opacity:.5;cursor:wait;}
+
+/* Refined tracking cell — clean two-row block: clickable carrier + ID,
+   then a small status badge and hover-revealed refresh button. */
+.pox-tracking-pro{display:flex;flex-direction:column;gap:5px;min-width:0;}
+.pox-tracking-block,.pox-tracking-block-static{display:flex;flex-direction:column;gap:1px;text-decoration:none;color:inherit;padding:3px 8px;border-radius:7px;border:1px solid transparent;transition:.15s;min-width:0;}
+.pox-tracking-block{cursor:pointer;margin-left:-8px;}
+.pox-tracking-block:hover{background:var(--vf-surface-2,#f8fafc);border-color:var(--vf-line,#e5eaf2);}
+.pox-tracking-courier-pro{font-size:9px;color:var(--vf-muted);font-weight:800;text-transform:uppercase;letter-spacing:.06em;line-height:1.2;}
+.pox-tracking-id-pro{font-family:'JetBrains Mono','SF Mono',ui-monospace,Menlo,monospace;font-size:11px;color:var(--vf-text);font-weight:700;display:inline-flex;align-items:center;gap:5px;line-height:1.3;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;}
+.pox-tracking-block:hover .pox-tracking-id-pro{color:var(--vf-primary,#6366f1);}
+.pox-tracking-foot{display:flex;align-items:center;gap:5px;margin-left:0;}
+.pox-refresh-mini{width:20px;height:20px;border-radius:5px;border:none;background:transparent;color:var(--vf-muted);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;opacity:0;transition:opacity .15s,background .15s;font-family:inherit;flex-shrink:0;}
+tr:hover .pox-refresh-mini{opacity:.7;}
+.pox-refresh-mini:hover{background:var(--vf-surface-2,#f1f5f9);color:var(--vf-text);opacity:1!important;}
+.pox-refresh-mini:disabled{opacity:.4!important;cursor:wait;}
+.pox-refresh-mini svg{transition:transform .4s;}
+.pox-refresh-mini:disabled svg{animation:pox-spin .9s linear infinite;}
+@keyframes pox-spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+
+/* Status pill (Delivered / In Transit / Issue) */
+.pox-delivery-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:99px;font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;line-height:1.4;border:1px solid transparent;white-space:nowrap;}
+.pox-delivery-badge.delivered{background:#ecfdf5;color:#065f46;border-color:#a7f3d0;}
+.pox-delivery-badge.transit{background:#eff6ff;color:#1e40af;border-color:#bfdbfe;}
+.pox-delivery-badge.rejected{background:#fef2f2;color:#991b1b;border-color:#fecaca;}
 /* Tracking Hover Tooltip */
 #poxTrackTooltip{background:var(--vf-surface);border:1px solid var(--vf-line);border-radius:10px;box-shadow:0 8px 28px rgba(15,23,42,.16);padding:10px 12px;min-width:180px;max-width:220px;animation:poxTipIn .12s ease;}
 @keyframes poxTipIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
@@ -3034,8 +3173,9 @@ body.vf-dark-mode .pox-va-perm-row{background:rgba(255,255,255,.06);}
 .pox-tracking-eta{font-size:10px;color:var(--vf-muted);}
 .pox-tracking-eta.delivered{color:#059669;font-weight:700;}
 .pox-tracking-rejected{font-size:10px;color:#dc2626;font-weight:700;}
-.pox-no-track{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:6px;font-size:10.5px;font-weight:700;background:#fee7e7;color:#b91c1c;cursor:pointer;transition:.15s;}
-.pox-no-track:hover{background:rgba(239,68,68,.18);}
+.pox-no-track{display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border-radius:7px;font-size:10.5px;font-weight:700;background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;cursor:pointer;transition:.15s;}
+.pox-no-track svg{flex-shrink:0;}
+.pox-no-track:hover{background:#fee2e2;border-color:#fca5a5;}
 .pox-actions-cell{display:flex;align-items:center;gap:4px;opacity:1;transition:.15s;}
 .pox-row-action{width:26px;height:26px;border-radius:6px;border:1px solid var(--vf-line);background:var(--vf-surface);color:var(--vf-muted);font-size:11px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.12s;}
 .pox-row-action:hover{background:var(--vf-surface-2);color:var(--vf-text);}
@@ -6305,23 +6445,28 @@ document.addEventListener("DOMContentLoaded", () => {
       </div>
     </div>
 
-    <section id="ordersSection" class="section premium-orders-page">
+    <section id="ordersSection" class="section premium-orders-page pox-filters-collapsed">
 
-      <!-- Top Bar -->
-      <div class="pox-topbar">
-        <div>
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:3px;">
+      <!-- ════════════════════════════════════════════════════════════
+           ULTRA-COMPACT TOP — minimum vertical space, maximum table area.
+           Layout: Header → Toolbar (search + chips + refine dropdowns)
+                   → KPI strip (slim) → Bulk bar (when selected) → Table
+           ════════════════════════════════════════════════════════════ -->
+      <div class="pox-topbar pox-topbar-clean">
+        <div class="pox-topbar-l">
+          <div class="pox-title-row">
             <h1 class="pox-title">Orders</h1>
-            <span class="pox-role-pill">🛡️ Admin · Full access</span>
+            <span class="pox-role-pill"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> Admin · Full access</span>
           </div>
           <p class="pox-sub">Manage orders across all connected stores · <span id="poxStoreNameLabel">—</span></p>
         </div>
         <div class="pox-topbar-actions">
           <!-- Bulk Import dropdown -->
           <div style="position:relative;display:inline-block;" id="ordImportWrap">
-            <button class="btn" onclick="ordToggleImportMenu(event)" title="Import orders" style="display:inline-flex;align-items:center;gap:6px;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/><path d="M5 21h14"/></svg>
-              Import ▾
+            <button class="pox-action-btn" onclick="ordToggleImportMenu(event)" title="Import orders">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/><path d="M5 21h14"/></svg>
+              <span>Import</span>
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:.55;"><polyline points="6 9 12 15 18 9"/></svg>
             </button>
             <div id="ordImportMenu" style="display:none;position:absolute;top:calc(100% + 6px);right:0;background:var(--vf-surface,#fff);border:1px solid var(--vf-line,#e5eaf2);border-radius:14px;box-shadow:0 12px 32px rgba(15,23,42,.15);min-width:200px;overflow:hidden;z-index:999;">
               <button onclick="ordOpenImport('csv')" style="display:block;width:100%;padding:12px 16px;text-align:left;background:none;border:none;font-size:13px;font-weight:700;color:var(--vf-text);cursor:pointer;font-family:inherit;" onmouseover="this.style.background='var(--vf-surface-2,#f4f6fb)'" onmouseout="this.style.background=''">📄 Import CSV</button>
@@ -6332,9 +6477,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
           <!-- Bulk Export dropdown -->
           <div style="position:relative;display:inline-block;" id="ordExportWrap">
-            <button class="btn" onclick="ordToggleExportMenu(event)" title="Export orders" style="display:inline-flex;align-items:center;gap:6px;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
-              Export ▾
+            <button class="pox-action-btn" onclick="ordToggleExportMenu(event)" title="Export orders">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+              <span>Export</span>
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:.55;"><polyline points="6 9 12 15 18 9"/></svg>
             </button>
             <div id="ordExportMenu" style="display:none;position:absolute;top:calc(100% + 6px);right:0;background:var(--vf-surface,#fff);border:1px solid var(--vf-line,#e5eaf2);border-radius:14px;box-shadow:0 12px 32px rgba(15,23,42,.15);min-width:200px;overflow:hidden;z-index:999;">
               <button onclick="ordExport('csv')" style="display:block;width:100%;padding:12px 16px;text-align:left;background:none;border:none;font-size:13px;font-weight:700;color:var(--vf-text);cursor:pointer;font-family:inherit;" onmouseover="this.style.background='var(--vf-surface-2,#f4f6fb)'" onmouseout="this.style.background=''">📄 Export as CSV</button>
@@ -6342,8 +6488,13 @@ document.addEventListener("DOMContentLoaded", () => {
             </div>
           </div>
 
-          <button class="btn" onclick="loadOrders()" title="Refresh">↻ Refresh</button>
-          <button id="autoAssignBtn" class="btn green" onclick="autoAssignAll()">⚡ Auto Assign</button>
+          <button class="pox-action-btn" onclick="loadOrders()" title="Refresh">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+            <span>Refresh</span>
+          </button>
+          <!-- Auto Assign button intentionally removed (overlapped with global notification bell).
+               Kept hidden so any JS that references autoAssignBtn still works without crashing. -->
+          <button id="autoAssignBtn" onclick="autoAssignAll()" style="display:none;">Auto Assign</button>
         </div>
       </div>
 
@@ -6417,70 +6568,72 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>
       </div>
 
-      <!-- Collapsible Stats + Alert wrapper -->
-      <div id="ordersStatsWrap" style="overflow:hidden;transition:max-height .3s cubic-bezier(.4,0,.2,1),opacity .25s;max-height:300px;opacity:1;">
-
-      <!-- Stats Cards (4 compact) -->
-      <div class="pox-stats-4">
-        <div class="pox-stat4 order-kpi-card" data-filter="all" onclick="setOrderKpiFilter('all',this)">
-          <div class="pox-s4-label">📦 Today's Orders</div>
-          <div class="pox-s4-val" id="ordersTotalCount">0</div>
-          <div class="pox-s4-delta" id="poxDeltaOrders">All synced orders</div>
+      <!-- ════════════════════════════════════════════════════════════
+           KPI Strip — SLIM horizontal row (icon · value · label).
+           Takes ~52px height total. SITS ABOVE the toolbar so the most
+           important snapshot is the first thing the eye lands on.
+           ════════════════════════════════════════════════════════════ -->
+      <div id="ordersStatsWrap" class="pox-kpi-strip">
+        <div class="pox-kpi-item order-kpi-card" data-filter="today" onclick="setOrderKpiFilter('today',this)" title="Filter to orders placed today">
+          <div class="pox-kpi-ic" style="background:#e0e7ff;color:#4338ca;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="13" height="13"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 002 1.6h9.7a2 2 0 002-1.6L23 6H6"/></svg>
+          </div>
+          <div class="pox-kpi-meta">
+            <div class="pox-kpi-val"><span id="ordersTotalCount">0</span><span class="pox-kpi-sub" id="poxDeltaOrders"></span></div>
+            <div class="pox-kpi-label">Today's Orders</div>
+          </div>
         </div>
-        <div class="pox-stat4 order-kpi-card" data-filter="all" onclick="setOrderKpiFilter('all',this)">
-          <div class="pox-s4-label">💰 Today's Revenue</div>
-          <div class="pox-s4-val" id="poxRevenueVal">—</div>
-          <div class="pox-s4-delta" id="poxDeltaRevenue">Total value</div>
+        <div class="pox-kpi-item order-kpi-card" data-filter="today" onclick="setOrderKpiFilter('today',this)" title="Filter to today's orders">
+          <div class="pox-kpi-ic" style="background:#dcfce7;color:#15803d;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="13" height="13"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+          </div>
+          <div class="pox-kpi-meta">
+            <div class="pox-kpi-val"><span id="poxRevenueVal">—</span></div>
+            <div class="pox-kpi-label">Today's Revenue</div>
+            <span id="poxDeltaRevenue" style="display:none;"></span>
+          </div>
         </div>
-        <div class="pox-stat4 pox-stat4-alert order-kpi-card" data-filter="unassigned" onclick="setOrderKpiFilter('unassigned',this)">
-          <div class="pox-s4-label">⚠ Need Attention</div>
-          <div class="pox-s4-val pox-s4-val-warn" id="poxNeedAttentionVal">0</div>
-          <div class="pox-s4-delta pox-delta-warn" id="poxDeltaAttention">—</div>
+        <div class="pox-kpi-item pox-kpi-item-alert order-kpi-card" data-filter="no_tracking" onclick="setOrderKpiFilter('no_tracking',this)" title="Filter to orders without tracking">
+          <div class="pox-kpi-ic" style="background:#fef3c7;color:#b45309;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="13" height="13"><path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h16.9a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          </div>
+          <div class="pox-kpi-meta">
+            <div class="pox-kpi-val pox-kpi-val-warn"><span id="poxNeedAttentionVal">0</span></div>
+            <div class="pox-kpi-label">Need Attention</div>
+            <span id="poxDeltaAttention" style="display:none;"></span>
+          </div>
         </div>
-        <div class="pox-stat4 order-kpi-card" data-filter="vendor_assigned" onclick="setOrderKpiFilter('vendor_assigned',this)">
-          <div class="pox-s4-label">🚚 Out for Delivery</div>
-          <div class="pox-s4-val" id="ordersVendorAssignedCount">0</div>
-          <div class="pox-s4-delta" id="poxDeltaDelivery">Assigned orders</div>
+        <div class="pox-kpi-item order-kpi-card" data-filter="has_tracking" onclick="setOrderKpiFilter('has_tracking',this)" title="Filter to orders with tracking">
+          <div class="pox-kpi-ic" style="background:#ede9fe;color:#6d28d9;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="13" height="13"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h5l2 3v5h-7z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+          </div>
+          <div class="pox-kpi-meta">
+            <div class="pox-kpi-val"><span id="ordersVendorAssignedCount">0</span></div>
+            <div class="pox-kpi-label">Out for Delivery</div>
+            <span id="poxDeltaDelivery" style="display:none;"></span>
+          </div>
         </div>
       </div>
-      <!-- Hidden KPI counts still needed by JS -->
-      <span id="ordersPendingCount" style="display:none">0</span>
-      <span id="ordersNoTrackingCount" style="display:none">0</span>
-      <span id="ordersUnassignedCount" style="display:none">0</span>
-      <span id="ordersSelectedCount" style="display:none">0</span>
 
-      <!-- Attention Bar -->
-      <div class="pox-attention" id="poxAttention" style="display:none">
-        <span class="pox-attention-icon">⚠</span>
-        <span class="pox-attention-msg" id="poxAttentionMsg"></span>
-        <button onclick="document.getElementById('poxAttention').style.display='none'">Dismiss</button>
-      </div>
-
-      </div><!-- /ordersStatsWrap -->
-
-      <!-- Stats collapse toggle -->
-      <div style="display:flex;justify-content:center;margin:-6px 0 8px;">
-        <button id="ordersStatsToggle" onclick="toggleOrdersStats()" style="background:none;border:1px solid var(--vf-line);border-radius:20px;padding:3px 14px;font-size:11.5px;font-weight:600;color:var(--vf-muted);cursor:pointer;display:flex;align-items:center;gap:5px;transition:all .2s;">
-          <span id="ordersStatsToggleIcon">▲</span><span id="ordersStatsToggleLabel">Show less</span>
-        </button>
-      </div>
-
-      <!-- Filter Row -->
-      <div class="pox-filter-row">
+      <!-- ════════════════════════════════════════════════════════════
+           Toolbar — Search + Chips + Refine dropdowns (all in one row).
+           Sits BELOW the KPI strip per user request.
+           ════════════════════════════════════════════════════════════ -->
+      <div class="pox-toolbar-row pox-toolbar-compact">
         <div class="pox-search-box">
-          <span style="opacity:.5;font-size:13px;">🔍</span>
-          <input id="orderSearchInput" placeholder="Search order ID, customer, product..." oninput="renderPremiumOrders()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="13" height="13" style="opacity:.55;flex-shrink:0;color:var(--vf-muted);"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input id="orderSearchInput" placeholder="Search order, customer, product…" oninput="renderPremiumOrders()">
         </div>
         <div class="pox-chips">
-          <div class="pox-chip pox-chip-active" data-filter="all" onclick="poxSetChipFilter(this,'all')">All <span class="pox-chip-count" id="chipCountAll">0</span></div>
-          <div class="pox-chip" data-filter="pending" onclick="poxSetChipFilter(this,'pending')">⏳ Processing <span class="pox-chip-count" id="chipCountPending">0</span></div>
-          <div class="pox-chip pox-chip-warn" data-filter="no_tracking" onclick="poxSetChipFilter(this,'no_tracking')">📦 No Tracking <span class="pox-chip-count" id="chipCountNoTracking">0</span></div>
-          <div class="pox-chip" data-filter="unassigned" onclick="poxSetChipFilter(this,'unassigned')">👤 Unassigned <span class="pox-chip-count" id="chipCountUnassigned">0</span></div>
-          <div class="pox-chip" data-filter="vendor_assigned" onclick="poxSetChipFilter(this,'vendor_assigned')">✓ Assigned <span class="pox-chip-count" id="chipCountAssigned">0</span></div>
-          <div class="pox-chip" data-filter="completed" onclick="poxSetChipFilter(this,'completed')">✅ Completed <span class="pox-chip-count" id="chipCountCompleted">0</span></div>
+          <div class="pox-chip pox-chip-active" data-filter="all" onclick="poxSetChipFilter(this,'all')"><span class="pox-chip-dot" style="background:#94a3b8;"></span>All <span class="pox-chip-count" id="chipCountAll">0</span></div>
+          <div class="pox-chip" data-filter="pending" onclick="poxSetChipFilter(this,'pending')"><span class="pox-chip-dot" style="background:#f59e0b;"></span>Processing <span class="pox-chip-count" id="chipCountPending">0</span></div>
+          <div class="pox-chip pox-chip-warn" data-filter="no_tracking" onclick="poxSetChipFilter(this,'no_tracking')"><span class="pox-chip-dot" style="background:#ef4444;"></span>No Tracking <span class="pox-chip-count" id="chipCountNoTracking">0</span></div>
+          <div class="pox-chip" data-filter="unassigned" onclick="poxSetChipFilter(this,'unassigned')"><span class="pox-chip-dot" style="background:#3b82f6;"></span>Unassigned <span class="pox-chip-count" id="chipCountUnassigned">0</span></div>
+          <div class="pox-chip" data-filter="vendor_assigned" onclick="poxSetChipFilter(this,'vendor_assigned')"><span class="pox-chip-dot" style="background:#8b5cf6;"></span>Assigned <span class="pox-chip-count" id="chipCountAssigned">0</span></div>
+          <div class="pox-chip" data-filter="completed" onclick="poxSetChipFilter(this,'completed')"><span class="pox-chip-dot" style="background:#10b981;"></span>Completed <span class="pox-chip-count" id="chipCountCompleted">0</span></div>
         </div>
-        <div class="pox-filter-extras">
-          <select id="orderStatusFilter" onchange="renderPremiumOrders()">
+        <div class="pox-toolbar-refine">
+          <select id="orderStatusFilter" class="pox-refine-select-inline" onchange="renderPremiumOrders()">
             <option value="all">All Statuses</option>
             <option value="pending">Pending</option>
             <option value="paid">Paid</option>
@@ -6489,14 +6642,23 @@ document.addEventListener("DOMContentLoaded", () => {
             <option value="cancelled">Cancelled</option>
             <option value="failed">Failed</option>
           </select>
-          <select id="orderVendorFilter" onchange="renderPremiumOrders()"><option value="all">All Vendors</option></select>
-          <select id="topVendorAssignSelect"><option value="">Assign Vendor…</option></select>
-          <label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#475569;font-weight:600;cursor:pointer;padding:0 6px;" title="Permanently assign this product to the vendor — future orders for the same product auto-route.">
-            <input type="checkbox" id="topPermanentAssign" style="width:14px;height:14px;accent-color:#6366f1;cursor:pointer;">
-            Permanent
-          </label>
-          <button class="btn green" onclick="assignVendorFromTopBar()">Assign</button>
+          <select id="orderVendorFilter" class="pox-refine-select-inline" onchange="renderPremiumOrders()"><option value="all">All Vendors</option></select>
         </div>
+      </div>
+
+      <!-- Hidden compat spans — JS still reads/writes these IDs. Also
+           includes the old Bulk Assign vendor select + Permanent checkbox
+           which are used by the floating bulk action bar via shared IDs. -->
+      <div style="display:none;">
+        <span id="ordersPendingCount">0</span>
+        <span id="ordersNoTrackingCount">0</span>
+        <span id="ordersUnassignedCount">0</span>
+        <span id="ordersSelectedCount">0</span>
+        <button id="ordersStatsToggle" onclick="toggleOrdersStats()"><span id="ordersStatsToggleIcon"></span><span id="ordersStatsToggleLabel"></span></button>
+        <button id="poxCollapseToggle" onclick="togglePoxFilterArea()"><span id="poxCollapseToggleIcon"></span><span id="poxCollapseToggleLabel"></span></button>
+        <div id="poxAttention"><span id="poxAttentionMsg"></span></div>
+        <select id="topVendorAssignSelect"><option value="">Choose vendor…</option></select>
+        <input type="checkbox" id="topPermanentAssign">
       </div>
 
       <!-- Table Panel -->
@@ -15788,19 +15950,54 @@ function toggleOrdersStats() {
   }
 }
 
-// restore collapsed state on page load
+// Force KPI cards visible on every page load — the old collapsed-state
+// restore is disabled because the visible "Hide" toggle was removed in
+// the cleaner Orders header. We also wipe any stale localStorage flag
+// from previous sessions so tenants don't end up with hidden stats.
 (function() {
-  if (localStorage.getItem("ordersStatsCollapsed") === "1") {
-    const wrap = document.getElementById("ordersStatsWrap");
-    if (wrap) {
-      wrap.style.maxHeight = "0";
-      wrap.style.opacity = "0";
-      wrap.dataset.collapsed = "1";
-      const icon = document.getElementById("ordersStatsToggleIcon");
-      const label = document.getElementById("ordersStatsToggleLabel");
-      if (icon) icon.textContent = "▼";
-      if (label) label.textContent = "Show more";
+  try { localStorage.removeItem("ordersStatsCollapsed"); } catch(_) {}
+  const wrap = document.getElementById("ordersStatsWrap");
+  if (wrap) {
+    wrap.style.maxHeight = "";
+    wrap.style.opacity   = "";
+    wrap.dataset.collapsed = "0";
+  }
+})();
+
+/* ─────────────────────────────────────────────────────────────
+   Hide / Show the KPI cards + Refine/Bulk panel as a unit.
+   Search + chip filters stay visible. Maximizes table space.
+   ───────────────────────────────────────────────────────────── */
+function togglePoxFilterArea(){
+  const sec = document.getElementById("ordersSection");
+  if (!sec) return;
+  const wasCollapsed = sec.classList.contains("pox-filters-collapsed");
+  const willCollapse = !wasCollapsed;
+  sec.classList.toggle("pox-filters-collapsed", willCollapse);
+  const label = document.getElementById("poxCollapseToggleLabel");
+  if (label) label.textContent = willCollapse ? "Show filters" : "Hide filters";
+  try { localStorage.setItem("poxFiltersCollapsed", willCollapse ? "1" : "0"); } catch(_){}
+}
+
+// Filters are collapsed by default. Only EXPAND on load if the user
+// previously chose to show them. (Persisted as "poxFiltersCollapsed" =
+// "0" when expanded, "1" when collapsed.)
+(function() {
+  const sec = document.getElementById("ordersSection");
+  if (!sec) return;
+  const label = document.getElementById("poxCollapseToggleLabel");
+  try {
+    if (localStorage.getItem("poxFiltersCollapsed") === "0") {
+      sec.classList.remove("pox-filters-collapsed");
+      if (label) label.textContent = "Hide filters";
+    } else {
+      // default OR explicitly "1" → keep collapsed
+      sec.classList.add("pox-filters-collapsed");
+      if (label) label.textContent = "Show filters";
     }
+  } catch(_){
+    sec.classList.add("pox-filters-collapsed");
+    if (label) label.textContent = "Show filters";
   }
 })();
 
@@ -15857,6 +16054,16 @@ function getFilteredOrders(){
   if(quick==="unassigned")orders=orders.filter(o=>!(o.assigned_vendor_name||o.vendor_name||o.assigned_vendor));
   if(quick==="vendor_assigned")orders=orders.filter(o=>(o.assigned_vendor_name||o.vendor_name||o.assigned_vendor));
   if(quick==="no_tracking")orders=orders.filter(o=>!o.tracking_number||String(o.tracking_number).toLowerCase().includes("no tracking")||String(o.tracking_number).toLowerCase()==="pending");
+  if(quick==="has_tracking")orders=orders.filter(o=>!!o.tracking_number && !String(o.tracking_number).toLowerCase().includes("no tracking") && String(o.tracking_number).toLowerCase()!=="pending");
+  if(quick==="today"){
+    const _n=new Date(), _y=_n.getFullYear(), _m=_n.getMonth(), _d=_n.getDate();
+    orders=orders.filter(o=>{
+      const s=o.created_at||o.date_created||o.order_date||o.placed_at;
+      if(!s) return false;
+      const dt=new Date(s);
+      return !isNaN(dt.getTime()) && dt.getFullYear()===_y && dt.getMonth()===_m && dt.getDate()===_d;
+    });
+  }
   if(quick==="completed")orders=orders.filter(o=>String(o.vendor_status||"").toLowerCase()==="approved"||String(o.fulfillment_status||"").toLowerCase().includes("fulfill")||String(o.fulfillment_status||"").toLowerCase().includes("deliver")||String(o.fulfillment_status||"").toLowerCase().includes("complet"));
   return orders;
 }
@@ -15878,6 +16085,95 @@ function poxGetPayClass(o){const s=String(o.payment_status||"").toLowerCase();if
 function poxGetPayLabel(o){const s=String(o.payment_status||"").toLowerCase();if(s.includes("paid"))return"Paid";if(s.includes("fail"))return"Payment failed";if(s.includes("cancel"))return"Cancelled";if(s.includes("pending"))return"Pending";return escapeHtml(o.payment_status||"—");}
 function poxGetFulClass(o){const s=String(o.fulfillment_status||"").toLowerCase();if(s.includes("fulfill")||s.includes("deliver")||s.includes("complet"))return "pox-ful-ok";if(s.includes("process")||s.includes("transit"))return "pox-ful-proc";if(s.includes("fail")||s.includes("hold")||s.includes("cancel"))return "pox-ful-fail";return "pox-ful-pend";}
 function poxGetFulLabel(o){const s=String(o.fulfillment_status||"").toLowerCase();if(s.includes("fulfill"))return"Fulfilled";if(s.includes("deliver"))return"Delivered";if(s.includes("complet"))return"Completed";if(s.includes("process"))return"Processing";if(s.includes("transit"))return"In transit";if(s.includes("hold"))return"On hold";if(s.includes("fail"))return"Failed";if(s.includes("cancel"))return"Cancelled";if(s.includes("pending"))return"Pending";return escapeHtml(o.fulfillment_status||"Awaiting");}
+/* Portal-derived single status — the only pill shown in the Status column.
+   Lifecycle: Awaiting (payment pending) → Processing (payment received) →
+   In Transit (tracking added) → Delivered/Completed → (Refunded / Cancelled
+   as branch states). Store's raw payment + fulfillment statuses appear on
+   hover via the cell tooltip. */
+function _poxIsPaid(pay){
+  // WooCommerce uses "processing" for "payment received, order being processed".
+  // Shopify uses "paid" or "captured". Treat all of these as "payment received".
+  return pay.includes("paid") || pay.includes("succ") || pay.includes("captured")
+      || pay.includes("complete") || pay.includes("process") || pay.includes("authorized");
+}
+function poxGetPortalLabel(o){
+  const pay=String(o.payment_status||"").toLowerCase();
+  const ful=String(o.fulfillment_status||"").toLowerCase();
+  const tn =String(o.tracking_number||"").toLowerCase();
+  const hasTracking = tn && tn!=="pending" && !tn.includes("no tracking");
+  if (pay.includes("refund"))                        return "Refunded";
+  if (pay.includes("fail") || pay.includes("cancel"))return "Cancelled";
+  if (ful.includes("deliver"))                       return "Delivered";
+  if (ful.includes("complet") && !pay.includes("pending")) return "Completed";
+  if (hasTracking)                                   return "In Transit";
+  if (ful.includes("fulfill"))                       return "Fulfilled";
+  if (_poxIsPaid(pay))                               return "Processing";
+  return "Awaiting";
+}
+/* ── Customer avatar → country flag (shipping origin) ──────────────
+   Replaces the initials chip with the flag emoji of the order's shipping
+   country. Falls back to initials if no country info is available. */
+const _POX_COUNTRY_MAP = {
+  "pakistan":"PK","united states":"US","united states of america":"US","usa":"US","u.s.a.":"US","u.s.":"US","america":"US",
+  "united kingdom":"GB","uk":"GB","u.k.":"GB","great britain":"GB","england":"GB","scotland":"GB","wales":"GB","northern ireland":"GB",
+  "canada":"CA","australia":"AU","new zealand":"NZ","ireland":"IE",
+  "india":"IN","bangladesh":"BD","sri lanka":"LK","nepal":"NP","afghanistan":"AF","myanmar":"MM","bhutan":"BT","maldives":"MV",
+  "united arab emirates":"AE","uae":"AE","saudi arabia":"SA","ksa":"SA","qatar":"QA","kuwait":"KW","bahrain":"BH","oman":"OM",
+  "iran":"IR","iraq":"IQ","israel":"IL","jordan":"JO","lebanon":"LB","palestine":"PS","syria":"SY","turkey":"TR","türkiye":"TR","yemen":"YE",
+  "germany":"DE","deutschland":"DE","france":"FR","spain":"ES","italy":"IT","portugal":"PT","netherlands":"NL","holland":"NL",
+  "belgium":"BE","luxembourg":"LU","switzerland":"CH","austria":"AT","poland":"PL","czech republic":"CZ","czechia":"CZ",
+  "slovakia":"SK","hungary":"HU","romania":"RO","bulgaria":"BG","greece":"GR","cyprus":"CY","malta":"MT","croatia":"HR",
+  "slovenia":"SI","serbia":"RS","bosnia and herzegovina":"BA","montenegro":"ME","albania":"AL","north macedonia":"MK","macedonia":"MK",
+  "denmark":"DK","sweden":"SE","norway":"NO","finland":"FI","iceland":"IS","estonia":"EE","latvia":"LV","lithuania":"LT",
+  "russia":"RU","ukraine":"UA","belarus":"BY","moldova":"MD","georgia":"GE","armenia":"AM","azerbaijan":"AZ",
+  "kazakhstan":"KZ","uzbekistan":"UZ","turkmenistan":"TM","kyrgyzstan":"KG","tajikistan":"TJ","mongolia":"MN",
+  "china":"CN","japan":"JP","south korea":"KR","korea":"KR","north korea":"KP","taiwan":"TW","hong kong":"HK","macau":"MO","macao":"MO",
+  "vietnam":"VN","viet nam":"VN","thailand":"TH","laos":"LA","cambodia":"KH","malaysia":"MY","singapore":"SG","indonesia":"ID","philippines":"PH","brunei":"BN","timor-leste":"TL","east timor":"TL",
+  "south africa":"ZA","nigeria":"NG","kenya":"KE","ethiopia":"ET","egypt":"EG","morocco":"MA","algeria":"DZ","tunisia":"TN","libya":"LY","sudan":"SD","ghana":"GH","tanzania":"TZ","uganda":"UG","rwanda":"RW","zimbabwe":"ZW","zambia":"ZM","mozambique":"MZ","botswana":"BW","namibia":"NA","angola":"AO","congo":"CG","democratic republic of the congo":"CD","drc":"CD","cameroon":"CM","ivory coast":"CI","côte d'ivoire":"CI","senegal":"SN","mali":"ML","burkina faso":"BF","niger":"NE","chad":"TD","mauritius":"MU","madagascar":"MG","seychelles":"SC","somalia":"SO","eritrea":"ER","djibouti":"DJ","south sudan":"SS","central african republic":"CF","gabon":"GA","benin":"BJ","togo":"TG","sierra leone":"SL","liberia":"LR","guinea":"GN","guinea-bissau":"GW","cape verde":"CV","comoros":"KM","gambia":"GM","lesotho":"LS","swaziland":"SZ","eswatini":"SZ","malawi":"MW","burundi":"BI","equatorial guinea":"GQ",
+  "brazil":"BR","argentina":"AR","chile":"CL","colombia":"CO","peru":"PE","venezuela":"VE","ecuador":"EC","bolivia":"BO","paraguay":"PY","uruguay":"UY","guyana":"GY","suriname":"SR","french guiana":"GF",
+  "mexico":"MX","guatemala":"GT","honduras":"HN","el salvador":"SV","nicaragua":"NI","costa rica":"CR","panama":"PA","belize":"BZ","cuba":"CU","jamaica":"JM","dominican republic":"DO","haiti":"HT","puerto rico":"PR","trinidad and tobago":"TT","bahamas":"BS","barbados":"BB"
+};
+function poxGetCountryISO(o){
+  if (!o) return null;
+  // 1) Explicit code on order
+  const direct = o.country_code || o.shipping_country_code || o.billing_country_code;
+  if (direct && String(direct).length===2) return String(direct).toUpperCase();
+  // 2) Raw data (Shopify / WC payload)
+  try {
+    const raw = o.raw_data || {};
+    const shop = raw.shipping_address || raw.shipping || raw.billing_address || raw.billing || raw.customer_address || {};
+    const code = shop.country_code || shop.countryCode || raw.country_code;
+    if (code && String(code).length===2) return String(code).toUpperCase();
+  } catch(_) {}
+  // 3) Top-level country field (string)
+  const c = String(o.country || "").trim();
+  if (!c) return null;
+  if (c.length===2) return c.toUpperCase();
+  const key = c.toLowerCase().replace(/\./g, "");
+  return _POX_COUNTRY_MAP[key] || null;
+}
+function poxIsoToFlag(iso){
+  if (!iso || iso.length!==2) return null;
+  try {
+    const A=iso.toUpperCase().charCodeAt(0)-65, B=iso.toUpperCase().charCodeAt(1)-65;
+    if (A<0||A>25||B<0||B>25) return null;
+    return String.fromCodePoint(0x1F1E6+A, 0x1F1E6+B);
+  } catch(_) { return null; }
+}
+function poxGetPortalClass(o){
+  const pay=String(o.payment_status||"").toLowerCase();
+  const ful=String(o.fulfillment_status||"").toLowerCase();
+  const tn =String(o.tracking_number||"").toLowerCase();
+  const hasTracking = tn && tn!=="pending" && !tn.includes("no tracking");
+  if (pay.includes("refund"))                        return "pox-portal-refunded";
+  if (pay.includes("fail") || pay.includes("cancel"))return "pox-portal-cancelled";
+  if (ful.includes("deliver"))                       return "pox-portal-delivered";
+  if (ful.includes("complet") && !pay.includes("pending")) return "pox-portal-delivered";
+  if (hasTracking)                                   return "pox-portal-transit";
+  if (ful.includes("fulfill"))                       return "pox-portal-delivered";
+  if (_poxIsPaid(pay))                               return "pox-portal-processing";
+  return "pox-portal-awaiting";
+}
 function poxGetAvatarClass(initials){const c=(initials.charCodeAt(0)||65)+(initials.charCodeAt(1)||65);return`pox-av${(c%7)+1}`;}
 function renderPremiumOrders(){
   const table=document.getElementById("ordersTable"); if(!table)return;
@@ -15886,6 +16182,11 @@ function renderPremiumOrders(){
   table.innerHTML=orders.map(order=>{
     const initials=String(order.customer_name||"NA").split(" ").map(x=>x[0]).join("").slice(0,2).toUpperCase();
     const avClass=poxGetAvatarClass(initials);
+    const _iso=poxGetCountryISO(order);
+    const _flag=poxIsoToFlag(_iso);
+    const customerCircle=_flag
+      ?`<div class="pox-avatar pox-flag-av" title="${escapeHtml(order.country||_iso||"")}">${_flag}</div>`
+      :`<div class="pox-avatar ${avClass}">${escapeHtml(initials)}</div>`;
     const dateText=order.created_at?new Date(order.created_at).toLocaleDateString():"-";
     const barClass=poxGetBarClass(order);
     const payClass=poxGetPayClass(order); const payLabel=poxGetPayLabel(order);
@@ -15896,7 +16197,7 @@ function renderPremiumOrders(){
     const isAutoAssigned=order.assignment_type==="permanent_auto";
     const hasStockAssignment = !!_soOrderAssignments[String(order.id)];
     const vendorHtml=vendorName
-      ?`<div class="pox-vendor-cell"><div class="pox-avatar pox-av4" style="width:26px;height:26px;font-size:9px;">${escapeHtml(vendorVI)}</div><div style="display:flex;flex-direction:column;gap:2px;"><span class="pox-vendor-name">${escapeHtml(vendorName)}</span>${isAutoAssigned?`<span style="font-size:9px;font-weight:800;color:#7c3aed;letter-spacing:.3px;">⚡ Auto Assigned</span>`:""}</div></div>`
+      ?`<div class="pox-vendor-cell" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><span class="pox-vendor-name">${escapeHtml(vendorName)}</span>${isAutoAssigned?`<span class="pox-vendor-auto-pill" title="Permanently auto-routed to this vendor for the same product"><svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" style="margin-right:3px;"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg>Auto</span>`:""}</div></div>`
       : hasStockAssignment
         ? `<span style="font-size:11px;color:var(--vf-muted);padding:4px 0;display:inline-block;" title="Remove stock assignment first">📦 Stock assigned</span>`
         : `<span class="pox-vendor-unassigned" onclick="poxOpenVendorAssign(event,${order.id})">＋ Assign vendor</span>`;
@@ -15908,19 +16209,32 @@ function renderPremiumOrders(){
     const tLive=order.live_tracking_status?escapeHtml(String(order.live_tracking_status).slice(0,40)):"";
     const tLiveLow=(tLive||"").toLowerCase();
     const tLiveClass=tLiveLow.includes("deliver")||tLiveLow.includes("complet")?"pox-tracking-eta delivered":tLiveLow.includes("error")||tLiveLow.includes("fail")||tLiveLow.includes("exception")?"pox-tracking-eta pox-tracking-rejected":"pox-tracking-eta";
-    const trackingHtml=hasTracking
-      ?`<div class="pox-tracking">
-          <div class="pox-tracking-row">
-            ${tCompany?`<span class="pox-tracking-courier">${tCompany}</span>`:""}
-            <span class="pox-tracking-id">${tId}</span>
+    const _liveStatusPill = tLive ? (
+      tLiveLow.includes("deliver") || tLiveLow.includes("complet")
+        ? `<span class="pox-delivery-badge delivered" title="${tLive}"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Delivered</span>`
+        : (tLiveLow.includes("error") || tLiveLow.includes("fail") || tLiveLow.includes("exception"))
+          ? `<span class="pox-delivery-badge rejected" title="${tLive}"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Issue</span>`
+          : `<span class="pox-delivery-badge transit" title="${tLive}"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h5l2 3v5h-7"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>In Transit</span>`
+    ) : "";
+    const trackingHtml = hasTracking
+      ?`<div class="pox-tracking-pro">
+          ${tUrl
+            ?`<a class="pox-tracking-block" href="${tUrl}" target="_blank" onclick="event.stopPropagation()" title="Track shipment${tCompany?` · ${tCompany}`:""}">
+                ${tCompany?`<span class="pox-tracking-courier-pro">${tCompany}</span>`:""}
+                <span class="pox-tracking-id-pro">${tId}<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="opacity:.55;flex-shrink:0;"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></span>
+              </a>`
+            :`<div class="pox-tracking-block-static">
+                ${tCompany?`<span class="pox-tracking-courier-pro">${tCompany}</span>`:""}
+                <span class="pox-tracking-id-pro">${tId}</span>
+              </div>`}
+          <div class="pox-tracking-foot">
+            ${_liveStatusPill}
+            <button class="pox-refresh-mini" onclick="event.stopPropagation();fetchLiveTrackingStatus(${order.id},this)" title="Refresh live status">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            </button>
           </div>
-          <div class="pox-tracking-row">
-            ${tUrl?`<a class="pox-track-link" href="${tUrl}" target="_blank" onclick="event.stopPropagation()">Track ↗</a>`:""}
-            ${tUrl?`<button class="pox-check-status-btn" onclick="event.stopPropagation();fetchLiveTrackingStatus(${order.id},this)">⟳</button>`:""}
-          </div>
-          ${tLive?`<div class="pox-tracking-row"><span class="${tLiveClass}">${tLive}</span></div>`:""}
         </div>`
-      :`<span class="pox-no-track">⚠ No tracking yet</span>`;
+      :`<span class="pox-no-track" title="No tracking number added yet"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h16.9a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>No tracking yet</span>`;
     return `<tr onclick="openOrderDetail(${order.id})" class="${isSelected?"pox-selected":""}">
   <td class="pox-row-bar"><div class="${barClass}"></div></td>
   <td onclick="event.stopPropagation()">
@@ -15928,10 +16242,10 @@ function renderPremiumOrders(){
     <div class="pox-cb row-cb ${isSelected?"on":""}" onclick="poxToggleRow(this,${order.id})"></div>
   </td>
   <td><div class="pox-order-id">#${escapeHtml(order.external_order_id||String(order.id))}</div><div class="pox-order-date">${escapeHtml(dateText)}</div></td>
-  <td><div class="pox-customer"><div class="pox-avatar ${avClass}">${escapeHtml(initials)}</div><div><div class="pox-cname">${escapeHtml(order.customer_name||"—")}</div><div class="pox-cemail">${escapeHtml(order.customer_email||"")}</div></div></div></td>
+  <td><div class="pox-customer">${customerCircle}<div><div class="pox-cname">${escapeHtml(order.customer_name||"—")}</div><div class="pox-cemail">${escapeHtml(order.customer_email||"")}</div></div></div></td>
   <td>${buildProductCellHTML(order)}</td>
   <td><span class="pox-amount">${escapeHtml(getCurrencySymbol(order.currency))}${escapeHtml(order.total_price||"0")}</span></td>
-  <td><div class="pox-status-stack"><span class="pox-pill ${payClass}"><span class="pox-dot"></span>${payLabel}</span><span class="pox-pill ${fulClass}"><span class="pox-dot"></span>${fulLabel}</span></div></td>
+  <td><span class="pox-pill pox-portal-pill ${poxGetPortalClass(order)}" title="Store status — Payment: ${payLabel} · Fulfillment: ${fulLabel}"><span class="pox-dot"></span>${poxGetPortalLabel(order)}</span></td>
   <td onclick="event.stopPropagation()">${vendorHtml}</td>
   <td onclick="event.stopPropagation()">${buildStockAssignCell(order)}</td>
   <td onmouseenter="poxShowTrackTip(event,this,${order.id})" onmouseleave="poxHideTrackTip()">${trackingHtml}</td>
@@ -15942,31 +16256,54 @@ function renderPremiumOrders(){
 function renderPremiumOrderStats(){
   const orders=currentOrders||[];
   const total=orders.length;
+
+  // ───────── Today filter — orders with created_at on the local current date ─────────
+  const _now=new Date();
+  const _todayY=_now.getFullYear(), _todayM=_now.getMonth(), _todayD=_now.getDate();
+  const isToday=(s)=>{
+    if(!s) return false;
+    const d=new Date(s);
+    if(isNaN(d.getTime())) return false;
+    return d.getFullYear()===_todayY && d.getMonth()===_todayM && d.getDate()===_todayD;
+  };
+  const todaysOrders=orders.filter(o=>isToday(o.created_at||o.date_created||o.order_date||o.placed_at));
+  const todaysCount=todaysOrders.length;
+  const todaysRevenue=todaysOrders.reduce((s,o)=>s+parseFloat(o.total_price||0),0);
+
+  // ───────── Tracking-based KPIs (user's spec) ─────────
+  const hasTracking=(o)=> !!o.tracking_number && !String(o.tracking_number).toLowerCase().includes("no tracking") && String(o.tracking_number).toLowerCase()!=="pending";
+  const noTracking=orders.filter(o=>!hasTracking(o)).length;
+  const withTracking=orders.filter(o=>hasTracking(o)).length;
+
+  // ───────── Other counts (for chips / hidden counters) ─────────
   const pending=orders.filter(o=>String(o.payment_status||o.fulfillment_status||"").toLowerCase().includes("pending")||String(o.fulfillment_status||"").toLowerCase().includes("processing")).length;
-  const noTracking=orders.filter(o=>!o.tracking_number||String(o.tracking_number).toLowerCase().includes("no tracking")||String(o.tracking_number).toLowerCase()==="pending").length;
   const assigned=orders.filter(o=>(o.assigned_vendor_name||o.vendor_name||o.assigned_vendor)).length;
   const unassigned=total-assigned;
   const failedPay=orders.filter(o=>String(o.payment_status||"").toLowerCase().includes("fail")).length;
-  const needAttention=unassigned+failedPay;
-  // revenue
-  const currencies=[...new Set(orders.map(o=>o.currency||"").filter(Boolean))];
+
+  // Currency for revenue formatting (prefer today's, fall back to overall)
+  const currencies=[...new Set((todaysCount?todaysOrders:orders).map(o=>o.currency||"").filter(Boolean))];
   const currency=currencies[0]||"";
-  const revenue=orders.reduce((s,o)=>s+parseFloat(o.total_price||0),0);
-  const revenueStr=revenue%1===0?revenue.toFixed(0):revenue.toFixed(2);
+  const revenueStr=todaysRevenue%1===0?todaysRevenue.toFixed(0):todaysRevenue.toFixed(2);
+
   const set=(id,val)=>{const el=document.getElementById(id);if(el)el.innerText=val;};
-  // 4 stat cards
-  set("ordersTotalCount",total);
-  set("poxRevenueVal",getCurrencySymbol(currency)+revenueStr);
-  set("poxNeedAttentionVal",needAttention);
-  set("ordersVendorAssignedCount",assigned);
-  // deltas
-  const deltaParts=[];
-  if(noTracking>0) deltaParts.push(`${noTracking} no tracking`);
-  if(failedPay>0) deltaParts.push(`${failedPay} failed payment${failedPay>1?"s":""}`);
-  set("poxDeltaAttention",deltaParts.length?deltaParts.join(" · "):(needAttention>0?`${unassigned} unassigned`:"All good ✓"));
-  set("poxDeltaRevenue",total>0?"Across "+total+" orders":"No orders loaded");
-  set("poxDeltaOrders",total>0?"From "+orders.length+" synced":"Fetch orders above");
-  set("poxDeltaDelivery",assigned>0?assigned+" vendor assigned":"No assigned orders");
+
+  // ───────── 4 KPI cards (per user spec) ─────────
+  //  1) Today's Orders     = count of orders created today
+  //  2) Today's Revenue    = sum of total_price for today's orders
+  //  3) Need Attention     = orders WITHOUT a tracking number
+  //  4) Out for Delivery   = orders WITH a tracking number
+  set("ordersTotalCount", todaysCount);
+  set("poxRevenueVal",    getCurrencySymbol(currency)+revenueStr);
+  set("poxNeedAttentionVal", noTracking);
+  set("ordersVendorAssignedCount", withTracking);
+
+  // Deltas (sub-text under each card)
+  set("poxDeltaOrders",    todaysCount>0?`From ${total} synced`:`${total} synced total · none today`);
+  set("poxDeltaRevenue",   todaysCount>0?`Across ${todaysCount} order${todaysCount>1?"s":""} today`:"No orders today");
+  set("poxDeltaAttention", noTracking>0?`${noTracking} of ${total} orders`:"All orders tracked ✓");
+  set("poxDeltaDelivery",  withTracking>0?`${withTracking} of ${total} with tracking`:"No tracking added yet");
+
   // hidden counts for chip filter
   set("ordersPendingCount",pending); set("ordersNoTrackingCount",noTracking);
   set("ordersUnassignedCount",unassigned); set("ordersSelectedCount",selectedOrderIds.size);
@@ -17593,12 +17930,12 @@ async function openOrderDetail(orderId){
           </div>
         </div>
 
-        <!-- Order Activity & Notes (NEW) — WC notes + Drop Sigma activity merged -->
+        <!-- Order Activity — WC payment events + Drop Sigma activity merged -->
         <div class="od-card" id="odNotesCard">
           <div class="od-card-header">
             <span class="od-card-title">
               <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8.689c0-.864.933-1.406 1.683-.977l7.108 4.061a1.125 1.125 0 0 1 0 1.954l-7.108 4.061A1.125 1.125 0 0 1 3 16.811V8.69ZM12.75 8.689c0-.864.933-1.406 1.683-.977l7.108 4.061a1.125 1.125 0 0 1 0 1.954l-7.108 4.061a1.125 1.125 0 0 1-1.683-.977V8.69Z"/></svg>
-              Order Activity &amp; Notes
+              Order Activity
               <span id="odNotesCount" style="font-size:11px;font-weight:700;background:#eef2ff;color:#4338ca;padding:1px 8px;border-radius:99px;margin-left:4px;">—</span>
             </span>
             <div style="display:flex;align-items:center;gap:8px;">
@@ -17610,15 +17947,15 @@ async function openOrderDetail(orderId){
           </div>
           <div class="od-card-body" style="padding-top:12px;padding-bottom:12px;">
 
-            <!-- Add-note bar -->
-            <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:12px;padding:10px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:9px;">
-              <select id="odNoteType" style="padding:8px 10px;border:1px solid #e5e7eb;border-radius:7px;background:#fff;font-family:inherit;font-size:12px;font-weight:600;color:#111827;outline:none;cursor:pointer;min-width:180px;">
-                <option value="private">🔒 Private note (admin-only)</option>
-                <option value="customer">📧 Note to customer (emails them)</option>
-              </select>
-              <textarea id="odNoteText" placeholder="Write a note about this order…" rows="1" style="flex:1;min-height:38px;padding:8px 11px;border:1px solid #e5e7eb;border-radius:7px;font-family:inherit;font-size:12.5px;color:#111827;background:#fff;resize:vertical;outline:none;line-height:1.45;"></textarea>
-              <button id="odNoteAddBtn" onclick="odNoteAdd(${o.id})" style="padding:9px 16px;border:none;border-radius:7px;background:#6366f1;color:#fff;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;transition:.12s;">＋ Add</button>
-            </div>
+            <!-- Add-note bar — removed per tenant request. Hidden inputs
+                 kept so any JS that targets odNoteType / odNoteText /
+                 odNoteAddBtn doesn't crash. -->
+            <select id="odNoteType" style="display:none;">
+              <option value="private">Private note</option>
+              <option value="customer">Note to customer</option>
+            </select>
+            <textarea id="odNoteText" style="display:none;"></textarea>
+            <button id="odNoteAddBtn" onclick="odNoteAdd(${o.id})" style="display:none;">＋ Add</button>
 
             <!-- Filter pills -->
             <div id="odNotesFilters" style="display:flex;align-items:center;gap:5px;margin-bottom:10px;flex-wrap:wrap;">
@@ -30384,38 +30721,50 @@ document.addEventListener("keydown", e => {
 
 <!-- ═══════════════ PRODUCT IMAGE LIGHTBOX (shared) ═══════════════ -->
 <style>
-  .ds-imgbox{position:fixed;inset:0;background:rgba(8,11,22,.85);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);display:none;align-items:center;justify-content:center;z-index:99999;animation:dsImgboxFade .22s ease-out;padding:24px}
-  .ds-imgbox.open{display:flex}
+  /* Card-style image lightbox — header (caption + close) / stage (image) / footer (actions).
+     Clean modal that looks polished even while the image is still loading. */
+  .ds-imgbox{position:fixed;inset:0;background:rgba(15,23,42,.62);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);display:none;align-items:center;justify-content:center;z-index:99999;animation:dsImgboxFade .22s ease-out;padding:24px;}
+  .ds-imgbox.open{display:flex;}
   @keyframes dsImgboxFade{from{opacity:0}to{opacity:1}}
-  .ds-imgbox-wrap{position:relative;max-width:92vw;max-height:88vh;display:flex;flex-direction:column;align-items:center;gap:18px;animation:dsImgboxPop .28s cubic-bezier(.4,1.6,.5,1)}
-  @keyframes dsImgboxPop{from{transform:scale(.92);opacity:0}to{transform:scale(1);opacity:1}}
-  .ds-imgbox-img{max-width:92vw;max-height:74vh;border-radius:14px;box-shadow:0 30px 80px rgba(0,0,0,.55);display:block;background:#fff;object-fit:contain}
-  .ds-imgbox-caption{color:#fff;font-size:13px;font-weight:600;opacity:.85;text-align:center;max-width:560px;line-height:1.4;text-shadow:0 2px 6px rgba(0,0,0,.5)}
-  .ds-imgbox-toolbar{display:flex;gap:10px;align-items:center}
-  .ds-imgbox-btn{padding:11px 22px;background:linear-gradient(135deg,#6366f1,#a855f7);border:none;border-radius:11px;color:#fff;font-weight:700;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;box-shadow:0 8px 22px rgba(168,85,247,.45);transition:.18s;font-family:inherit}
-  .ds-imgbox-btn:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(168,85,247,.6)}
-  .ds-imgbox-btn.secondary{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);box-shadow:none}
-  .ds-imgbox-btn.secondary:hover{background:rgba(255,255,255,.18);box-shadow:none}
-  .ds-imgbox-close{position:absolute;top:-14px;right:-14px;width:38px;height:38px;border-radius:50%;background:#fff;border:none;cursor:pointer;color:#0f172a;font-size:15px;font-weight:700;box-shadow:0 6px 18px rgba(0,0,0,.4);transition:.18s;display:flex;align-items:center;justify-content:center}
-  .ds-imgbox-close:hover{transform:scale(1.1) rotate(90deg);background:#fee2e2;color:#dc2626}
-  .ds-imgbox-spinner{width:48px;height:48px;border:4px solid rgba(255,255,255,.15);border-top-color:#a855f7;border-radius:50%;animation:dsImgboxSpin .8s linear infinite;position:absolute;left:50%;top:35%;margin-left:-24px;display:none}
-  .ds-imgbox.loading .ds-imgbox-spinner{display:block}
-  .ds-imgbox.loading .ds-imgbox-img{opacity:.3}
+  .ds-imgbox-wrap{position:relative;width:100%;max-width:640px;background:#fff;border-radius:18px;box-shadow:0 30px 80px rgba(0,0,0,.45);overflow:hidden;animation:dsImgboxPop .26s cubic-bezier(.34,1.4,.5,1);display:flex;flex-direction:column;}
+  @keyframes dsImgboxPop{from{transform:scale(.95) translateY(8px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}
+  /* Header */
+  .ds-imgbox-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid #f1f5f9;gap:12px;}
+  .ds-imgbox-caption{font-size:13.5px;font-weight:700;color:#0f172a;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.01em;}
+  .ds-imgbox-close{width:30px;height:30px;border-radius:8px;background:#f1f5f9;border:none;cursor:pointer;color:#475569;font-size:13px;display:inline-flex;align-items:center;justify-content:center;transition:.15s;flex-shrink:0;}
+  .ds-imgbox-close:hover{background:#fee2e2;color:#dc2626;}
+  /* Stage */
+  .ds-imgbox-stage{position:relative;background:repeating-conic-gradient(#f8fafc 0% 25%, #f1f5f9 0% 50%) 50% / 22px 22px;min-height:340px;display:flex;align-items:center;justify-content:center;padding:24px;}
+  .ds-imgbox-img{max-width:100%;max-height:62vh;object-fit:contain;border-radius:8px;display:block;transition:opacity .25s;}
+  .ds-imgbox.loading .ds-imgbox-img{opacity:0;}
+  /* Spinner — clean, centered, brand-tinted */
+  .ds-imgbox-spinner{position:absolute;width:42px;height:42px;border:3px solid #e2e8f0;border-top-color:#6366f1;border-radius:50%;animation:dsImgboxSpin .9s linear infinite;display:none;}
+  .ds-imgbox.loading .ds-imgbox-spinner{display:block;}
   @keyframes dsImgboxSpin{to{transform:rotate(360deg)}}
-  /* Clickable image affordance */
-  .order-product-img,.od-prod-thumb{cursor:zoom-in;transition:transform .18s,box-shadow .18s}
-  .order-product-img:hover,.od-prod-thumb:hover{transform:scale(1.05);box-shadow:0 6px 14px rgba(99,102,241,.3)}
+  /* Footer */
+  .ds-imgbox-toolbar{padding:14px 18px;border-top:1px solid #f1f5f9;display:flex;align-items:center;justify-content:flex-end;gap:10px;}
+  .ds-imgbox-btn{padding:9px 18px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border:none;border-radius:9px;color:#fff;font-weight:700;font-size:12.5px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 4px 14px rgba(99,102,241,.28);transition:.15s;font-family:inherit;letter-spacing:.01em;}
+  .ds-imgbox-btn:hover{filter:brightness(1.08);box-shadow:0 6px 18px rgba(99,102,241,.38);}
+  .ds-imgbox-btn:disabled{opacity:.7;cursor:wait;}
+  .ds-imgbox-btn.secondary{background:#f1f5f9;color:#0f172a;box-shadow:none;}
+  .ds-imgbox-btn.secondary:hover{background:#e2e8f0;}
+  /* Clickable image affordance (table thumbnails) */
+  .order-product-img,.od-prod-thumb{cursor:zoom-in;transition:transform .18s,box-shadow .18s;}
+  .order-product-img:hover,.od-prod-thumb:hover{transform:scale(1.04);box-shadow:0 4px 12px rgba(99,102,241,.22);}
 </style>
 
 <div class="ds-imgbox" id="dsImgbox" onclick="if(event.target===this)dsImgboxClose()">
   <div class="ds-imgbox-wrap">
-    <div class="ds-imgbox-caption" id="dsImgboxCaption">Product image</div>
-    <div style="position:relative;">
-      <img class="ds-imgbox-img" id="dsImgboxImg" src="" alt="Product image" />
-      <div class="ds-imgbox-spinner"></div>
+    <div class="ds-imgbox-header">
+      <div class="ds-imgbox-caption" id="dsImgboxCaption">Product image</div>
       <button class="ds-imgbox-close" onclick="dsImgboxClose()" title="Close (Esc)"><i class="fa-solid fa-xmark"></i></button>
     </div>
+    <div class="ds-imgbox-stage">
+      <img class="ds-imgbox-img" id="dsImgboxImg" src="" alt="Product image" />
+      <div class="ds-imgbox-spinner"></div>
+    </div>
     <div class="ds-imgbox-toolbar">
+      <button class="ds-imgbox-btn secondary" onclick="dsImgboxClose()"><i class="fa-solid fa-xmark"></i> Close</button>
       <button class="ds-imgbox-btn" onclick="dsImgboxDownload()" id="dsImgboxDlBtn"><i class="fa-solid fa-download"></i> Download</button>
     </div>
   </div>
