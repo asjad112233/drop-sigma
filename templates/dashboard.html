@@ -3208,6 +3208,173 @@ tr:hover .pox-refresh-mini{opacity:.7;}
 .ov-recent-row td{padding:10px 10px;border-bottom:1px solid var(--vf-line);}
 .ov-recent-row:last-child td{border-bottom:none;}
 .ov-recent-row:hover td{background:rgba(109,91,255,.04);}
+
+/* ════════════════════════════════════════════════════════════════════
+   PRO OVERVIEW — Refined hero + tier 2/3 layout
+   ════════════════════════════════════════════════════════════════════ */
+
+/* Attention banner — slim amber */
+.ov-alert-bar{background:linear-gradient(90deg,#fef3c7,#fffbeb);border:1px solid #fcd34d;border-radius:10px;padding:9px 14px;display:flex;align-items:center;gap:10px;font-size:12.5px;margin-bottom:14px;}
+.ov-alert-ic{color:#b45309;display:inline-flex;flex-shrink:0;}
+.ov-alert-msg{flex:1;color:#78350f;font-weight:600;line-height:1.4;}
+.ov-alert-msg b{color:#7c2d12;font-weight:700;}
+.ov-alert-btn{padding:5px 11px;border-radius:7px;font-size:11.5px;font-weight:700;background:rgba(120,53,15,.92);color:#fff;border:none;cursor:pointer;font-family:inherit;}
+.ov-alert-btn:hover{background:#7c2d12;}
+
+/* Hero strip — 4 slim KPI items in a row */
+.ov-hero-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;}
+.ov-hero-item{background:var(--vf-surface);border:1px solid var(--vf-line);border-radius:12px;padding:12px 14px;cursor:pointer;display:flex;align-items:center;gap:11px;transition:all .15s ease;min-width:0;}
+.ov-hero-item:hover{transform:translateY(-1px);border-color:#cbd5e1;box-shadow:0 4px 12px rgba(15,23,42,.06);}
+.ov-hero-item-alert{background:linear-gradient(180deg,rgba(245,158,11,.04),var(--vf-surface));border-color:rgba(245,158,11,.30);}
+.ov-hero-ic{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.ov-hero-meta{min-width:0;display:flex;flex-direction:column;line-height:1.2;}
+.ov-hero-label{font-size:10.5px;color:var(--vf-muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px;}
+.ov-hero-val{font-size:20px;font-weight:800;color:var(--vf-text);letter-spacing:-.01em;line-height:1.1;margin-bottom:2px;}
+.ov-hero-val-warn{color:#b45309;}
+.ov-hero-sub{font-size:11px;color:var(--vf-muted);font-weight:500;}
+
+/* Tier 2 — action area grid */
+.ov-tier2-grid{display:grid;grid-template-columns:1fr 320px;gap:14px;margin-bottom:24px;}
+.ov-tier2-left{display:flex;flex-direction:column;gap:14px;min-width:0;}
+.ov-tier2-right{display:flex;flex-direction:column;gap:14px;}
+
+/* Refined card system */
+.ov-card-pro{background:var(--vf-surface);border:1px solid var(--vf-line);border-radius:14px;padding:16px 18px;box-shadow:0 1px 2px rgba(15,23,42,.03);transition:.15s ease;}
+.ov-card-pro .ov-card-head{margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;}
+.ov-card-title-pro{display:flex;align-items:center;gap:9px;font-size:13px;font-weight:800;color:var(--vf-text);letter-spacing:-.005em;}
+.ov-card-ic{width:24px;height:24px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.ov-card-amt{font-size:13px;font-weight:800;color:#6366f1;letter-spacing:-.01em;}
+.ov-link-btn-pro{background:transparent;border:none;color:#6366f1;font-size:11.5px;font-weight:700;cursor:pointer;padding:3px 7px;border-radius:6px;font-family:inherit;transition:.12s;}
+.ov-link-btn-pro:hover{background:rgba(99,102,241,.08);}
+.ov-card-clickable{cursor:pointer;}
+.ov-card-clickable:hover{border-color:#cbd5e1;box-shadow:0 4px 12px rgba(15,23,42,.06);}
+.ov-card-arrow{font-size:14px;font-weight:800;color:var(--vf-muted);transition:.12s;}
+.ov-card-clickable:hover .ov-card-arrow{color:#6366f1;transform:translateX(2px);}
+
+/* Queue block (large number with sub) */
+.ov-queue-block{display:flex;align-items:baseline;gap:11px;padding:4px 0 2px;}
+.ov-queue-num{font-size:30px;font-weight:900;color:#6366f1;letter-spacing:-.02em;line-height:1;}
+.ov-queue-sub{color:var(--vf-muted);font-size:12px;line-height:1.45;font-weight:500;}
+
+/* Compact recent orders table */
+.ov-recent-table{width:100%;border-collapse:collapse;font-size:12.5px;}
+.ov-recent-table thead{background:var(--vf-surface-2,#f8fafc);}
+.ov-recent-table thead th{text-align:left;padding:9px 10px;font-size:10px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--vf-line);}
+.ov-recent-table tbody tr td{padding:10px;border-bottom:1px solid var(--vf-line);}
+.ov-recent-table tbody tr:last-child td{border-bottom:none;}
+
+/* Section divider for tier 3 */
+.ov-section-divider{display:flex;align-items:center;gap:14px;margin:24px 0 14px;}
+.ov-section-divider::before, .ov-section-divider::after{content:"";flex:1;height:1px;background:var(--vf-line);}
+.ov-section-divider-label{font-size:11px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.1em;}
+
+/* Tier 3 — below the fold supporting grid */
+.ov-tier3-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px;}
+
+/* Email card stats row */
+.ov-email-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;}
+.ov-email-stat{background:var(--vf-surface-2,#f8fafc);border:1px solid var(--vf-line);border-radius:9px;padding:9px 6px;text-align:center;}
+.ov-email-stat-val{font-size:18px;font-weight:900;color:var(--vf-text);letter-spacing:-.01em;line-height:1.1;}
+.ov-email-stat-label{font-size:9.5px;font-weight:700;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.05em;margin-top:2px;}
+.ov-email-unread-label{font-size:10px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;}
+
+/* Period selector bar */
+.ov-period-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;}
+.ov-period-left{display:flex;align-items:center;gap:10px;}
+.ov-period-label{font-size:11px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.06em;}
+.ov-period-pills{display:inline-flex;background:var(--vf-surface);border:1px solid var(--vf-line);border-radius:10px;padding:3px;gap:2px;}
+.ov-pp{padding:6px 13px;font-size:12px;font-weight:700;color:var(--vf-muted);border:none;background:none;border-radius:7px;cursor:pointer;font-family:inherit;transition:.12s;}
+.ov-pp:hover{color:var(--vf-text);}
+.ov-pp-on{background:#0f172a;color:#fff;box-shadow:0 1px 2px rgba(15,23,42,.08);}
+.ov-pp-on:hover{color:#fff;}
+.ov-period-right{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;color:var(--vf-muted);}
+.ov-live-dot{display:inline-block;width:7px;height:7px;background:#10b981;border-radius:50%;box-shadow:0 0 0 3px rgba(16,185,129,.15);animation:ovPulse 2s ease-in-out infinite;}
+@keyframes ovPulse{0%,100%{opacity:1;}50%{opacity:.5;}}
+.ov-live-text{color:#10b981;font-weight:700;font-size:11px;}
+
+/* Hero strip 6-col */
+.ov-hero-6{grid-template-columns:repeat(6,1fr);}
+.ov-hero-item{flex-direction:column;align-items:flex-start;gap:6px;padding:13px 14px 11px;}
+.ov-hero-row{display:flex;align-items:center;justify-content:space-between;width:100%;gap:7px;margin-bottom:1px;}
+.ov-trend{font-size:9.5px;font-weight:800;padding:2px 6px;border-radius:99px;letter-spacing:.02em;line-height:1.4;}
+.ov-trend.up{background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;}
+.ov-trend.down{background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;}
+.ov-trend.neutral{background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;}
+
+/* Mini legend dot for chart cards */
+.ov-mini-legend{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--vf-muted);}
+.ov-mini-legend::before{content:"";width:8px;height:8px;border-radius:2px;background:var(--c, #6366f1);}
+
+/* Tier 2 grid — 2 columns (chart wider, funnel narrow) */
+.ov-tier2-grid{grid-template-columns:1fr 320px;}
+.ov-tier2-right-narrow{display:flex;flex-direction:column;gap:14px;}
+
+/* Sales Funnel */
+.ov-funnel{display:flex;flex-direction:column;gap:10px;padding:2px 0;}
+.ov-funnel-step{display:flex;flex-direction:column;gap:5px;}
+.ov-funnel-bar{height:14px;width:var(--p);background:var(--c);border-radius:3px 99px 99px 3px;transition:width .5s ease;position:relative;}
+.ov-funnel-bar::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(255,255,255,.0),rgba(255,255,255,.25));border-radius:inherit;}
+.ov-funnel-meta{display:flex;align-items:center;justify-content:space-between;font-size:11.5px;}
+.ov-funnel-name{color:var(--vf-text);font-weight:700;}
+.ov-funnel-num{color:var(--vf-muted);font-weight:700;font-variant-numeric:tabular-nums;}
+
+/* Tier 3 action grid — 4 columns */
+.ov-tier3-grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;}
+.ov-action-card{background:var(--vf-surface);border:1px solid var(--vf-line);border-radius:14px;padding:14px 16px;cursor:pointer;transition:.15s ease;}
+.ov-action-card:hover{transform:translateY(-2px);border-color:#cbd5e1;box-shadow:0 8px 20px rgba(15,23,42,.07);}
+.ov-action-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.ov-action-ic{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;}
+.ov-action-arr{font-size:15px;font-weight:800;color:var(--vf-muted);transition:.12s;}
+.ov-action-card:hover .ov-action-arr{color:#6366f1;transform:translateX(2px);}
+.ov-action-num{font-size:26px;font-weight:900;letter-spacing:-.02em;color:var(--vf-text);line-height:1;margin-bottom:5px;}
+.ov-action-label{font-size:11.5px;font-weight:800;color:var(--vf-text);margin-bottom:2px;letter-spacing:-.005em;}
+.ov-action-sub{font-size:10.5px;color:var(--vf-muted);font-weight:500;}
+
+/* Tier 4 insights grid */
+.ov-insights-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px;}
+.ov-card-wide{grid-column:span 3;}
+
+/* Top list rows (vendors, products, customers, geography) */
+.ov-list-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px;background:var(--vf-surface-2,#f8fafc);border:1px solid var(--vf-line);transition:.12s;}
+.ov-list-row:hover{border-color:#cbd5e1;}
+.ov-list-rank{width:20px;height:20px;border-radius:50%;background:#e0e7ff;color:#4338ca;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.ov-list-rank.r1{background:#fef3c7;color:#b45309;}
+.ov-list-rank.r2{background:#f1f5f9;color:#475569;}
+.ov-list-rank.r3{background:#fed7aa;color:#c2410c;}
+.ov-list-info{flex:1;min-width:0;}
+.ov-list-name{font-size:12.5px;font-weight:700;color:var(--vf-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ov-list-sub{font-size:10.5px;color:var(--vf-muted);font-weight:500;margin-top:1px;}
+.ov-list-val{font-size:12.5px;font-weight:800;color:var(--vf-text);font-variant-numeric:tabular-nums;flex-shrink:0;}
+.ov-list-flag{font-size:18px;line-height:1;flex-shrink:0;font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif;}
+
+/* Activity feed */
+.ov-activity-item{display:flex;align-items:flex-start;gap:9px;padding:8px 10px;border-radius:9px;background:var(--vf-surface-2,#f8fafc);border:1px solid var(--vf-line);}
+.ov-act-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:5px;}
+.ov-act-body{flex:1;min-width:0;}
+.ov-act-text{font-size:12px;color:var(--vf-text);line-height:1.4;}
+.ov-act-text b{font-weight:700;}
+.ov-act-time{font-size:10.5px;color:var(--vf-muted);margin-top:2px;font-weight:500;}
+
+/* Responsive */
+@media(max-width:1280px){
+  .ov-hero-6{grid-template-columns:repeat(3,1fr);}
+  .ov-insights-grid{grid-template-columns:1fr 1fr;}
+  .ov-card-wide{grid-column:span 2;}
+}
+@media(max-width:980px){
+  .ov-hero-strip{grid-template-columns:repeat(2,1fr);}
+  .ov-hero-6{grid-template-columns:repeat(2,1fr);}
+  .ov-tier2-grid{grid-template-columns:1fr;}
+  .ov-tier3-grid{grid-template-columns:1fr;}
+  .ov-tier3-grid-4{grid-template-columns:repeat(2,1fr);}
+  .ov-insights-grid{grid-template-columns:1fr;}
+  .ov-card-wide{grid-column:span 1;}
+}
+@media(max-width:560px){
+  .ov-hero-strip{grid-template-columns:1fr;}
+  .ov-hero-6{grid-template-columns:1fr;}
+  .ov-tier3-grid-4{grid-template-columns:1fr;}
+}
 .ov-fs-badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:10.5px;font-weight:800;}
 @media(max-width:1300px){#ovKpiRow{grid-template-columns:repeat(3,1fr)!important;}}
 @media(max-width:1100px){.ov-main-grid{grid-template-columns:1fr!important;}#ovKpiRow{grid-template-columns:repeat(3,1fr)!important;}}
@@ -6010,10 +6177,6 @@ document.addEventListener("DOMContentLoaded", () => {
           <h1 style="margin:0;font-size:28px;font-weight:900;letter-spacing:-.5px;">Dashboard</h1>
           <p style="margin:4px 0 0;color:var(--vf-muted);font-size:13.5px;">Live overview · <span id="ovStoreName">All stores</span></p>
         </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn" onclick="loadOverview()" style="border-radius:14px;padding:10px 18px;font-size:13px;">↻ Refresh</button>
-          <button class="btn green" onclick="showSection('orders')" style="border-radius:14px;padding:10px 18px;font-size:13px;">🛒 View Orders</button>
-        </div>
       </div>
 
       <!-- SETUP WIZARD -->
@@ -6100,156 +6263,353 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>
       </div>
 
-      <!-- ALERT BANNER -->
-      <div id="ovAlertBar" style="display:none;background:linear-gradient(135deg,#fff7ed,#fef3c7);border:1px solid #fed7aa;border-radius:16px;padding:14px 20px;margin-bottom:20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-        <span style="font-size:18px;">⚠️</span>
-        <span id="ovAlertMsg" style="font-size:13px;font-weight:700;color:#92400e;flex:1;"></span>
-        <button onclick="showSection('orders')" style="background:#f59e0b;color:#fff;border:none;border-radius:10px;padding:7px 16px;font-size:12px;font-weight:800;cursor:pointer;">View Orders →</button>
+      <!-- Hidden compat spans for IDs JS still updates (Active Vendors
+           was merged into Top Vendors / hero; keep IDs so JS never crashes) -->
+      <div style="display:none;">
+        <span id="ovActiveVendors">0</span>
+        <span id="ovVendorAssigned">0 orders assigned</span>
       </div>
 
-      <!-- KPI ROW -->
-      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:20px;" id="ovKpiRow">
-        <div class="ov-kpi-card" onclick="showSection('orders')">
-          <div class="ov-kpi-icon" style="background:linear-gradient(135deg,#6d5bff,#a78bfa);">🛒</div>
-          <div class="ov-kpi-val" id="ovTotalOrders">—</div>
-          <div class="ov-kpi-label">Total Orders</div>
-          <div class="ov-kpi-sub" id="ovTodayOrders">— today</div>
+      <!-- ════════════════════════════════════════════════════════════
+           PERIOD SELECTOR — pill segmented control
+           ════════════════════════════════════════════════════════════ -->
+      <div class="ov-period-bar">
+        <div class="ov-period-left">
+          <span class="ov-period-label">Showing:</span>
+          <div class="ov-period-pills" id="ovPeriodPills">
+            <button class="ov-pp" data-p="today" onclick="ovSetPeriod(this,'today')">Today</button>
+            <button class="ov-pp ov-pp-on" data-p="7d" onclick="ovSetPeriod(this,'7d')">7 days</button>
+            <button class="ov-pp" data-p="30d" onclick="ovSetPeriod(this,'30d')">30 days</button>
+            <button class="ov-pp" data-p="90d" onclick="ovSetPeriod(this,'90d')">90 days</button>
+            <button class="ov-pp" data-p="all" onclick="ovSetPeriod(this,'all')">All time</button>
+          </div>
         </div>
-        <div class="ov-kpi-card" onclick="showSection('orders')">
-          <div class="ov-kpi-icon" style="background:linear-gradient(135deg,#10b981,#34d399);">💰</div>
-          <div class="ov-kpi-val" id="ovTotalRevenue">—</div>
-          <div class="ov-kpi-label">Total Revenue</div>
-          <div class="ov-kpi-sub" id="ovTodayRevenue">— today</div>
-        </div>
-        <div class="ov-kpi-card" onclick="showSection('vendors')">
-          <div class="ov-kpi-icon" style="background:linear-gradient(135deg,#f59e0b,#fcd34d);">🏭</div>
-          <div class="ov-kpi-val" id="ovActiveVendors">—</div>
-          <div class="ov-kpi-label">Active Vendors</div>
-          <div class="ov-kpi-sub" id="ovVendorAssigned">— orders assigned</div>
-        </div>
-        <div class="ov-kpi-card ov-kpi-warn" onclick="showSection('orders')">
-          <div class="ov-kpi-icon" style="background:linear-gradient(135deg,#ef4444,#f87171);">🚨</div>
-          <div class="ov-kpi-val" id="ovNeedAttention">—</div>
-          <div class="ov-kpi-label">Need Attention</div>
-          <div class="ov-kpi-sub" id="ovAttentionSub">unassigned + no tracking</div>
-        </div>
-        <div class="ov-kpi-card" onclick="showSection('emails')">
-          <div class="ov-kpi-icon" style="background:linear-gradient(135deg,#0ea5e9,#38bdf8);">✉️</div>
-          <div class="ov-kpi-val" id="ovEmailUnread">—</div>
-          <div class="ov-kpi-label">Unread Emails</div>
-          <div class="ov-kpi-sub" id="ovEmailSub">— open threads</div>
+        <div class="ov-period-right">
+          <span class="ov-live-dot"></span>
+          <span class="ov-live-text">Live · auto-refresh 60s</span>
         </div>
       </div>
 
-      <!-- MAIN GRID -->
-      <div style="display:grid;grid-template-columns:1fr 340px;gap:16px;margin-bottom:16px;" class="ov-main-grid">
+      <!-- ════════════════════════════════════════════════════════════
+           ATTENTION BANNER (only when issues need action)
+           ════════════════════════════════════════════════════════════ -->
+      <div id="ovAlertBar" class="ov-alert-bar" style="display:none;">
+        <span class="ov-alert-ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h16.9a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>
+        <span id="ovAlertMsg" class="ov-alert-msg"></span>
+        <button class="ov-alert-btn" onclick="showSection('orders')">View Orders</button>
+      </div>
 
-        <!-- LEFT: Revenue Chart + Recent Orders -->
-        <div style="display:flex;flex-direction:column;gap:16px;">
-
-          <!-- Revenue Chart -->
-          <div class="ov-card">
-            <div class="ov-card-head">
-              <div class="ov-card-title">📈 Revenue — Last 7 Days</div>
-              <div id="ovChartTotal" style="font-size:13px;font-weight:700;color:var(--vf-purple);"></div>
-            </div>
-            <div id="ovRevenueChart" style="padding:8px 0 4px;"></div>
+      <!-- ════════════════════════════════════════════════════════════
+           TIER 1 — HERO METRICS (6 KPIs with trend arrows)
+           ════════════════════════════════════════════════════════════ -->
+      <div class="ov-hero-strip ov-hero-6" id="ovKpiRow">
+        <div class="ov-hero-item" onclick="showSection('orders')">
+          <div class="ov-hero-row">
+            <div class="ov-hero-ic" style="background:#dbeafe;color:#1d4ed8;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg></div>
+            <span class="ov-trend up" id="ovTrendOrders">▲ —</span>
           </div>
+          <div class="ov-hero-label">Total Orders</div>
+          <div class="ov-hero-val"><span id="ovTotalOrders">—</span></div>
+          <div class="ov-hero-sub" id="ovTodayOrders">— today</div>
+        </div>
 
-          <!-- Recent Orders -->
-          <div class="ov-card">
+        <div class="ov-hero-item" onclick="showSection('orders')">
+          <div class="ov-hero-row">
+            <div class="ov-hero-ic" style="background:#dcfce7;color:#15803d;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+            <span class="ov-trend up" id="ovTrendRevenue">▲ —</span>
+          </div>
+          <div class="ov-hero-label">Total Revenue</div>
+          <div class="ov-hero-val"><span id="ovTotalRevenue">—</span></div>
+          <div class="ov-hero-sub" id="ovTodayRevenue">— today</div>
+        </div>
+
+        <div class="ov-hero-item" onclick="showSection('orders')">
+          <div class="ov-hero-row">
+            <div class="ov-hero-ic" style="background:#ede9fe;color:#6d28d9;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m7 17 4-8 4 4 6-10"/></svg></div>
+            <span class="ov-trend neutral" id="ovTrendAOV">— —</span>
+          </div>
+          <div class="ov-hero-label">Avg Order Value</div>
+          <div class="ov-hero-val"><span id="ovAvgOrderValue">—</span></div>
+          <div class="ov-hero-sub" id="ovAvgOrderSub">per order</div>
+        </div>
+
+        <div class="ov-hero-item" onclick="showSection('orders')">
+          <div class="ov-hero-row">
+            <div class="ov-hero-ic" style="background:#fce7f3;color:#be185d;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+            <span class="ov-trend up" id="ovTrendCustomers">▲ —</span>
+          </div>
+          <div class="ov-hero-label">Customers</div>
+          <div class="ov-hero-val"><span id="ovCustomersCount">—</span></div>
+          <div class="ov-hero-sub" id="ovCustomersSub">— new</div>
+        </div>
+
+        <div class="ov-hero-item ov-hero-item-alert" onclick="showSection('orders')">
+          <div class="ov-hero-row">
+            <div class="ov-hero-ic" style="background:#fef3c7;color:#b45309;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h16.9a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+            <span class="ov-trend down" id="ovTrendAttention">▼ —</span>
+          </div>
+          <div class="ov-hero-label">Need Attention</div>
+          <div class="ov-hero-val ov-hero-val-warn"><span id="ovNeedAttention">—</span></div>
+          <div class="ov-hero-sub" id="ovAttentionSub">unassigned + no tracking</div>
+        </div>
+
+        <div class="ov-hero-item" onclick="showSection('emails')">
+          <div class="ov-hero-row">
+            <div class="ov-hero-ic" style="background:#cffafe;color:#0e7490;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 6 10-6"/></svg></div>
+            <span class="ov-trend neutral" id="ovTrendEmails">— —</span>
+          </div>
+          <div class="ov-hero-label">Unread Emails</div>
+          <div class="ov-hero-val"><span id="ovEmailUnread">—</span></div>
+          <div class="ov-hero-sub" id="ovEmailSub">— open threads</div>
+        </div>
+      </div>
+
+      <!-- ════════════════════════════════════════════════════════════
+           TIER 2 — PERFORMANCE (Revenue chart + Sales Funnel)
+           ════════════════════════════════════════════════════════════ -->
+      <div class="ov-tier2-grid">
+        <!-- LEFT: Revenue chart -->
+        <div class="ov-tier2-left">
+          <div class="ov-card ov-card-pro">
             <div class="ov-card-head">
-              <div class="ov-card-title">🕐 Recent Orders</div>
-              <button onclick="showSection('orders')" class="ov-link-btn">View all →</button>
+              <div class="ov-card-title-pro">
+                <span class="ov-card-ic" style="background:#ede9fe;color:#6d28d9;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span>
+                Revenue Trend
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span class="ov-mini-legend" style="--c:#6366f1;">Revenue</span>
+                <div id="ovChartTotal" class="ov-card-amt">—</div>
+              </div>
             </div>
-            <div style="overflow-x:auto;">
-              <table style="width:100%;border-collapse:collapse;font-size:13px;">
-                <thead>
-                  <tr style="border-bottom:1px solid var(--vf-line);">
-                    <th style="text-align:left;padding:8px 10px;font-size:10.5px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.5px;">Order</th>
-                    <th style="text-align:left;padding:8px 10px;font-size:10.5px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.5px;">Customer</th>
-                    <th style="text-align:left;padding:8px 10px;font-size:10.5px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.5px;">Product</th>
-                    <th style="text-align:right;padding:8px 10px;font-size:10.5px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.5px;">Amount</th>
-                    <th style="text-align:left;padding:8px 10px;font-size:10.5px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.5px;">Status</th>
-                    <th style="text-align:left;padding:8px 10px;font-size:10.5px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.5px;">Vendor</th>
-                  </tr>
-                </thead>
-                <tbody id="ovRecentOrders">
-                  <tr><td colspan="6" style="text-align:center;padding:30px;color:var(--vf-muted);">Loading…</td></tr>
-                </tbody>
-              </table>
-            </div>
+            <div id="ovRevenueChart" style="padding:6px 0 2px;"></div>
           </div>
         </div>
 
-        <!-- RIGHT SIDEBAR -->
-        <div style="display:flex;flex-direction:column;gap:16px;">
-
-          <!-- Store Health -->
-          <div class="ov-card">
+        <!-- RIGHT: Sales Funnel -->
+        <div class="ov-tier2-right-narrow">
+          <div class="ov-card ov-card-pro">
             <div class="ov-card-head">
-              <div class="ov-card-title">🏬 Store Health</div>
-              <button onclick="showSection('stores')" class="ov-link-btn">Manage →</button>
-            </div>
-            <div id="ovStoreHealth" style="display:flex;flex-direction:column;gap:8px;">
-              <div style="text-align:center;padding:20px;color:var(--vf-muted);font-size:13px;">Loading…</div>
-            </div>
-          </div>
-
-          <!-- Top Vendors -->
-          <div class="ov-card">
-            <div class="ov-card-head">
-              <div class="ov-card-title">🏭 Top Vendors</div>
-              <button onclick="showSection('vendors')" class="ov-link-btn">View all →</button>
-            </div>
-            <div id="ovTopVendors" style="display:flex;flex-direction:column;gap:6px;">
-              <div style="text-align:center;padding:20px;color:var(--vf-muted);font-size:13px;">Loading…</div>
-            </div>
-          </div>
-
-          <!-- Tracking Queue -->
-          <div class="ov-card" onclick="showSection('vendors')" style="cursor:pointer;">
-            <div class="ov-card-head">
-              <div class="ov-card-title">📬 Tracking Queue</div>
-            </div>
-            <div style="display:flex;align-items:center;gap:14px;padding:4px 0;">
-              <div style="font-size:36px;font-weight:900;color:var(--vf-purple);" id="ovPendingTracking">—</div>
-              <div style="color:var(--vf-muted);font-size:13px;line-height:1.4;">submissions pending<br>your approval</div>
-            </div>
-          </div>
-
-          <!-- Email Inbox -->
-          <div class="ov-card">
-            <div class="ov-card-head">
-              <div class="ov-card-title">✉️ Email Inbox</div>
-              <button onclick="showSection('emails')" class="ov-link-btn">Open →</button>
-            </div>
-            <!-- Mini stats row -->
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
-              <div style="background:var(--vf-surface-2);border:1px solid var(--vf-line);border-radius:10px;padding:10px;text-align:center;">
-                <div style="font-size:20px;font-weight:900;color:#0ea5e9;" id="ovEmailNew">—</div>
-                <div style="font-size:10px;font-weight:700;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.04em;">New</div>
-              </div>
-              <div style="background:var(--vf-surface-2);border:1px solid var(--vf-line);border-radius:10px;padding:10px;text-align:center;">
-                <div style="font-size:20px;font-weight:900;color:#f59e0b;" id="ovEmailOpen">—</div>
-                <div style="font-size:10px;font-weight:700;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.04em;">Open</div>
-              </div>
-              <div style="background:var(--vf-surface-2);border:1px solid var(--vf-line);border-radius:10px;padding:10px;text-align:center;">
-                <div style="font-size:20px;font-weight:900;color:#10b981;" id="ovEmailReplied">—</div>
-                <div style="font-size:10px;font-weight:700;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.04em;">Replied</div>
-              </div>
-              <div style="background:var(--vf-surface-2);border:1px solid var(--vf-line);border-radius:10px;padding:10px;text-align:center;">
-                <div style="font-size:20px;font-weight:900;color:var(--vf-text);" id="ovEmailToday">—</div>
-                <div style="font-size:10px;font-weight:700;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.04em;">Today</div>
+              <div class="ov-card-title-pro">
+                <span class="ov-card-ic" style="background:#fef3c7;color:#b45309;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg></span>
+                Sales Funnel
               </div>
             </div>
-            <!-- Recent unread emails -->
-            <div style="font-size:10.5px;font-weight:800;color:var(--vf-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Unread</div>
-            <div id="ovRecentEmails" style="display:flex;flex-direction:column;gap:6px;">
-              <div style="text-align:center;padding:16px;color:var(--vf-muted);font-size:12px;">Loading…</div>
+            <div class="ov-funnel" id="ovFunnel">
+              <div class="ov-funnel-step" style="--p:100%;--c:#6366f1;"><div class="ov-funnel-bar"></div><div class="ov-funnel-meta"><span class="ov-funnel-name">Total Orders</span><span class="ov-funnel-num" id="ovFunnelTotal">—</span></div></div>
+              <div class="ov-funnel-step" style="--p:85%;--c:#8b5cf6;"><div class="ov-funnel-bar"></div><div class="ov-funnel-meta"><span class="ov-funnel-name">Paid</span><span class="ov-funnel-num" id="ovFunnelPaid">—</span></div></div>
+              <div class="ov-funnel-step" style="--p:60%;--c:#a855f7;"><div class="ov-funnel-bar"></div><div class="ov-funnel-meta"><span class="ov-funnel-name">Shipped</span><span class="ov-funnel-num" id="ovFunnelShipped">—</span></div></div>
+              <div class="ov-funnel-step" style="--p:42%;--c:#10b981;"><div class="ov-funnel-bar"></div><div class="ov-funnel-meta"><span class="ov-funnel-name">Delivered</span><span class="ov-funnel-num" id="ovFunnelDelivered">—</span></div></div>
             </div>
           </div>
+        </div>
+      </div>
 
+      <!-- ════════════════════════════════════════════════════════════
+           TIER 3 — OPERATIONS QUEUE (4 action-ready widgets)
+           ════════════════════════════════════════════════════════════ -->
+      <div class="ov-section-divider">
+        <span class="ov-section-divider-label">⚡ Operations · Action Required</span>
+      </div>
+
+      <div class="ov-tier3-grid-4">
+        <div class="ov-action-card" onclick="showSection('orders')">
+          <div class="ov-action-head">
+            <span class="ov-action-ic" style="background:#fef3c7;color:#b45309;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h16.9a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/></svg></span>
+            <span class="ov-action-arr">→</span>
+          </div>
+          <div class="ov-action-num" id="ovQueueAttention">—</div>
+          <div class="ov-action-label">Orders Need Attention</div>
+          <div class="ov-action-sub" id="ovQueueAttentionSub">unassigned + no tracking</div>
+        </div>
+
+        <div class="ov-action-card" onclick="showSection('vendors')">
+          <div class="ov-action-head">
+            <span class="ov-action-ic" style="background:#fed7aa;color:#c2410c;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h5l2 3v5h-7z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></span>
+            <span class="ov-action-arr">→</span>
+          </div>
+          <div class="ov-action-num" id="ovPendingTracking">—</div>
+          <div class="ov-action-label">Tracking Queue</div>
+          <div class="ov-action-sub">vendor submissions to review</div>
+        </div>
+
+        <div class="ov-action-card" onclick="showSection('rma')">
+          <div class="ov-action-head">
+            <span class="ov-action-ic" style="background:#ffe4e6;color:#be123c;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6a2 2 0 0 0 2 2h10"/><path d="M21 17v-6a2 2 0 0 0-2-2H9"/><polyline points="6 4 3 7 6 10"/><polyline points="18 14 21 17 18 20"/></svg></span>
+            <span class="ov-action-arr">→</span>
+          </div>
+          <div class="ov-action-num" id="ovRmaQueue">—</div>
+          <div class="ov-action-label">RMA Triage</div>
+          <div class="ov-action-sub">refund / return requests</div>
+        </div>
+
+        <div class="ov-action-card" onclick="showSection('emails')">
+          <div class="ov-action-head">
+            <span class="ov-action-ic" style="background:#cffafe;color:#0e7490;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12c0 5.5-4.5 10-10 10S2 17.5 2 12 6.5 2 12 2s10 4.5 10 10z"/><polyline points="22 6 12 13 2 6"/></svg></span>
+            <span class="ov-action-arr">→</span>
+          </div>
+          <div class="ov-action-num" id="ovEmailTriage">—</div>
+          <div class="ov-action-label">Email Triage</div>
+          <div class="ov-action-sub">needs human review</div>
+        </div>
+      </div>
+
+      <!-- ════════════════════════════════════════════════════════════
+           TIER 4 — INSIGHTS (Recent + Top Lists + Geography)
+           ════════════════════════════════════════════════════════════ -->
+      <div class="ov-section-divider">
+        <span class="ov-section-divider-label">📊 Insights</span>
+      </div>
+
+      <div class="ov-insights-grid">
+        <!-- Recent Orders — wide left -->
+        <div class="ov-card ov-card-pro ov-card-wide">
+          <div class="ov-card-head">
+            <div class="ov-card-title-pro">
+              <span class="ov-card-ic" style="background:#dbeafe;color:#1d4ed8;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>
+              Recent Orders
+            </div>
+            <button onclick="showSection('orders')" class="ov-link-btn-pro">View all →</button>
+          </div>
+          <div style="overflow-x:auto;">
+            <table class="ov-recent-table">
+              <thead>
+                <tr>
+                  <th>Order</th>
+                  <th>Customer</th>
+                  <th>Product</th>
+                  <th style="text-align:right;">Amount</th>
+                  <th>Status</th>
+                  <th>Vendor</th>
+                </tr>
+              </thead>
+              <tbody id="ovRecentOrders">
+                <tr><td colspan="6" style="text-align:center;padding:30px;color:var(--vf-muted);">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Top Vendors -->
+        <div class="ov-card ov-card-pro">
+          <div class="ov-card-head">
+            <div class="ov-card-title-pro">
+              <span class="ov-card-ic" style="background:#fce7f3;color:#be185d;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span>
+              Top Vendors
+            </div>
+            <button onclick="showSection('vendors')" class="ov-link-btn-pro">All →</button>
+          </div>
+          <div id="ovTopVendors" style="display:flex;flex-direction:column;gap:6px;">
+            <div style="text-align:center;padding:18px;color:var(--vf-muted);font-size:12px;">Loading…</div>
+          </div>
+        </div>
+
+        <!-- Top Products -->
+        <div class="ov-card ov-card-pro">
+          <div class="ov-card-head">
+            <div class="ov-card-title-pro">
+              <span class="ov-card-ic" style="background:#e0e7ff;color:#4338ca;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/></svg></span>
+              Top Products
+            </div>
+          </div>
+          <div id="ovTopProducts" style="display:flex;flex-direction:column;gap:6px;">
+            <div style="text-align:center;padding:18px;color:var(--vf-muted);font-size:12px;">Loading…</div>
+          </div>
+        </div>
+
+        <!-- Top Customers -->
+        <div class="ov-card ov-card-pro">
+          <div class="ov-card-head">
+            <div class="ov-card-title-pro">
+              <span class="ov-card-ic" style="background:#dcfce7;color:#15803d;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></span>
+              Top Customers
+            </div>
+          </div>
+          <div id="ovTopCustomers" style="display:flex;flex-direction:column;gap:6px;">
+            <div style="text-align:center;padding:18px;color:var(--vf-muted);font-size:12px;">Loading…</div>
+          </div>
+        </div>
+
+        <!-- Geography -->
+        <div class="ov-card ov-card-pro">
+          <div class="ov-card-head">
+            <div class="ov-card-title-pro">
+              <span class="ov-card-ic" style="background:#fde68a;color:#b45309;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span>
+              Orders by Country
+            </div>
+          </div>
+          <div id="ovGeography" style="display:flex;flex-direction:column;gap:6px;">
+            <div style="text-align:center;padding:18px;color:var(--vf-muted);font-size:12px;">Loading…</div>
+          </div>
+        </div>
+
+        <!-- Activity Feed -->
+        <div class="ov-card ov-card-pro">
+          <div class="ov-card-head">
+            <div class="ov-card-title-pro">
+              <span class="ov-card-ic" style="background:#f3e8ff;color:#7c3aed;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span>
+              Live Activity
+            </div>
+            <span class="ov-live-dot" style="width:6px;height:6px;"></span>
+          </div>
+          <div id="ovActivityFeed" style="display:flex;flex-direction:column;gap:6px;">
+            <div style="text-align:center;padding:18px;color:var(--vf-muted);font-size:12px;">Loading…</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ════════════════════════════════════════════════════════════
+           TIER 5 — SYSTEM (Store Health + Email Inbox detail)
+           ════════════════════════════════════════════════════════════ -->
+      <div class="ov-section-divider">
+        <span class="ov-section-divider-label">⚙️ System</span>
+      </div>
+
+      <div class="ov-tier3-grid">
+        <!-- Store Health -->
+        <div class="ov-card ov-card-pro">
+          <div class="ov-card-head">
+            <div class="ov-card-title-pro">
+              <span class="ov-card-ic" style="background:#dcfce7;color:#15803d;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l1-5h16l1 5"/><path d="M3 9a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0"/><path d="M5 9v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9"/></svg></span>
+              Store Health
+            </div>
+            <button onclick="showSection('stores')" class="ov-link-btn-pro">Manage →</button>
+          </div>
+          <div id="ovStoreHealth" style="display:flex;flex-direction:column;gap:8px;">
+            <div style="text-align:center;padding:18px;color:var(--vf-muted);font-size:12px;">Loading…</div>
+          </div>
+        </div>
+
+        <!-- Email Inbox -->
+        <div class="ov-card ov-card-pro">
+          <div class="ov-card-head">
+            <div class="ov-card-title-pro">
+              <span class="ov-card-ic" style="background:#cffafe;color:#0e7490;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 6 10-6"/></svg></span>
+              Email Inbox
+            </div>
+            <button onclick="showSection('emails')" class="ov-link-btn-pro">Open →</button>
+          </div>
+          <div class="ov-email-stats">
+            <div class="ov-email-stat">
+              <div class="ov-email-stat-val" style="color:#0ea5e9;" id="ovEmailNew">—</div>
+              <div class="ov-email-stat-label">New</div>
+            </div>
+            <div class="ov-email-stat">
+              <div class="ov-email-stat-val" style="color:#f59e0b;" id="ovEmailOpen">—</div>
+              <div class="ov-email-stat-label">Open</div>
+            </div>
+            <div class="ov-email-stat">
+              <div class="ov-email-stat-val" style="color:#10b981;" id="ovEmailReplied">—</div>
+              <div class="ov-email-stat-label">Replied</div>
+            </div>
+            <div class="ov-email-stat">
+              <div class="ov-email-stat-val" id="ovEmailToday">—</div>
+              <div class="ov-email-stat-label">Today</div>
+            </div>
+          </div>
+          <div class="ov-email-unread-label">Recent unread</div>
+          <div id="ovRecentEmails" style="display:flex;flex-direction:column;gap:6px;">
+            <div style="text-align:center;padding:14px;color:var(--vf-muted);font-size:12px;">Loading…</div>
+          </div>
         </div>
       </div>
 
@@ -15672,12 +16032,239 @@ async function loadOverview(){
       }).join("") : `<div style="text-align:center;padding:16px;color:var(--vf-muted);font-size:12px;">No unread emails 🎉</div>`;
     }
 
+    // ───── NEW: populate richer widgets from overview payload + recents ─────
+    try { ovPopulateRichWidgets(d, recents); } catch(_) {}
+
     // Setup wizard
     loadSetupWizard();
 
   }catch(e){
     console.error("Overview error:", e);
   }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   PRO OVERVIEW — populate the new feature-rich widgets
+   ════════════════════════════════════════════════════════════════════ */
+function ovPopulateRichWidgets(d, recents){
+  const fmtMoney = (n) => "$" + parseFloat(n||0).toLocaleString("en-US",{minimumFractionDigits:0,maximumFractionDigits:0});
+  const fmt = (n) => n >= 1000 ? (n/1000).toFixed(1)+"k" : String(n);
+
+  // ── Hero: AOV + Customers + trend pills ──────────────────────────
+  const totalOrders = d.total_orders || 0;
+  const totalRev = parseFloat(d.total_revenue || 0);
+  const aov = totalOrders > 0 ? (totalRev / totalOrders) : 0;
+  const elAov = document.getElementById("ovAvgOrderValue");
+  if (elAov) elAov.textContent = fmtMoney(aov);
+  const elAovSub = document.getElementById("ovAvgOrderSub");
+  if (elAovSub) elAovSub.textContent = totalOrders > 0 ? `over ${fmt(totalOrders)} orders` : "no orders yet";
+
+  // Customers — unique customer_email count from recents (best effort)
+  const custSet = new Set();
+  (recents || []).forEach(o => { if (o.customer) custSet.add((o.customer||"").toLowerCase()); });
+  const elCust = document.getElementById("ovCustomersCount");
+  if (elCust) elCust.textContent = fmt(custSet.size || 0);
+  const elCustSub = document.getElementById("ovCustomersSub");
+  if (elCustSub) elCustSub.textContent = custSet.size > 0 ? `from recent orders` : "—";
+
+  // ── Sales Funnel ─────────────────────────────────────────────────
+  const lc = s => String(s||"").toLowerCase();
+  const paidCount = (recents || []).filter(o => {
+    const p = lc(o.payment_status || o.fulfillment_status);
+    return p.includes("paid") || p.includes("complet") || p.includes("process") || p.includes("captured");
+  }).length;
+  const shippedCount = (recents || []).filter(o => {
+    const f = lc(o.fulfillment_status);
+    return f.includes("fulfill") || f.includes("ship") || f.includes("transit") || f.includes("deliver") || f.includes("complet");
+  }).length;
+  const deliveredCount = (recents || []).filter(o => {
+    const f = lc(o.fulfillment_status);
+    return f.includes("deliver") || f.includes("complet");
+  }).length;
+  const total = Math.max((recents || []).length, 1);
+  const setFunnel = (id, val, maxRef) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = String(val);
+    const pct = maxRef > 0 ? Math.max(8, Math.round((val / maxRef) * 100)) : 8;
+    const step = el && el.closest(".ov-funnel-step");
+    if (step) step.style.setProperty("--p", pct + "%");
+  };
+  const funnelTotal = (recents||[]).length;
+  setFunnel("ovFunnelTotal",    funnelTotal,    funnelTotal || 1);
+  setFunnel("ovFunnelPaid",     paidCount,      funnelTotal || 1);
+  setFunnel("ovFunnelShipped",  shippedCount,   funnelTotal || 1);
+  setFunnel("ovFunnelDelivered",deliveredCount, funnelTotal || 1);
+
+  // ── Tier 3 action cards ──────────────────────────────────────────
+  const attention = (d.unassigned_orders || 0) + (d.no_tracking || 0);
+  document.getElementById("ovQueueAttention").textContent = String(attention);
+  document.getElementById("ovQueueAttentionSub").textContent =
+    `${d.unassigned_orders||0} unassigned · ${d.no_tracking||0} no tracking`;
+  // RMA / Email triage will populate from their own APIs if available
+  ovFetchRmaTriageCount();
+  ovFetchEmailTriageCount();
+
+  // ── Trend pills (period-over-period) ─────────────────────────────
+  // Placeholder: shows neutral/up based on simple heuristics until backend
+  // returns explicit deltas. Tenants see ▲ vs prior period when available.
+  const setTrend = (id, delta) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (delta == null || isNaN(delta)) { el.textContent = "—"; el.className = "ov-trend neutral"; return; }
+    if (delta > 0)      { el.textContent = "▲ " + delta.toFixed(0) + "%"; el.className = "ov-trend up"; }
+    else if (delta < 0) { el.textContent = "▼ " + Math.abs(delta).toFixed(0) + "%"; el.className = "ov-trend down"; }
+    else                { el.textContent = "= 0%";                                 el.className = "ov-trend neutral"; }
+  };
+  setTrend("ovTrendOrders",    d.delta_orders);
+  setTrend("ovTrendRevenue",   d.delta_revenue);
+  setTrend("ovTrendAOV",       d.delta_aov);
+  setTrend("ovTrendCustomers", d.delta_customers);
+  setTrend("ovTrendAttention", d.delta_attention);
+  setTrend("ovTrendEmails",    d.delta_emails);
+
+  // ── Top Products / Customers / Geography from recents ────────────
+  ovRenderTopProducts(recents);
+  ovRenderTopCustomers(recents);
+  ovRenderGeography(recents);
+  ovRenderActivityFeed(d, recents);
+}
+
+function ovRenderTopProducts(recents){
+  const el = document.getElementById("ovTopProducts");
+  if (!el) return;
+  const counts = {};
+  (recents||[]).forEach(o => {
+    const p = (o.product || "—").trim();
+    if (!p || p === "—") return;
+    counts[p] = (counts[p] || 0) + 1;
+  });
+  const sorted = Object.entries(counts).sort((a,b) => b[1]-a[1]).slice(0,5);
+  if (!sorted.length) { el.innerHTML = `<div style="text-align:center;padding:18px;color:var(--vf-muted);font-size:12px;">No data yet</div>`; return; }
+  el.innerHTML = sorted.map(([name, n], i) => `
+    <div class="ov-list-row">
+      <div class="ov-list-rank ${i===0?'r1':i===1?'r2':i===2?'r3':''}">${i+1}</div>
+      <div class="ov-list-info">
+        <div class="ov-list-name">${escapeHtml(name)}</div>
+        <div class="ov-list-sub">${n} order${n===1?'':'s'}</div>
+      </div>
+    </div>`).join("");
+}
+
+function ovRenderTopCustomers(recents){
+  const el = document.getElementById("ovTopCustomers");
+  if (!el) return;
+  const map = {};
+  (recents||[]).forEach(o => {
+    const c = (o.customer || "—").trim();
+    if (!c || c === "—") return;
+    if (!map[c]) map[c] = {count:0, sum:0};
+    map[c].count += 1;
+    map[c].sum += parseFloat(o.amount || o.total_price || 0);
+  });
+  const sorted = Object.entries(map).sort((a,b) => b[1].sum - a[1].sum).slice(0,5);
+  if (!sorted.length) { el.innerHTML = `<div style="text-align:center;padding:18px;color:var(--vf-muted);font-size:12px;">No data yet</div>`; return; }
+  el.innerHTML = sorted.map(([name, info], i) => {
+    const initials = name.split(" ").map(w => w[0]||"").join("").slice(0,2).toUpperCase();
+    return `
+    <div class="ov-list-row">
+      <div class="ov-list-rank ${i===0?'r1':i===1?'r2':i===2?'r3':''}">${i+1}</div>
+      <div class="ov-list-info">
+        <div class="ov-list-name">${escapeHtml(name)}</div>
+        <div class="ov-list-sub">${info.count} order${info.count===1?'':'s'}</div>
+      </div>
+      <div class="ov-list-val">$${info.sum.toFixed(0)}</div>
+    </div>`;
+  }).join("");
+}
+
+function ovRenderGeography(recents){
+  const el = document.getElementById("ovGeography");
+  if (!el) return;
+  const counts = {};
+  (recents||[]).forEach(o => {
+    const c = (o.country || "").trim();
+    if (!c) return;
+    counts[c] = (counts[c] || 0) + 1;
+  });
+  const sorted = Object.entries(counts).sort((a,b) => b[1]-a[1]).slice(0,6);
+  if (!sorted.length) { el.innerHTML = `<div style="text-align:center;padding:18px;color:var(--vf-muted);font-size:12px;">No geography data</div>`; return; }
+  // Reuse the order-row country mapper if available
+  const isoMap = (typeof _POX_COUNTRY_MAP === 'object') ? _POX_COUNTRY_MAP : {};
+  const isoToFlag = typeof poxIsoToFlag === 'function' ? poxIsoToFlag : null;
+  el.innerHTML = sorted.map(([c, n]) => {
+    let iso = (c.length === 2) ? c.toUpperCase() : (isoMap[c.toLowerCase().replace(/\./g,"")] || "");
+    const flag = (iso && isoToFlag) ? (isoToFlag(iso) || "🌐") : "🌐";
+    return `
+    <div class="ov-list-row">
+      <div class="ov-list-flag">${flag}</div>
+      <div class="ov-list-info">
+        <div class="ov-list-name">${escapeHtml(c)}</div>
+      </div>
+      <div class="ov-list-val">${n}</div>
+    </div>`;
+  }).join("");
+}
+
+function ovRenderActivityFeed(d, recents){
+  const el = document.getElementById("ovActivityFeed");
+  if (!el) return;
+  // Build a synthetic activity stream from the most recent orders
+  const events = (recents || []).slice(0, 6).map(o => {
+    const fs = (o.fulfillment_status||"").toLowerCase();
+    let dot = "#6366f1", verb = "placed";
+    if (fs.includes("deliver") || fs.includes("complet")) { dot = "#10b981"; verb = "delivered"; }
+    else if (fs.includes("ship") || fs.includes("transit")) { dot = "#3b82f6"; verb = "shipped"; }
+    else if (fs.includes("process")) { dot = "#f59e0b"; verb = "processing"; }
+    else if (fs.includes("cancel") || fs.includes("fail")) { dot = "#ef4444"; verb = "cancelled"; }
+    const when = o.created_at ? new Date(o.created_at) : null;
+    const ago = when ? _ovTimeAgo(when) : "recent";
+    return `
+    <div class="ov-activity-item">
+      <div class="ov-act-dot" style="background:${dot};"></div>
+      <div class="ov-act-body">
+        <div class="ov-act-text">Order <b>#${escapeHtml(o.order_number||"")}</b> ${verb} · ${escapeHtml(o.customer||"—")}</div>
+        <div class="ov-act-time">${ago}</div>
+      </div>
+    </div>`;
+  });
+  el.innerHTML = events.length ? events.join("") : `<div style="text-align:center;padding:18px;color:var(--vf-muted);font-size:12px;">No activity yet</div>`;
+}
+
+function _ovTimeAgo(date){
+  const s = Math.floor((Date.now() - date.getTime())/1000);
+  if (s < 60) return s + "s ago";
+  if (s < 3600) return Math.floor(s/60) + "m ago";
+  if (s < 86400) return Math.floor(s/3600) + "h ago";
+  return Math.floor(s/86400) + "d ago";
+}
+
+async function ovFetchRmaTriageCount(){
+  try {
+    const r = await fetch("/rma/api/triage/").then(r => r.json());
+    if (r && r.ok) {
+      const el = document.getElementById("ovRmaQueue");
+      if (el) el.textContent = String(r.count || 0);
+    }
+  } catch(_){
+    const el = document.getElementById("ovRmaQueue");
+    if (el) el.textContent = "0";
+  }
+}
+
+async function ovFetchEmailTriageCount(){
+  // Use the unread emails count from existing payload as proxy for triage
+  const el = document.getElementById("ovEmailTriage");
+  const unreadEl = document.getElementById("ovEmailUnread");
+  if (el && unreadEl) el.textContent = unreadEl.textContent || "0";
+}
+
+/* Period selector — sets the period filter; loadOverview re-fetches */
+let _ovPeriod = "7d";
+function ovSetPeriod(btn, p){
+  _ovPeriod = p;
+  document.querySelectorAll("#ovPeriodPills .ov-pp").forEach(x => x.classList.toggle("ov-pp-on", x === btn));
+  // Re-load with new period (backend will need to support ?period=… later)
+  loadOverview();
 }
 
 // ─── SETUP WIZARD ────────────────────────────────────────────────────────────
