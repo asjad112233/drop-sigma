@@ -171,18 +171,6 @@ body{font-family:'Inter',system-ui,sans-serif;background:linear-gradient(180deg,
     </div>
   </div>
 
-  <!-- ────── TENANT'S RETURN LABEL (when generated) ────── -->
-  {% if rma.return_label_url and rma.return_tracking_no %}
-    <div class="cta-card label">
-      <div>
-        <div class="lbl">Your Pre-Paid Return Label</div>
-        <div class="val">{{ rma.return_carrier|default:"Carrier" }} · {{ rma.return_tracking_no }}</div>
-        <div class="hint">Use this label to ship the item back — no postage cost to you.</div>
-      </div>
-      <a href="{{ rma.return_label_url }}" target="_blank" rel="noopener"><i class="fa-solid fa-download"></i> Download Label</a>
-    </div>
-  {% endif %}
-
   <!-- ────── "How to Return" — points to chat ────── -->
   {% if rma.status == 'approved' or rma.status == 'tracking_submitted' or rma.status == 'in_transit' %}
   <div class="card">
