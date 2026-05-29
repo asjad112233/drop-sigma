@@ -991,7 +991,9 @@ def api_triage_list(request):
         .values_list("source_email_id", flat=True)
     )
 
-    qs = _tenant_email_qs(request.user).filter(category="refund").order_by("-id")[:200]
+    # Triage surfaces BOTH refund-intent and return-intent emails (the new
+    # classifier separates them, but both routes end in an RMA).
+    qs = _tenant_email_qs(request.user).filter(category__in=["refund", "return"]).order_by("-id")[:200]
 
     items = []
     for em in qs:

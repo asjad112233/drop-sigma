@@ -705,18 +705,77 @@ def find_order_from_email(store, subject, body):
 
 
 def classify_email(subject, body):
+    """
+    Classify an inbound customer email using priority-ordered intent rules.
+
+        Priority: Dispute  >  Refund  >  Return  >  Spam
+
+    Other useful buckets (shipping, order_edit) are kept and the final
+    fallback is "needs_human" — we deliberately never force an email into
+    a folder when intent is unclear; a human triages it instead.
+    """
     text = f"{subject or ''} {body or ''}".lower()
 
-    if "refund" in text or "return" in text or "money back" in text:
+    def has(*words):
+        return any(w in text for w in words)
+
+    # 1) DISPUTE — strongest signal, always wins.
+    if has(
+        "chargeback", "charge back", "unauthorized charge", "unauthorised charge",
+        "fraud", "fraudulent", "filing a complaint", "complaint with my bank",
+        "complaint with bank", "report to my bank", "report fraud",
+        "i want to dispute", "i would like to dispute", "disputing this",
+        "this is illegal", "scam", "scammer", "lawsuit", "small claims",
+        "attorney", "consumer protection", "bbb complaint",
+    ):
+        return "dispute"
+
+    # 2) REFUND — customer explicitly wants their money back.
+    if has(
+        "money back", "want my money", "give me a refund", "give my refund",
+        "refund me", "refund please", "refund my", "issue a refund",
+        "process a refund", "reverse the charge", "reverse charge",
+        "return my payment", "return my money", "i was double charged",
+        "double charged", "charged twice", "credit my card", "credit back",
+        "i want a full refund", "partial refund",
+    ):
         return "refund"
 
-    if "tracking" in text or "shipment" in text or "delivery" in text or "where is my order" in text:
+    # 3) RETURN — customer wants to send the product back (focus is the item).
+    if has(
+        "return the item", "return the product", "want to return",
+        "would like to return", "i'd like to return", "need to return",
+        "send it back", "send the item back", "send the product back",
+        "ship it back", "exchange", "wrong product", "wrong item",
+        "received the wrong", "size doesn't fit", "size does not fit",
+        "doesn't fit", "does not fit", "too small", "too large", "too big",
+        "defective", "broken on arrival", "damaged item", "arrived damaged",
+        "arrived broken", "not as described",
+    ):
+        return "return"
+
+    # 4) SPAM — promotional / bulk / clearly off-topic.
+    if has(
+        "unsubscribe me", "click here to", "limited time offer",
+        "promotional offer", "marketing campaign", "newsletter signup",
+        "you have won", "you've won", "claim your prize",
+        "investment opportunity", "make money fast", "earn $$$",
+        "buy now and save", "% off coupon", "exclusive deal",
+        "viagra", "casino", "crypto investment", "guaranteed returns",
+    ):
+        return "spam"
+
+    # 5) Other practical buckets (kept from previous logic).
+    if has("tracking", "shipment", "delivery", "where is my order",
+           "track my order", "package status", "in transit"):
         return "shipping"
 
-    if "change address" in text or "wrong address" in text:
+    if has("change address", "wrong address", "update my address",
+           "change shipping", "wrong shipping address"):
         return "order_edit"
 
-    return "support"
+    # 6) Default — let a human triage. Never force a category.
+    return "needs_human"
 
 
 def quick_reply(email_body):
