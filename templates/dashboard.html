@@ -12150,11 +12150,6 @@ document.addEventListener("DOMContentLoaded", () => {
     <div class="vm-form-grid" style="grid-template-columns:1fr 1fr;">
       <div class="vm-fg"><label>Full Name *</label><input id="vinvName" placeholder="Ali Traders"></div>
       <div class="vm-fg"><label>Email Address *</label><input id="vinvEmail" type="email" placeholder="ali@vendor.com"></div>
-      <div class="vm-fg vm-full"><label>Assign Store *</label>
-        <select id="vinvStore">
-          <option value="">— Select Store —</option>
-        </select>
-      </div>
     </div>
 
     <div class="vm-actions">
@@ -20816,15 +20811,7 @@ async function openVendorInviteModal(){
   document.getElementById("vinvName").value="";
   document.getElementById("vinvEmail").value="";
   document.getElementById("vinvMsg").innerText="";
-  // Load stores into dropdown
-  const sel=document.getElementById("vinvStore");
-  sel.innerHTML=`<option value="">— Select Store —</option>`;
-  try{
-    const r=await fetch("/stores/api/");
-    const d=await r.json();
-    const stores=d.stores||d.results||d||[];
-    stores.forEach(s=>{ const o=document.createElement("option"); o.value=s.id; o.innerText=s.name; sel.appendChild(o); });
-  }catch(e){}
+  // Store is auto-resolved from the active store switcher when sending.
   document.getElementById("vendorInviteModal").style.display="flex";
 }
 
@@ -20836,10 +20823,14 @@ async function sendVendorInvitation(){
   const msg=document.getElementById("vinvMsg");
   const name=document.getElementById("vinvName").value.trim();
   const email=document.getElementById("vinvEmail").value.trim();
-  const store_id=document.getElementById("vinvStore").value;
+  // Resolve store from the active store switcher (Assign Store dropdown removed).
+  const _switcher=document.getElementById("projectSwitcher");
+  const store_id=(typeof selectedStoreId!=="undefined"&&selectedStoreId)
+    ?selectedStoreId
+    :(_switcher&&_switcher.value)||"";
 
   if(!name||!email){ msg.style.color="#dc2626"; msg.innerText="Name and email are required."; return; }
-  if(!store_id){ msg.style.color="#dc2626"; msg.innerText="Please select a store."; return; }
+  if(!store_id){ msg.style.color="#dc2626"; msg.innerText="Please select a store from the top-bar before inviting."; return; }
 
   msg.style.color="#64748b"; msg.innerText="Sending invitation...";
 
