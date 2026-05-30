@@ -1194,14 +1194,39 @@ def send_vendor_invitation_api(request):
     except Store.DoesNotExist:
         return Response({"success": False, "message": "Store not found."}, status=404)
 
-    if Vendor.objects.filter(email=email).exists():
+    # Case-insensitive email match — Vendor.email may be mixed-case
+    if Vendor.objects.filter(email__iexact=email).exists():
         return Response({"success": False, "message": "A vendor with this email already exists."}, status=400)
 
-    if User.objects.filter(email=email).exists():
-        return Response({"success": False, "message": "A user with this email already exists."}, status=400)
+    # 🔥 Orphan-user recovery: if a User exists with this email but NO
+    #    Vendor record points to it, it's an interrupted accept-invite
+    #    (e.g. accept-flow crashed between User.create and Vendor.create).
+    #    Auto-sanitize so re-invite goes through cleanly. The orphan keeps
+    #    any chat history but loses the email + auth, and is deactivated.
+    orphan_qs = User.objects.filter(email__iexact=email)
+    if orphan_qs.exists():
+        # Are any of these legit (linked to a Vendor or other live role)?
+        legit_user_ids = set(Vendor.objects.filter(user__email__iexact=email)
+                                           .values_list("user_id", flat=True))
+        for u in orphan_qs:
+            if u.id in legit_user_ids:
+                # A real vendor user exists — duplicate check rightfully blocks
+                return Response({"success": False, "message": "A user with this email already exists."}, status=400)
+        # All matches are orphans — sanitize them
+        for u in orphan_qs:
+            u.email = f"orphan_{u.id}@invalid.local"
+            u.username = f"_orphan_{u.id}"
+            u.is_active = False
+            u.set_unusable_password()
+            u.save(update_fields=["email", "username", "is_active", "password"])
+        import logging
+        logging.getLogger(__name__).info(
+            "Sanitized %d orphan user(s) for email %s before re-invite",
+            orphan_qs.count(), email,
+        )
 
     # Expire any existing pending invites for this email
-    VendorInvitation.objects.filter(owner=request.user, email=email, status="pending").update(status="expired")
+    VendorInvitation.objects.filter(owner=request.user, email__iexact=email, status="pending").update(status="expired")
 
     expires_at = timezone.now() + datetime.timedelta(hours=48)
     inv = VendorInvitation.objects.create(
