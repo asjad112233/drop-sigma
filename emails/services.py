@@ -2648,6 +2648,32 @@ def _save_one_gmail_message(account, store, msg_id, access_token):
         )
     except Exception:
         pass
+
+    # Re-open a previously-resolved thread when the customer sends a new
+    # message. Without this, threads that were marked resolved (either by
+    # the email "Archive" action, auto-close-after-reply, or by an RMA
+    # being resolved) stay buried in the Resolved folder even when the
+    # customer writes back — the tenant never sees the reply in Inbox.
+    # A new inbound from the customer should always re-surface the thread.
+    try:
+        from .views import get_thread_contact as _gtc
+        from .models import EmailThreadAssignment
+        contact_clean = (_gtc(email_obj) or "").strip().lower()
+        # Only re-open if the sender IS the customer (don't unresolve when
+        # the new "message" is actually our own outbound reply).
+        sender_is_customer = bool(
+            sender_clean and account_email_clean
+            and sender_clean != account_email_clean
+        )
+        if contact_clean and sender_is_customer:
+            EmailThreadAssignment.objects.filter(
+                store=store,
+                contact__iexact=contact_clean,
+                is_resolved=True,
+            ).update(is_resolved=False, resolved_at=None)
+    except Exception:
+        pass
+
     return email_obj
 
 
