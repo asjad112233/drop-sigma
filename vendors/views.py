@@ -1248,7 +1248,10 @@ def send_vendor_invitation_api(request):
     invite_url = f"{scheme}://{host}/vendor/invite/accept/{inv.token}/"
 
     invited_by = request.user.get_full_name() or request.user.username
-    html = _build_vendor_invitation_email(name, invite_url, invited_by, store.name)
+    # store may be null if tenant hasn't connected any store yet — fall back
+    # to the inviter's display name so the email still reads naturally.
+    store_name = store.name if store else (invited_by or "Drop Sigma")
+    html = _build_vendor_invitation_email(name, invite_url, invited_by, store_name)
     _send_vendor_invitation_email(email, f"You're invited as a vendor partner on Drop Sigma", html)
 
     return Response({"success": True, "message": f"Invitation sent to {email}."})
