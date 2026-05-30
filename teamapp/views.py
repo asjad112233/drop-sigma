@@ -75,9 +75,11 @@ def team_members_api(request):
                 "status": "available",
                 "is_admin": True,
             }]
-            team_qs = TeamMember.objects.filter(owner=owner, is_active=True).order_by("name")
-            fellow = [{"id": m.id, "user": m.user_id, "name": m.name, "role": m.role, "status": m.status, "is_admin": False} for m in team_qs]
-            return Response({"success": True, "members": fellow, "admin_contacts": admin_contacts})
+            # 🔒 Vendors only DM-see the tenant ADMIN by default — not the
+            #    tenant's employees. Privacy + simpler mental model. If the
+            #    tenant wants a specific employee to chat with the vendor,
+            #    they add both into a shared channel (group chat already works).
+            return Response({"success": True, "members": [], "admin_contacts": admin_contacts})
     except Exception:
         pass
 
@@ -1514,7 +1516,20 @@ def chat_channel_members_api(request, channel_id):
         return Response({"success": False, "message": "You are not a member of this channel."}, status=403)
 
     members_data = []
-    for u in ch.members.all():
+    seen_ids = set()  # de-dup if the M2M somehow contains the same user twice
+    for u in ch.members.all().select_related().order_by("id"):
+        # 🔒 Skip sanitized / inactive users — old orphan rows shouldn't leak
+        #    into the visible member list.
+        if not u.is_active:
+            continue
+        # 🔒 Tenant isolation — channels are currently platform-wide (legacy),
+        #    so only show members who belong to the same org as the viewer.
+        #    Superusers see everyone (admin support).
+        if not request.user.is_superuser and not _users_in_same_org(request.user, u):
+            continue
+        if u.id in seen_ids:
+            continue
+        seen_ids.add(u.id)
         info = _sender_info(u)
         members_data.append({"user_id": u.id, "name": info["name"], "role": info["role"], "initials": info["initials"]})
 
