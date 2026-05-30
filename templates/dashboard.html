@@ -33143,7 +33143,13 @@ function applyEmailFolderFilter(threads){
       list = list.filter(t => (t.unread_count || 0) > 0);
       break;
     case 'needs_human':
-      list = list.filter(t => t.ai_status === 'needs_human');
+      // Match either:
+      //   • Any message in the thread is flagged needs_human, OR
+      //   • The thread-level ai_status mirror (latest message's status)
+      // Backward-compat: older payloads may not have needs_human_count.
+      list = list.filter(t =>
+        (t.needs_human_count || 0) > 0 || t.ai_status === 'needs_human'
+      );
       break;
     case 'drafts':
     case 'ai_drafts':

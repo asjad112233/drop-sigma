@@ -1290,6 +1290,11 @@ def email_threads_api(request):
                 "drafted_count": 0,
                 "replied_count": 0,
                 "unread_count": 0,
+                "needs_human_count": 0,
+                # The latest message's ai_status — used by the Needs Human
+                # filter so a thread with the most recent message stuck in
+                # `needs_human` shows up there.
+                "ai_status": getattr(email_obj, "ai_status", "") or "",
                 "is_read": True,
                 "is_individually_assigned": bool(is_individually_assigned),
             }
@@ -1305,6 +1310,12 @@ def email_threads_api(request):
         if email_obj.status == "replied":
             threads[contact]["replied_count"] += 1
 
+        # Count any message in the thread flagged "needs_human" so the
+        # Needs Human folder shows the thread even if the latest message
+        # was later auto-handled.
+        if getattr(email_obj, "ai_status", "") == "needs_human":
+            threads[contact]["needs_human_count"] += 1
+
         if not getattr(email_obj, "is_read", True):
             threads[contact]["unread_count"] += 1
             threads[contact]["is_read"] = False
@@ -1318,6 +1329,8 @@ def email_threads_api(request):
             threads[contact]["latest_category"] = (email_obj.category or "general")
             threads[contact]["latest_archived"] = bool(((email_obj.raw_data or {}) if isinstance(email_obj.raw_data, dict) else {}).get("archived"))
             threads[contact]["latest_time"] = email_obj.created_at
+            # Track the LATEST message's ai_status as the thread-level flag.
+            threads[contact]["ai_status"] = getattr(email_obj, "ai_status", "") or ""
 
     results = list(threads.values())
     results.sort(key=lambda x: x["latest_time"], reverse=True)
