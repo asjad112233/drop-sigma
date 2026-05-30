@@ -532,6 +532,23 @@ def rma_refund(request, pk):
             actor_user=request.user, actor_label="You",
         )
 
+        # Sync the linked Order's fulfillment status → "refunded" so the
+        # Orders dashboard reflects reality and downstream automations
+        # (status badges, vendor filters, exports) stay consistent.
+        # Doing this inside the same atomic block guarantees both rows
+        # flip together or not at all.
+        if rma.order_id:
+            try:
+                old_status = (rma.order.fulfillment_status or "").lower()
+                if old_status != "refunded":
+                    rma.order.fulfillment_status = "refunded"
+                    rma.order.save(update_fields=["fulfillment_status"])
+            except Exception as e:
+                logger.warning(
+                    "RMA %s: linked order fulfillment_status sync failed: %s",
+                    rma.rma_number, e,
+                )
+
     try:
         _send_status_email(rma, kind="refunded")
     except Exception as e:
@@ -570,6 +587,27 @@ def rma_resolve(request, pk):
         rma.resolved_by = request.user
         rma.save(update_fields=["status", "resolved_at", "resolved_by"])
         _log_event(rma, "resolved", "Manually marked resolved", actor_user=request.user, actor_label="You")
+
+        # Mark the customer's email thread Resolved so it moves out of the
+        # active Returns/Refunds queues and into the Resolved folder. The
+        # email side keys threads by (store, contact=customer_email).
+        try:
+            contact = (rma.customer_email or "").strip().lower()
+            if contact:
+                from emails.models import EmailThreadAssignment
+                EmailThreadAssignment.objects.update_or_create(
+                    store=rma.store,
+                    contact=contact,
+                    defaults={
+                        "is_resolved": True,
+                        "resolved_at": timezone.now(),
+                    },
+                )
+        except Exception as e:
+            logger.warning(
+                "RMA %s: email thread resolve sync failed: %s",
+                rma.rma_number, e,
+            )
 
     try:
         _send_status_email(rma, kind="resolved")

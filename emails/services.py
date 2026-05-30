@@ -2441,6 +2441,28 @@ def build_template_context(store, order=None):
         'tracking_id_only': tracking_number if (tracking_number and not tracking_link) else '',
     })
 
+    # Inject refund details when this order has a linked refunded RMA.
+    # Refund templates reference {{refund_amount}} / {{refund_method}};
+    # without this, those placeholders fall back to SAMPLE_TEMPLATE_DATA
+    # and the customer sees a stale sample number instead of the real
+    # amount the tenant entered on the RMA. Fail-soft: any error leaves
+    # the sample fallback in place.
+    try:
+        from rma.models import RMA as _RMA
+        rma = (_RMA.objects
+               .filter(order=order, status__in=("refunded", "resolved"),
+                       refund_amount__gt=0)
+               .order_by("-refunded_at", "-updated_at", "-id")
+               .first())
+        if rma and rma.refund_amount and float(rma.refund_amount) > 0:
+            ctx['refund_amount']    = fmt(float(rma.refund_amount))
+            ctx['refund_currency']  = currency
+            ctx['refund_method']    = pay_method or 'original payment method'
+            ctx['refund_reference'] = rma.stripe_refund_id or rma.rma_number or ''
+            ctx['rma_number']       = rma.rma_number or ''
+    except Exception:
+        pass
+
     return ctx
 
 
