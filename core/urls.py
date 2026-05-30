@@ -5,6 +5,7 @@ from django.conf.urls.static import static
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic.base import RedirectView
 from . import views
+from . import password_reset as _pr
 from teamapp import views as teamapp_views
 from vendors import views as vendor_views
 
@@ -34,6 +35,10 @@ urlpatterns = [
     path("login/", views.admin_login_page, name="admin_login"),
     path("setup-admin-x9k2/", views.setup_admin),
     path("logout/", views.admin_logout_view, name="admin_logout"),
+
+    # Unified platform password reset (admin / team / vendor — anyone with auth_user)
+    path("api/forgot-password/", _pr.forgot_password_api, name="forgot_password_api"),
+    path("reset-password/<str:uidb64>/<str:token>/", _pr.reset_password_page, name="reset_password_page"),
     path("signup/", views.signup_view, name="signup"),
     path("signup/email-sent/", views.email_sent_view, name="email_sent"),
     path("signup/resend-verification/", views.resend_verification_email_view, name="resend_verification"),

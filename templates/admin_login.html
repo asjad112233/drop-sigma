@@ -230,13 +230,14 @@ body{
         {% csrf_token %}
         <div class="field">
           <label>Username or Email</label>
-          <input type="text" name="username" placeholder="Enter username or email" {% if tab == "admin" %}autofocus{% endif %} required>
+          <input type="text" name="username" id="adminEmailInput" placeholder="Enter username or email" {% if tab == "admin" %}autofocus{% endif %} required>
         </div>
         <div class="field">
           <label>Password</label>
           <input type="password" name="password" placeholder="Enter password" required>
         </div>
         <button type="submit" class="login-btn">Sign In →</button>
+        <button type="button" class="forgot-link" onclick="openForgotPw('admin')">Forgot password?</button>
       </form>
     </div>
 
@@ -277,32 +278,33 @@ body{
         {% csrf_token %}
         <div class="field">
           <label>Email Address</label>
-          <input type="email" name="email" placeholder="team@email.com" {% if tab == "team" %}autofocus{% endif %} required>
+          <input type="email" name="email" id="teamEmailInput" placeholder="team@email.com" {% if tab == "team" %}autofocus{% endif %} required>
         </div>
         <div class="field">
           <label>Password</label>
           <input type="password" name="password" placeholder="Your password" required>
         </div>
         <button type="submit" class="login-btn">Sign In →</button>
+        <button type="button" class="forgot-link" onclick="openForgotPw('team')">Forgot password?</button>
       </form>
     </div>
 
   </div>
 </div>
 
-<!-- Forgot Password Modal (vendor) -->
+<!-- Forgot Password Modal (works for admin / vendor / team) -->
 <div class="fp-overlay" id="fpOverlay">
   <div class="fp-card">
     <div class="fp-head">
-      <div class="fp-title">Reset vendor password</div>
+      <div class="fp-title" id="fpTitle">Reset password</div>
       <button class="fp-close" type="button" onclick="closeForgotPw()" aria-label="Close">×</button>
     </div>
-    <div class="fp-sub">Enter your vendor email. Your admin will be notified and will reset your password — you'll receive the new credentials via email shortly.</div>
-    <input type="email" id="fpEmail" placeholder="vendor@email.com" autocomplete="email">
+    <div class="fp-sub" id="fpSub">Enter the email on your account. We'll send you a link to set a new password.</div>
+    <input type="email" id="fpEmail" placeholder="you@email.com" autocomplete="email">
     <div class="fp-msg" id="fpMsg"></div>
     <div class="fp-actions">
       <button type="button" class="fp-cancel" onclick="closeForgotPw()">Cancel</button>
-      <button type="button" class="fp-submit" id="fpSubmit" onclick="submitForgotPw()">Send request</button>
+      <button type="button" class="fp-submit" id="fpSubmit" onclick="submitForgotPw()">Send reset link</button>
     </div>
   </div>
 </div>
@@ -327,16 +329,39 @@ function _fpGetCsrf(){
   const inp = document.querySelector('form input[name="csrfmiddlewaretoken"]');
   return inp ? inp.value : "";
 }
-function openForgotPw(){
+function openForgotPw(role){
+  role = role || "vendor";
   const overlay = document.getElementById("fpOverlay");
   const emailInp = document.getElementById("fpEmail");
-  const vendorEmail = document.getElementById("vendorEmailInput");
-  // Prefill from the login form if already typed
-  if(vendorEmail && vendorEmail.value) emailInp.value = vendorEmail.value;
+  // Prefill from whichever tab they're on
+  const sources = {
+    admin:  document.getElementById("adminEmailInput"),
+    vendor: document.getElementById("vendorEmailInput"),
+    team:   document.getElementById("teamEmailInput"),
+  };
+  const src = sources[role];
+  if(src && src.value){
+    emailInp.value = src.value;
+  } else {
+    emailInp.value = "";
+  }
+  // Tailor copy per role
+  const titles = {
+    admin:  "Reset your password",
+    vendor: "Reset vendor password",
+    team:   "Reset team member password",
+  };
+  const subs = {
+    admin:  "Enter your account email. We'll send a link to set a new password.",
+    vendor: "Enter your vendor email. We'll send a link to set a new password.",
+    team:   "Enter your team member email. We'll send a link to set a new password.",
+  };
+  document.getElementById("fpTitle").textContent = titles[role] || titles.admin;
+  document.getElementById("fpSub").textContent   = subs[role]   || subs.admin;
   document.getElementById("fpMsg").textContent = "";
   document.getElementById("fpMsg").className = "fp-msg";
   const btn = document.getElementById("fpSubmit");
-  btn.disabled = false; btn.textContent = "Send request";
+  btn.disabled = false; btn.textContent = "Send reset link";
   overlay.classList.add("show");
   setTimeout(()=>emailInp.focus(), 50);
 }
@@ -354,7 +379,7 @@ async function submitForgotPw(){
   btn.disabled = true; btn.textContent = "Sending…";
   msg.textContent = "";
   try{
-    const r = await fetch("/vendor/forgot-password/", {
+    const r = await fetch("/api/forgot-password/", {
       method:"POST",
       headers:{"Content-Type":"application/json","X-CSRFToken":_fpGetCsrf()},
       body: JSON.stringify({email}),
@@ -362,18 +387,18 @@ async function submitForgotPw(){
     const d = await r.json();
     if(d.success){
       msg.className = "fp-msg ok";
-      msg.textContent = d.message || "Your admin has been notified. You'll receive new credentials shortly.";
+      msg.textContent = d.message || "If an account exists for that email, a reset link has been sent. Check your inbox (and spam).";
       btn.textContent = "Sent ✓";
-      setTimeout(()=>closeForgotPw(), 2400);
+      setTimeout(()=>closeForgotPw(), 3500);
     } else {
       msg.className = "fp-msg err";
       msg.textContent = d.message || "Could not send the request. Try again.";
-      btn.disabled = false; btn.textContent = "Send request";
+      btn.disabled = false; btn.textContent = "Send reset link";
     }
   }catch(e){
     msg.className = "fp-msg err";
     msg.textContent = e.message || "Network error.";
-    btn.disabled = false; btn.textContent = "Send request";
+    btn.disabled = false; btn.textContent = "Send reset link";
   }
 }
 // Close on overlay click (not card click)

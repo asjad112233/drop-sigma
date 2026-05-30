@@ -1353,36 +1353,38 @@ def vendor_change_password_api(request):
 @api_view(["POST"])
 def vendor_forgot_password_api(request):
     """
-    Vendor-initiated password reset request.
+    Vendor-initiated password reset — now forwards to the unified
+    platform reset flow (sends a noreply@dropsigma.com email with a link).
+    The old "admin must act" flow is replaced by self-service.
 
-    Since vendors don't own the email infrastructure (per project rule: emails
-    only via tenant's own connected Gmail), this endpoint records the reset
-    request and notifies the store owner. The admin then uses the existing
-    vendor_reset_password_api flow to set a new password and email it back
-    to the vendor via the store's connected Gmail account.
+    Kept as a thin compatibility wrapper so the existing URL keeps working.
     """
-    email = (request.data.get("email") or "").strip().lower()
-    if not email:
-        return Response({"success": False, "message": "Please enter your vendor email."}, status=400)
+    from django.http import HttpRequest
+    from core.password_reset import forgot_password_api as _platform_forgot
 
-    # Don't leak whether the email exists — always respond with a generic success.
-    vendor = Vendor.objects.filter(email__iexact=email).first()
-    if vendor:
-        # Record the request — admin sees this in their portal and can act on it.
+    # Defensive log of the request (history table) — useful for support audits.
+    email = (request.data.get("email") or "").strip().lower()
+    if email:
         try:
-            VendorPasswordResetRequest.objects.create(
-                vendor=vendor,
-                requested_email=email,
-                requested_ip=request.META.get("REMOTE_ADDR", "")[:45],
-                user_agent=(request.META.get("HTTP_USER_AGENT", "") or "")[:300],
-            )
+            vendor = Vendor.objects.filter(email__iexact=email).first()
+            if vendor:
+                VendorPasswordResetRequest.objects.create(
+                    vendor=vendor,
+                    requested_email=email,
+                    requested_ip=request.META.get("REMOTE_ADDR", "")[:45],
+                    user_agent=(request.META.get("HTTP_USER_AGENT", "") or "")[:300],
+                )
         except Exception:
             pass
 
-    return Response({
-        "success": True,
-        "message": "If an account exists for that email, your admin has been notified and will reset your password shortly. You'll receive the new credentials via email.",
-    })
+    # Forward to the unified endpoint — it'll send the actual email.
+    # DRF Request → underlying Django HttpRequest.
+    underlying = getattr(request, "_request", request)
+    # Make sure POST contains the email for the require_POST view.
+    if not underlying.POST.get("email"):
+        underlying.POST = underlying.POST.copy()
+        underlying.POST["email"] = email
+    return _platform_forgot(underlying)
 
 
 # ─── Vendor Invitations ───────────────────────────────────────────────────────
