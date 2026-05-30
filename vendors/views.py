@@ -1386,6 +1386,24 @@ def _safe_decimal(value, default=None):
         return default
 
 
+def _tenant_vendors_qs(tenant):
+    """Vendors reachable from this tenant via ANY of:
+       • assigned_store.user == tenant         (legacy single-store link)
+       • store_assignments.store.user == tenant (multi-store links)
+       • email matches a VendorInvitation owned by tenant (store-less)
+
+    Mirrors vendor_list() so endpoints stay consistent: any vendor that
+    shows in the UI dropdown can also be used in subsequent calls."""
+    invited_emails = (VendorInvitation.objects
+                      .filter(owner=tenant)
+                      .values_list("email", flat=True))
+    return Vendor.objects.filter(
+        Q(assigned_store__user=tenant) |
+        Q(store_assignments__store__user=tenant) |
+        Q(email__in=invited_emails)
+    ).distinct()
+
+
 def _serialize_quote(quote):
     if not quote:
         return None
@@ -1554,9 +1572,9 @@ def sourcing_bulk_assign_api(request):
     if not vendor_id:
         return Response({"success": False, "message": "vendor_id required"}, status=400)
 
-    # Tenant-scoped vendor lookup
+    # Tenant-scoped vendor lookup (accepts store-less vendors too)
     try:
-        vendor = Vendor.objects.get(id=vendor_id, assigned_store__user=request.user)
+        vendor = _tenant_vendors_qs(request.user).get(id=vendor_id)
     except Vendor.DoesNotExist:
         return Response({"success": False, "message": "Vendor not found"}, status=404)
 
@@ -1564,8 +1582,14 @@ def sourcing_bulk_assign_api(request):
     items = request.data.get("items") or []
     if not items:
         product_ids = request.data.get("product_ids") or []
+        # Fall back chain: explicit body store_id → vendor's own store →
+        # tenant's first owned store. The vendor may have no assigned_store
+        # if they were invited before any store existed.
         store_id = request.data.get("store_id") or vendor.assigned_store_id
-        if not Store.objects.filter(id=store_id, user=request.user).exists():
+        if not store_id:
+            first_store = Store.objects.filter(user=request.user).order_by("id").first()
+            store_id = first_store.id if first_store else None
+        if not store_id or not Store.objects.filter(id=store_id, user=request.user).exists():
             return Response({"success": False, "message": "Store not found"}, status=404)
         items = [{"store_id": store_id, "product_id": str(p)} for p in product_ids]
 
@@ -1868,7 +1892,7 @@ def sourcing_trust_settings_api(request):
     if not vendor_id:
         return Response({"success": False, "message": "vendor_id required"}, status=400)
 
-    if not Vendor.objects.filter(id=vendor_id, assigned_store__user=request.user).exists():
+    if not _tenant_vendors_qs(request.user).filter(id=vendor_id).exists():
         return Response({"success": False, "message": "Vendor not found"}, status=404)
 
     trust = VendorTrustSetting.objects.filter(
@@ -1889,7 +1913,7 @@ def sourcing_set_trust_api(request, vendor_id):
     if not request.user.is_authenticated:
         return Response({"success": False, "message": "Authentication required"}, status=401)
 
-    if not Vendor.objects.filter(id=vendor_id, assigned_store__user=request.user).exists():
+    if not _tenant_vendors_qs(request.user).filter(id=vendor_id).exists():
         return Response({"success": False, "message": "Vendor not found"}, status=404)
 
     trust_mode = bool(request.data.get("trust_mode"))
