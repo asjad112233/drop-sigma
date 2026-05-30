@@ -3468,9 +3468,6 @@ def _addr_blk():
 
 _SHOPIFY_TEMPLATES = [
 
-    # ═══════════════════════════════════════════════════════════════════
-    # ORDER CONFIRMATION  ×5
-    # ═══════════════════════════════════════════════════════════════════
     {
         "category": "order", "is_default": True,
         "name": "Order Confirmed — Shopify Style",
@@ -3485,6 +3482,7 @@ _SHOPIFY_TEMPLATES = [
             mid=_order_tbl("#5c6ac4") + _addr_blk(),
         ),
     },
+
     {
         "category": "order", "is_default": False,
         "name": "Order Confirmed — Amazon Style",
@@ -3499,19 +3497,7 @@ _SHOPIFY_TEMPLATES = [
             mid=_order_tbl("#ff9900") + _addr_blk(),
         ),
     },
-    {
-        "category": "order", "is_default": False,
-        "name": "Order Confirmed — Apple Style",
-        "status": "active", "trigger_type": "order_placed",
-        "subject": "Your order is confirmed.",
-        "preheader": "Here's a summary of what you ordered.",
-        "body_html": _apple(
-            "Your order is confirmed.",
-            "Hi {{customer_name}}, thank you for your purchase. Order {{order_id}} placed on {{order_date}} is being prepared. We'll be in touch when it ships.",
-            "View Store",
-            mid=_order_tbl("#0071e3") + _addr_blk(),
-        ),
-    },
+
     {
         "category": "order", "is_default": False,
         "name": "Order Confirmed — Bold Style",
@@ -3526,6 +3512,7 @@ _SHOPIFY_TEMPLATES = [
             mid=_order_tbl("#111") + _addr_blk(),
         ),
     },
+
     {
         "category": "order", "is_default": False,
         "name": "Order Confirmed — Luxury Style",
@@ -3541,9 +3528,6 @@ _SHOPIFY_TEMPLATES = [
         ),
     },
 
-    # ═══════════════════════════════════════════════════════════════════
-    # SHIPPING NOTIFICATION  ×5
-    # ═══════════════════════════════════════════════════════════════════
     {
         "category": "shipping", "is_default": True,
         "name": "Shipped — Shopify Style",
@@ -3559,6 +3543,7 @@ _SHOPIFY_TEMPLATES = [
             mid=_trk_tbl(),
         ),
     },
+
     {
         "category": "shipping", "is_default": False,
         "name": "Shipped — Amazon Style",
@@ -3573,20 +3558,7 @@ _SHOPIFY_TEMPLATES = [
             mid=_trk_tbl(),
         ),
     },
-    {
-        "category": "shipping", "is_default": False,
-        "name": "Shipped — Apple Style",
-        "status": "active", "trigger_type": "tracking_added",
-        "subject": "Your order has shipped.",
-        "preheader": "Track your package with the details inside.",
-        "body_html": _apple(
-            "Your order has shipped.",
-            "Hi {{customer_name}}, your order {{order_id}} is on its way to {{shipping_city}}. You can track it anytime using the information below.",
-            "Track Package",
-            href="{{tracking_link}}",
-            mid=_trk_tbl(),
-        ),
-    },
+
     {
         "category": "shipping", "is_default": False,
         "name": "Shipped — Bold Style",
@@ -3602,6 +3574,7 @@ _SHOPIFY_TEMPLATES = [
             mid=_trk_tbl(),
         ),
     },
+
     {
         "category": "shipping", "is_default": False,
         "name": "Shipped — Luxury Style",
@@ -3618,9 +3591,6 @@ _SHOPIFY_TEMPLATES = [
         ),
     },
 
-    # ═══════════════════════════════════════════════════════════════════
-    # DELIVERED  ×5
-    # ═══════════════════════════════════════════════════════════════════
     {
         "category": "refund", "is_default": True,
         "name": "Delivered — Shopify Style",
@@ -3638,6 +3608,7 @@ _SHOPIFY_TEMPLATES = [
                 '<p style="margin:4px 0 0;font-size:12px;color:#6b7280;">{{tracking_number}}</p></div>',
         ),
     },
+
     {
         "category": "refund", "is_default": False,
         "name": "Delivered — Amazon Style",
@@ -3654,21 +3625,7 @@ _SHOPIFY_TEMPLATES = [
                 '<p style="margin:4px 0 0;font-size:12px;color:#565959;">Tracking: {{tracking_number}}</p></div>',
         ),
     },
-    {
-        "category": "refund", "is_default": False,
-        "name": "Delivered — Apple Style",
-        "status": "active", "trigger_type": "order_delivered",
-        "subject": "Your order has been delivered.",
-        "preheader": "We hope you enjoy your purchase.",
-        "body_html": _apple(
-            "Your order was delivered.",
-            "Hi {{customer_name}}, order {{order_id}} was delivered to {{shipping_city}}. We hope everything arrived perfectly. If not, we're here to help.",
-            "Contact Support",
-            href="mailto:{{store_email}}",
-            mid='<div style="background:#f5f5f7;border-radius:10px;padding:16px;margin-bottom:22px;text-align:center;">'
-                '<p style="margin:0;font-size:14px;font-weight:500;color:#1d1d1f;">✓ Delivered — {{tracking_number}}</p></div>',
-        ),
-    },
+
     {
         "category": "refund", "is_default": False,
         "name": "Delivered — Bold Style",
@@ -3686,6 +3643,7 @@ _SHOPIFY_TEMPLATES = [
                 '<p style="margin:4px 0 0;font-size:12px;color:#555;">{{tracking_number}}</p></div>',
         ),
     },
+
     {
         "category": "refund", "is_default": False,
         "name": "Delivered — Luxury Style",
@@ -3702,9 +3660,6 @@ _SHOPIFY_TEMPLATES = [
         ),
     },
 
-    # ═══════════════════════════════════════════════════════════════════
-    # ORDER CANCELLED  ×5
-    # ═══════════════════════════════════════════════════════════════════
     {
         "category": "cancelled", "is_default": True,
         "name": "Cancelled — Shopify Style",
@@ -3725,6 +3680,7 @@ _SHOPIFY_TEMPLATES = [
                 '</table></div>',
         ),
     },
+
     {
         "category": "cancelled", "is_default": False,
         "name": "Cancelled — Amazon Style",
@@ -3741,21 +3697,7 @@ _SHOPIFY_TEMPLATES = [
                 '<p style="margin:4px 0 0;font-size:12px;color:#565959;">Allow 5–7 business days to process.</p></div>',
         ),
     },
-    {
-        "category": "cancelled", "is_default": False,
-        "name": "Cancelled — Apple Style",
-        "status": "active", "trigger_type": "order_cancelled",
-        "subject": "Your order has been cancelled.",
-        "preheader": "A refund is on its way.",
-        "body_html": _apple(
-            "Your order has been cancelled.",
-            "Hi {{customer_name}}, order {{order_id}} has been cancelled. Your refund of {{order_total}} will be returned to your {{payment_method}} within 5–7 business days.",
-            "Return to Store",
-            mid='<div style="background:#f5f5f7;border-radius:10px;padding:16px;margin-bottom:22px;text-align:center;">'
-                '<p style="margin:0;font-size:14px;font-weight:500;color:#1d1d1f;">Refund: {{order_total}}</p>'
-                '<p style="margin:4px 0 0;font-size:12px;color:#6e6e73;">5–7 business days to your {{payment_method}}</p></div>',
-        ),
-    },
+
     {
         "category": "cancelled", "is_default": False,
         "name": "Cancelled — Bold Style",
@@ -3772,6 +3714,7 @@ _SHOPIFY_TEMPLATES = [
                 '<p style="margin:4px 0 0;font-size:12px;color:#555;">Returns to {{payment_method}} in 5–7 days.</p></div>',
         ),
     },
+
     {
         "category": "cancelled", "is_default": False,
         "name": "Cancelled — Luxury Style",
@@ -3788,9 +3731,6 @@ _SHOPIFY_TEMPLATES = [
         ),
     },
 
-    # ═══════════════════════════════════════════════════════════════════
-    # PAYMENT FAILED  ×5
-    # ═══════════════════════════════════════════════════════════════════
     {
         "category": "failed", "is_default": True,
         "name": "Payment Failed — Shopify Style",
@@ -3806,6 +3746,7 @@ _SHOPIFY_TEMPLATES = [
                 '<p style="margin:0;font-size:13px;color:#dc2626;font-weight:600;">⚠ Payment of {{order_total}} declined via {{payment_method}}</p></div>',
         ),
     },
+
     {
         "category": "failed", "is_default": False,
         "name": "Payment Failed — Amazon Style",
@@ -3821,21 +3762,7 @@ _SHOPIFY_TEMPLATES = [
                 '<p style="margin:0;font-size:13px;color:#0f1111;font-weight:700;">⚠ Declined: {{order_total}} via {{payment_method}}</p></div>',
         ),
     },
-    {
-        "category": "failed", "is_default": False,
-        "name": "Payment Failed — Apple Style",
-        "status": "active", "trigger_type": "payment_failed",
-        "subject": "There was an issue with your payment.",
-        "preheader": "Please update your payment method.",
-        "body_html": _apple(
-            "There was an issue with your payment.",
-            "Hi {{customer_name}}, we weren't able to process payment of {{order_total}} for order {{order_id}}. Please update your payment details to keep your order active.",
-            "Update Payment",
-            mid='<div style="background:#fff2f2;border-radius:10px;padding:16px;margin-bottom:22px;text-align:center;">'
-                '<p style="margin:0;font-size:14px;font-weight:500;color:#dc2626;">Payment declined: {{order_total}}</p>'
-                '<p style="margin:4px 0 0;font-size:12px;color:#6e6e73;">{{payment_method}}</p></div>',
-        ),
-    },
+
     {
         "category": "failed", "is_default": False,
         "name": "Payment Failed — Bold Style",
@@ -3852,6 +3779,7 @@ _SHOPIFY_TEMPLATES = [
                 '<p style="margin:4px 0 0;font-size:12px;color:#555;">{{payment_method}}</p></div>',
         ),
     },
+
     {
         "category": "failed", "is_default": False,
         "name": "Payment Failed — Luxury Style",
@@ -3868,9 +3796,6 @@ _SHOPIFY_TEMPLATES = [
         ),
     },
 
-    # ═══════════════════════════════════════════════════════════════════
-    # FOLLOW-UP  ×5
-    # ═══════════════════════════════════════════════════════════════════
     {
         "category": "followup", "is_default": True,
         "name": "Follow-up — Shopify Style",
@@ -3884,6 +3809,7 @@ _SHOPIFY_TEMPLATES = [
             "Leave a Review",
         ),
     },
+
     {
         "category": "followup", "is_default": False,
         "name": "Follow-up — Amazon Style",
@@ -3898,21 +3824,7 @@ _SHOPIFY_TEMPLATES = [
             mid='<div style="text-align:center;font-size:24px;margin:0 0 14px;letter-spacing:4px;color:#ff9900;">★★★★★</div>',
         ),
     },
-    {
-        "category": "followup", "is_default": False,
-        "name": "Follow-up — Apple Style",
-        "status": "active", "trigger_type": "no_activity_7d",
-        "subject": "Tell us about your experience.",
-        "preheader": "How are you enjoying your purchase?",
-        "body_html": _apple(
-            "How are you enjoying it?",
-            "Hi {{customer_name}}, it's been a little while since order {{order_id}} arrived. We'd love to know how you're finding it. Your feedback means a lot to us.",
-            "Share Feedback",
-            mid='<div style="background:#f5f5f7;border-radius:10px;padding:16px;margin-bottom:22px;text-align:center;">'
-                '<p style="margin:0;font-size:22px;letter-spacing:6px;color:#0071e3;">★★★★★</p>'
-                '<p style="margin:8px 0 0;font-size:13px;color:#6e6e73;">How would you rate your order?</p></div>',
-        ),
-    },
+
     {
         "category": "followup", "is_default": False,
         "name": "Follow-up — Bold Style",
@@ -3928,6 +3840,7 @@ _SHOPIFY_TEMPLATES = [
                 '<p style="margin:0;font-size:20px;letter-spacing:4px;color:#111;">★★★★★</p></div>',
         ),
     },
+
     {
         "category": "followup", "is_default": False,
         "name": "Follow-up — Luxury Style",
