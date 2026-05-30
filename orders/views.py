@@ -1437,7 +1437,9 @@ TRACKING_REQUIRED_STATUSES = {
 # the "Send email to customer" checkbox in the UI. Update this list if a
 # new template lands.
 EMAIL_TEMPLATE_STATUSES = {
-    "processing", "shipped", "completed", "failed", "cancelled", "dispute",
+    "processing", "shipped", "delivered", "completed",
+    "cancelled", "failed", "dispute",
+    "refunded", "returned",
 }
 
 ORDER_STATUS_CATALOGUE = [
