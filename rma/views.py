@@ -8,14 +8,16 @@ All tenant queries must run through `_user_rma_qs(user)` to enforce
 isolation. Never trust IDs from POST body without re-checking tenancy.
 """
 import json
+import logging
 import datetime as _dt
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse, HttpResponse, Http404
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST, require_GET
 from django.views.decorators.csrf import csrf_exempt
+from django.db import transaction, IntegrityError
 from django.db.models import Count, Sum, Q, Avg, F
 from django.utils import timezone
 from django.conf import settings
@@ -28,6 +30,38 @@ from .models import (
     DEFAULT_REASONS, REASON_KEYS, RMA_STATUS_CHOICES, SHIPPING_POLICY_CHOICES,
     RMA_TERMINAL_STATUSES,
 )
+
+logger = logging.getLogger(__name__)
+
+
+# Status-transition rules — what statuses can transition into a target.
+# Used by action endpoints to reject invalid moves with a clear 400.
+_ALLOWED_FROM = {
+    "approved":   ("pending",),
+    "rejected":   ("pending", "approved"),          # tenant can change mind on a pending case
+    "in_transit": ("approved", "tracking_submitted"),
+    "received":   ("approved", "in_transit", "tracking_submitted"),
+    "refunded":   ("approved", "in_transit", "tracking_submitted", "received"),
+    "resolved":   ("approved", "in_transit", "tracking_submitted", "received", "refunded", "rejected"),
+}
+
+
+def _to_decimal(value, default=None):
+    """Safely coerce arbitrary JSON values into Decimal. Returns `default` on bad input."""
+    if value is None or value == "":
+        return default
+    try:
+        return Decimal(str(value))
+    except (InvalidOperation, ValueError, TypeError):
+        return default
+
+
+def _parse_json_body(request):
+    """Parse request.body as JSON, returning {} on any failure."""
+    try:
+        return json.loads(request.body or b"{}")
+    except (ValueError, TypeError):
+        return {}
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -69,6 +103,81 @@ def _log_event(rma, event_type, message="", actor_user=None, actor_label=""):
         actor_label=actor_label or (actor_user.get_full_name() or actor_user.username if actor_user else "System"),
         message=message,
     )
+
+
+def _create_rma_with_unique_number(**kwargs):
+    """
+    Create an RMA, retrying rma_number generation on the unique-constraint
+    race condition that occurs when two requests hit `next_rma_number` at
+    the same instant. Returns the saved RMA.
+    """
+    store = kwargs.pop("store")
+    last_err = None
+    for _attempt in range(5):
+        try:
+            with transaction.atomic():
+                return RMA.objects.create(
+                    store=store,
+                    rma_number=RMA.next_rma_number(store),
+                    **kwargs,
+                )
+        except IntegrityError as e:
+            last_err = e
+            continue
+    # Final attempt with a UUID-style fallback so the customer flow never breaks.
+    import uuid as _uuid
+    return RMA.objects.create(
+        store=store,
+        rma_number=f"RMA-{_uuid.uuid4().hex[:10].upper()}",
+        **kwargs,
+    )
+
+
+def _safe_send_to_customer(rma, subject, body):
+    """
+    Best-effort email send to the customer.
+
+    Project rule (memory): outbound emails MUST go through the tenant's
+    connected Gmail (emails.views.send_email_with_store_account). If the
+    tenant hasn't connected Gmail yet, fall back to Django's default mail
+    backend so the flow never silently fails during early onboarding.
+
+    Returns True if a send was attempted successfully; False otherwise.
+    Failures are logged but never raised — the RMA action itself must
+    succeed regardless of email outcome (best-effort by design).
+    """
+    if not rma or not rma.customer_email or not rma.store:
+        return False
+
+    # Try tenant's Gmail / connected account first.
+    try:
+        from emails.views import send_email_with_store_account
+        send_email_with_store_account(
+            store=rma.store,
+            recipient=rma.customer_email,
+            subject=subject,
+            body=body,
+        )
+        return True
+    except Exception as e:
+        # Includes "No connected email account" — fall through to default backend.
+        logger.info(
+            "RMA %s: store-account send failed (%s); using fallback.",
+            getattr(rma, "rma_number", "?"), e,
+        )
+
+    # Fallback — Django default mail backend (console / SMTP).
+    try:
+        from django.core.mail import send_mail
+        from_email = getattr(settings, "DEFAULT_FROM_EMAIL", None) or "noreply@dropsigma.com"
+        send_mail(subject, body, from_email, [rma.customer_email], fail_silently=True)
+        return True
+    except Exception as e:
+        logger.warning(
+            "RMA %s: fallback email send failed: %s",
+            getattr(rma, "rma_number", "?"), e,
+        )
+        return False
 
 
 def _platform_creds():
@@ -203,47 +312,63 @@ def rma_detail(request, pk):
 @login_required(login_url="/login/")
 @require_POST
 def rma_approve(request, pk):
-    rma = _get_tenant_rma(request.user, pk)
-    if rma.status not in ("pending", "rejected"):
-        return JsonResponse({"ok": False, "error": f"Cannot approve from status '{rma.status}'."}, status=400)
+    data = _parse_json_body(request)
+    custom_refund   = _to_decimal(data.get("refund_amount"))
+    refund_shipping = _to_decimal(data.get("refund_shipping"))
+    restocking      = _to_decimal(data.get("restocking_fee"))
 
-    # Optional override amount in POST
+    with transaction.atomic():
+        try:
+            rma = (_user_rma_qs(request.user)
+                   .select_for_update()
+                   .select_related("store", "order")
+                   .get(pk=int(pk)))
+        except (RMA.DoesNotExist, ValueError, TypeError):
+            raise Http404("RMA not found")
+
+        # Strict transition — only pending → approved. Use /reopen/ to go from
+        # rejected. This prevents re-approving an already-refunded case.
+        if rma.status not in _ALLOWED_FROM["approved"]:
+            return JsonResponse(
+                {"ok": False, "error": f"Cannot approve from status '{rma.status}'."},
+                status=400,
+            )
+
+        if refund_shipping is not None:
+            rma.refund_shipping = refund_shipping
+        if restocking is not None:
+            rma.restocking_fee = restocking
+        if custom_refund is not None:
+            rma.refund_amount = custom_refund
+        else:
+            rma.refund_amount = rma.total_refund
+
+        rma.status      = "approved"
+        rma.approved_at = timezone.now()
+        rma.approved_by = request.user
+        rma.save()
+
+        _log_event(
+            rma, "approved",
+            f"Approved by {request.user.username}. Refund: ${rma.refund_amount}",
+            actor_user=request.user, actor_label="You",
+        )
+
+        # Auto-generate label if enabled (stub — Shippo/EasyPost integration later)
+        sett = RMASettings.for_store(rma.store) if rma.store else None
+        if sett and sett.auto_generate_label and not rma.return_label_url:
+            rma.return_carrier     = "USPS Priority Mail"
+            rma.return_tracking_no = f"9405{rma.pk:010d}"
+            rma.return_label_url   = f"/rma/{rma.pk}/label.pdf"
+            rma.save(update_fields=["return_carrier", "return_tracking_no", "return_label_url"])
+            _log_event(rma, "label_generated", f"Label generated: {rma.return_tracking_no}", actor_label="System")
+
+    # Send the email AFTER the transaction commits so a failing send never
+    # rolls back the approval. Best-effort by design.
     try:
-        data = json.loads(request.body or b"{}")
-    except Exception:
-        data = {}
-    custom_refund = data.get("refund_amount")
-    refund_shipping = data.get("refund_shipping")
-    restocking     = data.get("restocking_fee")
-
-    if refund_shipping is not None:
-        rma.refund_shipping = Decimal(str(refund_shipping))
-    if restocking is not None:
-        rma.restocking_fee = Decimal(str(restocking))
-    if custom_refund is not None:
-        rma.refund_amount = Decimal(str(custom_refund))
-    else:
-        rma.refund_amount = rma.total_refund
-
-    rma.status      = "approved"
-    rma.approved_at = timezone.now()
-    rma.approved_by = request.user
-    rma.save()
-
-    _log_event(rma, "approved", f"Approved by {request.user.username}. Refund: ${rma.refund_amount}", actor_user=request.user, actor_label="You")
-
-    # Auto-generate label if enabled (stub for now — Shippo/EasyPost integration later)
-    store, sett = _settings_for_user(request.user)
-    if sett and sett.auto_generate_label and not rma.return_label_url:
-        # Stubbed values — real integration goes here
-        rma.return_carrier     = "USPS Priority Mail"
-        rma.return_tracking_no = f"9405{rma.pk:010d}"
-        rma.return_label_url   = f"/rma/{rma.pk}/label.pdf"
-        rma.save(update_fields=["return_carrier", "return_tracking_no", "return_label_url"])
-        _log_event(rma, "label_generated", f"Label generated: {rma.return_tracking_no}", actor_label="System")
-
-    # Trigger approval email (stub — full Gmail sender wiring later)
-    _send_status_email(rma, kind="approved")
+        _send_status_email(rma, kind="approved")
+    except Exception as e:
+        logger.warning("RMA %s: approval email send raised: %s", rma.rma_number, e)
 
     return JsonResponse({
         "ok": True,
@@ -257,100 +382,164 @@ def rma_approve(request, pk):
 @login_required(login_url="/login/")
 @require_POST
 def rma_reject(request, pk):
-    rma = _get_tenant_rma(request.user, pk)
-    try:
-        data = json.loads(request.body or b"{}")
-    except Exception:
-        data = {}
-    reason = (data.get("reason") or "").strip()
+    data = _parse_json_body(request)
+    reason = (data.get("reason") or "").strip()[:2000]
 
-    rma.status      = "rejected"
-    rma.rejected_at = timezone.now()
-    rma.reject_note = reason
-    rma.save(update_fields=["status", "rejected_at", "reject_note"])
-    _log_event(rma, "rejected", reason or "Rejected", actor_user=request.user, actor_label="You")
-    _send_status_email(rma, kind="rejected")
+    with transaction.atomic():
+        try:
+            rma = _user_rma_qs(request.user).select_for_update().get(pk=int(pk))
+        except (RMA.DoesNotExist, ValueError, TypeError):
+            raise Http404("RMA not found")
+
+        if rma.status not in _ALLOWED_FROM["rejected"]:
+            return JsonResponse(
+                {"ok": False, "error": f"Cannot reject from status '{rma.status}'."},
+                status=400,
+            )
+
+        rma.status      = "rejected"
+        rma.rejected_at = timezone.now()
+        rma.reject_note = reason
+        rma.save(update_fields=["status", "rejected_at", "reject_note"])
+        _log_event(rma, "rejected", reason or "Rejected", actor_user=request.user, actor_label="You")
+
+    try:
+        _send_status_email(rma, kind="rejected")
+    except Exception as e:
+        logger.warning("RMA %s: reject email send raised: %s", rma.rma_number, e)
     return JsonResponse({"ok": True, "status": "rejected"})
 
 
 @login_required(login_url="/login/")
 @require_POST
 def rma_mark_received(request, pk):
-    rma = _get_tenant_rma(request.user, pk)
-    if rma.status not in ("approved", "in_transit"):
-        return JsonResponse({"ok": False, "error": f"Cannot mark received from '{rma.status}'."}, status=400)
-    rma.status      = "received"
-    rma.received_at = timezone.now()
-    rma.save(update_fields=["status", "received_at"])
-    _log_event(rma, "received", "Marked received in dashboard", actor_user=request.user, actor_label="You")
+    with transaction.atomic():
+        try:
+            rma = _user_rma_qs(request.user).select_for_update().get(pk=int(pk))
+        except (RMA.DoesNotExist, ValueError, TypeError):
+            raise Http404("RMA not found")
+
+        if rma.status == "received":
+            # Idempotent — return success rather than crash.
+            return JsonResponse({"ok": True, "status": "received", "noop": True})
+        if rma.status not in _ALLOWED_FROM["received"]:
+            return JsonResponse(
+                {"ok": False, "error": f"Cannot mark received from '{rma.status}'."},
+                status=400,
+            )
+        rma.status      = "received"
+        rma.received_at = timezone.now()
+        rma.save(update_fields=["status", "received_at"])
+        _log_event(rma, "received", "Marked received in dashboard", actor_user=request.user, actor_label="You")
     return JsonResponse({"ok": True, "status": "received"})
 
 
 @login_required(login_url="/login/")
 @require_POST
 def rma_mark_in_transit(request, pk):
-    rma = _get_tenant_rma(request.user, pk)
-    if rma.status not in ("approved",):
-        return JsonResponse({"ok": False, "error": f"Cannot mark in transit from '{rma.status}'."}, status=400)
-    rma.status = "in_transit"
-    rma.save(update_fields=["status"])
-    _log_event(rma, "in_transit", "Marked in transit", actor_user=request.user, actor_label="You")
+    with transaction.atomic():
+        try:
+            rma = _user_rma_qs(request.user).select_for_update().get(pk=int(pk))
+        except (RMA.DoesNotExist, ValueError, TypeError):
+            raise Http404("RMA not found")
+
+        if rma.status == "in_transit":
+            return JsonResponse({"ok": True, "status": "in_transit", "noop": True})
+        if rma.status not in _ALLOWED_FROM["in_transit"]:
+            return JsonResponse(
+                {"ok": False, "error": f"Cannot mark in transit from '{rma.status}'."},
+                status=400,
+            )
+        rma.status = "in_transit"
+        rma.save(update_fields=["status"])
+        _log_event(rma, "in_transit", "Marked in transit", actor_user=request.user, actor_label="You")
     return JsonResponse({"ok": True, "status": "in_transit"})
 
 
 @login_required(login_url="/login/")
 @require_POST
 def rma_refund(request, pk):
-    """One-click Stripe refund. Falls back to manual-mark-only if no charge linked."""
-    rma = _get_tenant_rma(request.user, pk)
-    if rma.status == "refunded":
-        return JsonResponse({"ok": False, "error": "Already refunded."}, status=400)
+    """One-click Stripe refund. Falls back to manual-mark-only if no charge linked.
+
+    Leaves status at 'refunded' (does NOT auto-jump to 'resolved') so the
+    Refunded tab actually contains refunded cases. Use the Resolve action
+    after the case is fully closed.
+    """
+    data = _parse_json_body(request)
+    amount = _to_decimal(data.get("amount"))
+
+    with transaction.atomic():
+        try:
+            rma = (_user_rma_qs(request.user)
+                   .select_for_update()
+                   .select_related("store", "order")
+                   .get(pk=int(pk)))
+        except (RMA.DoesNotExist, ValueError, TypeError):
+            raise Http404("RMA not found")
+
+        # Idempotency — if already refunded, return the current state (no crash).
+        if rma.status in ("refunded", "resolved") and rma.refunded_at:
+            return JsonResponse({
+                "ok": True,
+                "status": rma.status,
+                "noop": True,
+                "refund_amount": str(rma.refund_amount),
+                "stripe_refund_id": rma.stripe_refund_id,
+            })
+
+        if rma.status not in _ALLOWED_FROM["refunded"]:
+            return JsonResponse(
+                {"ok": False, "error": f"Cannot refund from status '{rma.status}'. Approve it first."},
+                status=400,
+            )
+
+        if amount is not None:
+            rma.refund_amount = amount
+        if not rma.refund_amount or rma.refund_amount <= 0:
+            rma.refund_amount = rma.total_refund
+
+        # Attempt Stripe refund if we have a charge_id.
+        stripe_ok  = False
+        stripe_err = ""
+        if rma.stripe_charge_id:
+            try:
+                import stripe
+                stripe.api_key = _platform_creds()["stripe_secret"]
+                refund = stripe.Refund.create(
+                    charge=rma.stripe_charge_id,
+                    amount=int(float(rma.refund_amount) * 100),
+                    metadata={"rma_number": rma.rma_number, "django_user_id": str(request.user.id)},
+                )
+                rma.stripe_refund_id = refund.id
+                stripe_ok = True
+            except Exception as e:
+                stripe_err = f"{type(e).__name__}: {e}"
+                logger.warning(
+                    "RMA %s: Stripe refund failed: %s",
+                    rma.rma_number, stripe_err,
+                )
+
+        rma.status      = "refunded"
+        rma.refunded_at = timezone.now()
+        rma.save(update_fields=["status", "refunded_at", "refund_amount", "stripe_refund_id"])
+
+        _log_event(
+            rma, "refunded",
+            f"Refund processed: ${rma.refund_amount}" +
+            (f" (Stripe: {rma.stripe_refund_id})" if stripe_ok
+             else " (manual mark — no Stripe charge linked)" if not rma.stripe_charge_id
+             else f" (Stripe failed: {stripe_err})"),
+            actor_user=request.user, actor_label="You",
+        )
 
     try:
-        data = json.loads(request.body or b"{}")
-    except Exception:
-        data = {}
-    amount = data.get("amount")
-    if amount is not None:
-        rma.refund_amount = Decimal(str(amount))
-    if not rma.refund_amount or rma.refund_amount <= 0:
-        rma.refund_amount = rma.total_refund
-
-    # Attempt Stripe refund if we have a charge_id
-    stripe_ok  = False
-    stripe_err = ""
-    if rma.stripe_charge_id:
-        try:
-            import stripe
-            stripe.api_key = _platform_creds()["stripe_secret"]
-            refund = stripe.Refund.create(
-                charge=rma.stripe_charge_id,
-                amount=int(float(rma.refund_amount) * 100),
-                metadata={"rma_number": rma.rma_number, "django_user_id": str(request.user.id)},
-            )
-            rma.stripe_refund_id = refund.id
-            stripe_ok = True
-        except Exception as e:
-            stripe_err = f"{type(e).__name__}: {e}"
-
-    rma.status      = "refunded"
-    rma.refunded_at = timezone.now()
-    # Auto-resolve on refund (per tenant preference)
-    rma.resolved_at = timezone.now()
-    rma.resolved_by = request.user
-    rma.status      = "resolved"
-    rma.save()
-    _log_event(
-        rma, "refunded",
-        f"Refund processed: ${rma.refund_amount}" + (f" (Stripe: {rma.stripe_refund_id})" if stripe_ok else " (manual mark — no Stripe charge linked)"),
-        actor_user=request.user, actor_label="You",
-    )
-    _log_event(rma, "resolved", "Auto-resolved after refund", actor_user=request.user, actor_label="System")
-    _send_status_email(rma, kind="refunded")
+        _send_status_email(rma, kind="refunded")
+    except Exception as e:
+        logger.warning("RMA %s: refund email send raised: %s", rma.rma_number, e)
 
     return JsonResponse({
         "ok": True,
-        "status": "resolved",
+        "status": rma.status,
         "refund_amount": str(rma.refund_amount),
         "stripe_refund_id": rma.stripe_refund_id,
         "stripe_attempted": bool(rma.stripe_charge_id),
@@ -363,15 +552,29 @@ def rma_refund(request, pk):
 @require_POST
 def rma_resolve(request, pk):
     """Mark the case Resolved manually (e.g. tenant handled it outside Stripe)."""
-    rma = _get_tenant_rma(request.user, pk)
-    if rma.status == "resolved":
-        return JsonResponse({"ok": False, "error": "Already resolved."}, status=400)
-    rma.status      = "resolved"
-    rma.resolved_at = timezone.now()
-    rma.resolved_by = request.user
-    rma.save(update_fields=["status", "resolved_at", "resolved_by"])
-    _log_event(rma, "resolved", "Manually marked resolved", actor_user=request.user, actor_label="You")
-    _send_status_email(rma, kind="resolved")
+    with transaction.atomic():
+        try:
+            rma = _user_rma_qs(request.user).select_for_update().get(pk=int(pk))
+        except (RMA.DoesNotExist, ValueError, TypeError):
+            raise Http404("RMA not found")
+
+        if rma.status == "resolved":
+            return JsonResponse({"ok": True, "status": "resolved", "noop": True})
+        if rma.status not in _ALLOWED_FROM["resolved"]:
+            return JsonResponse(
+                {"ok": False, "error": f"Cannot resolve from '{rma.status}'."},
+                status=400,
+            )
+        rma.status      = "resolved"
+        rma.resolved_at = timezone.now()
+        rma.resolved_by = request.user
+        rma.save(update_fields=["status", "resolved_at", "resolved_by"])
+        _log_event(rma, "resolved", "Manually marked resolved", actor_user=request.user, actor_label="You")
+
+    try:
+        _send_status_email(rma, kind="resolved")
+    except Exception as e:
+        logger.warning("RMA %s: resolve email send raised: %s", rma.rma_number, e)
     return JsonResponse({"ok": True, "status": "resolved"})
 
 
@@ -379,22 +582,39 @@ def rma_resolve(request, pk):
 @require_POST
 def rma_reopen(request, pk):
     """Reopen a resolved/rejected case (back to last meaningful state)."""
-    rma = _get_tenant_rma(request.user, pk)
-    if rma.status not in ("resolved", "rejected"):
-        return JsonResponse({"ok": False, "error": "Only resolved or rejected RMAs can be reopened."}, status=400)
-    # Decide a reasonable target state
-    if rma.refunded_at:
-        target = "refunded"
-    elif rma.received_at:
-        target = "received"
-    elif rma.approved_at:
-        target = "approved"
-    else:
-        target = "pending"
-    rma.status      = target
-    rma.resolved_at = None
-    rma.save(update_fields=["status", "resolved_at"])
-    _log_event(rma, "status_change", f"Reopened to {target}", actor_user=request.user, actor_label="You")
+    with transaction.atomic():
+        try:
+            rma = _user_rma_qs(request.user).select_for_update().get(pk=int(pk))
+        except (RMA.DoesNotExist, ValueError, TypeError):
+            raise Http404("RMA not found")
+
+        if rma.status not in ("resolved", "rejected"):
+            return JsonResponse(
+                {"ok": False, "error": "Only resolved or rejected RMAs can be reopened."},
+                status=400,
+            )
+
+        # Decide a reasonable target state — read the timestamps in reverse
+        # chronological order so refunded > received > approved > pending.
+        if rma.refunded_at:
+            target = "refunded"
+        elif rma.received_at:
+            target = "received"
+        elif rma.approved_at:
+            target = "approved"
+        else:
+            target = "pending"
+
+        rma.status      = target
+        # Clear closure timestamps so the case is genuinely "open" again.
+        rma.resolved_at = None
+        rma.resolved_by = None
+        if rma.status != "rejected":
+            # Only nuke rejected_at when leaving rejected — preserves history otherwise.
+            rma.rejected_at = None
+            rma.reject_note = ""
+        rma.save(update_fields=["status", "resolved_at", "resolved_by", "rejected_at", "reject_note"])
+        _log_event(rma, "status_change", f"Reopened to {target}", actor_user=request.user, actor_label="You")
     return JsonResponse({"ok": True, "status": target})
 
 
@@ -403,11 +623,8 @@ def rma_reopen(request, pk):
 def rma_message(request, pk):
     """Send a reply to the customer (visible on their tracking page)."""
     rma = _get_tenant_rma(request.user, pk)
-    try:
-        data = json.loads(request.body or b"{}")
-    except Exception:
-        data = {}
-    body = (data.get("body") or "").strip()
+    data = _parse_json_body(request)
+    body = (data.get("body") or "").strip()[:5000]
     if not body:
         return JsonResponse({"ok": False, "error": "Message body is required."}, status=400)
     msg = RMAMessage.objects.create(
@@ -434,11 +651,8 @@ def rma_message(request, pk):
 def rma_internal_note(request, pk):
     """Add a team-only internal note (not visible to customer)."""
     rma = _get_tenant_rma(request.user, pk)
-    try:
-        data = json.loads(request.body or b"{}")
-    except Exception:
-        data = {}
-    body = (data.get("body") or "").strip()
+    data = _parse_json_body(request)
+    body = (data.get("body") or "").strip()[:5000]
     if not body:
         return JsonResponse({"ok": False, "error": "Note body is required."}, status=400)
     msg = RMAMessage.objects.create(
@@ -458,10 +672,7 @@ def rma_internal_note(request, pk):
 @require_POST
 def rma_create_manual(request):
     """Create an RMA directly from an existing Order (skips customer form)."""
-    try:
-        data = json.loads(request.body or b"{}")
-    except Exception:
-        data = {}
+    data = _parse_json_body(request)
 
     order_id = data.get("order_id")
     order_ext = (data.get("order_external_id") or "").strip()
@@ -481,14 +692,18 @@ def rma_create_manual(request):
     if not order:
         return JsonResponse({"ok": False, "error": "Order not found. Check the order number and that the store is connected."}, status=404)
 
-    rma = RMA.objects.create(
+    reason = (data.get("reason") or "").strip()
+    if reason and reason not in REASON_KEYS:
+        reason = ""  # Don't store free-text reasons that don't match our enum.
+    note = (data.get("note") or "").strip()[:5000]
+
+    rma = _create_rma_with_unique_number(
         store=order.store, order=order,
-        rma_number=RMA.next_rma_number(order.store),
         customer_name=order.customer_name or "",
-        customer_email=order.customer_email or "",
+        customer_email=(order.customer_email or "").strip().lower(),
         customer_phone=order.customer_phone or "",
-        reason=(data.get("reason") or ""),
-        customer_note=(data.get("note") or ""),
+        reason=reason,
+        customer_note=note,
         status="pending",
     )
 
@@ -504,6 +719,12 @@ def rma_create_manual(request):
     )
 
     _log_event(rma, "submitted", "Created manually from tenant dashboard", actor_user=request.user, actor_label="You")
+
+    # Send the submission ack so the customer has a tracking link they can use.
+    try:
+        _send_status_email(rma, kind="submitted")
+    except Exception as e:
+        logger.warning("RMA %s: manual-create email send raised: %s", rma.rma_number, e)
 
     return JsonResponse({"ok": True, "rma_id": rma.id, "rma_number": rma.rma_number})
 
@@ -596,33 +817,52 @@ def rma_settings_view(request):
         return render(request, "rma/settings.html", {"sett": None, "no_store": True, "default_reasons": DEFAULT_REASONS})
 
     if request.method == "POST":
+        data = _parse_json_body(request)
+
         try:
-            data = json.loads(request.body or b"{}")
-        except Exception:
-            data = {}
-        sett.return_window_days     = int(data.get("return_window_days", sett.return_window_days))
-        sett.restocking_fee_percent = Decimal(str(data.get("restocking_fee_percent", sett.restocking_fee_percent)))
-        sett.shipping_policy        = data.get("shipping_policy", sett.shipping_policy)
-        sett.policy_text            = data.get("policy_text", sett.policy_text)
-        sett.return_address_line1   = data.get("return_address_line1", sett.return_address_line1)
-        sett.return_address_line2   = data.get("return_address_line2", sett.return_address_line2)
-        sett.return_city            = data.get("return_city",  sett.return_city)
-        sett.return_state           = data.get("return_state", sett.return_state)
-        sett.return_postcode        = data.get("return_postcode", sett.return_postcode)
-        sett.return_country         = data.get("return_country", sett.return_country)
-        sett.auto_approve_defects_under = Decimal(str(data.get("auto_approve_defects_under", sett.auto_approve_defects_under)))
-        sett.auto_approve_vip       = bool(data.get("auto_approve_vip", sett.auto_approve_vip))
-        sett.auto_flag_suspicious   = bool(data.get("auto_flag_suspicious", sett.auto_flag_suspicious))
-        sett.auto_generate_label    = bool(data.get("auto_generate_label", sett.auto_generate_label))
+            sett.return_window_days = max(0, min(int(data.get("return_window_days", sett.return_window_days)), 3650))
+        except (TypeError, ValueError):
+            pass
+
+        d = _to_decimal(data.get("restocking_fee_percent"), sett.restocking_fee_percent)
+        if d is not None:
+            sett.restocking_fee_percent = max(Decimal("0"), min(d, Decimal("100")))
+
+        sp = data.get("shipping_policy", sett.shipping_policy)
+        valid_policies = {k for k, _ in SHIPPING_POLICY_CHOICES}
+        if sp in valid_policies:
+            sett.shipping_policy = sp
+
+        # String fields — cap to schema length so DB-level errors don't surface.
+        sett.policy_text          = (data.get("policy_text", sett.policy_text) or "")[:50000]
+        sett.return_address_line1 = (data.get("return_address_line1", sett.return_address_line1) or "")[:200]
+        sett.return_address_line2 = (data.get("return_address_line2", sett.return_address_line2) or "")[:200]
+        sett.return_city          = (data.get("return_city",  sett.return_city) or "")[:100]
+        sett.return_state         = (data.get("return_state", sett.return_state) or "")[:100]
+        sett.return_postcode      = (data.get("return_postcode", sett.return_postcode) or "")[:20]
+        sett.return_country       = (data.get("return_country", sett.return_country) or "")[:100]
+
+        d = _to_decimal(data.get("auto_approve_defects_under"), sett.auto_approve_defects_under)
+        if d is not None:
+            sett.auto_approve_defects_under = max(Decimal("0"), d)
+
+        sett.auto_approve_vip     = bool(data.get("auto_approve_vip", sett.auto_approve_vip))
+        sett.auto_flag_suspicious = bool(data.get("auto_flag_suspicious", sett.auto_flag_suspicious))
+        sett.auto_generate_label  = bool(data.get("auto_generate_label", sett.auto_generate_label))
+
         en = data.get("enabled_reasons")
         if isinstance(en, list):
             sett.enabled_reasons = [k for k in en if k in REASON_KEYS]
         if "auto_email_enabled" in data:
             sett.auto_email_enabled = bool(data.get("auto_email_enabled"))
         if "auto_email_subject" in data:
-            sett.auto_email_subject = (data.get("auto_email_subject") or "").strip() or sett.auto_email_subject
+            new_subject = (data.get("auto_email_subject") or "").strip()[:255]
+            if new_subject:
+                sett.auto_email_subject = new_subject
         if "auto_email_body" in data:
-            sett.auto_email_body = data.get("auto_email_body") or sett.auto_email_body
+            new_body = data.get("auto_email_body")
+            if new_body:
+                sett.auto_email_body = str(new_body)[:50000]
         sett.save()
         return JsonResponse({"ok": True})
 
@@ -1002,7 +1242,7 @@ def api_triage_list(request):
         items.append({
             "id":         em.id,
             "from":       getattr(em, "sender", "") or "",
-            "to":         getattr(em, "to_address", "") or "",
+            "to":         getattr(em, "recipient", "") or "",
             "subject":    em.subject or "",
             "preview":    (em.body or "")[:200],
             "created_at": em.created_at.isoformat() if getattr(em, "created_at", None) else "",
@@ -1036,22 +1276,36 @@ def api_triage_start(request, email_id):
     ) if customer_email else None
 
     # Already an RMA for this email? Don't duplicate.
-    existing = _user_rma_qs(request.user).filter(source_email_id=str(email.id)).first()
-    if existing:
-        return JsonResponse({"ok": True, "rma_id": existing.id, "rma_number": existing.rma_number, "duplicate": True})
+    # Wrap the dedupe-check + create in a transaction so two concurrent
+    # "Start RMA" clicks on the same triage email can't both create rows.
+    with transaction.atomic():
+        existing = (_user_rma_qs(request.user)
+                    .select_for_update()
+                    .filter(source_email_id=str(email.id))
+                    .first())
+        if existing:
+            return JsonResponse({
+                "ok": True, "rma_id": existing.id,
+                "rma_number": existing.rma_number, "duplicate": True,
+            })
 
-    rma = RMA.objects.create(
-        store=email.store,
-        order=order,
-        rma_number=RMA.next_rma_number(email.store),
-        customer_name=getattr(order, "customer_name", "") or "",
-        customer_email=customer_email,
-        customer_phone=getattr(order, "customer_phone", "") or "",
-        reason="",
-        customer_note="",
-        status="pending",
-        source_email_id=str(email.id),
-    )
+        if not customer_email:
+            return JsonResponse(
+                {"ok": False, "error": "Email has no sender address — can't start an RMA from it."},
+                status=400,
+            )
+
+        rma = _create_rma_with_unique_number(
+            store=email.store,
+            order=order,
+            customer_name=getattr(order, "customer_name", "") or "",
+            customer_email=customer_email,
+            customer_phone=getattr(order, "customer_phone", "") or "",
+            reason="",
+            customer_note="",
+            status="pending",
+            source_email_id=str(email.id),
+        )
     _log_event(rma, "submitted",
                f"Started from email: {email.subject or '(no subject)'}",
                actor_user=request.user, actor_label="You")
@@ -1122,29 +1376,11 @@ def _send_return_link_email(rma, source_email=None):
     subject = _render_template(sett.auto_email_subject, vars_)
     body    = _render_template(sett.auto_email_body, vars_)
 
-    # Try tenant Gmail first (matches the rest of the email-sending in the app)
-    try:
-        from emails.utils import send_email_with_store_account  # type: ignore
-        store_user = rma.store.user
-        ok = bool(send_email_with_store_account(
-            user=store_user, to=rma.customer_email, subject=subject, body=body,
-        ))
-        if ok:
-            _log_event(rma, "message_sent", f"Auto-template email sent: {subject}", actor_label="System")
-            return (True, "")
-    except Exception as e:
-        # Fall through to default backend
-        pass
-
-    # Fallback
-    try:
-        from django.core.mail import send_mail
-        from_email = getattr(settings, "DEFAULT_FROM_EMAIL", None) or "noreply@dropsigma.com"
-        send_mail(subject, body, from_email, [rma.customer_email], fail_silently=True)
-        _log_event(rma, "message_sent", f"Auto-template email sent (default backend): {subject}", actor_label="System")
+    ok = _safe_send_to_customer(rma, subject, body)
+    if ok:
+        _log_event(rma, "message_sent", f"Auto-template email sent: {subject}", actor_label="System")
         return (True, "")
-    except Exception as e:
-        return (False, f"{type(e).__name__}: {e}")
+    return (False, "Email send failed — Gmail not connected or SMTP unavailable.")
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -1198,11 +1434,20 @@ def cust_start(request, order_id):
     """
     email = (request.GET.get("email") or "").strip().lower()
 
-    # Find the order — must match external_order_id + customer_email
-    qs = Order.objects.select_related("store").filter(external_order_id=order_id)
-    if email:
-        qs = qs.filter(customer_email__iexact=email)
-    order = qs.first()
+    # Without an email we can't verify ownership — show the prompt-for-email
+    # state rather than leaking order info to anyone with the order number.
+    if not email:
+        return render(request, "rma/customer_form.html", {
+            "error": "Please enter the email used for the order to continue.",
+            "order": None,
+            "needs_email": True,
+            "order_id": order_id,
+        })
+
+    # Find the order — must match external_order_id + customer_email (case-insensitive).
+    order = (Order.objects.select_related("store")
+             .filter(external_order_id=order_id, customer_email__iexact=email)
+             .first())
     if not order:
         return render(request, "rma/customer_form.html", {
             "error": "We couldn't find that order. Please check your order number and email.",
@@ -1229,23 +1474,30 @@ def cust_submit(request, order_id):
         return JsonResponse({"ok": False, "error": "POST required."}, status=405)
 
     email = (request.POST.get("email") or "").strip().lower()
-    qs = Order.objects.select_related("store").filter(external_order_id=order_id)
-    if email:
-        qs = qs.filter(customer_email__iexact=email)
-    order = qs.first()
+    if not email:
+        return JsonResponse({"ok": False, "error": "Email is required to verify the order."}, status=400)
+
+    # Match BOTH order id + email (case-insensitive) — never match on order id alone.
+    order = (Order.objects.select_related("store")
+             .filter(external_order_id=order_id, customer_email__iexact=email)
+             .first())
     if not order:
         return JsonResponse({"ok": False, "error": "Order not found."}, status=404)
 
-    reason   = (request.POST.get("reason") or "").strip()
-    note     = (request.POST.get("note") or "").strip()
-    item_idx = request.POST.getlist("item_idx")  # which items selected (list of indexes)
-    qtys     = {k: int(v) for k, v in request.POST.items() if k.startswith("qty_") and v.isdigit()}
+    reason = (request.POST.get("reason") or "").strip()
+    if reason and reason not in REASON_KEYS:
+        reason = ""  # Reject free-text reason values
+    note = (request.POST.get("note") or "").strip()[:5000]
+    item_idx = request.POST.getlist("item_idx")  # selected indexes
+    qtys = {}
+    for k, v in request.POST.items():
+        if k.startswith("qty_") and str(v).isdigit():
+            qtys[k] = max(1, min(int(v), 999))  # clamp to sane range
 
-    rma = RMA.objects.create(
+    rma = _create_rma_with_unique_number(
         store=order.store, order=order,
-        rma_number=RMA.next_rma_number(order.store),
         customer_name=order.customer_name or "",
-        customer_email=order.customer_email or "",
+        customer_email=(order.customer_email or email).strip().lower(),
         customer_phone=order.customer_phone or "",
         reason=reason,
         customer_note=note,
@@ -1254,26 +1506,37 @@ def cust_submit(request, order_id):
 
     # Re-parse order line items, only include selected ones
     line_items = _order_items(order)
-    selected_set = {int(i) for i in item_idx if i.isdigit()} or set(range(len(line_items)))
+    selected_set = {int(i) for i in item_idx if str(i).isdigit()} or set(range(len(line_items)))
     for idx, it in enumerate(line_items):
         if idx not in selected_set:
             continue
-        qty = qtys.get(f"qty_{idx}", it.get("quantity", 1))
+        qty_raw = qtys.get(f"qty_{idx}", it.get("quantity", 1))
+        try:
+            qty = max(1, int(qty_raw))
+        except (TypeError, ValueError):
+            qty = 1
+        try:
+            unit_price = Decimal(str(it.get("unit_price", 0) or 0))
+        except (InvalidOperation, ValueError, TypeError):
+            unit_price = Decimal("0")
         RMAItem.objects.create(
             rma=rma,
-            product_name=it["name"],
-            sku=it.get("sku", ""),
-            variant_label=it.get("variant", ""),
+            product_name=(it.get("name") or "Item")[:255],
+            sku=(it.get("sku") or "")[:120],
+            variant_label=(it.get("variant") or "")[:255],
             quantity=qty,
-            unit_price=Decimal(str(it.get("unit_price", 0))),
-            external_id=it.get("external_id", ""),
-            image_url=it.get("image_url", ""),
+            unit_price=unit_price,
+            external_id=str(it.get("external_id") or "")[:120],
+            image_url=(it.get("image_url") or "")[:500],
         )
 
-    # Photos
+    # Photos — content-type validated, size-bounded (best-effort)
     for f in request.FILES.getlist("photos"):
         ctype = (f.content_type or "").lower()
         if not ctype.startswith("image/"):
+            continue
+        # Skip suspiciously large uploads (>10MB) to avoid filling disk
+        if getattr(f, "size", 0) > 10 * 1024 * 1024:
             continue
         RMAPhoto.objects.create(rma=rma, image=f, caption="")
 
@@ -1288,14 +1551,20 @@ def cust_submit(request, order_id):
     # Auto-approve hook (per settings)
     sett = RMASettings.for_store(order.store)
     if _should_auto_approve(rma, sett):
-        rma.status      = "approved"
-        rma.approved_at = timezone.now()
+        rma.status        = "approved"
+        rma.approved_at   = timezone.now()
         rma.refund_amount = rma.total_refund
         rma.save()
         _log_event(rma, "approved", "Auto-approved by policy", actor_label="System")
-        _send_status_email(rma, kind="approved")
+        try:
+            _send_status_email(rma, kind="approved")
+        except Exception as e:
+            logger.warning("RMA %s: submit auto-approve email raised: %s", rma.rma_number, e)
     else:
-        _send_status_email(rma, kind="submitted")
+        try:
+            _send_status_email(rma, kind="submitted")
+        except Exception as e:
+            logger.warning("RMA %s: submit email raised: %s", rma.rma_number, e)
 
     return JsonResponse({"ok": True, "rma_number": rma.rma_number, "track_url": f"/r/{rma.token}/"})
 
@@ -1308,7 +1577,7 @@ def cust_message(request, token):
     rma = _get_public_rma(token)
     if not rma.can_customer_act:
         return JsonResponse({"ok": False, "error": "This return has been closed."}, status=400)
-    body = (request.POST.get("body") or "").strip()
+    body = (request.POST.get("body") or "").strip()[:5000]
     if not body:
         return JsonResponse({"ok": False, "error": "Message body required."}, status=400)
     msg = RMAMessage.objects.create(
@@ -1321,16 +1590,17 @@ def cust_message(request, token):
 
 @csrf_exempt
 def cust_tracking(request, token):
-    """Customer submits return shipping tracking (gated to status=approved)."""
+    """Customer submits return shipping tracking (gated to status in approved/tracking_submitted)."""
     if request.method != "POST":
         return JsonResponse({"ok": False, "error": "POST required."}, status=405)
     rma = _get_public_rma(token)
-    if rma.status != "approved":
+    # Allow updating tracking once submitted as well (customer may correct it).
+    if rma.status not in ("approved", "tracking_submitted"):
         return JsonResponse({"ok": False, "error": "Tracking can only be added after approval."}, status=400)
 
-    tid     = (request.POST.get("tracking_id") or "").strip()
-    company = (request.POST.get("tracking_company") or "").strip()
-    url     = (request.POST.get("tracking_url") or "").strip()
+    tid     = (request.POST.get("tracking_id") or "").strip()[:120]
+    company = (request.POST.get("tracking_company") or "").strip()[:80]
+    url     = (request.POST.get("tracking_url") or "").strip()[:500]
     if not tid or not company:
         return JsonResponse({"ok": False, "error": "Tracking ID and Carrier are required."}, status=400)
 
@@ -1481,13 +1751,18 @@ def _should_auto_approve(rma, sett):
 
     # Auto-approve defects under threshold
     if rma.reason == "defective":
-        if rma.total_refund <= (sett.auto_approve_defects_under or Decimal("0")):
+        threshold = sett.auto_approve_defects_under or Decimal("0")
+        if threshold > 0 and rma.total_refund <= threshold:
             return True
 
-    # VIP customers (3+ prior orders, same email, same store)
+    # VIP customers — 3+ PRIOR orders (exclude the current order if known)
     if sett.auto_approve_vip and rma.customer_email:
-        prior = Order.objects.filter(store=rma.store, customer_email__iexact=rma.customer_email).count()
-        if prior >= 3 and rma.reason in ("defective", "damaged", "wrong_item"):
+        prior_qs = Order.objects.filter(
+            store=rma.store, customer_email__iexact=rma.customer_email,
+        )
+        if rma.order_id:
+            prior_qs = prior_qs.exclude(id=rma.order_id)
+        if prior_qs.count() >= 3 and rma.reason in ("defective", "damaged", "wrong_item"):
             return True
 
     return False
@@ -1551,25 +1826,4 @@ def _send_status_email(rma, kind="submitted"):
     else:
         body = f"There's an update on your return ({rma.rma_number}). Track it here: {track_url}"
 
-    # Try tenant Gmail first
-    sent = False
-    try:
-        from emails.utils import send_email_with_store_account  # type: ignore
-        store_user = rma.store.user
-        sent = bool(send_email_with_store_account(
-            user=store_user, to=rma.customer_email, subject=subject, body=body,
-        ))
-    except Exception:
-        sent = False
-
-    # Fallback to Django default
-    if not sent:
-        try:
-            from django.core.mail import send_mail
-            from_email = getattr(settings, "DEFAULT_FROM_EMAIL", None) or "noreply@dropsigma.com"
-            send_mail(subject, body, from_email, [rma.customer_email], fail_silently=True)
-            sent = True
-        except Exception:
-            sent = False
-
-    return sent
+    return _safe_send_to_customer(rma, subject, body)

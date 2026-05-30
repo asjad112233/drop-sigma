@@ -10904,7 +10904,7 @@ document.addEventListener("DOMContentLoaded", () => {
       </div>
 
       <!-- ── Create Manual RMA modal ────────────────────────────── -->
-      <div id="rmaCreateModal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.65);z-index:5000;align-items:center;justify-content:center;padding:20px;">
+      <div id="rmaCreateModal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.65);z-index:5000;align-items:center;justify-content:center;padding:20px;" onclick="if(event.target===this) rmaCloseCreateModal();">
         <div style="background:#fff;border-radius:18px;padding:28px 30px;max-width:500px;width:100%;box-shadow:0 24px 60px -16px rgba(15,23,42,.45);">
           <h2 style="font-size:18px;font-weight:900;margin-bottom:6px;">Create Manual RMA</h2>
           <p style="font-size:13px;color:#64748b;margin-bottom:18px;">Use this when a customer contacts you directly instead of the return portal.</p>
@@ -13468,10 +13468,42 @@ async function rmaRefreshTriageBadge(){
     if (!ok) return;
     const badge = document.getElementById('rmaTriageBadge');
     if (!badge) return;
-    if (data.count > 0){ badge.style.display='inline-block'; badge.textContent = data.count; }
+    const n = Number(data.count || 0);
+    if (n > 0){ badge.style.display='inline-block'; badge.textContent = n; }
     else { badge.style.display='none'; }
   } catch(e) {}
 }
+
+/* Lightweight pending-count refresh — called after every status-changing
+   action so the sidebar red dot updates without forcing the user back to
+   the inbox view. */
+async function rmaRefreshPendingBadge(){
+  try {
+    const { ok, data } = await rmaApi('/rma/api/list/?status=pending', null, 'GET');
+    if (!ok) return;
+    const badge = document.getElementById('rmaNavBadge');
+    if (!badge) return;
+    // Backend returns stats.pending in the standard list response
+    const n = Number((data && data.stats && data.stats.pending) || (data && data.rmas ? data.rmas.length : 0) || 0);
+    if (n > 0){ badge.style.display='inline-block'; badge.textContent = n; }
+    else { badge.style.display='none'; }
+  } catch(e) {}
+}
+
+// Fire the sidebar badge once at load so it's populated before user opens
+// the section at least once.
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => { try { rmaRefreshPendingBadge(); } catch(_){} }, 800);
+  // ESC closes the Create RMA modal
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape'){
+      const m = document.getElementById('rmaCreateModal');
+      if (m && m.style.display !== 'none' && m.style.display !== ''){
+        if (typeof rmaCloseCreateModal === 'function') rmaCloseCreateModal();
+      }
+    }
+  });
+});
 
 function rmaSwitchView(name){
   _rmaState.view = name;
@@ -13531,25 +13563,26 @@ async function rmaLoadTriage(){
 }
 
 async function rmaTriageStart(emailId){
-  if (!confirm('Create a return case from this email and send the customer the return-form link?')) return;
+  if (!(await _confirm('Create a return case from this email and send the customer the return-form link?', {title:'Start Return', icon:'📧', confirmText:'Start Return'}))) return;
   const { ok, data } = await rmaApi('/rma/api/triage/' + emailId + '/start/');
   if (ok) {
     if (data.duplicate) {
-      alert('Return case already exists for this email: ' + data.rma_number);
+      await _alert('Return case already exists for this email: ' + data.rma_number, 'Already Exists', 'ℹ');
     } else if (!data.email_sent) {
-      alert('RMA created (' + data.rma_number + ') but email could not be sent: ' + (data.send_error || 'unknown'));
+      await _alert('RMA created (' + data.rma_number + ') but email could not be sent: ' + (data.send_error || 'unknown'), 'Partial Success', '⚠');
     }
-    // Open the new RMA detail
+    rmaRefreshTriageBadge(); rmaRefreshPendingBadge();
     rmaOpenDetail(data.rma_id);
   } else {
-    alert(data.error || 'Could not start return.');
+    await _alert(data.error || 'Could not start return.', 'Error', '❌');
   }
 }
 
 async function rmaTriageDismiss(emailId){
-  if (!confirm('Dismiss this email from triage? You can still find it in your normal Emails inbox.')) return;
+  if (!(await _confirm('Dismiss this email from triage? You can still find it in your normal Emails inbox.', {title:'Dismiss Email', icon:'📭', confirmText:'Dismiss'}))) return;
   const { ok, data } = await rmaApi('/rma/api/triage/' + emailId + '/dismiss/');
-  if (ok) { rmaLoadTriage(); } else { alert(data.error || 'Could not dismiss.'); }
+  if (ok) { rmaLoadTriage(); rmaRefreshTriageBadge(); }
+  else { await _alert(data.error || 'Could not dismiss.', 'Error', '❌'); }
 }
 
 function rmaSetFilter(status){
@@ -13660,8 +13693,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function rmaOpenDetail(pk){
   _rmaState.view = 'detail';
-  // Switch to detail view, hide others
-  ['rmaViewInbox','rmaViewAnalytics','rmaViewSettings'].forEach(id => document.getElementById(id).style.display='none');
+  // Hide ALL other views (was missing rmaViewTriage — detail would render
+  // on top of a still-visible Triage list).
+  ['rmaViewInbox','rmaViewTriage','rmaViewAnalytics','rmaViewSettings'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display='none';
+  });
   document.querySelectorAll('#rmaSubTabs .rma-tab').forEach(b => b.classList.remove('active'));
   // Hint detail tab? No — keep top-tabs neutral. Inbox tab gets re-enabled via breadcrumb.
   const dv = document.getElementById('rmaViewDetail');
@@ -13915,55 +13952,82 @@ function rmaRenderDetail(d){
   if (rest) rest.addEventListener('input', recompute);
 }
 
-/* ── Detail actions ────────────────────────────────────────── */
+/* ── Detail actions ──────────────────────────────────────────
+   All confirms/alerts/prompts converted to _confirm / _alert.
+   After every successful action we refresh both the sidebar nav
+   badge and (where relevant) the triage badge. */
 
 async function rmaApprove(pk){
-  if (!confirm('Approve this return? The customer will get a label by email.')) return;
-  const payload = {
-    refund_shipping: parseFloat(document.getElementById('rmaFldShip')?.value||0) || 0,
-    restocking_fee:  parseFloat(document.getElementById('rmaFldRest')?.value||0) || 0,
-  };
+  if (!(await _confirm('Approve this return? The customer will get a label by email.', {title:'Approve Return', icon:'✅', confirmText:'Approve'}))) return;
+  // Recompute current refund-amount snapshot from inputs (not from displayed text).
+  const ship  = parseFloat(document.getElementById('rmaFldShip')?.value||0) || 0;
+  const rest  = parseFloat(document.getElementById('rmaFldRest')?.value||0) || 0;
+  const payload = { refund_shipping: ship, restocking_fee: rest };
   const { ok, data } = await rmaApi('/rma/' + pk + '/approve/', payload);
-  if (ok) rmaOpenDetail(pk); else alert(data.error || 'Could not approve.');
+  if (ok){ rmaOpenDetail(pk); rmaRefreshPendingBadge(); }
+  else await _alert(data.error || 'Could not approve.', 'Error', '❌');
 }
 
 async function rmaReject(pk){
-  const reason = prompt('Why are you rejecting this return? (sent to the customer)');
-  if (reason === null) return;
+  // Custom _prompt modal not built yet — native prompt is acceptable here
+  // because the user is being asked for a freeform reason string.
+  const reason = (typeof _prompt === 'function')
+    ? await _prompt('Why are you rejecting this return? (sent to the customer)', {title:'Reject Return', icon:'❌', placeholder:'Reason…'})
+    : prompt('Why are you rejecting this return? (sent to the customer)');
+  if (reason === null || reason === undefined) return;
   const { ok, data } = await rmaApi('/rma/' + pk + '/reject/', {reason});
-  if (ok) rmaOpenDetail(pk); else alert(data.error || 'Could not reject.');
+  if (ok){ rmaOpenDetail(pk); rmaRefreshPendingBadge(); }
+  else await _alert(data.error || 'Could not reject.', 'Error', '❌');
 }
 
 async function rmaMarkInTransit(pk){
   const { ok, data } = await rmaApi('/rma/' + pk + '/in-transit/');
-  if (ok) rmaOpenDetail(pk); else alert(data.error || 'Could not update.');
+  if (ok){ rmaOpenDetail(pk); rmaRefreshPendingBadge(); }
+  else await _alert(data.error || 'Could not update.', 'Error', '❌');
 }
 
 async function rmaMarkReceived(pk){
   const { ok, data } = await rmaApi('/rma/' + pk + '/received/');
-  if (ok) rmaOpenDetail(pk); else alert(data.error || 'Could not update.');
+  if (ok){ rmaOpenDetail(pk); rmaRefreshPendingBadge(); }
+  else await _alert(data.error || 'Could not update.', 'Error', '❌');
 }
 
 async function rmaProcessRefund(pk){
-  if (!confirm('Process refund now? This will trigger a Stripe refund if a charge is linked, and mark the case Resolved.')) return;
-  const amt = parseFloat((document.getElementById('rmaTotalRefund')?.textContent||'0').replace(/[^0-9.]/g,''));
+  if (!(await _confirm('Process refund now? This will trigger a Stripe refund if a charge is linked.', {title:'Process Refund', icon:'💰', confirmText:'Refund Now'}))) return;
+  // Compute amount from the input fields directly — text strip was eating
+  // the minus sign for negative net (over-applied restocking fee).
+  const items = parseFloat(document.getElementById('rmaTotalItems')?.value||'0') || 0;
+  const ship  = parseFloat(document.getElementById('rmaFldShip')?.value||'0')   || 0;
+  const rest  = parseFloat(document.getElementById('rmaFldRest')?.value||'0')   || 0;
+  let amt = items + ship - rest;
+  if (isNaN(amt) || amt < 0){
+    // Fall back to displayed total if inputs aren't available (e.g. simpler RMA)
+    const t = (document.getElementById('rmaTotalRefund')?.textContent||'0');
+    amt = parseFloat(t.replace(/[^0-9.\-]/g,'')) || 0;
+  }
   const { ok, data } = await rmaApi('/rma/' + pk + '/refund/', {amount: amt});
-  if (ok) {
-    if (data.stripe_attempted && !data.stripe_ok) alert('Refund marked but Stripe failed: ' + (data.stripe_error||'unknown'));
-    rmaOpenDetail(pk);
-  } else { alert(data.error || 'Could not process refund.'); }
+  if (ok){
+    if (data.stripe_attempted && !data.stripe_ok){
+      await _alert('Refund marked but Stripe failed: ' + (data.stripe_error||'unknown'), 'Refund Warning', '⚠');
+    }
+    rmaOpenDetail(pk); rmaRefreshPendingBadge();
+  } else {
+    await _alert(data.error || 'Could not process refund.', 'Error', '❌');
+  }
 }
 
 async function rmaResolve(pk){
-  if (!confirm('Mark this return as Resolved? The customer\'s link will close.')) return;
+  if (!(await _confirm("Mark this return as Resolved? The customer's link will close.", {title:'Resolve Return', icon:'✓', confirmText:'Resolve'}))) return;
   const { ok, data } = await rmaApi('/rma/' + pk + '/resolve/');
-  if (ok) rmaOpenDetail(pk); else alert(data.error || 'Could not mark resolved.');
+  if (ok){ rmaOpenDetail(pk); rmaRefreshPendingBadge(); }
+  else await _alert(data.error || 'Could not mark resolved.', 'Error', '❌');
 }
 
 async function rmaReopen(pk){
-  if (!confirm('Reopen this return? It will move back to its previous active state.')) return;
+  if (!(await _confirm('Reopen this return? It will move back to its previous active state.', {title:'Reopen Return', icon:'🔄', confirmText:'Reopen'}))) return;
   const { ok, data } = await rmaApi('/rma/' + pk + '/reopen/');
-  if (ok) rmaOpenDetail(pk); else alert(data.error || 'Could not reopen.');
+  if (ok){ rmaOpenDetail(pk); rmaRefreshPendingBadge(); }
+  else await _alert(data.error || 'Could not reopen.', 'Error', '❌');
 }
 
 function rmaInsertSnippet(key){
@@ -13976,9 +14040,10 @@ function rmaInsertSnippet(key){
 }
 
 async function rmaQuickRefund(pk){
-  if (!confirm('Process refund now? This will charge the refund to the original payment method.')) return;
+  if (!(await _confirm('Process refund now? This will charge the refund to the original payment method.', {title:'Process Refund', icon:'💰', confirmText:'Refund'}))) return;
   const { ok, data } = await rmaApi('/rma/' + pk + '/refund/');
-  if (ok) { rmaLoadList(); } else { alert(data.error || 'Could not refund.'); }
+  if (ok) { rmaLoadList(); rmaRefreshPendingBadge(); }
+  else await _alert(data.error || 'Could not refund.', 'Error', '❌');
 }
 
 async function rmaSendMessage(pk){
@@ -13987,7 +14052,7 @@ async function rmaSendMessage(pk){
   if (!body) return;
   const { ok, data } = await rmaApi('/rma/' + pk + '/message/', {body});
   if (ok) { input.value=''; rmaOpenDetail(pk); }
-  else alert(data.error || 'Could not send.');
+  else await _alert(data.error || 'Could not send.', 'Error', '❌');
 }
 
 async function rmaAddNote(pk){
@@ -13996,7 +14061,7 @@ async function rmaAddNote(pk){
   if (!body) return;
   const { ok, data } = await rmaApi('/rma/' + pk + '/note/', {body});
   if (ok) { input.value=''; rmaOpenDetail(pk); }
-  else alert(data.error || 'Could not add.');
+  else await _alert(data.error || 'Could not add.', 'Error', '❌');
 }
 
 function rmaCopyTrackLink(token){
@@ -14164,9 +14229,14 @@ async function rmaSaveSettings(){
     .filter(s => s.classList.contains('on'))
     .map(s => s.dataset.reason);
 
+  // Clamp numeric inputs so negative values can't slip through (bug M).
+  const _winDays  = Math.max(0, parseInt(document.getElementById('rmaF_window').value)   || 30);
+  const _restock  = Math.max(0, Math.min(100, parseFloat(document.getElementById('rmaF_restock').value) || 0));
+  const _autoUnd  = Math.max(0, parseFloat(document.getElementById('rmaF_auto_under').value) || 0);
+
   const payload = {
-    return_window_days:        parseInt(document.getElementById('rmaF_window').value) || 30,
-    restocking_fee_percent:    parseFloat(document.getElementById('rmaF_restock').value) || 0,
+    return_window_days:        _winDays,
+    restocking_fee_percent:    _restock,
     shipping_policy:           document.getElementById('rmaF_ship').value,
     policy_text:               document.getElementById('rmaF_policy').value,
     return_address_line1:      document.getElementById('rmaF_addr1').value,
@@ -14175,7 +14245,7 @@ async function rmaSaveSettings(){
     return_state:              document.getElementById('rmaF_state').value,
     return_postcode:           document.getElementById('rmaF_post').value,
     return_country:            document.getElementById('rmaF_country').value,
-    auto_approve_defects_under:parseFloat(document.getElementById('rmaF_auto_under').value) || 0,
+    auto_approve_defects_under: _autoUnd,
     auto_approve_vip:          document.getElementById('rmaSw_vip').classList.contains('on'),
     auto_flag_suspicious:      document.getElementById('rmaSw_flag').classList.contains('on'),
     auto_generate_label:       document.getElementById('rmaSw_label').classList.contains('on'),

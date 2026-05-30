@@ -46,7 +46,6 @@ body{font-family:'Inter',system-ui,sans-serif;background:linear-gradient(180deg,
 /* Top CTA card (changes by status) */
 .cta-card{margin-bottom:12px;border-radius:var(--radius-lg);padding:22px 24px;box-shadow:var(--shadow);}
 .cta-card.approved{background:linear-gradient(135deg,#dbeafe,#e0e7ff);color:#1e40af;border:1px solid #c7d2fe;}
-.cta-card.label{background:linear-gradient(135deg,#1e293b,#0f172a);color:#fff;display:flex;align-items:center;justify-content:space-between;gap:18px;}
 .cta-card.tracking{background:#fff;border:1px solid var(--line-soft);}
 .cta-card h3{font-size:14px;font-weight:800;margin-bottom:8px;}
 .cta-card .lbl{font-size:11px;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;}
@@ -282,9 +281,9 @@ body{font-family:'Inter',system-ui,sans-serif;background:linear-gradient(180deg,
 <div class="toast" id="toast"></div>
 
 <script>
-const TOKEN = "{{ rma.token }}";
+const TOKEN = "{{ rma.token|escapejs }}";
 let lastMsgId = {{ last_msg_id|default:0 }};
-let currentStatus = "{{ rma.status }}";
+let currentStatus = "{{ rma.status|escapejs }}";
 let isTerminal = {% if rma.is_terminal %}true{% else %}false{% endif %};
 let pollTimer = null;
 
@@ -435,6 +434,11 @@ if (!isTerminal) {
   // Poll immediately once
   setTimeout(poll, 1500);
 }
+
+// Cleanup poll timer on unload to prevent leaks on long-open tabs
+window.addEventListener('beforeunload', () => {
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+});
 </script>
 
 </body>

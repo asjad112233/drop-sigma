@@ -150,7 +150,7 @@ textarea{resize:vertical;min-height:80px;}
           <i class="fa-solid fa-camera"></i>
           <div class="t">Drop photos here or click to browse</div>
           <div class="h">Up to 5 photos · Max 10 MB each · JPG, PNG, HEIC</div>
-          <input type="file" name="photos" id="photoInput" accept="image/*" multiple style="display:none;"/>
+          <input type="file" id="photoInput" accept="image/*" multiple style="display:none;"/>
         </label>
         <div class="preview-row" id="preview"></div>
 
@@ -173,13 +173,18 @@ textarea{resize:vertical;min-height:80px;}
 
 {% if order %}
 <script>
-// Item pick toggle
+// Item pick toggle — handles both card-click AND direct checkbox-click
 document.querySelectorAll('.item-pick').forEach(itm => {
+  const cb = itm.querySelector('input[type=checkbox]');
+  // Card click (anywhere except the checkbox itself)
   itm.addEventListener('click', (e) => {
     if (e.target.tagName === 'INPUT') return;
     itm.classList.toggle('selected');
-    const cb = itm.querySelector('input[type=checkbox]');
     if (cb) cb.checked = itm.classList.contains('selected');
+  });
+  // Direct checkbox click — sync card visual state
+  if (cb) cb.addEventListener('change', () => {
+    itm.classList.toggle('selected', cb.checked);
   });
 });
 
@@ -238,7 +243,27 @@ async function submitForm(){
   errBox.style.display = 'none';
 
   const form = document.getElementById('rmaForm');
+
+  // 🔥 Client-side validation — backend silently defaults missing fields,
+  //    which made it possible to submit an RMA for items the user un-selected.
+  const selectedItems = form.querySelectorAll('input[name="item_idx"]:checked');
+  if (selectedItems.length === 0){
+    errBox.textContent = "Please pick at least one item to return.";
+    errBox.style.display = 'block'; return;
+  }
+  const reasonPicked = form.querySelector('input[name="reason"]:checked');
+  if (!reasonPicked){
+    errBox.textContent = "Please pick a reason for the return.";
+    errBox.style.display = 'block'; return;
+  }
+  if (reasonPicked.value === 'defective' && chosenFiles.length === 0){
+    errBox.textContent = "Please attach at least one photo when the item is defective.";
+    errBox.style.display = 'block'; return;
+  }
+
   const fd = new FormData(form);
+  // chosenFiles is the source of truth for photos (input has no name attr,
+  // so the form-collector skips it). Each file appended exactly once.
   chosenFiles.forEach(f => fd.append('photos', f, f.name));
 
   btn.disabled = true;

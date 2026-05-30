@@ -1,10 +1,11 @@
 import threading
 import datetime
+import logging
 
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
-from django.db import models
+from django.db import models, transaction, IntegrityError
 from django.utils import timezone
 
 from rest_framework.decorators import api_view
@@ -13,6 +14,18 @@ from rest_framework.response import Response
 from .models import TeamMember, AssignmentRule, ChatChannel, ChatMessage, ChatReaction, ChatReadReceipt, ChannelMember, EmployeeInvitation
 from .serializers import TeamMemberSerializer, AssignmentRuleSerializer
 from .services import add_user_to_default_channels, get_or_create_admin_dm
+
+logger = logging.getLogger(__name__)
+
+# ─── Chat constants (limits, validation) ──────────────────────────────────────
+MAX_MESSAGE_LENGTH        = 4000              # characters
+MAX_CHAT_IMAGE_BYTES      = 8 * 1024 * 1024   # 8 MiB
+ALLOWED_CHAT_IMAGE_MIMES  = {
+    "image/jpeg", "image/jpg", "image/png", "image/gif",
+    "image/webp", "image/bmp",
+}
+DEFAULT_MESSAGES_PAGE_SIZE = 100
+MAX_MESSAGES_PAGE_SIZE     = 500
 
 
 # ─── Admin: Team Members ──────────────────────────────────────────────────────
@@ -828,6 +841,122 @@ def _user_can_access_channel(user, channel):
     return ChannelMember.objects.filter(channel=channel, user=user, is_active=True).exists()
 
 
+def _is_tenant_user(user):
+    """True if `user` is a tenant/admin (not an employee, not a vendor).
+    Used to gate channel-management actions inside a tenant's org."""
+    if not user or not user.is_authenticated:
+        return False
+    if user.is_superuser:
+        return True
+    if user.team_profile.exists():
+        return False  # they're somebody's employee
+    try:
+        if user.vendor_profile is not None:
+            return False  # they're a vendor
+    except Exception:
+        pass
+    return True
+
+
+def _user_can_manage_channel(user, channel):
+    """True if `user` may add/remove members on `channel`.
+
+    A tenant may manage a non-DM channel iff:
+      • they're a superuser, OR
+      • they're a tenant-level user AND they are themselves a member of
+        the channel (or the channel has no members yet — bootstrap).
+    DMs are not managed via the members API.
+    """
+    if not user or not user.is_authenticated or channel.is_dm:
+        return False
+    if user.is_superuser:
+        return True
+    if not _is_tenant_user(user):
+        return False
+    # Allow the tenant to manage a channel they themselves are a member of.
+    if ChannelMember.objects.filter(channel=channel, user=user, is_active=True).exists():
+        return True
+    # Allow bootstrapping a brand-new channel that has no members yet.
+    if not ChannelMember.objects.filter(channel=channel).exists():
+        return True
+    return False
+
+
+def _users_in_same_org(user_a, user_b):
+    """Return True if user_a and user_b belong to the same tenant org.
+
+    The 'tenant org' is rooted at the admin/tenant User. Vendors and
+    employees both resolve up to a tenant via their profile relationships.
+    Used to prevent cross-tenant DM creation."""
+    if not user_a or not user_b:
+        return False
+    if user_a.id == user_b.id:
+        return False  # self-DM is rejected upstream anyway
+
+    def _org_root(u):
+        if u.is_superuser:
+            return u.id  # superuser can DM anyone
+        prof = u.team_profile.first()
+        if prof and prof.owner_id:
+            return prof.owner_id
+        try:
+            vp = u.vendor_profile
+            if vp and vp.assigned_store and vp.assigned_store.user_id:
+                # vendor's org root = the admin who owns their store
+                # but cross-check accepted invitation owner if present
+                from vendors.models import VendorInvitation as _VInv
+                inv = _VInv.objects.filter(email=u.email, status="accepted").first()
+                if inv and inv.owner_id:
+                    return inv.owner_id
+                return vp.assigned_store.user_id
+        except Exception:
+            pass
+        return u.id  # treat them as their own tenant root
+
+    a_root = _org_root(user_a)
+    b_root = _org_root(user_b)
+    # Superuser shortcut: org_root == own id; if either side is superuser, allow.
+    if user_a.is_superuser or user_b.is_superuser:
+        return True
+    return a_root == b_root
+
+
+def _broadcast_chat_message(msg):
+    """Push a freshly-saved ChatMessage to all WS subscribers of its channel.
+
+    Synchronous helpers (HTTP send / upload) call this so live receivers
+    see the new message without needing an HTTP poll.  Failure is non-fatal
+    — the message is already persisted; UI will pick it up on next refresh.
+    """
+    try:
+        from channels.layers import get_channel_layer
+        from asgiref.sync import async_to_sync
+        layer = get_channel_layer()
+        if not layer:
+            return
+        sender = msg.sender
+        info = _sender_info(sender)
+        preview = (msg.content or "").strip()
+        if not preview and msg.image:
+            preview = "📎 image"
+        if len(preview) > 200:
+            preview = preview[:197] + "…"
+        async_to_sync(layer.group_send)(
+            f"chat_{msg.channel_id}",
+            {
+                "type":         "message_event",
+                "channel_id":   int(msg.channel_id),
+                "message_id":   msg.id,
+                "sender_id":    sender.id,
+                "sender_name":  info["name"],
+                "sender_role":  info["role"],
+                "preview":      preview,
+            },
+        )
+    except Exception:
+        logger.exception("chat: WS broadcast failed for msg=%s", getattr(msg, "id", None))
+
+
 def _sender_info(user):
     # Team member
     member = user.team_profile.first()
@@ -888,10 +1017,12 @@ def chat_dm_unreads_api(request):
     result = {}
     for ch in dm_channels:
         receipt = ChatReadReceipt.objects.filter(user=request.user, channel=ch).first()
+        # Only top-level messages, and exclude messages the current user sent themselves.
+        base_qs = ch.messages.filter(parent=None).exclude(sender=request.user)
         if receipt:
-            unread = ch.messages.filter(created_at__gt=receipt.last_read_at).count()
+            unread = base_qs.filter(created_at__gt=receipt.last_read_at).count()
         else:
-            unread = ch.messages.count()
+            unread = base_qs.count()
         # Get the other participant's user id
         other = ch.participants.exclude(id=request.user.id).first()
         if other and unread > 0:
@@ -904,7 +1035,10 @@ def chat_dm_api(request):
     """Get or create a private DM channel between current user and target_user_id."""
     if not request.user.is_authenticated:
         return Response({"success": False, "message": "Not authenticated"}, status=401)
-    target_id = request.data.get("target_user_id")
+    try:
+        target_id = int(request.data.get("target_user_id") or 0)
+    except (TypeError, ValueError):
+        return Response({"success": False, "message": "target_user_id must be an integer."}, status=400)
     if not target_id:
         return Response({"success": False, "message": "target_user_id required."}, status=400)
     try:
@@ -916,17 +1050,28 @@ def chat_dm_api(request):
     if me.id == target.id:
         return Response({"success": False, "message": "Cannot DM yourself."}, status=400)
 
+    # Tenant isolation: both users must belong to the same org.
+    if not _users_in_same_org(me, target):
+        return Response({"success": False, "message": "You can only DM members of your own organization."}, status=403)
+
     # Deterministic slug: dm-{lower_id}-{higher_id}
     a, b = sorted([me.id, target.id])
     slug = f"dm-{a}-{b}"
 
-    channel = ChatChannel.objects.filter(slug=slug, is_dm=True).first()
-    if not channel:
-        channel = ChatChannel.objects.create(name=slug, slug=slug, is_dm=True)
-        channel.participants.set([me, target])
-    else:
-        # Always ensure both users are in participants (idempotent guard)
-        channel.participants.add(me, target)
+    # Race-safe: wrap fetch-or-create in a transaction and fall back on
+    # IntegrityError (concurrent insert) to the row that won.
+    try:
+        with transaction.atomic():
+            channel = ChatChannel.objects.filter(slug=slug, is_dm=True).first()
+            if not channel:
+                channel = ChatChannel.objects.create(name=slug, slug=slug, is_dm=True)
+                channel.participants.set([me, target])
+            else:
+                channel.participants.add(me, target)
+    except IntegrityError:
+        channel = ChatChannel.objects.filter(slug=slug, is_dm=True).first()
+        if channel:
+            channel.participants.add(me, target)
 
     # Build display name for the OTHER person (target)
     def _display(u):
@@ -951,15 +1096,26 @@ def chat_channels_api(request):
         return Response({"success": False, "message": "Not authenticated"}, status=401)
 
     if request.method == "POST":
+        # Only tenants (or superusers) can create channels.
+        if not _is_tenant_user(request.user):
+            return Response({"success": False, "message": "Only tenants can create channels."}, status=403)
         name = request.data.get("name", "").strip()
         description = request.data.get("description", "").strip()
         if not name:
             return Response({"success": False, "message": "Name required."}, status=400)
-        slug = name.lower().replace(" ", "-")
-        base, ctr = slug, 1
+        if len(name) > 100:
+            return Response({"success": False, "message": "Name too long (max 100 chars)."}, status=400)
+        if len(description) > 255:
+            return Response({"success": False, "message": "Description too long (max 255 chars)."}, status=400)
+        slug = name.lower().replace(" ", "-")[:50] or "channel"
+        base_slug, ctr = slug, 1
         while ChatChannel.objects.filter(slug=slug).exists():
-            slug = f"{base}-{ctr}"; ctr += 1
-        ch = ChatChannel.objects.create(name=name, slug=slug, description=description)
+            slug = f"{base_slug}-{ctr}"
+            ctr += 1
+        with transaction.atomic():
+            ch = ChatChannel.objects.create(name=name, slug=slug, description=description)
+            # Auto-add the creator so the new channel actually shows up for them.
+            ChannelMember.objects.get_or_create(channel=ch, user=request.user, defaults={"is_active": True})
         return Response({"success": True, "channel": {"id": ch.id, "name": ch.name, "slug": ch.slug, "description": ch.description}})
 
     for d in _DEFAULT_CHANNELS:
@@ -984,11 +1140,13 @@ def chat_channels_api(request):
             base_qs = base_qs.filter(created_at__gte=joined_at)
 
         last = base_qs.order_by("-created_at").first()
+        # For unread, ignore messages the current user sent themselves.
+        unread_qs = base_qs.exclude(sender=request.user)
         receipt = ChatReadReceipt.objects.filter(user=request.user, channel=ch).first()
         if receipt:
-            unread = base_qs.filter(created_at__gt=receipt.last_read_at).count()
+            unread = unread_qs.filter(created_at__gt=receipt.last_read_at).count()
         else:
-            unread = base_qs.count()
+            unread = unread_qs.count()
         last_sender = _sender_info(last.sender)["name"] if last else None
         data.append({
             "id":             ch.id,
@@ -1008,13 +1166,18 @@ def chat_channels_api(request):
 def chat_mark_read_api(request):
     if not request.user.is_authenticated:
         return Response({"success": False}, status=401)
-    channel_id = request.data.get("channel_id")
+    try:
+        channel_id = int(request.data.get("channel_id") or 0)
+    except (TypeError, ValueError):
+        return Response({"success": False, "message": "channel_id must be an integer."}, status=400)
     if not channel_id:
         return Response({"success": False}, status=400)
     from django.utils import timezone
     ch = ChatChannel.objects.filter(id=channel_id).first()
     if not ch:
         return Response({"success": False}, status=404)
+    if not _user_can_access_channel(request.user, ch):
+        return Response({"success": False, "message": "You are not a member of this channel."}, status=403)
     ChatReadReceipt.objects.update_or_create(
         user=request.user, channel=ch,
         defaults={"last_read_at": timezone.now()}
@@ -1027,7 +1190,10 @@ def chat_messages_api(request):
     if not request.user.is_authenticated:
         return Response({"success": False, "message": "Not authenticated"}, status=401)
 
-    channel_id = request.GET.get("channel_id")
+    try:
+        channel_id = int(request.GET.get("channel_id") or 0)
+    except (TypeError, ValueError):
+        return Response({"success": False, "message": "channel_id must be an integer."}, status=400)
     if not channel_id:
         return Response({"success": False, "message": "channel_id required."}, status=400)
 
@@ -1049,17 +1215,47 @@ def chat_messages_api(request):
             if not membership:
                 return Response({"success": False, "message": "Not a member of this channel."}, status=403)
 
+    # Pagination: ?limit=N&before_id=M  (descending by id, return chronologically)
+    try:
+        limit = int(request.GET.get("limit") or DEFAULT_MESSAGES_PAGE_SIZE)
+    except (TypeError, ValueError):
+        limit = DEFAULT_MESSAGES_PAGE_SIZE
+    limit = max(1, min(limit, MAX_MESSAGES_PAGE_SIZE))
+
+    before_id = request.GET.get("before_id")
+    try:
+        before_id = int(before_id) if before_id else None
+    except (TypeError, ValueError):
+        before_id = None
+
     msgs_qs = ch.messages.filter(parent=None).select_related("sender").prefetch_related("reactions", "replies__sender", "replies__reactions")
 
     # Filter messages to only those sent after the user joined (backend security)
     if membership:
         msgs_qs = msgs_qs.filter(created_at__gte=membership.joined_at)
 
+    if before_id:
+        msgs_qs = msgs_qs.filter(id__lt=before_id)
+
+    # Take last `limit` messages chronologically.
+    page_ids = list(msgs_qs.order_by("-id").values_list("id", flat=True)[:limit])
+    page_qs  = (ch.messages
+                .filter(id__in=page_ids)
+                .select_related("sender")
+                .prefetch_related("reactions", "replies__sender", "replies__reactions")
+                .order_by("created_at"))
+
+    serialized = [_serialize_message(m, uid) for m in page_qs]
+    has_more = len(page_ids) >= limit and msgs_qs.filter(id__lt=min(page_ids)).exists() if page_ids else False
+    oldest_id = min(page_ids) if page_ids else None
+
     return Response({
         "success":         True,
         "current_user_id": uid,
         "channel":         {"id": ch.id, "name": ch.name, "description": ch.description},
-        "messages":        [_serialize_message(m, uid) for m in msgs_qs],
+        "messages":        serialized,
+        "has_more":        has_more,
+        "oldest_id":       oldest_id,
     })
 
 
@@ -1144,12 +1340,20 @@ def chat_send_api(request):
     if not request.user.is_authenticated:
         return Response({"success": False, "message": "Not authenticated"}, status=401)
 
-    channel_id = request.data.get("channel_id")
-    content    = request.data.get("content", "").strip()
+    try:
+        channel_id = int(request.data.get("channel_id") or 0)
+    except (TypeError, ValueError):
+        return Response({"success": False, "message": "channel_id must be an integer."}, status=400)
+    content    = (request.data.get("content") or "").strip()
     parent_id  = request.data.get("parent_id")
 
     if not channel_id:
         return Response({"success": False, "message": "channel_id required."}, status=400)
+
+    if not content:
+        return Response({"success": False, "message": "Message body cannot be empty."}, status=400)
+    if len(content) > MAX_MESSAGE_LENGTH:
+        return Response({"success": False, "message": f"Message too long (max {MAX_MESSAGE_LENGTH} characters)."}, status=400)
 
     try:
         ch = ChatChannel.objects.get(id=channel_id)
@@ -1162,10 +1366,15 @@ def chat_send_api(request):
 
     parent = None
     if parent_id:
-        parent = ChatMessage.objects.filter(id=parent_id, channel=ch).first()
+        try:
+            parent_id = int(parent_id)
+            parent = ChatMessage.objects.filter(id=parent_id, channel=ch).first()
+        except (TypeError, ValueError):
+            parent = None
 
     msg = ChatMessage.objects.create(channel=ch, sender=request.user, content=content, parent=parent)
     _notify_chat_message(msg)
+    _broadcast_chat_message(msg)
     return Response({"success": True, "message": _serialize_message(msg, request.user.id)})
 
 
@@ -1173,10 +1382,21 @@ def chat_send_api(request):
 def chat_upload_image_api(request):
     if not request.user.is_authenticated:
         return Response({"success": False, "message": "Not authenticated"}, status=401)
-    channel_id = request.data.get("channel_id")
+    try:
+        channel_id = int(request.data.get("channel_id") or 0)
+    except (TypeError, ValueError):
+        return Response({"success": False, "message": "channel_id must be an integer."}, status=400)
     image_file = request.FILES.get("image")
     if not channel_id or not image_file:
         return Response({"success": False, "message": "channel_id and image required."}, status=400)
+    # Size cap
+    size = getattr(image_file, "size", 0) or 0
+    if size > MAX_CHAT_IMAGE_BYTES:
+        return Response({"success": False, "message": f"Image too large (max {MAX_CHAT_IMAGE_BYTES // (1024*1024)} MB)."}, status=400)
+    # MIME-type whitelist
+    ctype = (getattr(image_file, "content_type", "") or "").lower()
+    if ctype and ctype not in ALLOWED_CHAT_IMAGE_MIMES:
+        return Response({"success": False, "message": "Only image uploads are allowed."}, status=400)
     try:
         ch = ChatChannel.objects.get(id=channel_id)
     except ChatChannel.DoesNotExist:
@@ -1186,6 +1406,7 @@ def chat_upload_image_api(request):
         return Response({"success": False, "message": "You are not a member of this channel."}, status=403)
     msg = ChatMessage.objects.create(channel=ch, sender=request.user, content="", image=image_file)
     _notify_chat_message(msg)
+    _broadcast_chat_message(msg)
     return Response({"success": True, "message": _serialize_message(msg, request.user.id)})
 
 
@@ -1194,13 +1415,18 @@ def chat_reaction_api(request):
     if not request.user.is_authenticated:
         return Response({"success": False, "message": "Not authenticated"}, status=401)
 
-    message_id = request.data.get("message_id")
-    emoji      = request.data.get("emoji", "").strip()
+    try:
+        message_id = int(request.data.get("message_id") or 0)
+    except (TypeError, ValueError):
+        return Response({"success": False, "message": "message_id must be an integer."}, status=400)
+    emoji = (request.data.get("emoji") or "").strip()
     if not message_id or not emoji:
         return Response({"success": False, "message": "message_id and emoji required."}, status=400)
+    if len(emoji) > 10:
+        return Response({"success": False, "message": "Emoji too long."}, status=400)
 
     try:
-        msg = ChatMessage.objects.get(id=message_id)
+        msg = ChatMessage.objects.select_related("channel").get(id=message_id)
     except ChatMessage.DoesNotExist:
         return Response({"success": False, "message": "Message not found."}, status=404)
 
@@ -1208,9 +1434,19 @@ def chat_reaction_api(request):
     if not _user_can_access_channel(request.user, msg.channel):
         return Response({"success": False, "message": "You are not a member of this channel."}, status=403)
 
-    obj, created = ChatReaction.objects.get_or_create(message=msg, sender=request.user, emoji=emoji)
-    if not created:
-        obj.delete()
+    # Race-safe toggle: a rapid double-click should not double-count or 500.
+    created = False
+    try:
+        with transaction.atomic():
+            obj, created = ChatReaction.objects.get_or_create(
+                message=msg, sender=request.user, emoji=emoji
+            )
+            if not created:
+                obj.delete()
+    except IntegrityError:
+        # Concurrent insert by the same user — treat as toggle-off.
+        ChatReaction.objects.filter(message=msg, sender=request.user, emoji=emoji).delete()
+        created = False
 
     reactions = {}
     for r in msg.reactions.select_related("sender"):
@@ -1228,11 +1464,15 @@ def chat_delete_message_api(request, msg_id):
     if not request.user.is_authenticated:
         return Response({"success": False}, status=401)
     try:
-        msg = ChatMessage.objects.get(id=msg_id)
+        msg = ChatMessage.objects.select_related("channel").get(id=msg_id)
     except ChatMessage.DoesNotExist:
         return Response({"success": False, "message": "Not found."}, status=404)
-    if not request.user.is_superuser:
-        return Response({"success": False, "message": "Only admins can delete messages."}, status=403)
+    # Sender can delete their own message; tenant or superuser can delete any
+    # message in a channel they manage.
+    is_sender   = (msg.sender_id == request.user.id)
+    is_manager  = _user_can_manage_channel(request.user, msg.channel) if not msg.channel.is_dm else False
+    if not (is_sender or is_manager or request.user.is_superuser):
+        return Response({"success": False, "message": "You do not have permission to delete this message."}, status=403)
     msg.delete()
     return Response({"success": True})
 
@@ -1242,19 +1482,21 @@ def chat_edit_message_api(request, msg_id):
     if not request.user.is_authenticated:
         return Response({"success": False}, status=401)
     try:
-        msg = ChatMessage.objects.get(id=msg_id)
+        msg = ChatMessage.objects.select_related("channel").get(id=msg_id)
     except ChatMessage.DoesNotExist:
         return Response({"success": False, "message": "Not found."}, status=404)
     # Defense-in-depth: also confirm the user still has channel access
     if not _user_can_access_channel(request.user, msg.channel):
         return Response({"success": False, "message": "You are not a member of this channel."}, status=403)
-    if msg.sender != request.user:
+    if msg.sender_id != request.user.id:
         return Response({"success": False, "message": "Not authorized."}, status=403)
-    content = request.data.get("content", "").strip()
+    content = (request.data.get("content") or "").strip()
     if not content:
-        return Response({"success": False, "message": "Content required."})
+        return Response({"success": False, "message": "Content required."}, status=400)
+    if len(content) > MAX_MESSAGE_LENGTH:
+        return Response({"success": False, "message": f"Message too long (max {MAX_MESSAGE_LENGTH} characters)."}, status=400)
     msg.content = content
-    msg.save()
+    msg.save(update_fields=["content"])
     return Response({"success": True, "content": msg.content})
 
 
@@ -1267,8 +1509,12 @@ def chat_channel_members_api(request, channel_id):
     except ChatChannel.DoesNotExist:
         return Response({"success": False, "message": "Channel not found."}, status=404)
 
+    # Only channel members (or superusers) can list the membership.
+    if not _user_can_access_channel(request.user, ch):
+        return Response({"success": False, "message": "You are not a member of this channel."}, status=403)
+
     members_data = []
-    for u in ch.members.select_related().all():
+    for u in ch.members.all():
         info = _sender_info(u)
         members_data.append({"user_id": u.id, "name": info["name"], "role": info["role"], "initials": info["initials"]})
 
@@ -1277,20 +1523,31 @@ def chat_channel_members_api(request, channel_id):
 
 @api_view(["POST"])
 def chat_channel_members_add_api(request, channel_id):
-    if not request.user.is_authenticated or not request.user.is_superuser:
-        return Response({"success": False, "message": "Admin only."}, status=403)
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Login required."}, status=401)
     try:
         ch = ChatChannel.objects.get(id=channel_id, is_dm=False)
     except ChatChannel.DoesNotExist:
         return Response({"success": False, "message": "Channel not found."}, status=404)
 
-    user_id = request.data.get("user_id")
+    if not _user_can_manage_channel(request.user, ch):
+        return Response({"success": False, "message": "You do not have permission to manage this channel."}, status=403)
+
+    try:
+        user_id = int(request.data.get("user_id") or 0)
+    except (TypeError, ValueError):
+        return Response({"success": False, "message": "user_id must be an integer."}, status=400)
     if not user_id:
         return Response({"success": False, "message": "user_id required."}, status=400)
     try:
         u = User.objects.get(pk=user_id)
     except User.DoesNotExist:
         return Response({"success": False, "message": "User not found."}, status=404)
+
+    # Cross-tenant guard: the user being added must belong to the same org
+    # as the user managing the channel (superuser bypass).
+    if not request.user.is_superuser and not _users_in_same_org(request.user, u):
+        return Response({"success": False, "message": "You can only add members of your own organization."}, status=403)
 
     ChannelMember.objects.get_or_create(channel=ch, user=u, defaults={"is_active": True})
     info = _sender_info(u)
@@ -1306,17 +1563,22 @@ def chat_channel_members_add_api(request, channel_id):
 
 @api_view(["DELETE"])
 def chat_channel_members_remove_api(request, channel_id, user_id):
-    if not request.user.is_authenticated or not request.user.is_superuser:
-        return Response({"success": False, "message": "Admin only."}, status=403)
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Login required."}, status=401)
     try:
         ch = ChatChannel.objects.get(id=channel_id, is_dm=False)
     except ChatChannel.DoesNotExist:
         return Response({"success": False, "message": "Channel not found."}, status=404)
+
+    if not _user_can_manage_channel(request.user, ch):
+        return Response({"success": False, "message": "You do not have permission to manage this channel."}, status=403)
+
     try:
         u = User.objects.get(pk=user_id)
     except User.DoesNotExist:
         return Response({"success": False, "message": "User not found."}, status=404)
 
+    # Prevent removing yourself if you're the only manager (avoid orphaned channel).
     ChannelMember.objects.filter(channel=ch, user=u).delete()
     return Response({"success": True})
 

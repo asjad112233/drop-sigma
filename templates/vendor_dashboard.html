@@ -2033,8 +2033,13 @@ function _vcRenderMsgList(msgs, containerId){
     html += _vcRenderMsg(msg, showDate, cont);
     lastDate=dl; lastSender=msg.sender_name;
   }
+  // 🔥 Only auto-scroll to bottom if user was ALREADY near the bottom.
+  // Prevents the "scroll yank" when a WS message arrives while reading history.
+  const wasNearBottom = (el.scrollHeight - el.scrollTop - el.clientHeight) < 60;
   el.innerHTML = html;
-  el.scrollTop = el.scrollHeight;
+  if (wasNearBottom || containerId !== "vcMessages") {
+    el.scrollTop = el.scrollHeight;
+  }
 }
 
 async function vcChatInit(){
@@ -2206,7 +2211,7 @@ function _vcRenderMemberAvatars(members){
   const shown = members.slice(0, MAX);
   const extra = members.length - shown.length;
   let html = shown.map((m, i) =>
-    `<div style="width:26px;height:26px;border-radius:50%;background:${_VC_AV_BG_COLORS[i%_VC_AV_BG_COLORS.length]};color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;border:2px solid #fff;margin-left:${i>0?"-8px":"0"};position:relative;z-index:${10-i};flex-shrink:0;" title="${m.name}">${m.initials}</div>`
+    `<div style="width:26px;height:26px;border-radius:50%;background:${_VC_AV_BG_COLORS[i%_VC_AV_BG_COLORS.length]};color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;border:2px solid #fff;margin-left:${i>0?"-8px":"0"};position:relative;z-index:${10-i};flex-shrink:0;" title="${esc(m.name||"")}">${esc(m.initials||"")}</div>`
   ).join("");
   if(extra > 0) html += `<div style="width:26px;height:26px;border-radius:50%;background:#e5e7eb;color:#374151;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;border:2px solid #fff;margin-left:-8px;position:relative;z-index:0;flex-shrink:0;">+${extra}</div>`;
   html += `<span style="margin-left:7px;font-size:12px;font-weight:700;color:#5b21b6;">${members.length}</span>`;
@@ -2303,13 +2308,32 @@ async function vcSend(){
   const input=document.getElementById("vcChatInput");
   const content=_vcCeToMarkdown(input);
   if(!content) return;
+  // 🔥 Capture original HTML so we can restore on failure
+  const savedHTML = input.innerHTML;
+  // Optimistically clear so user can keep typing the next message,
+  // but DON'T blow it away permanently — restore on failure.
   input.innerHTML="";
+  const sendBtn = document.querySelector(".tc-send-btn");
+  if (sendBtn) sendBtn.disabled = true;
   vcCloseEmojiPicker();
   _vcSendTyping(false);
   clearTimeout(_vcTypingTimer);
-  const r=await fetch("/teamapp/chat/send/",{method:"POST",headers:{"Content-Type":"application/json","X-CSRFToken":getCsrf()},body:JSON.stringify({channel_id:_vcChannelId,content})});
-  const d=await r.json();
-  if(d.success){ vcLoadMessages(); _vcWsBroadcastNew(content); }
+  try {
+    const r=await fetch("/teamapp/chat/send/",{method:"POST",headers:{"Content-Type":"application/json","X-CSRFToken":getCsrf()},body:JSON.stringify({channel_id:_vcChannelId,content})});
+    const d=await r.json();
+    if(d.success){
+      vcLoadMessages();
+      _vcWsBroadcastNew(content);
+    } else {
+      input.innerHTML = savedHTML;
+      _vcToast && _vcToast("⚠️ Could not send — try again");
+    }
+  } catch(e){
+    input.innerHTML = savedHTML;
+    _vcToast && _vcToast("⚠️ Network error — try again");
+  } finally {
+    if (sendBtn) sendBtn.disabled = false;
+  }
 }
 
 function vcKeyDown(e){
@@ -2483,7 +2507,7 @@ function vcShowMsgMenu(msgId, btn){
   if(isMine) items.push(`<button style="${_vcMenuStyle}" onmouseenter="this.style.background='#f5f3ff'" onmouseleave="this.style.background='none'" onclick="_vcMenuDo(()=>vcEditMsg(${msgId}))"><i class="fa-regular fa-pen-to-square" style="color:#7c3aed;width:16px;"></i> Edit message</button>`);
   items.push(`<button style="${_vcMenuStyle}" onmouseenter="this.style.background='#f5f3ff'" onmouseleave="this.style.background='none'" onclick="_vcMenuDo(()=>vcBookmarkMsg(${msgId}))"><i class="fa-regular fa-bookmark" style="color:#7c3aed;width:16px;"></i> Save message</button>`);
   items.push(_vcMenuDivider);
-  items.push(`<button style="${_vcMenuStyle}" onmouseenter="this.style.background='#f5f3ff'" onmouseleave="this.style.background='none'" onclick="_vcMenuDo(()=>vcCopyMsg(${JSON.stringify(content)}))"><i class="fa-regular fa-copy" style="color:#9a99ad;width:16px;"></i> Copy message text</button>`);
+  items.push(`<button style="${_vcMenuStyle}" onmouseenter="this.style.background='#f5f3ff'" onmouseleave="this.style.background='none'" onclick="_vcMenuDo(()=>vcCopyMsgById(${msgId}))"><i class="fa-regular fa-copy" style="color:#9a99ad;width:16px;"></i> Copy message text</button>`);
   menu.innerHTML = items.join("");
   document.body.appendChild(menu);
   const r = btn.getBoundingClientRect();
@@ -2500,6 +2524,12 @@ function vcShowMsgMenu(msgId, btn){
 
 function _vcMenuDo(fn){ document.querySelectorAll(".tc-msg-menu").forEach(el=>el.remove()); fn(); }
 function vcCopyMsg(content){ navigator.clipboard.writeText(content).then(()=>_vcToast("📋 Message copied!")); }
+function vcCopyMsgById(msgId){
+  const m = _vcMsgMap[msgId];
+  const text = (m && m.content) || "";
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(()=>_vcToast("📋 Message copied!"));
+}
 
 // Note: vcDeleteMsg was removed — backend chat_delete_message_api only allows
 // admins (teamapp/views.py:828). Vendors cannot delete messages, so no UI is wired.

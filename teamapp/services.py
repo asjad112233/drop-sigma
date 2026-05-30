@@ -108,19 +108,29 @@ def add_user_to_default_channels(user, added_by_user=None):
 def get_or_create_admin_dm(admin_user, new_user):
     """
     Get or create a private DM channel between admin_user and new_user.
-    Returns the channel.
+    Returns the channel. Race-safe: two concurrent calls for the same pair
+    won't both create a channel — the IntegrityError fallback fetches the
+    row that won the unique-slug race.
     """
+    from django.db import transaction, IntegrityError
+
     ids = sorted([admin_user.id, new_user.id])
     slug = f"dm-{ids[0]}-{ids[1]}"
 
     channel = ChatChannel.objects.filter(slug=slug, is_dm=True).first()
     if channel:
+        # Idempotent guard — make sure both participants are present.
+        channel.participants.add(admin_user, new_user)
         return channel
 
-    def _display(u):
-        return _get_display_name(u)
-
-    name = f"{_display(admin_user)} & {_display(new_user)}"
-    channel = ChatChannel.objects.create(name=name, slug=slug, is_dm=True)
-    channel.participants.set([admin_user, new_user])
+    name = f"{_get_display_name(admin_user)} & {_get_display_name(new_user)}"
+    try:
+        with transaction.atomic():
+            channel = ChatChannel.objects.create(name=name, slug=slug, is_dm=True)
+            channel.participants.set([admin_user, new_user])
+    except IntegrityError:
+        # Lost the race — fetch the winning row.
+        channel = ChatChannel.objects.filter(slug=slug, is_dm=True).first()
+        if channel:
+            channel.participants.add(admin_user, new_user)
     return channel
