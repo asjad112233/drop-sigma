@@ -198,6 +198,8 @@ class EmailTemplate(models.Model):
         ('cancelled', 'Order Cancelled'),
         ('failed', 'Payment Failed'),
         ('refund', 'Refund'),
+        ('delivered', 'Delivered'),
+        ('returned', 'Returned'),
         ('dispute', 'Dispute'),
         ('welcome', 'Welcome'),
         ('followup', 'Follow-up'),
@@ -215,6 +217,7 @@ class EmailTemplate(models.Model):
         ('order_cancelled', 'Order Cancelled'),
         ('payment_failed', 'Payment Failed'),
         ('order_delivered', 'Order Delivered'),
+        ('order_returned', 'Order Returned'),
         ('no_activity_7d', '7 Days No Activity'),
     ]
 

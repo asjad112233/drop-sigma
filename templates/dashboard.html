@@ -2,6 +2,8 @@
 <html>
 <head>
   <title>Drop Sigma — Dashboard</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
   <link rel="apple-touch-icon" href="/static/favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -2539,6 +2541,13 @@ body.vf-dark-mode .tm-badge-status-draft{background:rgba(100,116,139,.15);color:
 .tm-card-act-btn:hover{background:#6366f1;border-color:#6366f1;color:#fff;}
 .tm-card-act-btn.danger:hover{background:#dc2626;border-color:#dc2626;color:#fff;}
 .tm-card-default-badge{position:absolute;top:10px;left:10px;z-index:11;background:#16a34a;color:#fff;font-size:10px;font-weight:800;padding:3px 8px;border-radius:6px;letter-spacing:.04em;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.25);}
+/* -- Template card Enable / Active toggle (top-right of name-bar) -- */
+.tm-card-enable-btn{display:inline-flex;align-items:center;justify-content:center;height:22px;padding:0 10px;border-radius:999px;font-size:10.5px;font-weight:800;letter-spacing:.04em;cursor:pointer;border:1px solid var(--vf-line);background:var(--vf-surface);color:var(--vf-muted);transition:all .15s;white-space:nowrap;flex-shrink:0;text-transform:uppercase;font-family:inherit;}
+.tm-card-enable-btn:hover{transform:translateY(-1px);}
+.tm-card-enable-off:hover{border-color:#6366f1;color:#6366f1;background:rgba(99,102,241,.08);}
+.tm-card-enable-on{background:#16a34a;border-color:#16a34a;color:#fff;cursor:default;box-shadow:0 2px 8px rgba(22,163,74,.25);}
+.tm-card-enable-on:hover{transform:none;background:#16a34a;}
+body.vf-dark-mode .tm-card-enable-on{background:rgba(22,163,74,.85);border-color:rgba(22,163,74,.85);}
 .tm-card-name-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 12px;background:var(--vf-surface);border-top:1px solid var(--vf-line);}
 .tm-card-name-bar-text{font-size:12px;font-weight:700;color:var(--vf-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0;}
 /* Lock button in editor */
@@ -6260,6 +6269,7 @@ document.addEventListener("DOMContentLoaded", () => {
     /* Active-label filter chip in inbox header */
     .em-label-filter-chip{display:inline-flex;align-items:center;gap:6px;padding:3px 9px 3px 11px;border-radius:99px;font-size:11px;font-weight:800;color:#fff;}
     .em-label-filter-chip .x{cursor:pointer;background:rgba(0,0,0,.2);width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;}
+
   </style>
 
   <!-- Profile Modal -->
@@ -8223,11 +8233,12 @@ document.addEventListener("DOMContentLoaded", () => {
               <div class="tm-cat-pills" id="tmCatPills">
                 <button class="tm-cat-pill active" data-cat="order" onclick="tmSetCat(this,'order')">Processing <span class="tm-pill-count" id="tmCount_order">0</span></button>
                 <button class="tm-cat-pill" data-cat="shipping" onclick="tmSetCat(this,'shipping')">Shipping <span class="tm-pill-count" id="tmCount_shipping">0</span></button>
-                <button class="tm-cat-pill" data-cat="refund" onclick="tmSetCat(this,'refund')">Completed <span class="tm-pill-count" id="tmCount_refund">0</span></button>
+                <button class="tm-cat-pill" data-cat="delivered" onclick="tmSetCat(this,'delivered')">Delivered <span class="tm-pill-count" id="tmCount_delivered">0</span></button>
+                <button class="tm-cat-pill" data-cat="refund" onclick="tmSetCat(this,'refund')">Refunded <span class="tm-pill-count" id="tmCount_refund">0</span></button>
+                <button class="tm-cat-pill" data-cat="returned" onclick="tmSetCat(this,'returned')">Returned <span class="tm-pill-count" id="tmCount_returned">0</span></button>
                 <button class="tm-cat-pill" data-cat="failed" onclick="tmSetCat(this,'failed')">Failed <span class="tm-pill-count" id="tmCount_failed">0</span></button>
                 <button class="tm-cat-pill" data-cat="cancelled" onclick="tmSetCat(this,'cancelled')">Cancelled <span class="tm-pill-count" id="tmCount_cancelled">0</span></button>
                 <button class="tm-cat-pill" data-cat="dispute" onclick="tmSetCat(this,'dispute')">Dispute <span class="tm-pill-count" id="tmCount_dispute">0</span></button>
-                <button class="tm-cat-pill" data-cat="other" onclick="tmSetCat(this,'other')">Other <span class="tm-pill-count" id="tmCount_other">0</span></button>
               </div>
             </div>
             <div class="tm-filter-right">
@@ -8262,9 +8273,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 All Projects
               </label>
               <button class="tm-btn tm-btn-ghost" id="tmTestBtn" onclick="showSendTestPopover()">📧 Send Test</button>
-              <button class="tm-btn tm-btn-ghost" id="tmDupBtn" onclick="tmDuplicateCurrent()">⧉ Duplicate</button>
               <button class="tm-btn tm-btn-ghost" id="tmResetBtn" onclick="tmResetToDefault()" title="Replace this template's design with the original default. Trigger rules are kept.">↺ Reset</button>
-              <button class="tm-btn tm-btn-danger" id="tmDelBtn" onclick="tmDeleteCurrent()">🗑</button>
               <button class="tm-btn tm-btn-primary" onclick="saveTemplate()">Save</button>
             </div>
           </div>
@@ -11277,6 +11286,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   </main>
 </div>
+
+<!-- Mobile bottom-nav bar (visible only ≤768px) -->
 
 <!-- ── Add Tracking Modal (Stock Orders) ── -->
 <div id="soTrackModal" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(13,13,18,.65);backdrop-filter:blur(8px);align-items:center;justify-content:center;">
@@ -20895,6 +20906,11 @@ function switchEmailView(tab, btn){
   if(tab==="settings") loadEmailSettings();
   if(tab==="templates"){ loadTemplates(); loadAutoEmailState(); }
 
+  // 🔥 Assign Email button — only relevant on the Inbox view (it scopes
+  //    folder/label access for the Inbox). Hide on Templates + Settings.
+  const _emAssignBtn = document.getElementById("emAssignBtn");
+  if (_emAssignBtn) _emAssignBtn.style.display = (tab === "inbox") ? "" : "none";
+
   // De-highlight the contextual sidebar folders when user switches OUT
   // of the inbox to Templates/Settings — otherwise a stale "Inbox" pill
   // stays highlighted while a different panel is showing.
@@ -21303,7 +21319,6 @@ async function loadTemplates(){
   }
 }
 
-const _TM_OTHER_CATS = new Set(['welcome','followup','custom']);
 let _tmActiveCat = 'order';
 
 function tmUpdatePillCounts(list){
@@ -21311,16 +21326,16 @@ function tmUpdatePillCounts(list){
   list.forEach(t=>{
     counts[t.category] = (counts[t.category]||0)+1;
   });
-  const otherCount = Object.entries(counts).filter(([k])=>_TM_OTHER_CATS.has(k)).reduce((a,[,v])=>a+v,0);
   const total = list.length;
   const set = (id, n) => { const el=document.getElementById(id); if(el) el.textContent=n; };
   set('tmCount_order',    counts['order']    ||0);
   set('tmCount_shipping', counts['shipping'] ||0);
+  set('tmCount_delivered',counts['delivered']||0);
   set('tmCount_refund',   counts['refund']   ||0);
+  set('tmCount_returned', counts['returned'] ||0);
   set('tmCount_failed',   counts['failed']   ||0);
   set('tmCount_cancelled',counts['cancelled']||0);
   set('tmCount_dispute',  counts['dispute']  ||0);
-  set('tmCount_other',    otherCount);
 }
 
 function tmSetCat(btn, cat){
@@ -21342,7 +21357,6 @@ function tmFilterList(){
   const filtered = _tmTemplates.filter(t=>{
     if(q && !t.name.toLowerCase().includes(q) && !(t.description||"").toLowerCase().includes(q)) return false;
     if(status && t.status!==status) return false;
-    if(cat==='other') return _TM_OTHER_CATS.has(t.category);
     if(cat && t.category!==cat) return false;
     return true;
   });
@@ -21472,25 +21486,25 @@ function tmRenderCards(list){
   }
 
   grid.innerHTML = list.map(t=>{
-    const statusClass = `tm-badge-status-${t.status}`;
     const catLabel = TM_CAT_LABELS[t.category]||t.category;
     const updated = tmTimeAgo(t.updated_at);
-    const defaultBadge = t.is_category_default ? `<span class="tm-card-default-badge">✓ Default</span>` : '';
+    const activeBadge = t.is_category_default ? `<span class="tm-card-default-badge">Active</span>` : '';
+    const toggleClass = t.is_category_default ? 'tm-card-enable-btn tm-card-enable-on' : 'tm-card-enable-btn tm-card-enable-off';
+    const toggleLabel = t.is_category_default ? 'Active' : 'Enable';
+    const toggleTitle = t.is_category_default ? 'This template is the active default for this category' : 'Enable this template as the active default for this category';
     const thumbSlot = t.body_html
-      ? `<div class="tm-card-thumb" data-tm-thumb="${t.id}">${defaultBadge}<button class="tm-card-view-btn" onclick="event.stopPropagation();tmPreviewCard(${t.id})" title="Preview">⤢</button></div>`
-      : `<div class="tm-card-thumb-empty">✉️</div>`;
+      ? `<div class="tm-card-thumb" data-tm-thumb="${t.id}">${activeBadge}<button class="tm-card-view-btn" onclick="event.stopPropagation();tmPreviewCard(${t.id})" title="Preview">⤢</button></div>`
+      : `<div class="tm-card-thumb-empty">${activeBadge}✉️</div>`;
     return `<div class="tm-card" onclick="openTemplateEditor(${t.id})">
       ${thumbSlot}
       <div class="tm-card-name-bar">
         <span class="tm-card-name-bar-text">${escHtml(t.name)}</span>
-        <span class="tm-badge ${statusClass}" style="flex-shrink:0;">${t.status}</span>
+        <button class="${toggleClass}" onclick="event.stopPropagation();tmToggleEnableFromCard(${t.id})" title="${toggleTitle}">${toggleLabel}</button>
       </div>
       <div class="tm-card-footer" style="padding:8px 12px 10px;">
         <span class="tm-card-time">${updated}</span>
         <div class="tm-card-actions">
           <button class="tm-card-act-btn" onclick="event.stopPropagation();tmSendTestFromCard(${t.id})" title="Send Test Email">📧</button>
-          <button class="tm-card-act-btn" onclick="event.stopPropagation();tmDuplicate(${t.id})" title="Duplicate">⧉</button>
-          <button class="tm-card-act-btn danger" onclick="event.stopPropagation();tmDelete(${t.id})" title="Delete">🗑</button>
         </div>
       </div>
     </div>`;
@@ -21573,9 +21587,9 @@ async function openTemplateEditor(id){
   _tmCheckEl("tmThrottle", false);
   tmSetLockState(false);
   document.getElementById("tmCustomSigWrap").style.display="none";
-  document.getElementById("tmDelBtn").style.display = id ? "" : "none";
-  document.getElementById("tmDupBtn").style.display = id ? "" : "none";
-  document.getElementById("tmTestBtn").style.display = id ? "" : "none";
+  const _tmDelBtn = document.getElementById("tmDelBtn"); if(_tmDelBtn) _tmDelBtn.style.display = id ? "" : "none";
+  const _tmDupBtn = document.getElementById("tmDupBtn"); if(_tmDupBtn) _tmDupBtn.style.display = id ? "" : "none";
+  const _tmTestBtn = document.getElementById("tmTestBtn"); if(_tmTestBtn) _tmTestBtn.style.display = id ? "" : "none";
 
   // Open first accordion by default
   document.querySelectorAll(".tm-acc-body").forEach((b,i)=>{ if(i===0) b.classList.add("open"); else b.classList.remove("open"); });
@@ -22019,9 +22033,9 @@ async function saveTemplate(){
     const data = await r.json();
     if(data.success){
       if(!_tmEditingId && data.id) _tmEditingId=data.id;
-      document.getElementById("tmDelBtn").style.display="";
-      document.getElementById("tmDupBtn").style.display="";
-      document.getElementById("tmTestBtn").style.display="";
+      const _tmDelBtn2 = document.getElementById("tmDelBtn"); if(_tmDelBtn2) _tmDelBtn2.style.display="";
+      const _tmDupBtn2 = document.getElementById("tmDupBtn"); if(_tmDupBtn2) _tmDupBtn2.style.display="";
+      const _tmTestBtn2 = document.getElementById("tmTestBtn"); if(_tmTestBtn2) _tmTestBtn2.style.display="";
       showSettingsSaved("Template saved!");
       loadAutoEmailState();
     } else {
@@ -22031,6 +22045,9 @@ async function saveTemplate(){
 }
 
 async function tmDelete(id){
+  if (typeof _alert === 'function') _alert('Deleting templates is not allowed.', 'Not Allowed', '⚠');
+  return;
+  // (existing implementation kept below but unreachable)
   if(!await _confirm("Delete this template?", {title:"Delete Template", icon:"🗑️", danger:true, confirmText:"Delete", details:"This action cannot be undone."})) return;
   try{
     await fetch(`/emails/api/templates/${id}/`,{
@@ -22043,6 +22060,9 @@ async function tmDelete(id){
 }
 
 async function tmDeleteCurrent(){
+  if (typeof _alert === 'function') _alert('Deleting templates is not allowed.', 'Not Allowed', '⚠');
+  return;
+  // (existing implementation kept below but unreachable)
   if(!_tmEditingId){ closeTemplateEditor(); return; }
   if(!await _confirm("Delete this template?", {title:"Delete Template", icon:"🗑️", danger:true, confirmText:"Delete"})) return;
   fetch(`/emails/api/templates/${_tmEditingId}/`,{
@@ -22053,6 +22073,9 @@ async function tmDeleteCurrent(){
 }
 
 async function tmDuplicate(id){
+  if (typeof _alert === 'function') _alert('Duplicating templates is not allowed.', 'Not Allowed', '⚠');
+  return;
+  // (existing implementation kept below but unreachable)
   try{
     const r=await fetch(`/emails/api/templates/${id}/duplicate/`,{method:"POST",headers:{"Content-Type":"application/json","X-Requested-With":"XMLHttpRequest"},body:JSON.stringify({store_id:selectedStoreId})});
     const d=await r.json();
@@ -22061,9 +22084,70 @@ async function tmDuplicate(id){
 }
 
 function tmDuplicateCurrent(){
+  if (typeof _alert === 'function') _alert('Duplicating templates is not allowed.', 'Not Allowed', '⚠');
+  return;
+  // (existing implementation kept below but unreachable)
   if(!_tmEditingId) return;
   tmDuplicate(_tmEditingId).then(()=>closeTemplateEditor());
 }
+
+// ---------------------------------------------------------------------------
+// Enable / Active toggle on each template card.
+// Re-uses the existing set-default endpoint (same endpoint that
+// tmToggleCategoryLock calls from inside the editor). When clicked on a
+// card that is NOT yet the category default, prompt-then-PATCH via the
+// same flow; if it IS already the active default, show a friendly toast
+// and do nothing (you cannot un-default - every category needs one).
+// ---------------------------------------------------------------------------
+async function tmToggleEnableFromCard(id){
+  const t = (_tmTemplates || []).find(x => x.id === id);
+  if(!t) return;
+  if(t.is_category_default){
+    if (typeof _alert === 'function') _alert('This is already the active template for this category.', 'Already Active', 'ℹ️');
+    return;
+  }
+  try{
+    let r = await fetch(`/emails/api/templates/${id}/set-default/`,{
+      method:"POST",
+      headers:{"Content-Type":"application/json","X-Requested-With":"XMLHttpRequest","X-CSRFToken":getCSRFToken()},
+      body: JSON.stringify({action:"set", force:false})
+    });
+    let d = await r.json();
+    if(d && d.success){
+      loadTemplates();
+      loadAutoEmailState();
+      showSettingsSaved && showSettingsSaved("Template activated!");
+      return;
+    }
+    if(d && d.conflict){
+      const existing = d.existing_name || 'another template';
+      const catLabel = d.category_label || (typeof TM_CAT_LABELS_FULL !== 'undefined' && TM_CAT_LABELS_FULL[t.category]) || t.category;
+      const ok = await _confirm(
+        `"${existing}" is already set as the default for ${catLabel}. Replace it with this template?`,
+        {title:"Replace Active Template", icon:"⚡", confirmText:"Replace"}
+      );
+      if(!ok) return;
+      r = await fetch(`/emails/api/templates/${id}/set-default/`,{
+        method:"POST",
+        headers:{"Content-Type":"application/json","X-Requested-With":"XMLHttpRequest","X-CSRFToken":getCSRFToken()},
+        body: JSON.stringify({action:"set", force:true})
+      });
+      d = await r.json();
+      if(d && d.success){
+        loadTemplates();
+        loadAutoEmailState();
+        showSettingsSaved && showSettingsSaved("Template activated!");
+      } else {
+        await _alert((d && d.message) || 'Could not activate template.', 'Error', '❌');
+      }
+      return;
+    }
+    await _alert((d && d.message) || 'Could not activate template.', 'Error', '❌');
+  }catch(e){
+    await _alert('Network error: ' + e.message, 'Error', '❌');
+  }
+}
+
 
 async function tmResetToDefault(){
   if(!_tmEditingId) return;

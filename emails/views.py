@@ -3126,6 +3126,8 @@ def email_template_detail_api(request, template_id):
         _apply_template_fields(t, request.data)
         t.save()
         return Response({'success': True, 'message': 'Template saved.'})
+    if not request.user.is_superuser:
+        return Response({"success": False, "message": "Deleting templates is not allowed."}, status=403)
     t.delete()
     return Response({'success': True, 'message': 'Template deleted.'})
 
@@ -3171,6 +3173,8 @@ def set_category_default_api(request, template_id):
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def duplicate_template_api(request, template_id):
+    if not request.user.is_superuser:
+        return Response({"success": False, "message": "Duplicating templates is not allowed."}, status=403)
     t = get_object_or_404(EmailTemplate, id=template_id)
     if not _user_can_manage_template(request.user, t):
         return _forbidden_response()
@@ -3950,8 +3954,9 @@ STATUS_TO_CATEGORY = {
     "shipping":   "shipping",
     "in transit": "shipping",
     "in_transit": "shipping",
-    "completed":  "followup",
-    "delivered":  "followup",
+    "completed":  "delivered",
+    "delivered":  "delivered",
+    "returned":   "returned",
     "failed":     "failed",
     "cancelled":  "cancelled",
     "canceled":   "cancelled",
