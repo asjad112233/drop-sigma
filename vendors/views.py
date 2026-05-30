@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.utils import timezone
+from django.db.models import Q
 
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -19,11 +20,30 @@ from stores.models import Store
 def vendor_list(request):
     store_id = request.GET.get("store_id")
     if request.user.is_authenticated and not request.user.is_superuser:
-        vendors = Vendor.objects.filter(assigned_store__user=request.user).order_by("-id").select_related("assigned_store")
+        # 🔥 Vendor.assigned_store is now nullable — a vendor invited before
+        #    any store was connected has no assigned_store. We must therefore
+        #    include vendors reachable via ANY of these paths to this tenant:
+        #      • assigned_store.user == this tenant   (legacy single-store link)
+        #      • store_assignments.store.user == this tenant  (full-store links)
+        #      • invited via VendorInvitation.owner == this tenant   (store-less)
+        invited_emails = (VendorInvitation.objects
+                          .filter(owner=request.user)
+                          .values_list("email", flat=True))
+        vendors = (Vendor.objects.filter(
+                       Q(assigned_store__user=request.user) |
+                       Q(store_assignments__store__user=request.user) |
+                       Q(email__in=invited_emails)
+                   )
+                   .distinct()
+                   .order_by("-id")
+                   .select_related("assigned_store"))
     else:
         vendors = Vendor.objects.all().order_by("-id").select_related("assigned_store")
     if store_id:
-        vendors = vendors.filter(assigned_store_id=store_id)
+        # Per-store filter: include vendors directly assigned to this store
+        # OR with no assigned_store yet (so the global "no store" pool is
+        # still pickable from any store's perspective).
+        vendors = vendors.filter(Q(assigned_store_id=store_id) | Q(assigned_store__isnull=True))
     serializer = VendorSerializer(vendors, many=True)
     data = serializer.data
 
