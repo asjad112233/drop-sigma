@@ -320,7 +320,7 @@ def rma_approve(request, pk):
     with transaction.atomic():
         try:
             rma = (_user_rma_qs(request.user)
-                   .select_for_update()
+                   .select_for_update(of=("self",))
                    .select_related("store", "order")
                    .get(pk=int(pk)))
         except (RMA.DoesNotExist, ValueError, TypeError):
@@ -387,7 +387,7 @@ def rma_reject(request, pk):
 
     with transaction.atomic():
         try:
-            rma = _user_rma_qs(request.user).select_for_update().get(pk=int(pk))
+            rma = _user_rma_qs(request.user).select_for_update(of=("self",)).get(pk=int(pk))
         except (RMA.DoesNotExist, ValueError, TypeError):
             raise Http404("RMA not found")
 
@@ -415,7 +415,7 @@ def rma_reject(request, pk):
 def rma_mark_received(request, pk):
     with transaction.atomic():
         try:
-            rma = _user_rma_qs(request.user).select_for_update().get(pk=int(pk))
+            rma = _user_rma_qs(request.user).select_for_update(of=("self",)).get(pk=int(pk))
         except (RMA.DoesNotExist, ValueError, TypeError):
             raise Http404("RMA not found")
 
@@ -439,7 +439,7 @@ def rma_mark_received(request, pk):
 def rma_mark_in_transit(request, pk):
     with transaction.atomic():
         try:
-            rma = _user_rma_qs(request.user).select_for_update().get(pk=int(pk))
+            rma = _user_rma_qs(request.user).select_for_update(of=("self",)).get(pk=int(pk))
         except (RMA.DoesNotExist, ValueError, TypeError):
             raise Http404("RMA not found")
 
@@ -471,7 +471,7 @@ def rma_refund(request, pk):
     with transaction.atomic():
         try:
             rma = (_user_rma_qs(request.user)
-                   .select_for_update()
+                   .select_for_update(of=("self",))
                    .select_related("store", "order")
                    .get(pk=int(pk)))
         except (RMA.DoesNotExist, ValueError, TypeError):
@@ -554,7 +554,7 @@ def rma_resolve(request, pk):
     """Mark the case Resolved manually (e.g. tenant handled it outside Stripe)."""
     with transaction.atomic():
         try:
-            rma = _user_rma_qs(request.user).select_for_update().get(pk=int(pk))
+            rma = _user_rma_qs(request.user).select_for_update(of=("self",)).get(pk=int(pk))
         except (RMA.DoesNotExist, ValueError, TypeError):
             raise Http404("RMA not found")
 
@@ -584,7 +584,7 @@ def rma_reopen(request, pk):
     """Reopen a resolved/rejected case (back to last meaningful state)."""
     with transaction.atomic():
         try:
-            rma = _user_rma_qs(request.user).select_for_update().get(pk=int(pk))
+            rma = _user_rma_qs(request.user).select_for_update(of=("self",)).get(pk=int(pk))
         except (RMA.DoesNotExist, ValueError, TypeError):
             raise Http404("RMA not found")
 
@@ -1280,7 +1280,7 @@ def api_triage_start(request, email_id):
     # "Start RMA" clicks on the same triage email can't both create rows.
     with transaction.atomic():
         existing = (_user_rma_qs(request.user)
-                    .select_for_update()
+                    .select_for_update(of=("self",))
                     .filter(source_email_id=str(email.id))
                     .first())
         if existing:
