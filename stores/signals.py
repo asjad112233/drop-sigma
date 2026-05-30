@@ -30,3 +30,18 @@ def seed_templates_on_new_store(sender, instance, created, **kwargs):
         EmailTemplate.objects.bulk_create(bulk)
     except Exception:
         pass  # Never let template seeding break store creation
+
+
+@receiver(post_save, sender=Store)
+def auto_sync_products_on_new_store(sender, instance, created, **kwargs):
+    """When a tenant connects a new store, fetch its catalog in the background
+    so the Products section is pre-populated. Manual sync still works for
+    re-syncing later. Best-effort — failures are logged, never raised."""
+    if not created:
+        return
+    try:
+        from stock.services import auto_sync_store_products
+        auto_sync_store_products(instance, async_=True)
+    except Exception:
+        # Importing or threading failed — store creation must still succeed.
+        pass
