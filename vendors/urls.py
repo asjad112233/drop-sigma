@@ -22,18 +22,6 @@ urlpatterns = [
     path("<int:vendor_id>/credentials/", views.vendor_credentials_api, name="vendor_credentials"),
     path("<int:vendor_id>/reset-password/", views.vendor_reset_password_api, name="vendor_reset_password"),
     path("invite/send/", views.send_vendor_invitation_api, name="send_vendor_invitation"),
-
-    # ─── Vendor Pricing & Approval System (v1) ──────────────────────────────
-    path("sourcing/products/",                         views.sourcing_products_list_api,     name="sourcing_products_list"),
-    path("sourcing/assign/",                           views.sourcing_bulk_assign_api,       name="sourcing_bulk_assign"),
-    path("sourcing/queue/",                            views.sourcing_approvals_queue_api,   name="sourcing_approvals_queue"),
-    path("sourcing/quote/<int:quote_id>/approve/",     views.sourcing_approve_quote_api,     name="sourcing_approve_quote"),
-    path("sourcing/quote/<int:quote_id>/reject/",      views.sourcing_reject_quote_api,      name="sourcing_reject_quote"),
-    path("sourcing/change/<int:change_id>/approve/",   views.sourcing_approve_change_api,    name="sourcing_approve_change"),
-    path("sourcing/change/<int:change_id>/reject/",    views.sourcing_reject_change_api,     name="sourcing_reject_change"),
-    path("sourcing/bulk-reject/",                      views.sourcing_bulk_reject_api,       name="sourcing_bulk_reject"),
-    path("sourcing/trust/",                            views.sourcing_trust_settings_api,    name="sourcing_trust_settings"),
-    path("sourcing/trust/<int:vendor_id>/",            views.sourcing_set_trust_api,         name="sourcing_set_trust"),
-    path("sourcing/reasons/",                          views.sourcing_reasons_api,           name="sourcing_reasons"),
-    path("sourcing/assignment/<int:assignment_id>/",   views.sourcing_assignment_detail_api, name="sourcing_assignment_detail"),
+    path("invite/list/", views.vendor_invitations_api, name="vendor_invitations_list"),
+    path("invite/<int:invite_id>/revoke/", views.vendor_invitation_revoke_api, name="vendor_invitation_revoke"),
 ]

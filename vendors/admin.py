@@ -1,9 +1,5 @@
 from django.contrib import admin
-from .models import (
-    Vendor, ProductVendorAssignment,
-    VendorQuote, VendorShippingOverride, QuoteChangeRequest,
-    VendorTrustSetting, ReasonConfig, QuoteReminderLog,
-)
+from .models import Vendor, ProductVendorAssignment, VendorPasswordResetRequest
 
 
 @admin.register(Vendor)
@@ -20,48 +16,9 @@ class ProductVendorAssignmentAdmin(admin.ModelAdmin):
     search_fields = ("product_name", "product_id", "vendor__name")
 
 
-@admin.register(VendorQuote)
-class VendorQuoteAdmin(admin.ModelAdmin):
-    list_display = ("id", "assignment", "product_cost", "default_shipping",
-                    "status", "review_pending", "submitted_at")
-    list_filter = ("status", "review_pending", "currency")
-    search_fields = ("assignment__product_name", "assignment__vendor__name")
-    readonly_fields = ("submitted_at",)
-
-
-@admin.register(VendorShippingOverride)
-class VendorShippingOverrideAdmin(admin.ModelAdmin):
-    list_display = ("id", "quote", "country_code", "shipping_cost", "status", "created_at")
-    list_filter = ("status", "country_code")
-    search_fields = ("country_code",)
-
-
-@admin.register(QuoteChangeRequest)
-class QuoteChangeRequestAdmin(admin.ModelAdmin):
-    list_display = ("id", "quote", "change_type", "old_value", "new_value",
-                    "delta_pct", "reason_key", "status", "auto_decision", "submitted_at")
-    list_filter = ("status", "change_type", "auto_decision", "reason_key")
-    search_fields = ("quote__assignment__product_name", "notes", "automation_reason")
-    readonly_fields = ("submitted_at",)
-
-
-@admin.register(VendorTrustSetting)
-class VendorTrustSettingAdmin(admin.ModelAdmin):
-    list_display = ("id", "tenant", "vendor", "trust_mode",
-                    "threshold_pct", "threshold_abs", "updated_at")
-    list_filter = ("trust_mode",)
-    search_fields = ("tenant__username", "vendor__name")
-
-
-@admin.register(ReasonConfig)
-class ReasonConfigAdmin(admin.ModelAdmin):
-    list_display = ("key", "label", "auto_eligible", "requires_notes", "sort_order")
-    list_filter = ("auto_eligible", "requires_notes")
-    search_fields = ("key", "label")
-
-
-@admin.register(QuoteReminderLog)
-class QuoteReminderLogAdmin(admin.ModelAdmin):
-    list_display = ("id", "assignment", "kind", "sent_at")
-    list_filter = ("kind",)
-    readonly_fields = ("sent_at",)
+@admin.register(VendorPasswordResetRequest)
+class VendorPasswordResetRequestAdmin(admin.ModelAdmin):
+    list_display = ("vendor", "requested_email", "status", "created_at", "resolved_by", "resolved_at")
+    list_filter = ("status", "created_at")
+    search_fields = ("vendor__name", "requested_email")
+    readonly_fields = ("vendor", "requested_email", "requested_ip", "user_agent", "created_at")

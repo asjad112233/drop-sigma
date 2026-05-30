@@ -2,12 +2,11 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.utils import timezone
-from django.db.models import Q
 
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from .models import Vendor, ProductVendorAssignment, VendorTrackingSubmission, StoreVendorAssignment, TrackingQueueSetting, ProductTrackingAutoApprove, VendorInvitation
+from .models import Vendor, ProductVendorAssignment, VendorTrackingSubmission, StoreVendorAssignment, TrackingQueueSetting, ProductTrackingAutoApprove, VendorInvitation, VendorPasswordResetRequest
 from .serializers import VendorSerializer
 from orders.models import Order
 from orders.services import log_activity, COURIER_URL_TEMPLATES
@@ -18,32 +17,13 @@ from stores.models import Store
 
 @api_view(["GET"])
 def vendor_list(request):
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
     store_id = request.GET.get("store_id")
-    if request.user.is_authenticated and not request.user.is_superuser:
-        # 🔥 Vendor.assigned_store is now nullable — a vendor invited before
-        #    any store was connected has no assigned_store. We must therefore
-        #    include vendors reachable via ANY of these paths to this tenant:
-        #      • assigned_store.user == this tenant   (legacy single-store link)
-        #      • store_assignments.store.user == this tenant  (full-store links)
-        #      • invited via VendorInvitation.owner == this tenant   (store-less)
-        invited_emails = (VendorInvitation.objects
-                          .filter(owner=request.user)
-                          .values_list("email", flat=True))
-        vendors = (Vendor.objects.filter(
-                       Q(assigned_store__user=request.user) |
-                       Q(store_assignments__store__user=request.user) |
-                       Q(email__in=invited_emails)
-                   )
-                   .distinct()
-                   .order_by("-id")
-                   .select_related("assigned_store"))
-    else:
-        vendors = Vendor.objects.all().order_by("-id").select_related("assigned_store")
+    # Per-user scope. No superuser fallback — /superadmin/ has its own panel.
+    vendors = Vendor.objects.filter(assigned_store__user=request.user).order_by("-id").select_related("assigned_store")
     if store_id:
-        # Per-store filter: include vendors directly assigned to this store
-        # OR with no assigned_store yet (so the global "no store" pool is
-        # still pickable from any store's perspective).
-        vendors = vendors.filter(Q(assigned_store_id=store_id) | Q(assigned_store__isnull=True))
+        vendors = vendors.filter(assigned_store_id=store_id)
     serializer = VendorSerializer(vendors, many=True)
     data = serializer.data
 
@@ -119,14 +99,37 @@ def vendor_list(request):
     return Response(data)
 
 
+def _resolve_acting_owner(user, perm_key):
+    """For Vendor / Rule / etc. mutations: tenant acts under themselves,
+    employee with perm_key acts under their owner. Returns (owner_user, error_response)."""
+    if not user.is_authenticated:
+        return None, Response({"success": False, "message": "Authentication required"}, status=401)
+    member = user.team_profile.filter(is_active=True).select_related("owner").first() if hasattr(user, "team_profile") else None
+    if member:
+        if not (member.permissions or {}).get(perm_key):
+            return None, Response({"success": False, "message": f"Not allowed — missing {perm_key} permission."}, status=403)
+        return (member.owner or user), None
+    return user, None
+
+
 @api_view(["POST"])
 def vendor_create(request):
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
+    owner_user, err = _resolve_acting_owner(request.user, "manage_vendors")
+    if err: return err
     data = request.data.copy()
     password = data.get("password", "").strip()
 
     email = data.get("email", "").strip()
     if Vendor.objects.filter(email=email).exists():
         return Response({"success": False, "errors": {"email": ["A vendor with this email already exists."]}}, status=400)
+
+    # The assigned_store on the new vendor must belong to the owner (tenant
+    # — either the requester directly or the employee's parent tenant).
+    assigned_store_id = data.get("assigned_store") or data.get("assigned_store_id")
+    if assigned_store_id and not Store.objects.filter(id=assigned_store_id, user=owner_user).exists():
+        return Response({"success": False, "errors": {"assigned_store": ["Store not found or not yours."]}}, status=400)
 
     serializer = VendorSerializer(data=data)
     if not serializer.is_valid():
@@ -162,7 +165,9 @@ def vendor_create(request):
 
 @api_view(["DELETE"])
 def vendor_delete(request, vendor_id):
-    vendor = get_object_or_404(Vendor, id=vendor_id)
+    owner_user, err = _resolve_acting_owner(request.user, "manage_vendors")
+    if err: return err
+    vendor = get_object_or_404(Vendor, id=vendor_id, assigned_store__user=owner_user)
     if vendor.user:
         vendor.user.delete()
     vendor.delete()
@@ -171,7 +176,9 @@ def vendor_delete(request, vendor_id):
 
 @api_view(["POST"])
 def vendor_update_permissions(request, vendor_id):
-    vendor = get_object_or_404(Vendor, id=vendor_id)
+    owner_user, err = _resolve_acting_owner(request.user, "manage_vendors")
+    if err: return err
+    vendor = get_object_or_404(Vendor, id=vendor_id, assigned_store__user=owner_user)
     new_perms = request.data.get("permissions", {})
     changed_by = request.data.get("changed_by", "Admin")
 
@@ -199,7 +206,9 @@ def vendor_update_permissions(request, vendor_id):
 @api_view(["GET"])
 def vendor_permission_logs_api(request, vendor_id):
     from .models import VendorPermissionLog
-    vendor = get_object_or_404(Vendor, id=vendor_id)
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
+    vendor = get_object_or_404(Vendor, id=vendor_id, assigned_store__user=request.user)
     logs = VendorPermissionLog.objects.filter(vendor=vendor)
     data = [{
         "id": l.id,
@@ -214,10 +223,30 @@ def vendor_permission_logs_api(request, vendor_id):
 
 @api_view(["GET"])
 def tracking_queue_api(request):
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
     store_id = request.GET.get("store_id")
     status_filter = request.GET.get("status", "pending")
 
-    qs = VendorTrackingSubmission.objects.select_related("order", "vendor").order_by("-submitted_at")
+    # Tenant sees their own queue; employee with `approve_tracking` sees
+    # their owner's queue (narrowed by allowed_stores if set).
+    qs_user = request.user
+    member = request.user.team_profile.filter(is_active=True).select_related("owner").first() if hasattr(request.user, "team_profile") else None
+    if member and (member.permissions or {}).get("approve_tracking") and member.owner_id:
+        qs_user = member.owner
+
+    qs = VendorTrackingSubmission.objects.filter(
+        order__store__user=qs_user
+    ).select_related("order", "vendor").order_by("-submitted_at")
+
+    # Honour employee's allowed_stores narrowing.
+    if member and member.owner_id == qs_user.id:
+        allowed = (member.permissions or {}).get("allowed_stores") or []
+        if allowed:
+            try:
+                qs = qs.filter(order__store_id__in=[int(s) for s in allowed])
+            except (TypeError, ValueError):
+                pass
     if store_id:
         qs = qs.filter(order__store_id=store_id)
     if status_filter != "all":
@@ -246,10 +275,30 @@ def tracking_queue_api(request):
     return Response({"success": True, "submissions": data, "count": len(data)})
 
 
+def _can_act_on_submission(user, submission, perm_key):
+    """Tenant owns the order's store ▸ allowed.
+    Employee with perm_key under the same owner ▸ allowed."""
+    if not user or not user.is_authenticated or not submission:
+        return False
+    store = submission.order.store if submission.order_id else None
+    if not store:
+        return False
+    if store.user_id == user.id:
+        return True
+    member = user.team_profile.filter(is_active=True).select_related("owner").first() if hasattr(user, "team_profile") else None
+    if not member or not member.owner_id or member.owner_id != store.user_id:
+        return False
+    return bool((member.permissions or {}).get(perm_key))
+
+
 @api_view(["POST"])
 def approve_tracking_api(request, submission_id):
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
     try:
         sub = get_object_or_404(VendorTrackingSubmission, id=submission_id)
+        if not _can_act_on_submission(request.user, sub, "approve_tracking"):
+            return Response({"success": False, "message": "Not allowed."}, status=403)
         sub.status = "approved"
         sub.reviewed_at = timezone.now()
         sub.save()
@@ -281,6 +330,25 @@ def approve_tracking_api(request, submission_id):
         except Exception:
             pass
 
+        # Notify vendor of approval
+        try:
+            from notifications.services import notify
+            if sub.vendor.user_id:
+                notify(
+                    recipient=sub.vendor.user,
+                    audience="vendor",
+                    category="tracking",
+                    priority="medium",
+                    title=f"Tracking approved for #{order.external_order_id}",
+                    body=f"Your tracking {sub.tracking_number} was approved. "
+                         f"Order status updated to Shipped automatically.",
+                    action_url="/vendor/?tab=tracking",
+                    action_label="View",
+                    related_order_id=order.id,
+                )
+        except Exception:
+            pass
+
         return Response({"success": True, "message": "Tracking approved and customer notified."})
     except Exception as e:
         import logging
@@ -290,7 +358,11 @@ def approve_tracking_api(request, submission_id):
 
 @api_view(["POST"])
 def reject_tracking_api(request, submission_id):
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
     sub = get_object_or_404(VendorTrackingSubmission, id=submission_id)
+    if not _can_act_on_submission(request.user, sub, "approve_tracking"):
+        return Response({"success": False, "message": "Not allowed."}, status=403)
     reason = request.data.get("reason", "").strip()
 
     sub.status = "rejected"
@@ -307,14 +379,36 @@ def reject_tracking_api(request, submission_id):
         reject_desc += f" Reason: {reason}"
     log_activity(order, "tracking_rejected", reject_desc, actor="Admin")
 
+    # Notify vendor of rejection
+    try:
+        from notifications.services import notify
+        if sub.vendor.user_id:
+            notify(
+                recipient=sub.vendor.user,
+                audience="vendor",
+                category="tracking",
+                priority="high",
+                title=f"Tracking rejected — please resubmit for #{order.external_order_id}",
+                body=(f'Admin note: "{reason}"' if reason else
+                      "Your tracking submission was rejected. Please verify and resubmit."),
+                action_url=f"/vendor/?tab=orders&order_id={order.id}",
+                action_label="Resubmit",
+                related_order_id=order.id,
+            )
+    except Exception:
+        pass
+
     return Response({"success": True, "message": "Tracking submission rejected."})
 
 
 @api_view(["GET", "POST"])
 def tracking_queue_settings_api(request):
     """Get or set auto-approve toggle for a store's tracking queue."""
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
     store_id = request.data.get("store_id") or request.GET.get("store_id")
-    store = get_object_or_404(Store, id=store_id) if store_id else None
+    # Per-user scope on the target store.
+    store = get_object_or_404(Store, id=store_id, user=request.user) if store_id else None
 
     if request.method == "GET":
         if not store:
@@ -345,8 +439,10 @@ def tracking_queue_settings_api(request):
 @api_view(["POST"])
 def approve_tracking_permanent_api(request, submission_id):
     """Approve this submission AND permanently auto-approve all future submissions for this product."""
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
     try:
-        sub = get_object_or_404(VendorTrackingSubmission, id=submission_id)
+        sub = get_object_or_404(VendorTrackingSubmission, id=submission_id, order__store__user=request.user)
 
         sub.status = "approved"
         sub.reviewed_at = timezone.now()
@@ -399,8 +495,13 @@ def approve_tracking_permanent_api(request, submission_id):
 @api_view(["DELETE"])
 def remove_product_auto_approve_api(request, product_id):
     """Remove a product from the permanent auto-approve list."""
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
     store_id = request.data.get("store_id") or request.GET.get("store_id")
-    ProductTrackingAutoApprove.objects.filter(product_id=product_id, store_id=store_id).delete()
+    # Per-user scope on the store.
+    ProductTrackingAutoApprove.objects.filter(
+        product_id=product_id, store_id=store_id, store__user=request.user
+    ).delete()
     return Response({"success": True})
 
 
@@ -472,22 +573,18 @@ def vendor_orders_api(request):
             line_items = order.raw_data.get("line_items", [])
 
         billing = (order.raw_data or {}).get("billing", {})
-        full_address = ", ".join(filter(None, [
-            billing.get("address_1", ""),
-            billing.get("address_2", ""),
-            order.city or billing.get("city", ""),
-            billing.get("postcode", ""),
-            order.country or billing.get("country", ""),
-        ]))
+        # Shipping address is non-optional for vendors — they literally cannot
+        # ship the order without it, so it bypasses the permission gate.
+        shipping = order.shipping_address
 
         row = {
             "id": order.id,
             "order_number": order.external_order_id,
             "customer_name": order.customer_name or "-",
-            "customer_phone": order.customer_phone or "-",
             "customer_city": order.city or "-",
             "customer_country": order.country or "-",
-            "customer_address": full_address or "-",
+            "shipping_address": shipping,
+            "shipping_address_text": order.shipping_address_text,
             "created_at": order.created_at.isoformat() if order.created_at else None,
             "product_name": order.product_name or "",
             "payment_status": order.payment_status or "-",
@@ -532,6 +629,12 @@ def vendor_orders_api(request):
             row["assigned_to_name"] = order.assigned_to.name if order.assigned_to else None
         if perm("show_store_url"):
             row["store_url"] = order.store.store_url if order.store else None
+        if perm("show_customer_phone"):
+            row["customer_phone"] = order.customer_phone or "-"
+        # Legacy field — older vendor UIs read `customer_address` as a flat
+        # string. Keep populated from the same shipping source so old + new
+        # portals stay consistent.
+        row["customer_address"] = order.shipping_address_text or "-"
 
         data.append(row)
 
@@ -625,23 +728,48 @@ def vendor_submit_tracking_api(request, order_id):
                  f"Vendor '{vendor.name}' submitted tracking: {tracking_number}",
                  actor=vendor.name)
 
+    # Notify admin (tenant owner) of pending tracking review
+    try:
+        from notifications.services import notify
+        owner = getattr(order.store, "user", None)
+        if owner:
+            notify(
+                recipient=owner,
+                audience="admin",
+                category="tracking",
+                priority="medium",
+                title=f"Vendor submitted tracking for #{order.external_order_id}",
+                body=f"{vendor.name} submitted tracking number {tracking_number}. Awaiting your approval.",
+                action_url="/dashboard/?section=trackingQueue",
+                action_label="Review",
+                related_order_id=order.id,
+            )
+    except Exception:
+        pass
+
     return Response({"success": True, "message": "Tracking submitted for approval.", "submission_id": sub.id})
 
 
 @api_view(["DELETE"])
 def remove_perm_assignment_api(request, assignment_id):
-    assignment = get_object_or_404(ProductVendorAssignment, id=assignment_id)
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
+    # Per-user scope: only delete assignments inside the requester's stores.
+    assignment = get_object_or_404(ProductVendorAssignment, id=assignment_id, store__user=request.user)
     assignment.delete()
     return Response({"success": True, "message": "Permanent assignment removed."})
 
 
 @api_view(["POST", "DELETE"])
 def store_full_vendor_api(request, store_id):
-    store = get_object_or_404(Store, id=store_id)
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
+    # Per-user scope on both the store and the vendor.
+    store = get_object_or_404(Store, id=store_id, user=request.user)
     vendor_id = request.data.get("vendor_id")
     if not vendor_id:
         return Response({"success": False, "message": "vendor_id required"}, status=400)
-    vendor = get_object_or_404(Vendor, id=vendor_id)
+    vendor = get_object_or_404(Vendor, id=vendor_id, assigned_store__user=request.user)
     if request.method == "POST":
         StoreVendorAssignment.objects.get_or_create(vendor=vendor, store=store, defaults={"is_active": True})
         return Response({"success": True, "message": f"{vendor.name} assigned to {store.name}"})
@@ -652,8 +780,10 @@ def store_full_vendor_api(request, store_id):
 
 @api_view(["POST"])
 def vendor_toggle_store_scope_api(request, vendor_id, store_id):
-    vendor = get_object_or_404(Vendor, id=vendor_id)
-    store = get_object_or_404(Store, id=store_id)
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
+    vendor = get_object_or_404(Vendor, id=vendor_id, assigned_store__user=request.user)
+    store = get_object_or_404(Store, id=store_id, user=request.user)
     action = request.data.get("action", "set_full")
     if action == "set_full":
         StoreVendorAssignment.objects.get_or_create(vendor=vendor, store=store, defaults={"is_active": True})
@@ -677,7 +807,9 @@ def _get_product_image(vendor, product_id):
 
 @api_view(["GET"])
 def vendor_products_api(request, vendor_id):
-    vendor = get_object_or_404(Vendor, id=vendor_id)
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
+    vendor = get_object_or_404(Vendor, id=vendor_id, assigned_store__user=request.user)
 
     permanent = ProductVendorAssignment.objects.filter(vendor=vendor, is_active=True).select_related("store")
 
@@ -770,7 +902,9 @@ def vendor_tracking_history_api(request):
 
 @api_view(["POST"])
 def vendor_update_status(request, vendor_id):
-    vendor = get_object_or_404(Vendor, id=vendor_id)
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
+    vendor = get_object_or_404(Vendor, id=vendor_id, assigned_store__user=request.user)
     new_status = request.data.get("status")
     if new_status not in ("active", "inactive"):
         return Response({"success": False, "message": "Invalid status."}, status=400)
@@ -781,8 +915,10 @@ def vendor_update_status(request, vendor_id):
 
 @api_view(["GET", "POST"])
 def vendor_store_manage_products_api(request, vendor_id, store_id):
-    vendor = get_object_or_404(Vendor, id=vendor_id)
-    store = get_object_or_404(Store, id=store_id)
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
+    vendor = get_object_or_404(Vendor, id=vendor_id, assigned_store__user=request.user)
+    store = get_object_or_404(Store, id=store_id, user=request.user)
 
     if request.method == "POST":
         action = request.data.get("action")
@@ -1104,6 +1240,151 @@ def vendor_stock_mark_arrived_api(request, assignment_id):
     return Response({"success": True, "message": "Stock marked as arrived. Admin has been notified."})
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# VENDOR PORTAL — Self-service: Permissions, Permanent Products, Change Password
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Canonical list of permission keys + their human labels, mirrored on the
+# vendor side as read-only display. Keep in sync with admin permissions UI.
+VENDOR_PERMISSION_LABELS = {
+    "show_order_amount":     "View Order Amount",
+    "show_order_email":      "View Customer Email",
+    "show_assigned_member":  "View Assigned Team Member",
+    "show_store_url":        "View Store URL",
+    "show_customer_phone":   "View Customer Phone",
+    "show_customer_address": "View Customer Address",
+    "submit_tracking":       "Submit Tracking Numbers",
+    "view_order_history":    "View Order History",
+    "view_tracking_history": "View Tracking History",
+}
+
+
+@api_view(["GET"])
+def vendor_my_permissions_api(request):
+    """Return the current vendor's own permissions as a read-only list."""
+    vendor, err = _require_vendor(request)
+    if err:
+        return err
+    perms = vendor.permissions or {}
+    items = []
+    for key, label in VENDOR_PERMISSION_LABELS.items():
+        items.append({
+            "key": key,
+            "label": label,
+            "enabled": bool(perms.get(key, False)),
+        })
+    return Response({"success": True, "permissions": items})
+
+
+@api_view(["GET"])
+def vendor_my_permanent_products_api(request):
+    """Return products that are permanently assigned to the current vendor."""
+    vendor, err = _require_vendor(request)
+    if err:
+        return err
+
+    perm_qs = (ProductVendorAssignment.objects
+               .filter(vendor=vendor, is_active=True)
+               .select_related("store")
+               .order_by("-created_at"))
+
+    items = []
+    for a in perm_qs:
+        product_orders = Order.objects.filter(assigned_vendor=vendor, product_id=a.product_id)
+        total_orders = product_orders.count()
+        shipped = product_orders.filter(fulfillment_status__in=["shipped", "completed"]).count()
+        pending = product_orders.exclude(fulfillment_status__in=["shipped", "completed", "cancelled"]).count()
+        items.append({
+            "id": a.id,
+            "product_id": a.product_id,
+            "product_name": a.product_name or a.product_id,
+            "store_name": a.store.name if a.store else "",
+            "image": _get_product_image(vendor, a.product_id),
+            "assigned_at": a.created_at.isoformat() if a.created_at else None,
+            "total_orders": total_orders,
+            "shipped_orders": shipped,
+            "pending_orders": pending,
+        })
+
+    return Response({"success": True, "products": items, "count": len(items)})
+
+
+@api_view(["POST"])
+def vendor_change_password_api(request):
+    """Allow vendor to change their own password from the portal."""
+    vendor, err = _require_vendor(request)
+    if err:
+        return err
+
+    if not vendor.user:
+        return Response({"success": False, "message": "No login account is linked to this vendor."}, status=400)
+
+    current = (request.data.get("current_password") or "").strip()
+    new_pw  = (request.data.get("new_password") or "").strip()
+    confirm = (request.data.get("confirm_password") or "").strip()
+
+    if not current or not new_pw or not confirm:
+        return Response({"success": False, "message": "All three fields are required."}, status=400)
+
+    if new_pw != confirm:
+        return Response({"success": False, "message": "New password and confirmation do not match."}, status=400)
+
+    if len(new_pw) < 8:
+        return Response({"success": False, "message": "New password must be at least 8 characters long."}, status=400)
+
+    if new_pw == current:
+        return Response({"success": False, "message": "New password must be different from your current password."}, status=400)
+
+    if not vendor.user.check_password(current):
+        return Response({"success": False, "message": "Current password is incorrect."}, status=400)
+
+    vendor.user.set_password(new_pw)
+    vendor.user.save()
+    vendor.password_plain = new_pw  # Keep in sync so admin "view credentials" still works
+    vendor.save(update_fields=["password_plain"])
+
+    # Keep the user logged in after password change
+    from django.contrib.auth import update_session_auth_hash
+    update_session_auth_hash(request, vendor.user)
+
+    return Response({"success": True, "message": "Password updated successfully."})
+
+
+@api_view(["POST"])
+def vendor_forgot_password_api(request):
+    """
+    Vendor-initiated password reset request.
+
+    Since vendors don't own the email infrastructure (per project rule: emails
+    only via tenant's own connected Gmail), this endpoint records the reset
+    request and notifies the store owner. The admin then uses the existing
+    vendor_reset_password_api flow to set a new password and email it back
+    to the vendor via the store's connected Gmail account.
+    """
+    email = (request.data.get("email") or "").strip().lower()
+    if not email:
+        return Response({"success": False, "message": "Please enter your vendor email."}, status=400)
+
+    # Don't leak whether the email exists — always respond with a generic success.
+    vendor = Vendor.objects.filter(email__iexact=email).first()
+    if vendor:
+        # Record the request — admin sees this in their portal and can act on it.
+        try:
+            VendorPasswordResetRequest.objects.create(
+                vendor=vendor,
+                requested_email=email,
+                requested_ip=request.META.get("REMOTE_ADDR", "")[:45],
+                user_agent=(request.META.get("HTTP_USER_AGENT", "") or "")[:300],
+            )
+        except Exception:
+            pass
+
+    return Response({
+        "success": True,
+        "message": "If an account exists for that email, your admin has been notified and will reset your password shortly. You'll receive the new credentials via email.",
+    })
+
+
 # ─── Vendor Invitations ───────────────────────────────────────────────────────
 
 import os
@@ -1172,27 +1453,64 @@ def _build_vendor_invitation_email(name, invite_url, invited_by, store_name):
 
 
 def _send_vendor_invitation_email(to_email, subject, html):
+    """Send a vendor invitation. Synchronous so failures surface to the
+    user instead of dying silently in a daemon thread.
+
+    Tries Resend (historical default), then Django SMTP via
+    EMAIL_HOST_USER as a fallback. Always sends from
+    noreply@dropsigma.com — the platform brand sender, not the
+    tenant's own Gmail."""
     import logging
+    from django.conf import settings
     logger = logging.getLogger(__name__)
 
-    def _do():
+    errors = []
+
+    # ── Path 1: Resend ────────────────────────────────────────────────
+    resend_key = os.getenv("RESEND_API_KEY", "")
+    if resend_key:
         try:
             import resend as _resend
-            api_key = os.getenv("RESEND_API_KEY", "")
-            if not api_key:
-                logger.warning("RESEND_API_KEY not set — vendor invitation email not sent to %s", to_email)
-                return
-            _resend.api_key = api_key
+            _resend.api_key = resend_key
             result = _resend.Emails.send({
                 "from":    "Drop Sigma <noreply@dropsigma.com>",
                 "to":      [to_email],
                 "subject": subject,
                 "html":    html,
             })
-            logger.info("Vendor invitation email sent to %s — id: %s", to_email, getattr(result, "id", result))
+            logger.info("Vendor invitation sent via Resend to %s (id=%s)",
+                        to_email, getattr(result, "id", result))
+            return True, ""
         except Exception as exc:
-            logger.error("Failed to send vendor invitation email to %s: %s", to_email, exc)
-    threading.Thread(target=_do, daemon=True).start()
+            errors.append(f"Resend: {exc}")
+            logger.warning("Vendor Resend send failed for %s: %s", to_email, exc)
+
+    # ── Path 2: Django SMTP fallback ──────────────────────────────────
+    if settings.EMAIL_HOST_USER and settings.EMAIL_HOST_PASSWORD:
+        try:
+            from django.core.mail import EmailMultiAlternatives
+            from_addr = settings.DEFAULT_FROM_EMAIL or settings.EMAIL_HOST_USER
+            msg = EmailMultiAlternatives(
+                subject=subject,
+                body="Open in an HTML-capable email client to view this invitation.",
+                from_email=f"Drop Sigma <{from_addr}>",
+                to=[to_email],
+            )
+            msg.attach_alternative(html, "text/html")
+            msg.send(fail_silently=False)
+            logger.info("Vendor invitation sent via SMTP to %s from %s",
+                        to_email, from_addr)
+            return True, ""
+        except Exception as exc:
+            errors.append(f"SMTP: {exc}")
+            logger.warning("Vendor SMTP send failed for %s: %s", to_email, exc)
+
+    if not resend_key and not (settings.EMAIL_HOST_USER and settings.EMAIL_HOST_PASSWORD):
+        return False, ("Server email is not configured. Set either "
+                       "RESEND_API_KEY or EMAIL_HOST_USER + EMAIL_HOST_PASSWORD "
+                       "on the server, then retry.")
+
+    return False, "Email send failed: " + " | ".join(errors)
 
 
 @api_view(["POST"])
@@ -1201,58 +1519,50 @@ def send_vendor_invitation_api(request):
         return Response({"success": False, "message": "Login required."}, status=401)
 
     name     = (request.data.get("name") or "").strip()
-    email    = (request.data.get("email") or "").strip()
+    email    = (request.data.get("email") or "").strip().lower()  # normalise once
     store_id = request.data.get("store_id")
 
     if not name or not email:
         return Response({"success": False, "message": "Name and email are required."}, status=400)
+    if not store_id:
+        return Response({"success": False, "message": "Store is required."}, status=400)
 
-    # Store is now OPTIONAL — vendor can be invited before any store is connected.
-    # If a store_id is provided, validate it; otherwise fall back to the
-    # requester's own first active store, else null.
-    store = None
-    if store_id:
-        try:
-            store = Store.objects.get(id=store_id)
-        except (Store.DoesNotExist, ValueError, TypeError):
-            store = None
-    if store is None:
-        store = Store.objects.filter(user=request.user).order_by("id").first()
-    # store may still be None — that's fine, invitation accepted without store
+    # Per-user scope: vendor's store must belong to the requester.
+    try:
+        store = Store.objects.get(id=store_id, user=request.user)
+    except Store.DoesNotExist:
+        return Response({"success": False, "message": "Store not found."}, status=404)
 
-    # Case-insensitive email match — Vendor.email may be mixed-case
+    # Case-insensitive existence checks — previous version did `email=email`
+    # which broke when the stored row's case differed from what the admin typed.
     if Vendor.objects.filter(email__iexact=email).exists():
-        return Response({"success": False, "message": "A vendor with this email already exists."}, status=400)
+        return Response({
+            "success": False,
+            "message": f"\"{email}\" is already registered as a vendor on Drop Sigma."
+        }, status=400)
 
-    # 🔥 Orphan-user recovery: if a User exists with this email but NO
-    #    Vendor record points to it, it's an interrupted accept-invite
-    #    (e.g. accept-flow crashed between User.create and Vendor.create).
-    #    Auto-sanitize so re-invite goes through cleanly. The orphan keeps
-    #    any chat history but loses the email + auth, and is deactivated.
-    orphan_qs = User.objects.filter(email__iexact=email)
-    if orphan_qs.exists():
-        # Are any of these legit (linked to a Vendor or other live role)?
-        legit_user_ids = set(Vendor.objects.filter(user__email__iexact=email)
-                                           .values_list("user_id", flat=True))
-        for u in orphan_qs:
-            if u.id in legit_user_ids:
-                # A real vendor user exists — duplicate check rightfully blocks
-                return Response({"success": False, "message": "A user with this email already exists."}, status=400)
-        # All matches are orphans — sanitize them
-        for u in orphan_qs:
-            u.email = f"orphan_{u.id}@invalid.local"
-            u.username = f"_orphan_{u.id}"
-            u.is_active = False
-            u.set_unusable_password()
-            u.save(update_fields=["email", "username", "is_active", "password"])
-        import logging
-        logging.getLogger(__name__).info(
-            "Sanitized %d orphan user(s) for email %s before re-invite",
-            orphan_qs.count(), email,
-        )
+    if User.objects.filter(email__iexact=email).exists():
+        return Response({
+            "success": False,
+            "message": f"\"{email}\" already has a Drop Sigma account. Ask them to log in instead."
+        }, status=400)
 
-    # Expire any existing pending invites for this email
-    VendorInvitation.objects.filter(owner=request.user, email__iexact=email, status="pending").update(status="expired")
+    # Prevent spam-resends — surface "already invited" if a live pending
+    # invitation exists from this same admin.
+    pending = VendorInvitation.objects.filter(
+        owner=request.user, email__iexact=email, status="pending"
+    ).first()
+    if pending and pending.expires_at and pending.expires_at > timezone.now():
+        return Response({
+            "success": False,
+            "message": f"You already invited \"{email}\". The previous invite is still valid until "
+                       f"{pending.expires_at.strftime('%b %d, %H:%M UTC')}."
+        }, status=400)
+
+    # Expire stale pending invites so we don't pile up rows.
+    VendorInvitation.objects.filter(
+        owner=request.user, email__iexact=email, status="pending"
+    ).update(status="expired")
 
     expires_at = timezone.now() + datetime.timedelta(hours=48)
     inv = VendorInvitation.objects.create(
@@ -1268,13 +1578,88 @@ def send_vendor_invitation_api(request):
     invite_url = f"{scheme}://{host}/vendor/invite/accept/{inv.token}/"
 
     invited_by = request.user.get_full_name() or request.user.username
-    # store may be null if tenant hasn't connected any store yet — fall back
-    # to the inviter's display name so the email still reads naturally.
-    store_name = store.name if store else (invited_by or "Drop Sigma")
-    html = _build_vendor_invitation_email(name, invite_url, invited_by, store_name)
-    _send_vendor_invitation_email(email, f"You're invited as a vendor partner on Drop Sigma", html)
+    html = _build_vendor_invitation_email(name, invite_url, invited_by, store.name)
+    sent, err = _send_vendor_invitation_email(email, f"You're invited as a vendor partner on Drop Sigma", html)
+
+    if not sent:
+        # Roll back so the user can retry once email is configured.
+        inv.delete()
+        return Response({"success": False, "message": err}, status=500)
 
     return Response({"success": True, "message": f"Invitation sent to {email}."})
+
+
+@api_view(["GET"])
+def vendor_me_api(request):
+    """Lightweight identity + permissions endpoint the vendor portal can
+    poll every few seconds to pick up admin-side access changes instantly.
+    Returns the live permissions dict so the portal can re-render columns,
+    hide/show buttons, and refresh data without a page reload."""
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Not authenticated"}, status=401)
+    try:
+        vendor = request.user.vendor_profile
+    except Exception:
+        return Response({"success": False, "message": "Not a vendor"}, status=403)
+
+    return Response({
+        "success": True,
+        "vendor": {
+            "id":             vendor.id,
+            "name":           vendor.name,
+            "email":          vendor.email,
+            "status":         vendor.status,
+            "company_name":   vendor.company_name or "",
+            "store_id":       vendor.assigned_store_id,
+            "store_name":     vendor.assigned_store.name if vendor.assigned_store_id else "",
+            "permissions":    vendor.permissions or {},
+        }
+    })
+
+
+@api_view(["GET"])
+def vendor_invitations_api(request):
+    """List vendor invitations this admin has sent."""
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Login required."}, status=401)
+
+    # Auto-expire stale pending rows so the UI is honest.
+    VendorInvitation.objects.filter(
+        owner=request.user, status="pending", expires_at__lt=timezone.now()
+    ).update(status="expired")
+
+    rows = (VendorInvitation.objects
+            .filter(owner=request.user)
+            .select_related("store")
+            .order_by("-created_at")[:100])
+
+    items = [{
+        "id":         inv.id,
+        "name":       inv.name,
+        "email":      inv.email,
+        "store_id":   inv.store_id,
+        "store_name": inv.store.name if inv.store_id else "",
+        "status":     inv.status,
+        "created_at": inv.created_at.isoformat() if inv.created_at else None,
+        "expires_at": inv.expires_at.isoformat() if inv.expires_at else None,
+    } for inv in rows]
+    return Response({"success": True, "invitations": items})
+
+
+@api_view(["POST"])
+def vendor_invitation_revoke_api(request, invite_id):
+    """Cancel a pending vendor invitation."""
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Login required."}, status=401)
+    try:
+        inv = VendorInvitation.objects.get(id=invite_id, owner=request.user)
+    except VendorInvitation.DoesNotExist:
+        return Response({"success": False, "message": "Invitation not found."}, status=404)
+    if inv.status != "pending":
+        return Response({"success": False, "message": f"Invitation is already {inv.status}."}, status=400)
+    inv.status = "expired"
+    inv.save(update_fields=["status"])
+    return Response({"success": True, "message": "Invitation revoked."})
 
 
 def accept_vendor_invitation_page(request, token):
@@ -1357,875 +1742,3 @@ def vendor_activate_login_by_token(request, token):
         return redirect("/vendor/dashboard/")
     except Exception:
         return redirect("/vendor/login/")
-
-
-# ═════════════════════════════════════════════════════════════════════════════
-# VENDOR PRICING & APPROVAL SYSTEM — TENANT APIs
-# ═════════════════════════════════════════════════════════════════════════════
-
-from decimal import Decimal, InvalidOperation
-from django.db.models import Q
-from .models import (
-    VendorQuote, VendorShippingOverride, QuoteChangeRequest,
-    VendorTrustSetting, ReasonConfig,
-)
-from .services import (
-    evaluate_change_request, apply_approved_change, compute_deltas,
-)
-
-
-def _tenant_stores(user):
-    """All stores owned by this tenant. Tenant isolation root."""
-    return Store.objects.filter(user=user)
-
-
-def _safe_decimal(value, default=None):
-    try:
-        return Decimal(str(value))
-    except (InvalidOperation, TypeError, ValueError):
-        return default
-
-
-def _tenant_vendors_qs(tenant):
-    """Vendors reachable from this tenant via ANY of:
-       • assigned_store.user == tenant         (legacy single-store link)
-       • store_assignments.store.user == tenant (multi-store links)
-       • email matches a VendorInvitation owned by tenant (store-less)
-
-    Mirrors vendor_list() so endpoints stay consistent: any vendor that
-    shows in the UI dropdown can also be used in subsequent calls."""
-    invited_emails = (VendorInvitation.objects
-                      .filter(owner=tenant)
-                      .values_list("email", flat=True))
-    return Vendor.objects.filter(
-        Q(assigned_store__user=tenant) |
-        Q(store_assignments__store__user=tenant) |
-        Q(email__in=invited_emails)
-    ).distinct()
-
-
-def _serialize_quote(quote):
-    if not quote:
-        return None
-    overrides = list(quote.overrides.all())
-    return {
-        "id": quote.id,
-        "product_cost": str(quote.product_cost),
-        "default_shipping": str(quote.default_shipping),
-        "currency": quote.currency,
-        "status": quote.status,
-        "review_pending": quote.review_pending,
-        "overrides_count": len(overrides),
-        "overrides": [
-            {"country_code": o.country_code, "shipping_cost": str(o.shipping_cost),
-             "status": o.status}
-            for o in overrides
-        ],
-        "submitted_at": quote.submitted_at.isoformat() if quote.submitted_at else None,
-        "approved_at": quote.approved_at.isoformat() if quote.approved_at else None,
-    }
-
-
-def _serialize_assignment_brief(assignment):
-    """Brief assignment representation used inside the products listing."""
-    active = assignment.quotes.filter(status=VendorQuote.STATUS_ACTIVE).first()
-    pending = assignment.quotes.filter(status=VendorQuote.STATUS_PENDING).first()
-    if active:
-        a_status = "change_pending" if active.review_pending else "active"
-    elif pending:
-        a_status = "pending_approval"
-    else:
-        a_status = "awaiting_quote"
-    return {
-        "id": assignment.id,
-        "vendor_id": assignment.vendor_id,
-        "vendor_name": assignment.vendor.name if assignment.vendor else "",
-        "status": a_status,
-        "active_quote": _serialize_quote(active),
-    }
-
-
-# ─── GET /vendors/api/sourcing/products/ ────────────────────────────────────
-
-@api_view(["GET"])
-def sourcing_products_list_api(request):
-    """List synced products with current assignment + quote status.
-
-    Reuses StockProduct (synced from store) when available, falling back to
-    distinct products derived from Orders (this matches the existing project
-    pattern in vendor_store_manage_products_api).
-
-    Query params:
-      store_id  — optional, scope to a single store
-      status    — all|unassigned|awaiting_quote|active|change_pending
-      q         — substring match on product name
-    """
-    if not request.user.is_authenticated:
-        return Response({"success": False, "message": "Authentication required"}, status=401)
-
-    stores = _tenant_stores(request.user)
-    store_id = request.GET.get("store_id")
-    status_filter = (request.GET.get("status") or "all").lower()
-    q = (request.GET.get("q") or "").strip()
-
-    if store_id:
-        stores = stores.filter(id=store_id)
-    store_ids = list(stores.values_list("id", flat=True))
-    if not store_ids:
-        return Response({"success": True, "products": []})
-
-    products = []
-    seen = set()  # (store_id, product_id)
-
-    # Source 1: StockProduct (synced)
-    try:
-        from stock.models import StockProduct
-        sp_qs = StockProduct.objects.filter(store_id__in=store_ids, is_active=True)
-        if q:
-            sp_qs = sp_qs.filter(product_name__icontains=q)
-        for sp in sp_qs.select_related("store"):
-            key = (sp.store_id, str(sp.product_id))
-            if key in seen:
-                continue
-            seen.add(key)
-            products.append({
-                "id": sp.id,
-                "external_id": str(sp.product_id),
-                "name": sp.product_name,
-                "sku": "",
-                "image": sp.image_url or "",
-                "currency": "USD",
-                "store_id": sp.store_id,
-                "store_name": sp.store.name,
-                "_pid": str(sp.product_id),
-            })
-    except Exception:
-        pass
-
-    # Source 2: distinct products from orders (covers stores without StockProduct sync)
-    order_qs = (Order.objects.filter(store_id__in=store_ids)
-                .exclude(product_id="").exclude(product_id__isnull=True))
-    if q:
-        order_qs = order_qs.filter(product_name__icontains=q)
-    order_rows = (order_qs.values("store_id", "product_id", "product_name").distinct())
-    for row in order_rows:
-        key = (row["store_id"], str(row["product_id"]))
-        if key in seen:
-            continue
-        seen.add(key)
-        store_name = next((s.name for s in stores if s.id == row["store_id"]), "")
-        products.append({
-            "id": f"order_{row['store_id']}_{row['product_id']}",
-            "external_id": str(row["product_id"]),
-            "name": row["product_name"] or row["product_id"],
-            "sku": "",
-            "image": "",
-            "currency": "USD",
-            "store_id": row["store_id"],
-            "store_name": store_name,
-            "_pid": str(row["product_id"]),
-        })
-
-    # Now decorate with assignment data
-    pva_qs = (ProductVendorAssignment.objects
-              .filter(store_id__in=store_ids, is_active=True)
-              .select_related("vendor", "store"))
-    # Bucket by (store_id, product_id)
-    pva_map = {(p.store_id, str(p.product_id)): p for p in pva_qs}
-
-    out = []
-    for p in products:
-        pid = p.pop("_pid")
-        pva = pva_map.get((p["store_id"], pid))
-        p["assignment"] = _serialize_assignment_brief(pva) if pva else None
-
-        # status filter
-        if status_filter != "all":
-            if status_filter == "unassigned" and pva:
-                continue
-            if status_filter != "unassigned":
-                if not pva:
-                    continue
-                if p["assignment"]["status"] != status_filter:
-                    continue
-        out.append(p)
-
-    return Response({"success": True, "products": out})
-
-
-# ─── POST /vendors/api/sourcing/assign/ ─────────────────────────────────────
-
-@api_view(["POST"])
-def sourcing_bulk_assign_api(request):
-    """Bulk assign N products to 1 vendor.
-
-    Body: { "product_ids": [...], "vendor_id": 7, "store_id": 12 }
-    OR: { "items": [{"store_id": 12, "product_id": "shopify_123", "product_name": "..."}, ...], "vendor_id": 7 }
-
-    Skips products already assigned to the SAME vendor (idempotent).
-    Re-assigns from a different vendor (replaces assignment).
-    """
-    if not request.user.is_authenticated:
-        return Response({"success": False, "message": "Authentication required"}, status=401)
-
-    vendor_id = request.data.get("vendor_id")
-    if not vendor_id:
-        return Response({"success": False, "message": "vendor_id required"}, status=400)
-
-    # Tenant-scoped vendor lookup (accepts store-less vendors too)
-    try:
-        vendor = _tenant_vendors_qs(request.user).get(id=vendor_id)
-    except Vendor.DoesNotExist:
-        return Response({"success": False, "message": "Vendor not found"}, status=404)
-
-    # Two input shapes supported
-    items = request.data.get("items") or []
-    if not items:
-        product_ids = request.data.get("product_ids") or []
-        # Fall back chain: explicit body store_id → vendor's own store →
-        # tenant's first owned store. The vendor may have no assigned_store
-        # if they were invited before any store existed.
-        store_id = request.data.get("store_id") or vendor.assigned_store_id
-        if not store_id:
-            first_store = Store.objects.filter(user=request.user).order_by("id").first()
-            store_id = first_store.id if first_store else None
-        if not store_id or not Store.objects.filter(id=store_id, user=request.user).exists():
-            return Response({"success": False, "message": "Store not found"}, status=404)
-        items = [{"store_id": store_id, "product_id": str(p)} for p in product_ids]
-
-    assigned = 0
-    skipped = 0
-    for it in items:
-        sid = it.get("store_id")
-        pid = str(it.get("product_id") or "")
-        pname = it.get("product_name") or ""
-        if not (sid and pid):
-            continue
-        if not Store.objects.filter(id=sid, user=request.user).exists():
-            skipped += 1
-            continue
-        if not pname:
-            row = Order.objects.filter(store_id=sid, product_id=pid).first()
-            pname = (row.product_name if row else "") or pid
-
-        obj, created = ProductVendorAssignment.objects.update_or_create(
-            store_id=sid, product_id=pid,
-            defaults={"vendor": vendor, "product_name": pname, "is_active": True},
-        )
-        if created:
-            assigned += 1
-        else:
-            # update_or_create swapped a different vendor or re-activated existing
-            if obj.vendor_id == vendor.id:
-                skipped += 1 if not created else 0
-                assigned += 1 if created else 0
-            else:
-                assigned += 1
-
-    return Response({"success": True, "assigned": assigned, "skipped": skipped})
-
-
-# ─── GET /vendors/api/sourcing/queue/ ───────────────────────────────────────
-
-@api_view(["GET"])
-def sourcing_approvals_queue_api(request):
-    """The Approvals Queue — Pricing tab.
-
-    Query params:
-      type    — all|initial|changes
-      status  — pending|all
-    """
-    if not request.user.is_authenticated:
-        return Response({"success": False, "message": "Authentication required"}, status=401)
-
-    store_ids = list(_tenant_stores(request.user).values_list("id", flat=True))
-    qtype = (request.GET.get("type") or "all").lower()
-    qstatus = (request.GET.get("status") or "pending").lower()
-
-    items = []
-
-    if qtype in ("all", "initial"):
-        quotes = (VendorQuote.objects
-                  .filter(assignment__store_id__in=store_ids)
-                  .select_related("assignment", "assignment__vendor", "assignment__store"))
-        if qstatus == "pending":
-            quotes = quotes.filter(status=VendorQuote.STATUS_PENDING)
-        else:
-            quotes = quotes.exclude(status=VendorQuote.STATUS_ACTIVE)
-        for q in quotes.order_by("-submitted_at"):
-            assignment = q.assignment
-            override_count = q.overrides.count()
-            items.append({
-                "type": "initial_quote",
-                "id": assignment.id,
-                "quote_id": q.id,
-                "vendor_name": assignment.vendor.name if assignment.vendor else "",
-                "product_name": assignment.product_name or assignment.product_id,
-                "product_image": "",
-                "summary": (
-                    f"Quoted ${q.product_cost} + ${q.default_shipping} default shipping"
-                    + (f" ({override_count} country overrides)" if override_count else "")
-                ),
-                "delta_pct": None,
-                "delta_abs": None,
-                "reason_label": None,
-                "reason_key": None,
-                "notes": "",
-                "submitted_at": q.submitted_at.isoformat() if q.submitted_at else None,
-                "auto_decision": False,
-            })
-
-    if qtype in ("all", "changes"):
-        changes = (QuoteChangeRequest.objects
-                   .filter(quote__assignment__store_id__in=store_ids)
-                   .select_related("quote__assignment", "quote__assignment__vendor"))
-        if qstatus == "pending":
-            changes = changes.filter(status=QuoteChangeRequest.STATUS_PENDING)
-        reason_map = {r.key: r.label for r in ReasonConfig.objects.all()}
-        for c in changes.order_by("-submitted_at"):
-            a = c.quote.assignment
-            items.append({
-                "type": "change_request",
-                "id": c.id,
-                "quote_id": c.quote_id,
-                "vendor_name": a.vendor.name if a.vendor else "",
-                "product_name": a.product_name or a.product_id,
-                "product_image": "",
-                "summary": f"{c.get_change_type_display()}: {c.old_value} → {c.new_value}",
-                "delta_pct": str(c.delta_pct),
-                "delta_abs": str(c.delta_abs),
-                "reason_label": reason_map.get(c.reason_key, c.reason_key),
-                "reason_key": c.reason_key,
-                "notes": c.notes,
-                "submitted_at": c.submitted_at.isoformat() if c.submitted_at else None,
-                "auto_decision": c.auto_decision,
-            })
-
-    # Stats — today
-    from django.utils.timezone import now
-    today = now().date()
-    base_q = QuoteChangeRequest.objects.filter(
-        quote__assignment__store_id__in=store_ids, reviewed_at__date=today,
-    )
-    pending_quotes = VendorQuote.objects.filter(
-        assignment__store_id__in=store_ids, status=VendorQuote.STATUS_PENDING).count()
-    pending_changes = QuoteChangeRequest.objects.filter(
-        quote__assignment__store_id__in=store_ids, status=QuoteChangeRequest.STATUS_PENDING).count()
-    stats = {
-        "pending": pending_quotes + pending_changes,
-        "auto_approved_today": base_q.filter(status=QuoteChangeRequest.STATUS_AUTO_APPROVED).count(),
-        "approved_today": base_q.filter(status=QuoteChangeRequest.STATUS_APPROVED).count(),
-        "rejected_today": base_q.filter(status=QuoteChangeRequest.STATUS_REJECTED).count(),
-    }
-
-    return Response({"success": True, "items": items, "stats": stats})
-
-
-# ─── POST /vendors/api/sourcing/quote/<id>/approve/ ─────────────────────────
-
-@api_view(["POST"])
-def sourcing_approve_quote_api(request, quote_id):
-    """Approve a PENDING initial quote → mark ACTIVE (locked snapshot).
-    If there's a previous ACTIVE quote on the same assignment, it's superseded.
-    """
-    if not request.user.is_authenticated:
-        return Response({"success": False, "message": "Authentication required"}, status=401)
-    try:
-        quote = (VendorQuote.objects
-                 .select_related("assignment", "assignment__store")
-                 .get(id=quote_id, assignment__store__user=request.user))
-    except VendorQuote.DoesNotExist:
-        return Response({"success": False, "message": "Quote not found"}, status=404)
-
-    if quote.status not in (VendorQuote.STATUS_PENDING,):
-        return Response({"success": False, "message": f"Quote is {quote.status}, cannot approve"}, status=400)
-
-    # Supersede any existing active quote on the same assignment
-    VendorQuote.objects.filter(
-        assignment=quote.assignment, status=VendorQuote.STATUS_ACTIVE
-    ).update(status=VendorQuote.STATUS_SUPERSEDED, review_pending=False)
-
-    quote.status = VendorQuote.STATUS_ACTIVE
-    quote.approved_at = timezone.now()
-    quote.approved_by = request.user
-    quote.review_pending = False
-    quote.save(update_fields=["status", "approved_at", "approved_by", "review_pending"])
-
-    # Activate its overrides
-    quote.overrides.filter(status=VendorShippingOverride.STATUS_PENDING).update(
-        status=VendorShippingOverride.STATUS_ACTIVE
-    )
-    return Response({"success": True, "active_quote_id": quote.id})
-
-
-# ─── POST /vendors/api/sourcing/quote/<id>/reject/ ──────────────────────────
-
-@api_view(["POST"])
-def sourcing_reject_quote_api(request, quote_id):
-    """Reject a PENDING quote. Body: {"reason": "..."}."""
-    if not request.user.is_authenticated:
-        return Response({"success": False, "message": "Authentication required"}, status=401)
-    try:
-        quote = VendorQuote.objects.get(
-            id=quote_id, assignment__store__user=request.user
-        )
-    except VendorQuote.DoesNotExist:
-        return Response({"success": False, "message": "Quote not found"}, status=404)
-
-    if quote.status != VendorQuote.STATUS_PENDING:
-        return Response({"success": False, "message": f"Quote is {quote.status}, cannot reject"}, status=400)
-
-    quote.status = VendorQuote.STATUS_REJECTED
-    quote.rejected_at = timezone.now()
-    quote.rejected_reason = (request.data.get("reason") or "").strip()
-    quote.save(update_fields=["status", "rejected_at", "rejected_reason"])
-    return Response({"success": True})
-
-
-# ─── POST /vendors/api/sourcing/change/<id>/approve/ ────────────────────────
-
-@api_view(["POST"])
-def sourcing_approve_change_api(request, change_id):
-    """Approve a PENDING change request → applies via apply_approved_change()."""
-    if not request.user.is_authenticated:
-        return Response({"success": False, "message": "Authentication required"}, status=401)
-    try:
-        change = (QuoteChangeRequest.objects
-                  .select_related("quote", "quote__assignment", "quote__assignment__store")
-                  .get(id=change_id, quote__assignment__store__user=request.user))
-    except QuoteChangeRequest.DoesNotExist:
-        return Response({"success": False, "message": "Change request not found"}, status=404)
-
-    if change.status != QuoteChangeRequest.STATUS_PENDING:
-        return Response({"success": False, "message": f"Change is {change.status}"}, status=400)
-
-    new_quote = apply_approved_change(change, reviewed_by=request.user)
-    change.status = QuoteChangeRequest.STATUS_APPROVED
-    change.reviewed_at = timezone.now()
-    change.reviewed_by = request.user
-    change.save(update_fields=["status", "reviewed_at", "reviewed_by"])
-    return Response({"success": True, "new_active_quote_id": new_quote.id})
-
-
-# ─── POST /vendors/api/sourcing/change/<id>/reject/ ─────────────────────────
-
-@api_view(["POST"])
-def sourcing_reject_change_api(request, change_id):
-    """Reject a PENDING change request. Body: {"reason": "..."}."""
-    if not request.user.is_authenticated:
-        return Response({"success": False, "message": "Authentication required"}, status=401)
-    try:
-        change = QuoteChangeRequest.objects.select_related("quote").get(
-            id=change_id, quote__assignment__store__user=request.user
-        )
-    except QuoteChangeRequest.DoesNotExist:
-        return Response({"success": False, "message": "Change request not found"}, status=404)
-
-    if change.status != QuoteChangeRequest.STATUS_PENDING:
-        return Response({"success": False, "message": f"Change is {change.status}"}, status=400)
-
-    change.status = QuoteChangeRequest.STATUS_REJECTED
-    change.reviewed_at = timezone.now()
-    change.reviewed_by = request.user
-    change.rejection_reason = (request.data.get("reason") or "").strip()
-    change.save(update_fields=["status", "reviewed_at", "reviewed_by", "rejection_reason"])
-
-    # Clear review_pending on the parent quote if no more open changes on it
-    open_changes = change.quote.change_requests.filter(
-        status=QuoteChangeRequest.STATUS_PENDING).exists()
-    if not open_changes and change.quote.review_pending:
-        change.quote.review_pending = False
-        change.quote.save(update_fields=["review_pending"])
-
-    return Response({"success": True})
-
-
-# ─── POST /vendors/api/sourcing/bulk-reject/ ────────────────────────────────
-
-@api_view(["POST"])
-def sourcing_bulk_reject_api(request):
-    """Bulk reject N change requests with a single reason.
-    Body: { "change_ids": [...], "reason": "..." }
-    """
-    if not request.user.is_authenticated:
-        return Response({"success": False, "message": "Authentication required"}, status=401)
-
-    change_ids = request.data.get("change_ids") or []
-    reason = (request.data.get("reason") or "").strip()
-    if not change_ids:
-        return Response({"success": False, "message": "change_ids required"}, status=400)
-
-    qs = QuoteChangeRequest.objects.filter(
-        id__in=change_ids,
-        quote__assignment__store__user=request.user,
-        status=QuoteChangeRequest.STATUS_PENDING,
-    )
-    affected_quote_ids = list(qs.values_list("quote_id", flat=True).distinct())
-    rejected = qs.update(
-        status=QuoteChangeRequest.STATUS_REJECTED,
-        reviewed_at=timezone.now(),
-        reviewed_by=request.user,
-        rejection_reason=reason,
-    )
-
-    # Clear review_pending on quotes that have no more open changes
-    for qid in affected_quote_ids:
-        still_open = QuoteChangeRequest.objects.filter(
-            quote_id=qid, status=QuoteChangeRequest.STATUS_PENDING
-        ).exists()
-        if not still_open:
-            VendorQuote.objects.filter(id=qid).update(review_pending=False)
-
-    return Response({"success": True, "rejected": rejected})
-
-
-# ─── GET/POST /vendors/api/sourcing/trust/ ──────────────────────────────────
-
-@api_view(["GET"])
-def sourcing_trust_settings_api(request):
-    """Get trust mode + thresholds for a (tenant, vendor) pair.
-    Query: ?vendor_id=7
-    """
-    if not request.user.is_authenticated:
-        return Response({"success": False, "message": "Authentication required"}, status=401)
-    vendor_id = request.GET.get("vendor_id")
-    if not vendor_id:
-        return Response({"success": False, "message": "vendor_id required"}, status=400)
-
-    if not _tenant_vendors_qs(request.user).filter(id=vendor_id).exists():
-        return Response({"success": False, "message": "Vendor not found"}, status=404)
-
-    trust = VendorTrustSetting.objects.filter(
-        tenant=request.user, vendor_id=vendor_id
-    ).first()
-
-    return Response({
-        "success": True,
-        "trust_mode": trust.trust_mode if trust else False,
-        "threshold_pct": str(trust.threshold_pct) if trust else "10.00",
-        "threshold_abs": str(trust.threshold_abs) if trust else "5.00",
-    })
-
-
-@api_view(["POST"])
-def sourcing_set_trust_api(request, vendor_id):
-    """Set trust mode + thresholds. Body: {"trust_mode": bool, "threshold_pct": "10", "threshold_abs": "5"}."""
-    if not request.user.is_authenticated:
-        return Response({"success": False, "message": "Authentication required"}, status=401)
-
-    if not _tenant_vendors_qs(request.user).filter(id=vendor_id).exists():
-        return Response({"success": False, "message": "Vendor not found"}, status=404)
-
-    trust_mode = bool(request.data.get("trust_mode"))
-    pct = _safe_decimal(request.data.get("threshold_pct"), Decimal("10"))
-    absv = _safe_decimal(request.data.get("threshold_abs"), Decimal("5"))
-
-    obj, _ = VendorTrustSetting.objects.update_or_create(
-        tenant=request.user, vendor_id=vendor_id,
-        defaults={"trust_mode": trust_mode, "threshold_pct": pct, "threshold_abs": absv},
-    )
-    return Response({"success": True})
-
-
-# ─── GET /vendors/api/sourcing/reasons/ ─────────────────────────────────────
-
-@api_view(["GET"])
-def sourcing_reasons_api(request):
-    """List configured change reasons + auto-eligibility."""
-    if not request.user.is_authenticated:
-        return Response({"success": False, "message": "Authentication required"}, status=401)
-    rows = ReasonConfig.objects.all().order_by("sort_order", "id")
-    return Response({
-        "success": True,
-        "reasons": [
-            {"key": r.key, "label": r.label, "auto_eligible": r.auto_eligible,
-             "requires_notes": r.requires_notes}
-            for r in rows
-        ],
-    })
-
-
-# ─── GET /vendors/api/sourcing/assignment/<id>/ ─────────────────────────────
-
-@api_view(["GET"])
-def sourcing_assignment_detail_api(request, assignment_id):
-    """Full detail: assignment + all quotes (history) + active quote + overrides
-    + any open change request."""
-    if not request.user.is_authenticated:
-        return Response({"success": False, "message": "Authentication required"}, status=401)
-    try:
-        a = (ProductVendorAssignment.objects
-             .select_related("vendor", "store")
-             .get(id=assignment_id, store__user=request.user))
-    except ProductVendorAssignment.DoesNotExist:
-        return Response({"success": False, "message": "Assignment not found"}, status=404)
-
-    quotes = a.quotes.all().order_by("-submitted_at").prefetch_related("overrides")
-    active = quotes.filter(status=VendorQuote.STATUS_ACTIVE).first()
-    open_changes = []
-    if active:
-        for c in active.change_requests.filter(status=QuoteChangeRequest.STATUS_PENDING):
-            open_changes.append({
-                "id": c.id, "change_type": c.change_type, "country_code": c.country_code,
-                "old_value": str(c.old_value), "new_value": str(c.new_value),
-                "delta_abs": str(c.delta_abs), "delta_pct": str(c.delta_pct),
-                "reason_key": c.reason_key, "notes": c.notes,
-                "submitted_at": c.submitted_at.isoformat() if c.submitted_at else None,
-            })
-
-    return Response({
-        "success": True,
-        "assignment": {
-            "id": a.id,
-            "vendor_id": a.vendor_id,
-            "vendor_name": a.vendor.name if a.vendor else "",
-            "product_id": a.product_id,
-            "product_name": a.product_name or a.product_id,
-            "store_id": a.store_id,
-            "store_name": a.store.name,
-            "created_at": a.created_at.isoformat() if a.created_at else None,
-        },
-        "active_quote": _serialize_quote(active),
-        "history": [_serialize_quote(q) for q in quotes],
-        "open_changes": open_changes,
-    })
-
-
-# ═════════════════════════════════════════════════════════════════════════════
-# VENDOR PRICING & APPROVAL SYSTEM — VENDOR PORTAL APIs
-# ═════════════════════════════════════════════════════════════════════════════
-
-
-@api_view(["GET"])
-def portal_my_assignments_api(request):
-    """Vendor: list products assigned to me + my current quote status."""
-    vendor, err = _require_vendor(request)
-    if err:
-        return err
-
-    assignments = (
-        ProductVendorAssignment.objects
-        .filter(vendor=vendor, is_active=True)
-        .select_related("store")
-        .order_by("-created_at")
-    )
-    items = []
-    for a in assignments:
-        active = a.quotes.filter(status=VendorQuote.STATUS_ACTIVE).first()
-        pending = a.quotes.filter(status=VendorQuote.STATUS_PENDING).first()
-        if active:
-            status = "change_pending" if active.review_pending else "active"
-        elif pending:
-            status = "pending_approval"
-        else:
-            status = "awaiting_quote"
-        items.append({
-            "assignment_id": a.id,
-            "product_id": a.product_id,
-            "product_name": a.product_name or a.product_id,
-            "store_id": a.store_id,
-            "store_name": a.store.name,
-            "created_at": a.created_at.isoformat() if a.created_at else None,
-            "status": status,
-            "active_quote": _serialize_quote(active),
-            "pending_quote": _serialize_quote(pending),
-        })
-    return Response({"success": True, "assignments": items})
-
-
-@api_view(["POST"])
-def portal_submit_quote_api(request, assignment_id):
-    """Vendor: submit a fresh quote for an assignment.
-
-    Body: {
-      "product_cost": "12.50",
-      "default_shipping": "8.00",
-      "overrides": [{"country_code": "US", "shipping_cost": "10"}, ...]
-    }
-    Creates a VendorQuote(status=pending). Tenant must approve to lock.
-    """
-    vendor, err = _require_vendor(request)
-    if err:
-        return err
-
-    try:
-        a = ProductVendorAssignment.objects.get(
-            id=assignment_id, vendor=vendor, is_active=True
-        )
-    except ProductVendorAssignment.DoesNotExist:
-        return Response({"success": False, "message": "Assignment not found"}, status=404)
-
-    # Block double-submit if there's already a pending quote
-    if a.quotes.filter(status=VendorQuote.STATUS_PENDING).exists():
-        return Response({"success": False,
-                         "message": "You already have a pending quote on this product"}, status=400)
-
-    product_cost = _safe_decimal(request.data.get("product_cost"))
-    default_shipping = _safe_decimal(request.data.get("default_shipping"), Decimal("0"))
-    if product_cost is None or product_cost <= 0:
-        return Response({"success": False, "message": "product_cost must be > 0"}, status=400)
-    if default_shipping is None or default_shipping < 0:
-        return Response({"success": False, "message": "default_shipping invalid"}, status=400)
-
-    overrides_in = request.data.get("overrides") or []
-
-    quote = VendorQuote.objects.create(
-        assignment=a, product_cost=product_cost,
-        default_shipping=default_shipping,
-        status=VendorQuote.STATUS_PENDING,
-    )
-    for ov in overrides_in:
-        cc = (ov.get("country_code") or "").strip().upper()[:3]
-        cost = _safe_decimal(ov.get("shipping_cost"))
-        if not cc or cost is None or cost < 0:
-            continue
-        VendorShippingOverride.objects.update_or_create(
-            quote=quote, country_code=cc,
-            defaults={"shipping_cost": cost, "status": VendorShippingOverride.STATUS_PENDING},
-        )
-    return Response({"success": True, "quote_id": quote.id, "status": quote.status})
-
-
-@api_view(["POST"])
-def portal_submit_change_api(request, quote_id):
-    """Vendor: propose a change on an ACTIVE quote.
-
-    Body: {
-      "change_type": "product_cost|default_shipping|country_shipping|country_added|country_removed",
-      "country_code": "US",     (when relevant)
-      "new_value": "13.00",
-      "reason_key": "currency_fluctuation",
-      "notes": "..."
-    }
-    The automation engine decides: auto_approved (applied immediately) or pending.
-    """
-    vendor, err = _require_vendor(request)
-    if err:
-        return err
-
-    try:
-        quote = (VendorQuote.objects
-                 .select_related("assignment")
-                 .get(id=quote_id, assignment__vendor=vendor,
-                      status=VendorQuote.STATUS_ACTIVE))
-    except VendorQuote.DoesNotExist:
-        return Response({"success": False,
-                         "message": "Active quote not found for your account"}, status=404)
-
-    change_type = request.data.get("change_type")
-    valid_types = {ct for ct, _ in QuoteChangeRequest.CHANGE_TYPE_CHOICES}
-    if change_type not in valid_types:
-        return Response({"success": False, "message": "Invalid change_type"}, status=400)
-
-    country_code = (request.data.get("country_code") or "").strip().upper()[:3]
-    new_value = _safe_decimal(request.data.get("new_value"))
-    if new_value is None or new_value < 0:
-        return Response({"success": False, "message": "new_value invalid"}, status=400)
-
-    reason_key = (request.data.get("reason_key") or "").strip()
-    notes = (request.data.get("notes") or "").strip()
-    reason = ReasonConfig.objects.filter(key=reason_key).first()
-    if not reason:
-        return Response({"success": False, "message": "Invalid reason_key"}, status=400)
-    if reason.requires_notes and not notes:
-        return Response({"success": False,
-                         "message": "Notes required for this reason"}, status=400)
-
-    # Compute old_value depending on change type
-    if change_type == QuoteChangeRequest.CHANGE_PRODUCT_COST:
-        old_value = Decimal(quote.product_cost)
-    elif change_type == QuoteChangeRequest.CHANGE_DEFAULT_SHIPPING:
-        old_value = Decimal(quote.default_shipping)
-    elif change_type == QuoteChangeRequest.CHANGE_COUNTRY_SHIPPING:
-        if not country_code:
-            return Response({"success": False, "message": "country_code required"}, status=400)
-        ov = quote.overrides.filter(country_code=country_code).first()
-        if not ov:
-            return Response({"success": False, "message": "No override exists for this country"}, status=400)
-        old_value = Decimal(ov.shipping_cost)
-    elif change_type == QuoteChangeRequest.CHANGE_COUNTRY_ADDED:
-        # Spec: new country = silent default-apply (no review). But we still
-        # record the change for audit and auto-approve it via cost_decrease/within rules.
-        # old_value is the current default_shipping (the country was using it).
-        if not country_code:
-            return Response({"success": False, "message": "country_code required"}, status=400)
-        if quote.overrides.filter(country_code=country_code).exists():
-            return Response({"success": False, "message": "Override already exists for this country"}, status=400)
-        old_value = Decimal(quote.default_shipping)
-    elif change_type == QuoteChangeRequest.CHANGE_COUNTRY_REMOVED:
-        # Treated as a shipping change — reason + review.
-        if not country_code:
-            return Response({"success": False, "message": "country_code required"}, status=400)
-        ov = quote.overrides.filter(country_code=country_code).first()
-        if not ov:
-            return Response({"success": False, "message": "No override to remove"}, status=400)
-        old_value = Decimal(ov.shipping_cost)
-        # new_value collapses back to default_shipping
-        new_value = Decimal(quote.default_shipping)
-    else:
-        return Response({"success": False, "message": "Unsupported change_type"}, status=400)
-
-    delta_abs, delta_pct = compute_deltas(old_value, new_value)
-
-    change = QuoteChangeRequest.objects.create(
-        quote=quote,
-        change_type=change_type,
-        country_code=country_code,
-        old_value=old_value,
-        new_value=new_value,
-        delta_abs=delta_abs,
-        delta_pct=delta_pct,
-        reason_key=reason_key,
-        notes=notes,
-        status=QuoteChangeRequest.STATUS_PENDING,
-    )
-
-    # Special-case: country_added is treated as silent default-apply per spec.
-    # Force auto-approve regardless of trust state.
-    if change_type == QuoteChangeRequest.CHANGE_COUNTRY_ADDED:
-        decision, auto_reason = ("auto_approved", "country_added_silent_default")
-    else:
-        decision, auto_reason = evaluate_change_request(change)
-
-    if decision == "auto_approved":
-        new_quote = apply_approved_change(change, reviewed_by=None)
-        change.status = QuoteChangeRequest.STATUS_AUTO_APPROVED
-        change.auto_decision = True
-        change.automation_reason = auto_reason
-        change.reviewed_at = timezone.now()
-        change.save(update_fields=[
-            "status", "auto_decision", "automation_reason", "reviewed_at",
-        ])
-        return Response({
-            "success": True, "decision": "auto_approved",
-            "change_id": change.id, "automation_reason": auto_reason,
-            "new_active_quote_id": new_quote.id,
-        })
-    else:
-        # pending — flag the quote
-        change.automation_reason = auto_reason
-        change.save(update_fields=["automation_reason"])
-        if not quote.review_pending:
-            quote.review_pending = True
-            quote.save(update_fields=["review_pending"])
-        return Response({
-            "success": True, "decision": "pending",
-            "change_id": change.id, "automation_reason": auto_reason,
-        })
-
-
-@api_view(["GET"])
-def portal_reasons_api(request):
-    """Vendor: list reasons the vendor can pick when submitting a change."""
-    vendor, err = _require_vendor(request)
-    if err:
-        return err
-    rows = ReasonConfig.objects.all().order_by("sort_order", "id")
-    return Response({
-        "success": True,
-        "reasons": [
-            {"key": r.key, "label": r.label, "auto_eligible": r.auto_eligible,
-             "requires_notes": r.requires_notes}
-            for r in rows
-        ],
-    })
