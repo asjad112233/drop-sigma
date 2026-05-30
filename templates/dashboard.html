@@ -29702,12 +29702,17 @@ async function psOpenAssignModal(mode, productId){
   sel.innerHTML = `<option value="">— Loading vendors… —</option>`;
   m.style.display = "flex";
   try{
-    if(!_psVendorsCache){
+    // 🔥 Never trust the cache when the modal is opened — vendor list
+    //    changes (new invites, store-less vendors becoming visible after
+    //    backend updates) made the "fetch-once" cache stale and stuck
+    //    users on an empty dropdown forever. Always refetch.
+    {
       const sid = (typeof selectedStoreId !== "undefined" && selectedStoreId) ? selectedStoreId : "";
       const url = "/vendors/api/" + (sid ? `?store_id=${sid}` : "");
       const r = await fetch(url);
       const d = await r.json();
-      _psVendorsCache = (d.vendors || d.data || []).map(v => ({id: v.id, name: v.name || v.vendor_name || `Vendor #${v.id}`}));
+      _psVendorsCache = (Array.isArray(d) ? d : (d.vendors || d.data || []))
+        .map(v => ({id: v.id, name: v.name || v.vendor_name || `Vendor #${v.id}`}));
     }
     if(!_psVendorsCache.length){
       sel.innerHTML = `<option value="">No vendors available — add one first</option>`;
