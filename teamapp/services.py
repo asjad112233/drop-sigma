@@ -67,21 +67,64 @@ def _get_display_name(user):
     return user.get_full_name() or user.username
 
 
+DEFAULT_CHANNEL_SPECS = [
+    ("general",    "Team-wide chat"),
+    ("operations", "Orders & vendor ops"),
+    ("support",    "Customer support discussions"),
+]
+
+
+def ensure_tenant_default_channels(tenant):
+    """Make sure `tenant` (a tenant/admin User) owns the three default group
+    channels. Returns a list of ChatChannel rows owned by this tenant.
+
+    Idempotent — safe to call from signals / login hooks / explicit setup.
+    """
+    if tenant is None or not getattr(tenant, "id", None):
+        return []
+    channels = []
+    for name, desc in DEFAULT_CHANNEL_SPECS:
+        existing = ChatChannel.objects.filter(
+            owner=tenant, name=name, is_dm=False,
+        ).first()
+        if existing:
+            channels.append(existing)
+            continue
+        base_slug = f"{tenant.username}-{name}".lower().replace(" ", "-")[:50]
+        slug = base_slug
+        ctr = 1
+        while ChatChannel.objects.filter(slug=slug).exists():
+            slug = f"{base_slug}-{ctr}"[:50]
+            ctr += 1
+        ch = ChatChannel.objects.create(
+            owner=tenant, name=name, slug=slug, description=desc, is_dm=False,
+        )
+        # Always add the tenant to their own channels.
+        ChannelMember.objects.get_or_create(
+            channel=ch, user=tenant, defaults={"is_active": True},
+        )
+        channels.append(ch)
+    return channels
+
+
 def add_user_to_default_channels(user, added_by_user=None):
     """
-    Ensure `user` is a member of every default channel defined in CHAT_DEFAULT_CHANNELS.
-    Posts a welcome system message in #general on first join.
-    Returns list of channels the user was newly added to.
+    Ensure `user` is a member of every default channel owned by `added_by_user`
+    (the tenant who is adding them). Posts a welcome system message in
+    #general on first join. Returns the list of channels the user was newly
+    added to.
+
+    Tenant scoping: members are added ONLY to the tenant's own channels —
+    never to another tenant's channels.
     """
-    default_channels = getattr(settings, "CHAT_DEFAULT_CHANNELS", [])
     newly_added = []
 
-    for ch_def in default_channels:
-        channel, _ = ChatChannel.objects.get_or_create(
-            slug=ch_def["slug"],
-            is_dm=False,
-            defaults={"name": ch_def["name"], "description": ch_def["description"]},
-        )
+    # Resolve the tenant. If we weren't given one explicitly, treat the user
+    # themselves as their own tenant (e.g. legacy callers).
+    tenant = added_by_user or user
+    tenant_channels = ensure_tenant_default_channels(tenant)
+
+    for channel in tenant_channels:
         _, created = ChannelMember.objects.get_or_create(
             channel=channel,
             user=user,
@@ -90,8 +133,8 @@ def add_user_to_default_channels(user, added_by_user=None):
         if created:
             newly_added.append(channel)
 
-    # Post welcome message in #general on first add
-    general = next((ch for ch in newly_added if ch.slug == "general"), None)
+    # Post welcome message in tenant's #general on first add.
+    general = next((ch for ch in newly_added if ch.name == "general"), None)
     if general:
         user_name = _get_display_name(user)
         added_by_name = _get_display_name(added_by_user) if added_by_user else "Admin"

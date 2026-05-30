@@ -1,4 +1,5 @@
 import uuid
+from django.conf import settings
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
@@ -67,6 +68,13 @@ class AssignmentRule(models.Model):
 # ─── Team Chat ────────────────────────────────────────────────────────────────
 
 class ChatChannel(models.Model):
+    owner        = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="owned_channels",
+        null=True, blank=True,
+        help_text="The tenant who owns this channel. NULL for DM channels (is_dm=True).",
+    )
     name         = models.CharField(max_length=100)
     slug         = models.SlugField(unique=True)
     description  = models.CharField(max_length=255, blank=True)

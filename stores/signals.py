@@ -30,3 +30,27 @@ def seed_templates_on_new_store(sender, instance, created, **kwargs):
         EmailTemplate.objects.bulk_create(bulk)
     except Exception:
         pass  # Never let template seeding break store creation
+
+
+@receiver(post_save, sender=Store)
+def seed_default_chat_channels_on_new_store(sender, instance, created, **kwargs):
+    """When a tenant creates their first Store, give them their own
+    #general / #operations / #support channels (owned by them).
+
+    Idempotent — skips if the tenant already has any non-DM channel.
+    Wrapped in try/except so chat seeding never breaks store creation.
+    """
+    if not created:
+        return
+    tenant = getattr(instance, "user", None)
+    if tenant is None:
+        return
+    try:
+        from teamapp.models import ChatChannel
+        from teamapp.services import ensure_tenant_default_channels
+
+        if ChatChannel.objects.filter(owner=tenant, is_dm=False).exists():
+            return
+        ensure_tenant_default_channels(tenant)
+    except Exception:
+        pass  # Never let chat seeding break store creation

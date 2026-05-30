@@ -6,6 +6,7 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.db import models, transaction, IntegrityError
+from django.db.models import Q
 from django.utils import timezone
 
 from rest_framework.decorators import api_view
@@ -832,7 +833,10 @@ def _user_can_access_channel(user, channel):
     Rules:
     - Superusers can always access.
     - DM channels: user must be in channel.participants.
-    - Regular channels: user must be an active ChannelMember.
+    - Regular channels: user must be the channel.owner (tenant) OR an active
+      ChannelMember. Owner-without-membership is a defensive fallback in case
+      a tenant's own membership row was deleted; the tenant always owns the
+      channel and must retain access.
     """
     if not user or not user.is_authenticated:
         return False
@@ -840,6 +844,8 @@ def _user_can_access_channel(user, channel):
         return True
     if channel.is_dm:
         return channel.participants.filter(id=user.id).exists()
+    if channel.owner_id == user.id:
+        return True
     return ChannelMember.objects.filter(channel=channel, user=user, is_active=True).exists()
 
 
@@ -1109,24 +1115,39 @@ def chat_channels_api(request):
             return Response({"success": False, "message": "Name too long (max 100 chars)."}, status=400)
         if len(description) > 255:
             return Response({"success": False, "message": "Description too long (max 255 chars)."}, status=400)
-        slug = name.lower().replace(" ", "-")[:50] or "channel"
-        base_slug, ctr = slug, 1
+        # Slugs are namespaced by username so two tenants can both have a
+        # channel named "general" without colliding on the unique slug.
+        base_slug = f"{request.user.username}-{name}".lower().replace(" ", "-")[:50] or "channel"
+        slug = base_slug
+        ctr = 1
         while ChatChannel.objects.filter(slug=slug).exists():
-            slug = f"{base_slug}-{ctr}"
+            slug = f"{base_slug}-{ctr}"[:50]
             ctr += 1
         with transaction.atomic():
-            ch = ChatChannel.objects.create(name=name, slug=slug, description=description)
+            ch = ChatChannel.objects.create(
+                owner=request.user, name=name, slug=slug, description=description,
+            )
             # Auto-add the creator so the new channel actually shows up for them.
             ChannelMember.objects.get_or_create(channel=ch, user=request.user, defaults={"is_active": True})
         return Response({"success": True, "channel": {"id": ch.id, "name": ch.name, "slug": ch.slug, "description": ch.description}})
 
-    for d in _DEFAULT_CHANNELS:
-        ChatChannel.objects.get_or_create(slug=d["slug"], defaults={"name": d["name"], "description": d["description"]})
+    # NB: legacy global-defaults seeding was removed. Default channels are now
+    # created per-tenant via the stores.signals post_save Store handler.
 
+    # Tenant-scoped channel listing:
+    #   • channels owned by the user (tenant view), OR
+    #   • channels the user is an active member of (employee/vendor view), OR
+    #   • DMs they participate in.
     if request.user.is_superuser:
         channels = ChatChannel.objects.filter(is_dm=False).order_by("id")
     else:
-        channels = ChatChannel.objects.filter(is_dm=False, members=request.user).order_by("id")
+        channels = (
+            ChatChannel.objects
+            .filter(is_dm=False)
+            .filter(Q(owner=request.user) | Q(memberships__user=request.user, memberships__is_active=True))
+            .distinct()
+            .order_by("id")
+        )
     # Build a map of channel_id → joined_at for the current user (non-superuser)
     if not request.user.is_superuser:
         memberships = ChannelMember.objects.filter(user=request.user, is_active=True).values("channel_id", "joined_at")
@@ -1563,6 +1584,14 @@ def chat_channel_members_add_api(request, channel_id):
     # as the user managing the channel (superuser bypass).
     if not request.user.is_superuser and not _users_in_same_org(request.user, u):
         return Response({"success": False, "message": "You can only add members of your own organization."}, status=403)
+
+    # Additional safety: if the channel has an owner (post-0015 schema), the
+    # new member's org root must match the channel-owner's org. This protects
+    # against an employee with `invite_members` adding someone from a foreign
+    # tenant when the channel was created by their boss.
+    if ch.owner_id and not request.user.is_superuser:
+        if not _users_in_same_org(ch.owner, u) and ch.owner_id != u.id:
+            return Response({"success": False, "message": "User is not part of this channel's organization."}, status=403)
 
     ChannelMember.objects.get_or_create(channel=ch, user=u, defaults={"is_active": True})
     info = _sender_info(u)
