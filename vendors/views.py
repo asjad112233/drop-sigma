@@ -1186,13 +1186,19 @@ def send_vendor_invitation_api(request):
 
     if not name or not email:
         return Response({"success": False, "message": "Name and email are required."}, status=400)
-    if not store_id:
-        return Response({"success": False, "message": "Store is required."}, status=400)
 
-    try:
-        store = Store.objects.get(id=store_id)
-    except Store.DoesNotExist:
-        return Response({"success": False, "message": "Store not found."}, status=404)
+    # Store is now OPTIONAL — vendor can be invited before any store is connected.
+    # If a store_id is provided, validate it; otherwise fall back to the
+    # requester's own first active store, else null.
+    store = None
+    if store_id:
+        try:
+            store = Store.objects.get(id=store_id)
+        except (Store.DoesNotExist, ValueError, TypeError):
+            store = None
+    if store is None:
+        store = Store.objects.filter(user=request.user).order_by("id").first()
+    # store may still be None — that's fine, invitation accepted without store
 
     # Case-insensitive email match — Vendor.email may be mixed-case
     if Vendor.objects.filter(email__iexact=email).exists():

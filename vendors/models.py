@@ -30,8 +30,11 @@ class Vendor(models.Model):
 
     assigned_store = models.ForeignKey(
         Store,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name="vendors",
+        help_text="Initial store assignment — optional. A vendor can later be linked to multiple stores via StoreVendorAssignment.",
     )
 
     notes = models.TextField(blank=True, null=True)
@@ -176,7 +179,7 @@ class VendorInvitation(models.Model):
     owner      = models.ForeignKey(User, on_delete=models.CASCADE, related_name="sent_vendor_invitations")
     name       = models.CharField(max_length=255)
     email      = models.EmailField()
-    store      = models.ForeignKey(Store, on_delete=models.CASCADE, related_name="vendor_invitations")
+    store      = models.ForeignKey(Store, on_delete=models.CASCADE, null=True, blank=True, related_name="vendor_invitations")
     status     = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
     expires_at = models.DateTimeField()
     created_at = models.DateTimeField(auto_now_add=True)
@@ -416,3 +419,30 @@ class QuoteReminderLog(models.Model):
 
     def __str__(self):
         return f"{self.kind} for assignment {self.assignment_id} @ {self.sent_at}"
+
+
+class VendorPasswordResetRequest(models.Model):
+    """Audit log of password reset requests for vendor accounts.
+    Restored to match existing migration 0009 (the backend agent's models
+    file was forked before this model was added)."""
+    STATUS_CHOICES = (
+        ("pending", "Pending"),
+        ("resolved", "Resolved"),
+        ("dismissed", "Dismissed"),
+    )
+    vendor = models.ForeignKey(
+        Vendor, on_delete=models.CASCADE, related_name="password_reset_requests"
+    )
+    requested_email = models.EmailField()
+    requested_ip = models.CharField(max_length=45, blank=True, default="")
+    user_agent = models.CharField(max_length=300, blank=True, default="")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
+    resolved_by = models.CharField(max_length=255, blank=True, default="")
+    resolved_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"PWReset({self.requested_email}, {self.status})"
