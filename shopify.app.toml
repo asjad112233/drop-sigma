@@ -10,9 +10,9 @@
 # Dashboard → Versions → click the new version → Release.
 # ─────────────────────────────────────────────────────────────────────────────
 
-client_id        = "e7a98c71d56bb7c0814ea873d1ef736e"
+client_id        = "208a368ae574b41dd14c2d752efa148d"
 name             = "Drop Sigma"
-handle           = "drop-sigma"
+handle           = "drop-sigma-app"
 application_url  = "https://dropsigma.com/dashboard/"
 embedded         = false
 
