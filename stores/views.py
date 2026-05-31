@@ -486,6 +486,11 @@ def shopify_callback_api(request):
         return Response({"success": False, "message": "Could not match this connection to your account. Please reconnect while logged in."}, status=400)
 
     # ── (3) Exchange code → access token ──
+    # `expiring: 1` tells Shopify to mint the new "expiring offline" token
+    # format. Without it, the Admin API rejects the token with HTTP 403:
+    # "Non-expiring access tokens are no longer accepted for the Admin API."
+    # The response then also includes refresh_token + refresh_token_expires_in
+    # which we persist alongside the access token for refresh later.
     try:
         token_resp = _req.post(
             f"https://{shop}/admin/oauth/access_token",
@@ -493,6 +498,7 @@ def shopify_callback_api(request):
                 "client_id":     settings.SHOPIFY_API_KEY,
                 "client_secret": settings.SHOPIFY_API_SECRET,
                 "code":          code,
+                "expiring":      1,
             },
             timeout=20,
         )
