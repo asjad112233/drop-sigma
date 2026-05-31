@@ -1,0 +1,70 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Shopify App configuration — Drop Sigma
+#
+# This file is the source-of-truth for the App's Partner / Dev Dashboard
+# settings (URLs, scopes, webhooks). Deploy via:
+#
+#     shopify app deploy
+#
+# A new version is created on every deploy. Activate it from the Dev
+# Dashboard → Versions → click the new version → Release.
+# ─────────────────────────────────────────────────────────────────────────────
+
+client_id        = "e7a98c71d56bb7c0814ea873d1ef736e"
+name             = "Drop Sigma"
+handle           = "drop-sigma"
+application_url  = "https://dropsigma.com/dashboard/"
+embedded         = false
+
+
+# ─── OAuth scopes ────────────────────────────────────────────────────────────
+# Justification for each scope lives in SHOPIFY_SCOPE_JUSTIFICATION.md.
+# `write_customers` was intentionally dropped — it was reserved but unused.
+[access_scopes]
+scopes = "read_orders,write_orders,read_customers,read_products,read_fulfillments,write_fulfillments"
+
+
+# ─── Auth / callback URLs ────────────────────────────────────────────────────
+[auth]
+redirect_urls = [
+  "https://dropsigma.com/stores/api/shopify-callback/",
+]
+
+
+# ─── Webhooks ────────────────────────────────────────────────────────────────
+# api_version pins the schema we'll receive. HMAC verification is done in
+# orders/views.py against the app client_secret.
+[webhooks]
+api_version = "2026-04"
+
+# Mandatory GDPR / privacy compliance webhooks (Shopify will probe each
+# during App Store review). Each one is its own URL because our backend
+# routes them to dedicated handlers.
+[[webhooks.subscriptions]]
+compliance_topics = ["customers/data_request"]
+uri = "https://dropsigma.com/orders/webhook/shopify/customers-data-request/"
+
+[[webhooks.subscriptions]]
+compliance_topics = ["customers/redact"]
+uri = "https://dropsigma.com/orders/webhook/shopify/customers-redact/"
+
+[[webhooks.subscriptions]]
+compliance_topics = ["shop/redact"]
+uri = "https://dropsigma.com/orders/webhook/shopify/shop-redact/"
+
+# Operational webhook — fired when a merchant uninstalls the app.
+[[webhooks.subscriptions]]
+topics = ["app/uninstalled"]
+uri = "https://dropsigma.com/orders/webhook/shopify/app-uninstalled/"
+
+
+# ─── Pos (Point-of-Sale) ─────────────────────────────────────────────────────
+# Not used. Embedded false → app loads at application_url externally.
+[pos]
+embedded = false
+
+
+# ─── Build config (Shopify CLI only — ignored at runtime) ────────────────────
+[build]
+automatically_update_urls_on_dev = false
+dev_store_url                    = "arovabeauty.myshopify.com"
