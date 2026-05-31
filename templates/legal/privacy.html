@@ -1,131 +1,198 @@
 {% extends "legal/_base.html" %}
 {% block title %}Privacy Policy — Drop Sigma{% endblock %}
-{% block description %}Drop Sigma's privacy policy explaining how we collect, use, and protect data from connected stores and merchants.{% endblock %}
+{% block description %}Drop Sigma's privacy policy explaining how we collect, use, store, and protect data from Shopify merchants, their customers, and connected services.{% endblock %}
 
 {% block content %}
 <div class="ds-shell">
   <a class="ds-back" href="/">← Back to Drop Sigma</a>
   <h1 class="ds-title">Privacy Policy</h1>
-  <p class="ds-subtitle">Last updated: 25 May 2026 · Effective immediately</p>
+  <p class="ds-subtitle">Last updated: 31 May 2026 · Effective: 31 May 2026</p>
 
   <div class="ds-content">
 
     <div class="ds-callout">
       <strong>Summary</strong>
-      Drop Sigma is a multi-tenant SaaS that helps e-commerce merchants run their dropshipping operations. We only collect what we need to run the service, never sell your data, and respect every applicable data-protection law including GDPR (EU) and CCPA (California).
+      Drop Sigma is a multi-tenant SaaS that helps Shopify merchants automate email replies, run RMA / refund workflows, coordinate vendors, and chat with their team. We only collect what is necessary to deliver the service, we never sell your data, our AI sub-processor (Anthropic) does not train on your data, and we comply with Shopify's Protected Customer Data requirements, GDPR (EU/UK), and CCPA (California).
     </div>
 
-    <h2>1. Who we are</h2>
-    <p>"Drop Sigma", "we", "us" and "our" refer to <strong>Drop Sigma</strong>, operating from Pakistan. We provide an order-management, vendor-coordination, and customer-support SaaS for Shopify and WooCommerce stores at <a href="https://dropsigma.com">dropsigma.com</a>.</p>
-
-    <h2>2. Data we collect</h2>
-
-    <h3>2.1 Information you give us directly</h3>
+    <h2>1. Introduction</h2>
+    <p>"Drop Sigma", "we", "us" and "our" refer to <strong>Drop Sigma</strong>, a United States-based service serving merchants globally through <a href="https://dropsigma.com">dropsigma.com</a>. Drop Sigma is a multi-tenant Django SaaS that provides Shopify merchants with:</p>
     <ul>
-      <li><strong>Account details</strong> — name, email, password (hashed), phone number (optional).</li>
-      <li><strong>Team members</strong> — names, emails, roles you assign to your employees and vendors inside Drop Sigma.</li>
-      <li><strong>Billing details</strong> — handled by our payment processor (Stripe / Razorpay); we never store raw card numbers.</li>
-      <li><strong>Support correspondence</strong> — emails, chat messages and screenshots you send to our support team.</li>
+      <li><strong>AI email automation</strong> — drafting replies to customer emails using Anthropic Claude.</li>
+      <li><strong>RMA workflow management</strong> — handling returns, refunds, and exchange requests.</li>
+      <li><strong>Vendor management</strong> — routing fulfillment to your suppliers / dropshippers.</li>
+      <li><strong>Team chat</strong> — real-time messaging between operators inside your business.</li>
+    </ul>
+    <p>This Privacy Policy explains what data we collect, why we collect it, who we share it with, how long we keep it, and the rights you and your customers have over it. It applies to every visitor to dropsigma.com and every merchant or end customer whose data flows through the Service.</p>
+
+    <h2>2. Information We Collect</h2>
+
+    <h3>2.1 Information merchants provide directly</h3>
+    <ul>
+      <li><strong>Account details</strong> — business name, contact name, email address, password (hashed with PBKDF2), phone number (optional), and time zone.</li>
+      <li><strong>Team members</strong> — names, emails, and roles you assign to your operators and vendors inside Drop Sigma.</li>
+      <li><strong>Billing information</strong> — handled by Stripe at <a href="https://dropsigma.com">dropsigma.com</a>; we store only the customer ID, plan name, and last 4 card digits returned by Stripe. We never see or store raw card numbers.</li>
+      <li><strong>Support correspondence</strong> — any emails, chat messages, or screenshots you send to our support team.</li>
     </ul>
 
-    <h3>2.2 Information pulled from your connected store</h3>
-    <p>When you connect a Shopify or WooCommerce store via OAuth, with your explicit permission we sync:</p>
+    <h3>2.2 Information collected from Shopify (via OAuth)</h3>
+    <p>When you install Drop Sigma on your Shopify store and approve the OAuth scopes we request, Shopify shares the following with us:</p>
     <ul>
-      <li>Orders (order number, line items, fulfilment status, payment status, totals, currency).</li>
-      <li>Customer details associated with those orders (name, email, phone, shipping address).</li>
-      <li>Products referenced in orders (title, variant, SKU).</li>
-      <li>Tracking and fulfilment events we push back when you take action inside Drop Sigma.</li>
-      <li>Inbox messages (Gmail / IMAP) when you separately authorize the email module.</li>
-    </ul>
-    <p>We <strong>never</strong> read or store: customer passwords, raw payment instruments, or any product data that isn't tied to an order you manage.</p>
-
-    <h3>2.3 Information collected automatically</h3>
-    <ul>
-      <li>IP address, browser type, OS, and approximate location (for security + abuse prevention).</li>
-      <li>Usage events — which features you opened, when you logged in. We don't sell this to anyone.</li>
-      <li>Cookies — session cookie for login, CSRF cookie for security. No third-party advertising cookies.</li>
+      <li><strong>Orders</strong> — order ID, line items (title, variant, SKU, quantity), totals, currency, financial status, and fulfillment status.</li>
+      <li><strong>Customer data</strong> — name, email address, shipping address, billing address, phone number, and the order history tied to your shop. This is treated as <strong>Shopify Protected Customer Data</strong>.</li>
+      <li><strong>Products</strong> — product titles, variants, SKUs, prices, and inventory levels of the catalog you sell.</li>
+      <li><strong>Fulfillments</strong> — tracking numbers, carrier names, and fulfillment events we read or push back to your store.</li>
+      <li><strong>Shop metadata</strong> — your shop domain, plan, currency, and primary contact email.</li>
     </ul>
 
-    <h2>3. How we use the data</h2>
-    <p>We use the information above to:</p>
+    <h3>2.3 Information collected from connected Gmail accounts (via OAuth)</h3>
+    <p>If you optionally connect a Gmail account so Drop Sigma can draft and send replies on your behalf, Google shares the following with us under the scopes you approve:</p>
     <ul>
-      <li>Run the service you signed up for (sync orders, send AI replies, push tracking back to your store).</li>
-      <li>Authenticate you and your team members and prevent unauthorized access.</li>
-      <li>Send transactional emails (order alerts, password resets, billing receipts).</li>
-      <li>Improve product reliability (anonymized error reporting and performance monitoring).</li>
-      <li>Comply with legal obligations (tax invoices, court orders, GDPR / CCPA requests).</li>
+      <li>Email subject lines, sender / recipient addresses, and message bodies.</li>
+      <li>Attachments (downloaded only when needed to classify or quote in a draft).</li>
+      <li>Real-time push notifications via Google Cloud Pub/Sub when new mail arrives.</li>
+      <li>Permission to send outbound email from your connected Gmail address.</li>
     </ul>
-    <p>We do <strong>not</strong> use your or your customers' data for advertising, profiling, or any purpose unrelated to delivering Drop Sigma.</p>
+    <p>We use this data <strong>only</strong> to draft and send replies, classify intent (refund / question / shipping / spam), and trigger workflow automations you have configured. We do not read your inbox for any other purpose, and we do not use Gmail data to train AI models.</p>
 
-    <h2>4. Sharing &amp; sub-processors</h2>
-    <p>We share data only with the small set of vendors needed to run Drop Sigma:</p>
+    <h3>2.4 Information collected automatically</h3>
+    <ul>
+      <li><strong>Technical data</strong> — IP address, browser type, OS, and approximate location, used for security, abuse detection, and rate limiting.</li>
+      <li><strong>Usage events</strong> — which features you opened, when you logged in, which buttons you clicked. Used solely to improve reliability and the product.</li>
+      <li><strong>Cookies</strong> — see Section 7.</li>
+    </ul>
+
+    <h2>3. How We Use This Data</h2>
+    <p>We process the data described above for the following purposes only:</p>
+    <ul>
+      <li><strong>AI-generated email replies</strong> — we send the email content (subject, body, customer name, related order details) to Anthropic's Claude API (model: <code>claude-haiku-4-5</code>) to generate a draft reply. The draft is shown to you for approval, or sent automatically if you have enabled auto-send.</li>
+      <li><strong>RMA / refund workflow processing</strong> — matching customer requests to orders, generating return labels, and synchronizing refund status back to Shopify.</li>
+      <li><strong>Vendor assignment routing</strong> — assigning new orders to the correct vendor / supplier based on rules you configure.</li>
+      <li><strong>Team chat and activity logs</strong> — storing messages your operators send to each other inside Drop Sigma and audit trails of actions taken on orders.</li>
+      <li><strong>Service authentication &amp; security</strong> — verifying logins, OAuth callbacks, and webhook HMAC signatures.</li>
+      <li><strong>Transactional notifications</strong> — sending password resets, vendor invites, billing receipts, and product update emails through Resend.</li>
+      <li><strong>Analytics &amp; service improvement</strong> — anonymized usage and error reporting to fix bugs and prioritize features.</li>
+      <li><strong>Legal compliance</strong> — responding to GDPR / CCPA requests, tax invoicing, lawful subpoenas, and Shopify's Protected Customer Data obligations.</li>
+    </ul>
+    <p>We do <strong>not</strong> use your data, your customers' data, or your email content for advertising, profiling, AI model training, or any purpose unrelated to delivering Drop Sigma.</p>
+
+    <h2>4. Third-Party Processors</h2>
+    <p>We share data only with the small set of sub-processors needed to run the Service. Each is contractually bound to confidentiality and data-protection terms, including a Data Processing Agreement (DPA) where applicable.</p>
     <table>
-      <thead><tr><th>Sub-processor</th><th>Purpose</th><th>Region</th></tr></thead>
+      <thead>
+        <tr><th>Sub-processor</th><th>Purpose</th><th>Region</th></tr>
+      </thead>
       <tbody>
-        <tr><td>Railway</td><td>Application hosting + database</td><td>USA</td></tr>
-        <tr><td>Google (Gmail API)</td><td>Email inbox sync (only if you connect Gmail)</td><td>USA</td></tr>
-        <tr><td>Shopify / WooCommerce</td><td>Order &amp; customer sync (only for stores you connect)</td><td>Worldwide</td></tr>
-        <tr><td>Anthropic / Groq</td><td>AI text generation for drafted replies</td><td>USA</td></tr>
-        <tr><td>Brevo / SMTP provider</td><td>Outbound transactional email</td><td>EU</td></tr>
+        <tr>
+          <td><strong>Anthropic</strong> (Claude API)</td>
+          <td>AI text generation for email drafts and intent classification. Anthropic <strong>does not train</strong> on data submitted through their API.</td>
+          <td>USA</td>
+        </tr>
+        <tr>
+          <td><strong>Resend</strong></td>
+          <td>Outbound platform transactional email (password resets, vendor invites, billing receipts).</td>
+          <td>USA / EU</td>
+        </tr>
+        <tr>
+          <td><strong>Railway</strong></td>
+          <td>Application hosting and managed Postgres database. All merchant data lives here.</td>
+          <td>USA</td>
+        </tr>
+        <tr>
+          <td><strong>Google</strong> (Cloud Pub/Sub + Gmail API)</td>
+          <td>Real-time email push notifications and outbound send for tenants who connect Gmail. Subject to <a href="https://policies.google.com/privacy">Google's Privacy Policy</a>.</td>
+          <td>Global</td>
+        </tr>
+        <tr>
+          <td><strong>Stripe</strong></td>
+          <td>Subscription payment processing for paying tenants. Billed externally at dropsigma.com — not via Shopify's billing API.</td>
+          <td>USA / EU</td>
+        </tr>
+        <tr>
+          <td><strong>Shopify</strong></td>
+          <td>Source platform for order, product, customer, and fulfillment data for the stores you connect.</td>
+          <td>Global</td>
+        </tr>
       </tbody>
     </table>
-    <p>All sub-processors are contractually bound to confidentiality and data-protection terms. We never sell personal data to advertisers, data brokers, or any third party.</p>
+    <p>We never sell personal data to advertisers, data brokers, or any third party. We never share Shopify Protected Customer Data with any party other than the sub-processors listed above for the purposes described.</p>
 
-    <h2>5. Where we store data</h2>
-    <p>Our primary database lives in Railway's US data center. Backups are encrypted at rest and kept for 30 days. If you're in the EU, your data may be transferred outside the EEA — we rely on Standard Contractual Clauses (SCCs) as the legal basis.</p>
-
-    <h2>6. How long we keep it</h2>
-    <table>
-      <thead><tr><th>Data type</th><th>Retention</th></tr></thead>
-      <tbody>
-        <tr><td>Account &amp; team profiles</td><td>Until you delete the account, then ≤30 days</td></tr>
-        <tr><td>Synced orders / customers</td><td>While the store is connected; deleted within 48h of uninstall</td></tr>
-        <tr><td>Email messages (inbox module)</td><td>90 days rolling, then archived</td></tr>
-        <tr><td>Billing records</td><td>7 years (tax law requirement)</td></tr>
-        <tr><td>Application logs</td><td>30 days</td></tr>
-      </tbody>
-    </table>
-
-    <h2>7. Your rights</h2>
-    <p>Regardless of where you live, you can email <a href="mailto:support@dropsigma.com">support@dropsigma.com</a> to:</p>
+    <h2>5. Data Retention</h2>
     <ul>
-      <li><strong>Access</strong> — request a copy of the data we hold on you.</li>
-      <li><strong>Rectify</strong> — ask us to fix anything inaccurate.</li>
-      <li><strong>Delete</strong> — request erasure ("right to be forgotten").</li>
-      <li><strong>Restrict / Object</strong> — pause processing while we investigate.</li>
-      <li><strong>Portability</strong> — receive your data in a machine-readable format (JSON / CSV).</li>
+      <li><strong>Active accounts</strong> — data is retained for as long as you continue to use Drop Sigma.</li>
+      <li><strong>App uninstall</strong> — when you uninstall Drop Sigma from your Shopify store, all data associated with your shop is deleted within <strong>30 days</strong>.</li>
+      <li><strong>GDPR <code>customers/redact</code> webhook</strong> — when Shopify forwards this request (48 hours after a customer requests erasure), Drop Sigma anonymizes that customer's data within <strong>30 days</strong>, as required by Shopify's policy.</li>
+      <li><strong>GDPR <code>shop/redact</code> webhook</strong> — when Shopify forwards this request (48 hours after uninstall), Drop Sigma purges the entire shop dataset within <strong>30 days</strong>.</li>
+      <li><strong>GDPR <code>customers/data_request</code> webhook</strong> — we respond with the requested customer's data within 30 days.</li>
+      <li><strong>Email message history</strong> — retained for 90 days rolling, then archived in cold storage for an additional 12 months for audit before permanent deletion.</li>
+      <li><strong>Billing records</strong> — retained for 7 years to satisfy tax and accounting law.</li>
+      <li><strong>Application logs</strong> — 30 days, then permanently deleted.</li>
     </ul>
-    <p>We respond within 30 days. Free of charge unless the request is "manifestly unfounded or excessive".</p>
 
     <div class="ds-callout">
       <strong>For Shopify merchants</strong>
-      We also honour the official Shopify GDPR webhooks: <code>customers/data_request</code>, <code>customers/redact</code>, and <code>shop/redact</code>. When you uninstall Drop Sigma from your store, all related data is deleted within 48 hours automatically.
+      Drop Sigma implements all three mandatory Shopify GDPR webhooks (<code>customers/data_request</code>, <code>customers/redact</code>, <code>shop/redact</code>) with HMAC signature verification. Compliance is automated and does not require any action from you.
     </div>
+
+    <h2>6. GDPR Rights (for EU / UK customers)</h2>
+    <p>If you or your customers are in the European Economic Area or the United Kingdom, you have the following rights under the GDPR / UK GDPR:</p>
+    <ul>
+      <li><strong>Right of access</strong> — request a copy of the personal data we hold about you.</li>
+      <li><strong>Right to erasure</strong> ("right to be forgotten") — request deletion of your personal data.</li>
+      <li><strong>Right to data portability</strong> — receive your data in a structured, machine-readable format (JSON or CSV).</li>
+      <li><strong>Right to rectification</strong> — ask us to correct inaccurate or incomplete data.</li>
+      <li><strong>Right to restriction of processing</strong> — ask us to pause processing while a dispute is resolved.</li>
+      <li><strong>Right to object</strong> — object to processing based on our legitimate interests.</li>
+      <li><strong>Right to lodge a complaint</strong> — file a complaint with your local supervisory authority (e.g., the ICO in the UK, CNIL in France, DPC in Ireland).</li>
+    </ul>
+    <p>To exercise any of these rights, email <a href="mailto:privacy@dropsigma.com">privacy@dropsigma.com</a>. We respond within 30 days, free of charge unless the request is manifestly unfounded or excessive.</p>
+
+    <h2>7. Cookies &amp; Tracking</h2>
+    <p>Drop Sigma uses a minimal set of cookies. We do not use advertising or cross-site tracking cookies.</p>
+    <ul>
+      <li><strong>Session cookie</strong> (<code>sessionid</code>) — keeps you logged in. Essential.</li>
+      <li><strong>CSRF cookie</strong> (<code>csrftoken</code>) — protects against cross-site request forgery. Essential.</li>
+      <li><strong>Cookie consent choice</strong> (<code>ds_cookie_choice</code>) — remembers whether you accepted or declined non-essential cookies. Stored in <code>localStorage</code>.</li>
+      <li><strong>First-party analytics</strong> — basic page-view counters; no third-party advertising network involved.</li>
+    </ul>
+    <p>You can clear cookies from your browser settings at any time. Disabling essential cookies will sign you out and may break parts of the dashboard. See our <a href="/cookies/">Cookie Policy</a> for details.</p>
 
     <h2>8. Security</h2>
     <ul>
-      <li>TLS 1.2+ on every connection.</li>
-      <li>Passwords hashed with PBKDF2 (Django default).</li>
-      <li>OAuth tokens encrypted at rest.</li>
-      <li>Per-tenant scoping enforced on every API endpoint — no cross-tenant data leakage possible.</li>
-      <li>HMAC signature verification on every incoming webhook.</li>
-      <li>Annual third-party security audit.</li>
+      <li><strong>TLS in transit</strong> — every connection between you, Drop Sigma, and our sub-processors is encrypted with TLS 1.2 or higher.</li>
+      <li><strong>Encrypted at rest</strong> — the Postgres database on Railway is encrypted at rest.</li>
+      <li><strong>OAuth tokens encrypted</strong> — Shopify and Gmail OAuth refresh tokens are stored encrypted using Django's <code>SECRET_KEY</code>-derived encryption.</li>
+      <li><strong>Per-tenant scoping</strong> — every database query is filtered by the requesting user's tenant; we explicitly forbid superuser-fallback patterns that could leak data across stores.</li>
+      <li><strong>Webhook HMAC verification</strong> — every Shopify webhook is verified with Shopify's HMAC signature before processing.</li>
+      <li><strong>Access controls</strong> — production access is restricted to authorized engineers via single sign-on and 2FA. All access is audit-logged.</li>
+      <li><strong>Password hashing</strong> — passwords are hashed with PBKDF2 (Django default) and never stored in plain text.</li>
     </ul>
 
-    <h2>9. Children</h2>
-    <p>Drop Sigma is a B2B product. It is not directed at children under 16 and we don't knowingly collect data from them.</p>
+    <h2>9. Children's Privacy</h2>
+    <p>Drop Sigma is a B2B product targeted at e-commerce merchants. It is not directed at children under 16 and we do not knowingly collect personal data from them. If you believe a child has provided us personal data, please email <a href="mailto:privacy@dropsigma.com">privacy@dropsigma.com</a> and we will delete it.</p>
 
-    <h2>10. Changes to this policy</h2>
-    <p>We'll post any material changes on this page and notify you via email at least 14 days before they take effect.</p>
+    <h2>10. International Data Transfers</h2>
+    <p>Our infrastructure runs primarily in the United States (Railway). If you or your customers are located in the European Economic Area, the United Kingdom, or other regions with data-export restrictions, your data may be transferred outside your home region.</p>
+    <p>For EU / UK transfers, we rely on the European Commission's <strong>Standard Contractual Clauses (SCCs)</strong> as the legal basis, supplemented by the technical measures described in Section 8.</p>
 
-    <h2>11. Contact</h2>
+    <h2>11. Changes to This Policy</h2>
+    <p>We may update this Privacy Policy from time to time. For material changes — for example, adding a new sub-processor or changing how we use Gmail data — we will notify you at least <strong>30 days in advance</strong> by:</p>
+    <ul>
+      <li>Displaying a banner inside your Drop Sigma dashboard, and</li>
+      <li>Emailing the primary account contact on file.</li>
+    </ul>
+    <p>The "Last updated" date at the top of this page always reflects the most recent revision. Continued use of the Service after the effective date constitutes acceptance of the updated policy.</p>
+
+    <h2>12. Contact</h2>
+    <p>For all privacy-related requests (access, deletion, portability, GDPR / CCPA inquiries, sub-processor questions, security concerns):</p>
     <p>
-      Privacy questions: <a href="mailto:support@dropsigma.com">support@dropsigma.com</a><br>
-      General support: <a href="mailto:support@dropsigma.com">support@dropsigma.com</a> · <a href="mailto:hello@dropsigma.com">hello@dropsigma.com</a><br>
-      Website: <a href="https://dropsigma.com">dropsigma.com</a>
+      <strong>Email:</strong> <a href="mailto:privacy@dropsigma.com">privacy@dropsigma.com</a><br>
+      <strong>General support:</strong> <a href="mailto:support@dropsigma.com">support@dropsigma.com</a><br>
+      <strong>Website:</strong> <a href="https://dropsigma.com">dropsigma.com</a>
     </p>
+    <p>We respond to every privacy request within <strong>30 days</strong> as required by GDPR.</p>
 
-    <p style="margin-top:48px;color:var(--ink-3);font-size:13px;">See also: <a href="/terms/">Terms of Service</a> · <a href="/cookies/">Cookie Policy</a> · <a href="/support/">Support</a></p>
+    <p style="margin-top:48px;color:var(--ink-3);font-size:13px;">See also: <a href="/terms/">Terms of Service</a> · <a href="/cookies/">Cookie Policy</a> · <a href="/refund/">Refund Policy</a> · <a href="/support/">Support</a></p>
   </div>
 </div>
 {% endblock %}

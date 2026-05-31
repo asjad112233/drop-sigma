@@ -1,93 +1,158 @@
 {% extends "legal/_base.html" %}
 {% block title %}Terms of Service — Drop Sigma{% endblock %}
-{% block description %}Drop Sigma's terms of service governing your use of the platform.{% endblock %}
+{% block description %}Drop Sigma's terms of service governing merchant use of the platform, billing, acceptable use, and legal responsibilities.{% endblock %}
 
 {% block content %}
 <div class="ds-shell">
   <a class="ds-back" href="/">← Back to Drop Sigma</a>
   <h1 class="ds-title">Terms of Service</h1>
-  <p class="ds-subtitle">Last updated: 25 May 2026 · Effective immediately</p>
+  <p class="ds-subtitle">Last updated: 31 May 2026 · Effective: 31 May 2026</p>
 
   <div class="ds-content">
 
-    <h2>1. Acceptance of these terms</h2>
-    <p>By signing up for, accessing, or otherwise using Drop Sigma ("Service"), you agree to be bound by these Terms of Service ("Terms"). If you don't agree, you may not use the Service. These Terms form a binding contract between you ("Customer") and <strong>Drop Sigma</strong> ("we", "us").</p>
+    <div class="ds-callout">
+      <strong>Summary</strong>
+      Drop Sigma is a multi-tenant SaaS for Shopify merchants providing AI email automation, RMA workflows, vendor management, and team chat. Subscriptions are billed externally at <a href="https://dropsigma.com">dropsigma.com</a> through Stripe — not through Shopify's in-app billing API. By signing up, you agree to the following terms.
+    </div>
 
-    <h2>2. The Service</h2>
-    <p>Drop Sigma is a multi-tenant SaaS that connects to your Shopify and/or WooCommerce store(s) to sync orders, manage customer support email, coordinate vendors, and run AI-powered replies. Specific features and limits depend on the plan you've subscribed to.</p>
+    <h2>1. Acceptance</h2>
+    <p>By signing up for, accessing, or otherwise using Drop Sigma (the "Service"), you ("Merchant", "Customer", "you") agree to be bound by these Terms of Service ("Terms"). If you do not agree, you may not use the Service. These Terms form a binding contract between you and <strong>Drop Sigma</strong> ("we", "us", "our"), a United States-based service.</p>
+    <p>If you accept these Terms on behalf of a company or other legal entity, you represent that you have authority to bind that entity, and the term "you" refers to that entity.</p>
 
-    <h2>3. Your account</h2>
+    <h2>2. Service Description</h2>
+    <p>Drop Sigma is a multi-tenant SaaS that connects to your Shopify store(s) to provide:</p>
     <ul>
-      <li>You must be 18+ and authorized to bind your business to these Terms.</li>
-      <li>You're responsible for the activity on your account and for keeping your password safe.</li>
-      <li>You may invite team members; you're responsible for their use of the Service.</li>
-      <li>One account per business — sharing logins across organizations violates these Terms.</li>
+      <li><strong>AI email automation</strong> — drafted and (optionally) auto-sent replies to customer emails, powered by Anthropic Claude.</li>
+      <li><strong>RMA workflow management</strong> — returns, refunds, and exchange request handling.</li>
+      <li><strong>Vendor management</strong> — routing orders to suppliers / dropshippers based on rules you configure.</li>
+      <li><strong>Team chat</strong> — real-time messaging between operators inside your business.</li>
+    </ul>
+    <p>Specific features, usage limits, and integrations available to you depend on the plan you select at <a href="https://dropsigma.com">dropsigma.com</a>.</p>
+
+    <h2>3. Account Requirements</h2>
+    <ul>
+      <li>You must be at least <strong>18 years old</strong> and have the legal capacity to enter into binding contracts.</li>
+      <li>You must operate a <strong>legitimate business</strong> — Drop Sigma is not available for personal, hobbyist, or illegal use.</li>
+      <li>You must provide accurate, current, and complete information at signup and keep it updated.</li>
+      <li>You are responsible for all activity under your account and for keeping your credentials safe.</li>
+      <li>You may invite team members and vendors; you remain responsible for their compliance with these Terms.</li>
+      <li>One Drop Sigma account per business entity — sharing a single account across multiple unrelated businesses is not permitted.</li>
     </ul>
 
-    <h2>4. Customer data &amp; ownership</h2>
-    <p>You retain all rights to the data you upload or that we sync from your connected stores ("Customer Data"). We process Customer Data solely to provide the Service, in line with our <a href="/privacy/">Privacy Policy</a>.</p>
-    <p>You grant Drop Sigma a limited licence to host, copy, transmit, and display Customer Data as necessary to deliver the Service. You're responsible for ensuring you have the legal right to sync that data into Drop Sigma (e.g., your customers' personal data under GDPR).</p>
-
-    <h2>5. Acceptable use</h2>
-    <p>You agree NOT to:</p>
+    <h2>4. External Billing Disclosure</h2>
+    <div class="ds-callout">
+      <strong>Important — please read carefully</strong>
+      Drop Sigma subscriptions are billed externally at <a href="https://dropsigma.com">dropsigma.com</a> using Stripe. <strong>We do not use Shopify's in-app billing API.</strong>
+    </div>
     <ul>
-      <li>Reverse-engineer, decompile, or attempt to extract source code from the Service.</li>
-      <li>Use the Service to send spam, phishing, or any unlawful communications.</li>
-      <li>Bypass per-tenant rate limits or attempt to access another tenant's data.</li>
-      <li>Resell, sublicense, or white-label the Service without written permission.</li>
-      <li>Use the Service to violate applicable laws (e.g., GDPR, CCPA, anti-fraud, sanctions).</li>
+      <li>Pricing, plan upgrades, downgrades, and cancellations are managed at <strong>dropsigma.com → Billing</strong>. The Shopify admin does not display or control your Drop Sigma subscription.</li>
+      <li>For Shopify App Store users: <strong>Drop Sigma is offered free at the App Store level.</strong> Paid plans are entirely optional and purchased separately at dropsigma.com after you have installed the app.</li>
+      <li>Your payment method (credit card, debit card) is collected and stored by Stripe under their security and compliance standards. Drop Sigma never sees your raw card number.</li>
+      <li>Subscriptions renew automatically on the same day each month (or year, if you select annual billing) until cancelled.</li>
+      <li>All prices are listed at dropsigma.com and are exclusive of taxes unless stated otherwise. Local taxes may be added at checkout.</li>
+      <li>We may change prices for future billing cycles with at least <strong>30 days' notice</strong> by email and dashboard banner.</li>
+      <li>Failure to pay within 14 days of the due date may result in suspension of paid features. Your data remains intact during suspension.</li>
     </ul>
 
-    <h2>6. Subscription &amp; billing</h2>
+    <h2>5. Acceptable Use</h2>
+    <p>You agree NOT to use the Service to:</p>
     <ul>
-      <li>The Service is offered on monthly or annual subscriptions.</li>
-      <li>Fees are billed in advance and are non-refundable except where required by law (see our <a href="/refund/">Refund Policy</a>).</li>
-      <li>You authorize us to charge your payment method on each renewal date.</li>
-      <li>We may change pricing for future billing cycles with 30 days' notice.</li>
-      <li>Failure to pay within 14 days of the due date may result in suspension.</li>
+      <li>Send spam, unsolicited bulk email, phishing, or deceptive communications.</li>
+      <li>Host, transmit, or distribute illegal, infringing, defamatory, or hateful content.</li>
+      <li>Abuse the AI features — for example, by attempting to extract the underlying model, bypass safety filters, or generate content that violates Anthropic's <a href="https://www.anthropic.com/legal/aup">Acceptable Use Policy</a>.</li>
+      <li>Resell, sublicense, white-label, or otherwise transfer Drop Sigma access to third parties without our prior written permission.</li>
+      <li>Reverse-engineer, decompile, or attempt to extract the source code, models, or proprietary algorithms of the Service.</li>
+      <li>Bypass per-tenant rate limits, security controls, or attempt to access another tenant's data.</li>
+      <li>Violate applicable laws (including GDPR, CCPA, anti-spam laws such as CAN-SPAM and CASL, sanctions, and consumer-protection regulations).</li>
+      <li>Use the Service to compete with Drop Sigma by benchmarking it for the purpose of building a competing product.</li>
+    </ul>
+    <p>We reserve the right to suspend or terminate accounts that violate this section, with or without notice depending on severity.</p>
+
+    <h2>6. Fair Use</h2>
+    <p>Some plans are marketed as offering "unlimited" usage of certain features (for example, unlimited email replies). "Unlimited" is subject to the following soft caps, intended only to prevent abuse and protect platform stability:</p>
+    <ul>
+      <li>Reasonable usage of email automation is considered to be up to approximately <strong>50,000 outbound email replies per tenant per month</strong>.</li>
+      <li>Reasonable usage of RMA / refund workflows is up to approximately <strong>10,000 RMA tickets per tenant per month</strong>.</li>
+      <li>Reasonable usage of team chat is up to approximately <strong>500,000 messages per tenant per month</strong>.</li>
+    </ul>
+    <p>Tenants whose usage materially exceeds these limits may be contacted for a review of their use case. In rare cases of clear abuse, we may rate-limit specific features, require an upgrade to a higher plan, or — for severe misuse — suspend the account. We will always attempt to contact you before taking action.</p>
+
+    <h2>7. Service Availability</h2>
+    <p>We target <strong>99.5% monthly uptime</strong> on a best-effort basis. We do not offer a binding SLA on the free tier of the Service. Paid tiers may have specific SLA terms documented in their plan pages.</p>
+    <p>Scheduled maintenance is announced in advance via the dashboard. We are not liable for downtime caused by:</p>
+    <ul>
+      <li>Third-party providers (Shopify, Google, Anthropic, Railway, Stripe, Resend) that we depend on.</li>
+      <li>Force majeure events, network outages outside our control, or DDoS attacks.</li>
+      <li>Issues with your own internet connection, OAuth integrations, or merchant-supplied credentials.</li>
     </ul>
 
-    <h2>7. Free trial</h2>
-    <p>If a free trial is offered, you may use the Service free of charge for the trial period. We may end or shorten the trial at our discretion. After the trial, your subscription will automatically begin unless you cancel.</p>
+    <h2>8. Intellectual Property</h2>
+    <p>Drop Sigma — including its name, logo, software, documentation, design system, AI prompt engineering, and platform code — is owned by Drop Sigma and protected by copyright, trademark, and other intellectual-property laws.</p>
+    <p>We grant you a non-exclusive, non-transferable, revocable licence to access and use the Service for your business while your subscription is active and you remain in compliance with these Terms. All rights not expressly granted are reserved.</p>
 
-    <h2>8. Cancellation &amp; termination</h2>
+    <h2>9. Data Ownership</h2>
+    <p>You retain all rights, title, and interest to the data you upload to Drop Sigma or that we sync from your connected stores and email accounts ("Customer Data"). Drop Sigma processes Customer Data solely under your authority, as a data processor on your behalf, in accordance with our <a href="/privacy/">Privacy Policy</a>.</p>
+    <p>You grant Drop Sigma a limited licence to host, copy, transmit, display, and process Customer Data as necessary to deliver the Service. You are responsible for ensuring you have the legal right to sync that data into Drop Sigma — including consents required from your end customers under GDPR, CCPA, and any other applicable law.</p>
+
+    <h2>10. Refunds</h2>
+    <p>Refunds are handled in accordance with our <a href="/refund/">Refund Policy</a>:</p>
     <ul>
-      <li>You may cancel any time from your account settings. Cancellation takes effect at the end of the current billing period.</li>
-      <li>We may suspend or terminate your account if you breach these Terms, our acceptable-use policy, or fail to pay.</li>
-      <li>On termination, you have 30 days to export your data; thereafter we delete it (subject to legal retention requirements).</li>
+      <li>Monthly subscriptions are non-refundable except where required by law. Cancellations stop future billing but do not refund the current month.</li>
+      <li>Annual subscriptions may be cancelled at any time; we will prorate and refund any unused complete months, less a 5% processing fee.</li>
+      <li>Refund requests should be sent to <a href="mailto:support@dropsigma.com">support@dropsigma.com</a> and are typically processed within 7 business days.</li>
     </ul>
 
-    <h2>9. Service availability</h2>
-    <p>We target 99.5% monthly uptime but do not guarantee uninterrupted access. Scheduled maintenance is announced in advance. We're not liable for downtime caused by third-party providers (Shopify, WooCommerce, AWS, Railway, etc.).</p>
+    <h2>11. Termination</h2>
+    <ul>
+      <li><strong>Termination by you</strong> — you may cancel any time from <strong>dropsigma.com → Billing</strong>. Cancellation takes effect at the end of the current billing period. You may also uninstall the app from your Shopify admin at any time.</li>
+      <li><strong>Termination for convenience by us</strong> — we may terminate or suspend your account with <strong>30 days' written notice</strong> for any reason, including discontinuing the Service.</li>
+      <li><strong>Termination for cause</strong> — we may suspend or terminate your account <strong>immediately and without notice</strong> if you materially breach these Terms, fail to pay, engage in fraud, violate applicable law, or pose a security or reputational risk to the Service.</li>
+      <li><strong>Effect of termination</strong> — on termination, you have 30 days to export your data via the dashboard or API; after that, we delete it in accordance with the retention rules in our Privacy Policy. Provisions that by their nature survive termination (e.g., IP, liability, indemnification, governing law) remain in effect.</li>
+    </ul>
 
-    <h2>10. Third-party services</h2>
-    <p>The Service integrates with third-party platforms (Shopify, WooCommerce, Gmail, etc.). Their terms apply to your use of those platforms. We're not responsible for outages, changes, or policy decisions made by those providers.</p>
+    <h2>12. Limitation of Liability</h2>
+    <p>TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW:</p>
+    <ul>
+      <li>THE SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE", WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.</li>
+      <li>OUR AGGREGATE LIABILITY UNDER THESE TERMS — WHETHER IN CONTRACT, TORT, OR OTHERWISE — IS <strong>STRICTLY LIMITED TO THE TOTAL FEES YOU ACTUALLY PAID US IN THE THREE (3) MONTHS</strong> IMMEDIATELY PRECEDING THE EVENT GIVING RISE TO THE LIABILITY.</li>
+      <li>WE ARE NOT LIABLE FOR INDIRECT, INCIDENTAL, CONSEQUENTIAL, SPECIAL, OR PUNITIVE DAMAGES, INCLUDING LOST PROFITS, LOST REVENUE, LOST DATA, OR BUSINESS INTERRUPTION — EVEN IF WE HAVE BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.</li>
+      <li>WE ARE NOT LIABLE FOR DAMAGES ARISING FROM AI-GENERATED CONTENT. AI REPLIES ARE DRAFTS — YOU REMAIN RESPONSIBLE FOR REVIEWING AND APPROVING THEM BEFORE THEY ARE SENT.</li>
+    </ul>
 
-    <h2>11. Intellectual property</h2>
-    <p>Drop Sigma, its name, logo, and all software, documentation, and design elements are owned by Drop Sigma. We grant you a non-exclusive, non-transferable, revocable licence to use the Service while your subscription is active.</p>
+    <h2>13. Indemnification</h2>
+    <p>You agree to defend, indemnify, and hold harmless Drop Sigma, its officers, employees, and contractors from and against any claims, damages, liabilities, costs, and expenses (including reasonable legal fees) arising out of or related to:</p>
+    <ul>
+      <li>Your misuse of the Service or breach of these Terms.</li>
+      <li>Your violation of any law or third-party rights (including privacy and IP rights).</li>
+      <li>Content sent via the Service, including AI-drafted emails that you approve or auto-send.</li>
+      <li>Your failure to obtain proper customer consents required by GDPR, CCPA, CAN-SPAM, or similar laws.</li>
+    </ul>
 
-    <h2>12. Disclaimers</h2>
-    <p>THE SERVICE IS PROVIDED "AS IS" WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. We do not warrant that the Service will be error-free, secure, or always available.</p>
+    <h2>14. Disputes &amp; Governing Law</h2>
+    <p>These Terms are governed by the laws of the <strong>State of Delaware, United States of America</strong>, without regard to its conflict-of-laws principles. The exclusive jurisdiction for any dispute arising out of or relating to these Terms is the state and federal courts located in <strong>Delaware, USA</strong> — except where mandatory consumer-protection law allows you to bring claims in the courts of your country of residence.</p>
+    <p>Before initiating any legal proceeding, you agree to first contact us at <a href="mailto:support@dropsigma.com">support@dropsigma.com</a> to attempt informal resolution. We will work in good faith to resolve the dispute within 60 days.</p>
 
-    <h2>13. Limitation of liability</h2>
-    <p>TO THE MAXIMUM EXTENT PERMITTED BY LAW, OUR AGGREGATE LIABILITY UNDER THESE TERMS IS LIMITED TO THE AMOUNT YOU PAID US IN THE 12 MONTHS BEFORE THE EVENT GIVING RISE TO LIABILITY. WE'RE NOT LIABLE FOR INDIRECT, CONSEQUENTIAL, OR PUNITIVE DAMAGES.</p>
+    <h2>15. Changes to Terms</h2>
+    <p>We may revise these Terms from time to time. For material changes — for example, changes to billing, liability, or jurisdiction — we will notify the primary account contact <strong>at least 30 days in advance</strong> by email and via a dashboard banner. The "Last updated" date at the top of this page always reflects the most recent revision.</p>
+    <p>Continued use of the Service after the effective date of the revised Terms constitutes acceptance of the new Terms. If you do not agree, you may cancel before the effective date.</p>
 
-    <h2>14. Indemnification</h2>
-    <p>You agree to indemnify and hold Drop Sigma harmless from any claims arising from your use of the Service in violation of these Terms or applicable law.</p>
-
-    <h2>15. Governing law</h2>
-    <p>These Terms are governed by the laws of Pakistan. Disputes are submitted to the exclusive jurisdiction of the courts of Karachi, Pakistan — except where mandatory consumer protection law allows you to bring claims in your local courts.</p>
-
-    <h2>16. Changes</h2>
-    <p>We may revise these Terms by posting an updated version. Material changes will be emailed to account owners at least 14 days before they take effect. Continued use after the effective date constitutes acceptance.</p>
+    <h2>16. Miscellaneous</h2>
+    <ul>
+      <li><strong>Entire agreement</strong> — these Terms, together with the Privacy Policy, Refund Policy, and Cookie Policy, constitute the entire agreement between you and Drop Sigma regarding the Service.</li>
+      <li><strong>Severability</strong> — if any provision of these Terms is held unenforceable, the remaining provisions remain in full force.</li>
+      <li><strong>No waiver</strong> — our failure to enforce any right is not a waiver of that right.</li>
+      <li><strong>Assignment</strong> — you may not assign these Terms without our written consent. We may assign them in connection with a merger, acquisition, or sale of assets.</li>
+      <li><strong>Third-party services</strong> — the Service integrates with Shopify, Google, Anthropic, Stripe, Resend, and Railway. Your use of those services is governed by their own terms.</li>
+    </ul>
 
     <h2>17. Contact</h2>
     <p>
-      Questions about these Terms: <a href="mailto:support@dropsigma.com">support@dropsigma.com</a><br>
-      General inquiries: <a href="mailto:hello@dropsigma.com">hello@dropsigma.com</a>
+      <strong>General support &amp; questions about these Terms:</strong> <a href="mailto:support@dropsigma.com">support@dropsigma.com</a><br>
+      <strong>Privacy / GDPR requests:</strong> <a href="mailto:privacy@dropsigma.com">privacy@dropsigma.com</a><br>
+      <strong>Website:</strong> <a href="https://dropsigma.com">dropsigma.com</a>
     </p>
 
-    <p style="margin-top:48px;color:var(--ink-3);font-size:13px;">See also: <a href="/privacy/">Privacy Policy</a> · <a href="/refund/">Refund Policy</a> · <a href="/cookies/">Cookie Policy</a></p>
+    <p style="margin-top:48px;color:var(--ink-3);font-size:13px;">See also: <a href="/privacy/">Privacy Policy</a> · <a href="/refund/">Refund Policy</a> · <a href="/cookies/">Cookie Policy</a> · <a href="/support/">Support</a></p>
   </div>
 </div>
 {% endblock %}

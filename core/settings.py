@@ -54,7 +54,7 @@ SHOPIFY_API_KEY    = _os_for_shopify.getenv("SHOPIFY_API_KEY", "")
 SHOPIFY_API_SECRET = _os_for_shopify.getenv("SHOPIFY_API_SECRET", "")
 SHOPIFY_SCOPES     = _os_for_shopify.getenv(
     "SHOPIFY_SCOPES",
-    "read_orders,write_orders,read_customers,write_customers,read_products,read_fulfillments,write_fulfillments",
+    "read_orders,write_orders,read_customers,read_products,read_fulfillments,write_fulfillments",
 )
 SHOPIFY_APP_NAME   = _os_for_shopify.getenv("SHOPIFY_APP_NAME", "Drop Sigma")
 

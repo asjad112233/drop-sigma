@@ -2161,13 +2161,13 @@ Support Team"""
 
 
 SAMPLE_TEMPLATE_DATA = {
-    'customer_name': 'Ahmed Khan',
-    'customer_email': 'ahmed@example.com',
-    'customer_phone': '+92 300 1234567',
+    'customer_name': 'Sarah Williams',
+    'customer_email': 'sarah.williams@example.com',
+    'customer_phone': '+1 (415) 555-0123',
     'order_id': '#10248',
     'order_date': 'May 1, 2026',
     'order_items': '2× Premium T-Shirt, 1× Watch',
-    'store_name': 'VendorFlow Store',
+    'store_name': 'Northbrook Co.',
     'store_url': 'https://store.example.com',
     'store_logo': '',
     'product_image': 'https://placehold.co/200x200/f1f5f9/64748b?text=Product',
@@ -2178,12 +2178,12 @@ SAMPLE_TEMPLATE_DATA = {
     'tax_amount': '$10.00',
     'order_total': '$124.99',
     # Address
-    'shipping_address': '123 Main Street, Apt 4B',
-    'shipping_city': 'Karachi',
-    'shipping_state': 'Sindh',
-    'shipping_postcode': '75500',
-    'shipping_country': 'Pakistan',
-    'shipping_full_address': '123 Main Street, Apt 4B, Karachi, Sindh 75500, Pakistan',
+    'shipping_address': '123 Market Street, Apt 4B',
+    'shipping_city': 'San Francisco',
+    'shipping_state': 'CA',
+    'shipping_postcode': '94103',
+    'shipping_country': 'United States',
+    'shipping_full_address': '123 Market Street, Apt 4B, San Francisco, CA 94103, United States',
     # Payment
     'payment_method': 'Credit Card',
     'payment_status': 'Paid',
