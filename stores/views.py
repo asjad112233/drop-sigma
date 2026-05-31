@@ -395,12 +395,17 @@ def _shopify_oauth_build_auth_url(request, name, store_url):
         "user_pk":   request.user.pk,
     })
 
+    # Shopify-2025: new public apps MUST receive "expiring offline" tokens.
+    # Sending an empty `grant_options[]=` previously caused Shopify to mint
+    # the legacy non-expiring offline token, which is now rejected with
+    # HTTP 403: "Non-expiring access tokens are no longer accepted for the
+    # Admin API." Omitting `grant_options[]` entirely is the documented
+    # default and gives us the new expiring offline token format.
     params = {
         "client_id":    settings.SHOPIFY_API_KEY,
         "scope":        settings.SHOPIFY_SCOPES,
         "redirect_uri": redirect_uri,
         "state":        state_token,
-        "grant_options[]": "",   # online tokens only when explicitly set
     }
     auth_url = f"https://{shop}/admin/oauth/authorize?{urlencode(params)}"
 
