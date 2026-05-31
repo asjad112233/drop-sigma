@@ -2130,7 +2130,7 @@ body{font-family:Inter,Arial,sans-serif!important;background:var(--vf-gradient)!
 .main.orders-mode{overflow:hidden!important;}
 .section{display:none!important;min-height:calc(100vh - 48px)!important;padding-bottom:70px!important;overflow:visible!important;animation:vfFade .24s ease both;}.section.active{display:block!important}@keyframes vfFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 .global-store-switcher{position:sticky!important;top:0!important;z-index:60!important;margin:-8px 0 18px!important;padding:8px 0!important;background:linear-gradient(to bottom,var(--vf-app-bg),rgba(255,255,255,0))!important;}body.vf-dark-mode .global-store-switcher{background:linear-gradient(to bottom,#050712,rgba(5,7,18,0))!important}.global-store-switcher-inner{border-radius:22px!important;padding:11px!important;box-shadow:var(--vf-shadow)!important;backdrop-filter:blur(18px)!important}#projectSwitcher,.global-store-switcher .btn{height:46px!important;border-radius:15px!important;}
-.sidebar h2{position:relative!important;font-size:21px!important;line-height:1.1!important;margin:0 0 34px 0!important;padding-left:58px!important;color:var(--vf-text)!important;letter-spacing:-.4px!important}.sidebar h2:before{content:'AI';position:absolute;left:0;top:-4px;width:46px;height:46px;border-radius:17px;background:linear-gradient(135deg,var(--vf-cyan),var(--vf-purple));display:grid;place-items:center;color:#06101f;font-weight:950;box-shadow:0 12px 36px rgba(53,207,255,.25)}.sidebar h2:after{content:'Ecommerce OS';display:block;font-size:12px;font-weight:600;color:var(--vf-muted);margin-top:5px;letter-spacing:0}
+.sidebar h2{position:relative!important;font-size:21px!important;line-height:1.1!important;margin:0 0 34px 0!important;padding-left:58px!important;color:var(--vf-text)!important;letter-spacing:-.4px!important}.sidebar h2:before{content:'DS';position:absolute;left:0;top:-4px;width:46px;height:46px;border-radius:14px;background:linear-gradient(135deg,#6366F1,#06B6D4);display:grid;place-items:center;color:#fff;font-weight:950;font-size:18px;letter-spacing:-.5px;box-shadow:0 8px 24px rgba(99,102,241,.45),inset 0 1px 0 rgba(255,255,255,.3)}.sidebar h2:after{content:'Customer Suite';display:block;font-size:12px;font-weight:600;color:var(--vf-muted);margin-top:5px;letter-spacing:0}
 .sidebar button[id^='nav']{height:auto!important;border:0!important;border-radius:10px!important;margin-bottom:2px!important;padding:8px 10px!important;display:flex!important;align-items:center!important;gap:9px!important;font-weight:600!important;font-size:13px!important;transition:.12s!important;color:var(--vf-muted,#475569)!important;background:none!important;box-shadow:none!important;transform:none!important;}.sidebar button[id^='nav']:hover{background:var(--vf-surface-2,#f1f5f9)!important;color:var(--vf-text,#0f172a)!important;transform:none!important;box-shadow:none!important;border-color:transparent!important;}.sidebar button[id^='nav'].active{background:#eff6ff!important;color:#2563eb!important;transform:none!important;box-shadow:none!important;border-color:transparent!important;}body.vf-dark-mode .sidebar button[id^='nav'].active{background:rgba(37,99,235,.18)!important;color:#93c5fd!important;}
 .sb-nav-icon{width:16px!important;height:16px!important;flex-shrink:0!important;opacity:.6!important;transition:opacity .12s!important;}
 .sidebar button[id^='nav']:hover .sb-nav-icon,.sidebar button[id^='nav'].active .sb-nav-icon{opacity:1!important;}
@@ -5237,7 +5237,7 @@ document.addEventListener("DOMContentLoaded", () => {
         <path d="M10.5 6L8 8.5L10.5 11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
     </button>
-    <h2>VendorFlow AI</h2>
+    <h2>Drop Sigma</h2>
 
     <div class="sb-nav-area">
     <!-- ── MAIN ── -->
@@ -8301,7 +8301,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     </button>
                   </div>
                   <label class="tm-field-label">From Name</label>
-                  <input type="text" class="tm-field-input" id="tmSenderName" placeholder="e.g. VendorFlow Support">
+                  <input type="text" class="tm-field-input" id="tmSenderName" placeholder="e.g. Northbrook Support">
                   <label class="tm-field-label" style="margin-top:10px;">From Email</label>
                   <select class="tm-field-select" id="tmFromEmail">
                     <option value="">Use store default</option>
@@ -8410,7 +8410,7 @@ document.addEventListener("DOMContentLoaded", () => {
                   <iframe class="tm-body-preview" id="tmBodyPreview" frameborder="0" scrolling="no"></iframe>
                 </div>
                 <label class="tm-field-label" style="margin-top:10px;">Footer</label>
-                <input type="text" class="tm-field-input" id="tmFooter" placeholder="e.g. © 2026 VendorFlow · Unsubscribe">
+                <input type="text" class="tm-field-input" id="tmFooter" placeholder="e.g. © 2026 Northbrook · Unsubscribe">
               </div>
             </div>
 
@@ -9002,7 +9002,7 @@ document.addEventListener("DOMContentLoaded", () => {
             </div>
             <div class="em-stg-sig-wrap">
               <textarea class="em-stg-sig-textarea" id="settingSignature"
-                placeholder="e.g. Best regards,&#10;Support Team&#10;VendorFlow"
+                placeholder="e.g. Best regards,&#10;Support Team&#10;Northbrook"
                 oninput="updateSignatureCount()"></textarea>
               <div class="em-stg-sig-footer">
                 <span class="em-stg-char-count" id="sigCharCount">0 chars</span>
