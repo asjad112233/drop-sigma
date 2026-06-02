@@ -99,7 +99,15 @@ def _scoped_orders_qs(user, perm_key):
 
 @api_view(["GET"])
 def orders_poll_api(request):
-    """Lightweight endpoint — returns latest order id + total count. Used by frontend polling."""
+    """Lightweight endpoint — returns latest order id + total count. Used by frontend polling.
+
+    Side effect: opportunistically verifies the focused store's real-time
+    webhook is still wired up. The check is cached for 5 min by the
+    sentinel so this is basically free on every poll except the first
+    one per 5-minute window. Result: a store's webhook is never more
+    than 5 min behind reality even if the tenant just leaves the tab
+    open in the background.
+    """
     if not request.user.is_authenticated:
         return Response({"success": False, "message": "Authentication required"}, status=401)
     store_id = request.GET.get("store_id")
@@ -109,9 +117,28 @@ def orders_poll_api(request):
     if store_id:
         qs = qs.filter(store_id=store_id)
     latest = qs.order_by("-id").values("id").first()
+
+    # Opportunistic webhook sentinel ping for the currently-focused store.
+    # Cheap due to in-process 5-min cache; safe to call on every poll.
+    webhook_health = None
+    if store_id:
+        try:
+            store = Store.objects.filter(id=store_id, user=request.user).first()
+            if store and store.platform in ("woocommerce", "shopify"):
+                from .webhook_sentinel import ensure_webhook, get_last_delivery_age
+                wh_res = ensure_webhook(store, request=request)
+                webhook_health = {
+                    "ok":                  bool(wh_res and wh_res.get("ok")),
+                    "registered_topics":   wh_res.get("registered", []) if wh_res else [],
+                    "last_delivery_secs":  get_last_delivery_age(store.id),
+                }
+        except Exception:
+            pass
+
     return Response({
-        "latest_id": latest["id"] if latest else None,
-        "count": qs.count(),
+        "latest_id":      latest["id"] if latest else None,
+        "count":          qs.count(),
+        "webhook_health": webhook_health,
     })
 
 
@@ -188,14 +215,13 @@ def sync_orders(request, store_id):
         return JsonResponse({"success": False, "message": f"Sync failed: {e}"}, status=500)
 
     # ── Self-heal webhook on manual Refresh ─────────────────────────────
-    # If the user is hitting Refresh, real-time sync probably isn't working
-    # (otherwise they wouldn't need to). Silently re-register the webhook
-    # so the NEXT new order arrives instantly without another Refresh.
-    # Fire-and-forget — never block the response on this.
+    # User hitting Refresh is a strong signal real-time sync isn't working
+    # (otherwise they wouldn't need it). Force the sentinel to re-verify
+    # right now, bypassing its 5-min cache, so the next order lands live.
     webhook_healed = False
     try:
-        from stores.views import _register_webhook_for_store
-        wh_res = _register_webhook_for_store(store, request)
+        from .webhook_sentinel import ensure_webhook
+        wh_res = ensure_webhook(store, request=request, force=True)
         webhook_healed = bool(wh_res and wh_res.get("ok"))
     except Exception:
         pass
@@ -1124,6 +1150,15 @@ def shopify_webhook(request, store_id):
         return JsonResponse({"success": False, "message": "Invalid payload"}, status=400)
 
     _, created = process_shopify_order(store, data)
+
+    # Tell the sentinel real-time sync is alive for this store. Lets the
+    # sweeper deprioritise stores that are clearly working.
+    try:
+        from .webhook_sentinel import record_delivery
+        record_delivery(store.id)
+    except Exception:
+        pass
+
     return JsonResponse({"success": True, "created": created})
 
 
@@ -1382,6 +1417,15 @@ def woocommerce_webhook(request, store_id):
         return JsonResponse({"success": False, "message": "Invalid payload"}, status=400)
 
     _, created = process_woocommerce_order(store, data)
+
+    # Tell the sentinel real-time sync is alive for this store. Lets the
+    # sweeper deprioritise stores that are clearly working.
+    try:
+        from .webhook_sentinel import record_delivery
+        record_delivery(store.id)
+    except Exception:
+        pass
+
     return JsonResponse({"success": True, "created": created})
 
 

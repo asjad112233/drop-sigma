@@ -1074,7 +1074,17 @@ def delete_store_api(request, store_id):
         except Exception:
             snapshot_taken = False
 
+    deleted_id = store.id
     store.delete()
+
+    # Drop the sentinel's in-process cache for this store so a future store
+    # created with the same auto-incremented id can't accidentally inherit
+    # stale verification state.
+    try:
+        from orders.webhook_sentinel import clear_cache
+        clear_cache(deleted_id)
+    except Exception:
+        pass
 
     return Response({
         "success":                  True,
