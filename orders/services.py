@@ -1,6 +1,52 @@
 from teamapp.services import auto_assign_order
 import requests
 
+# ── WooCommerce / WP REST helper ────────────────────────────────────────────
+# Many merchants put their WooCommerce store behind Cloudflare, which
+# aggressively challenges `/wp-json/*` requests from plain Python `requests`
+# (HTTP 406 / 403 / 503). `cloudscraper` solves the JS challenge + browser
+# fingerprint check transparently. Fall back to plain `requests` if the
+# library isn't installed (older deploys), and add browser-like headers
+# either way so non-Cloudflare WAFs (Wordfence, SiteGround, etc.) also
+# stop flagging the call.
+try:
+    import cloudscraper as _cs
+    _WOO_SCRAPER_AVAILABLE = True
+except Exception:
+    _WOO_SCRAPER_AVAILABLE = False
+
+
+_WOO_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/131.0.0.0 Safari/537.36"
+    ),
+    "Accept": "application/json, text/plain, */*",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Connection": "keep-alive",
+}
+
+
+def woo_session():
+    """Return a session that survives Cloudflare's bot challenges.
+
+    Use this in place of bare `requests` for every WooCommerce REST call so
+    merchant stores hidden behind Cloudflare keep working without asking
+    them to whitelist our IP or disable Bot Fight Mode. Behaves identically
+    to a `requests.Session()` — supports .get / .post / .put / .delete
+    with the same kwargs (auth=, params=, json=, timeout=, headers=)."""
+    if _WOO_SCRAPER_AVAILABLE:
+        s = _cs.create_scraper(
+            browser={"browser": "chrome", "platform": "darwin", "desktop": True},
+            delay=2,
+        )
+    else:
+        s = requests.Session()
+    s.headers.update(_WOO_HEADERS)
+    return s
+
 COURIER_URL_TEMPLATES = {
     "yuntrack":       "https://www.yuntrack.com/parcelTracking?id={num}",
     "dhl":            "https://www.dhl.com/en/express/tracking.html?AWB={num}&brand=DHL",
@@ -191,8 +237,9 @@ def setup_woocommerce_webhook(store, delivery_url):
     base = f"{store.store_url.rstrip('/')}/wp-json/wc/v3/webhooks"
     auth = (store.api_key, store.api_secret)
 
+    sess = woo_session()
     try:
-        existing = requests.get(base, auth=auth, params={"per_page": 100}, timeout=15, verify=False)
+        existing = sess.get(base, auth=auth, params={"per_page": 100}, timeout=15, verify=False)
         existing_topics = {}
         if existing.ok:
             for wh in existing.json():
@@ -213,7 +260,7 @@ def setup_woocommerce_webhook(store, delivery_url):
             "status": "active",
         }
         try:
-            r = requests.post(base, auth=auth, json=payload, timeout=15, verify=False)
+            r = sess.post(base, auth=auth, json=payload, timeout=15, verify=False)
             if r.ok:
                 last_id = r.json().get("id")
                 last_created = True
@@ -365,7 +412,7 @@ def sync_woocommerce_orders(store, after=None):
     if after:
         params["after"] = after
 
-    response = requests.get(url, auth=(store.api_key, store.api_secret), params=params, timeout=30)
+    response = woo_session().get(url, auth=(store.api_key, store.api_secret), params=params, timeout=30)
     response.raise_for_status()
 
     count = 0

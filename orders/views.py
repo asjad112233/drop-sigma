@@ -842,9 +842,10 @@ def _fetch_wc_notes(order):
     if not store.api_key or not store.api_secret or not order.external_order_id:
         return []
     try:
+        from .services import woo_session
         url = f"{store.store_url.rstrip('/')}/wp-json/wc/v3/orders/{order.external_order_id}/notes"
-        r = requests.get(url, auth=(store.api_key, store.api_secret),
-                         params={"type": "any"}, timeout=8)
+        r = woo_session().get(url, auth=(store.api_key, store.api_secret),
+                              params={"type": "any"}, timeout=8)
         if r.status_code != 200:
             return []
         return r.json() or []
@@ -860,8 +861,9 @@ def _push_wc_note(order, text, is_customer_note=False):
     if not store.api_key or not store.api_secret or not order.external_order_id:
         return False, "Store not connected"
     try:
+        from .services import woo_session
         url = f"{store.store_url.rstrip('/')}/wp-json/wc/v3/orders/{order.external_order_id}/notes"
-        r = requests.post(
+        r = woo_session().post(
             url, auth=(store.api_key, store.api_secret),
             json={"note": text, "customer_note": bool(is_customer_note)},
             timeout=10,

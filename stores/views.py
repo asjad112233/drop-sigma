@@ -702,7 +702,13 @@ def _diagnose_store(store):
         if req_headers:
             kwargs["headers"] = req_headers
         try:
-            r = _req.get(url, **kwargs)
+            # Use Cloudflare-aware session for WooCommerce so Bot Fight
+            # Mode doesn't 406 us on `/wp-json/*` health checks.
+            if store.platform == "woocommerce":
+                from orders.services import woo_session
+                r = woo_session().get(url, **kwargs)
+            else:
+                r = _req.get(url, **kwargs)
             return r.status_code, None
         except _req.exceptions.ConnectionError as e:
             err = str(e).lower()

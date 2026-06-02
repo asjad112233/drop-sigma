@@ -180,7 +180,9 @@ def _update_woocommerce_webhooks(tunnel_url):
                 new_url = f"{tunnel_url}/orders/webhook/woocommerce/{store.id}/"
                 setup_woocommerce_webhook(store, new_url)
                 # Also patch any existing webhooks still pointing to old URL
-                resp = requests.get(
+                from orders.services import woo_session
+                _wc_sess = woo_session()
+                resp = _wc_sess.get(
                     f"{store.store_url}/wp-json/wc/v3/webhooks",
                     auth=(store.api_key, store.api_secret),
                     timeout=10, verify=False,
@@ -188,7 +190,7 @@ def _update_woocommerce_webhooks(tunnel_url):
                 if resp.ok:
                     for wh in resp.json():
                         if isinstance(wh, dict) and wh.get("delivery_url", "").rstrip("/") != new_url.rstrip("/"):
-                            requests.put(
+                            _wc_sess.put(
                                 f"{store.store_url}/wp-json/wc/v3/webhooks/{wh['id']}",
                                 auth=(store.api_key, store.api_secret),
                                 json={"delivery_url": new_url},

@@ -65,8 +65,22 @@ def _timed(check_fn, title):
 
 
 def _http_probe(url, headers=None, timeout=4, method="GET"):
-    """Lightweight HTTP request that returns (status_code, body_str | None, error)."""
-    req = urllib.request.Request(url, headers=headers or {}, method=method)
+    """Lightweight HTTP request that returns (status_code, body_str | None, error).
+
+    Adds a browser-like User-Agent so health probes against merchant stores
+    hidden behind Cloudflare (Bot Fight Mode) aren't blocked with HTTP 406.
+    """
+    merged = {
+        "User-Agent": (
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/131.0.0.0 Safari/537.36"
+        ),
+        "Accept": "application/json, text/plain, */*",
+    }
+    if headers:
+        merged.update(headers)
+    req = urllib.request.Request(url, headers=merged, method=method)
     try:
         with urllib.request.urlopen(req, timeout=timeout) as r:
             return r.status, r.read(2048).decode("utf-8", errors="replace"), None

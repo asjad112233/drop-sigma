@@ -429,11 +429,13 @@ def stock_fetch_store_products_api(request):
 
     try:
         if store.platform == "woocommerce":
+            from orders.services import woo_session
             base = store.store_url.rstrip("/")
             auth = (store.api_key, store.api_secret)
+            sess = woo_session()
             page = 1
             while True:
-                r = _req.get(
+                r = sess.get(
                     f"{base}/wp-json/wc/v3/products",
                     auth=auth,
                     params={"per_page": 100, "page": page, "status": "publish"},
@@ -447,7 +449,7 @@ def stock_fetch_store_products_api(request):
                 for p in batch:
                     variants = []
                     if p.get("type") == "variable":
-                        vr = _req.get(
+                        vr = sess.get(
                             f"{base}/wp-json/wc/v3/products/{p['id']}/variations",
                             auth=auth, params={"per_page": 100}, timeout=15,
                         )
