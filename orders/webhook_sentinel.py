@@ -347,11 +347,123 @@ def _sweeper_loop() -> None:
         time.sleep(_SWEEPER_INTERVAL_SECONDS)
 
 
+def _read_func_source(module_parts: tuple, func_name: str) -> str:
+    """Read source for a top-level function from disk (bypasses DRF's
+    @api_view wrapper, which inspect.getsource would otherwise show)."""
+    import re as _re
+    from pathlib import Path
+    base = Path(__file__).resolve().parent.parent
+    path = base / Path(*module_parts).with_suffix(".py")
+    text = path.read_text(encoding="utf-8")
+    m = _re.search(
+        rf"^def {_re.escape(func_name)}\(.*?(?=^(?:def |class |@api_view|@csrf_exempt|@permission_classes)\b)",
+        text, _re.MULTILINE | _re.DOTALL,
+    )
+    if not m:
+        m = _re.search(rf"^def {_re.escape(func_name)}\(.*\Z", text,
+                       _re.MULTILINE | _re.DOTALL)
+    return m.group(0) if m else ""
+
+
+def _audit_wiring() -> list[str]:
+    """Static check that every part of the real-time sync chain is still
+    wired correctly. Run once at sentinel startup. Returns a list of
+    human-readable problems (empty = healthy).
+
+    This is a runtime guard against refactors silently removing one of
+    the integration points — the kind of regression that wouldn't break
+    any single request but would silently turn off real-time sync."""
+    import inspect
+    problems: list[str] = []
+
+    # 1. orders_poll_api must call ensure_webhook (so every 10s poll
+    #    opportunistically self-heals the focused store) AND must do a
+    #    safety pull when webhook delivery is stale.
+    try:
+        src = _read_func_source(("orders", "views"), "orders_poll_api")
+        if "ensure_webhook" not in src:
+            problems.append(
+                "orders.views.orders_poll_api no longer calls ensure_webhook — "
+                "the every-10s poll has stopped self-healing webhooks."
+            )
+        if "sync_woocommerce_orders" not in src and "sync_shopify_orders" not in src:
+            problems.append(
+                "orders.views.orders_poll_api safety-pull is missing — "
+                "broken webhooks will silently drop orders again."
+            )
+    except Exception as e:
+        problems.append(f"could not audit orders_poll_api: {e}")
+
+    # 2. Both webhook receivers must call record_delivery.
+    for view_name in ("woocommerce_webhook", "shopify_webhook"):
+        try:
+            src = _read_func_source(("orders", "views"), view_name)
+            if "record_delivery" not in src:
+                problems.append(
+                    f"orders.views.{view_name} no longer calls record_delivery — "
+                    f"sentinel can't tell whether real-time sync is alive."
+                )
+        except Exception as e:
+            problems.append(f"could not audit {view_name}: {e}")
+
+    # 3. sync_orders (manual Refresh) must call ensure_webhook so
+    #    Refresh also self-heals.
+    try:
+        src = _read_func_source(("orders", "views"), "sync_orders")
+        if "ensure_webhook" not in src:
+            problems.append(
+                "orders.views.sync_orders no longer calls ensure_webhook — "
+                "manual Refresh has stopped self-healing webhooks."
+            )
+    except Exception as e:
+        problems.append(f"could not audit sync_orders: {e}")
+
+    # 4. _register_webhook_for_store must return the rich status dict.
+    try:
+        from stores.views import _register_webhook_for_store
+        src = inspect.getsource(_register_webhook_for_store)
+        for token in ('"ok"', '"message"', '"registered"', '"errors"'):
+            if token not in src:
+                problems.append(
+                    f"stores.views._register_webhook_for_store no longer "
+                    f"returns {token} — connect endpoints + UI warnings break."
+                )
+                break
+    except Exception as e:
+        problems.append(f"could not audit _register_webhook_for_store: {e}")
+
+    # 5. Tunables must stay tight enough to keep order-confirmation
+    #    emails real-time.
+    if _VERIFY_TTL_SECONDS > 120:
+        problems.append(
+            f"_VERIFY_TTL_SECONDS={_VERIFY_TTL_SECONDS} is too high — "
+            f"real-time sync degrades. Should be ≤ 120s."
+        )
+    if _SWEEPER_INTERVAL_SECONDS > 120:
+        problems.append(
+            f"_SWEEPER_INTERVAL_SECONDS={_SWEEPER_INTERVAL_SECONDS} is too high — "
+            f"idle stores' webhooks rot. Should be ≤ 120s."
+        )
+    if _SWEEPER_STARTUP_DELAY_SECONDS > 30:
+        problems.append(
+            f"_SWEEPER_STARTUP_DELAY={_SWEEPER_STARTUP_DELAY_SECONDS}s too long — "
+            f"pre-existing broken webhooks stay broken after deploy."
+        )
+
+    return problems
+
+
 def start_sentinel() -> bool:
     """Idempotently start the background sweeper. Returns True if started.
 
     Safe to call multiple times — subsequent calls are no-ops. Skipped in
-    test/migration contexts to avoid leaking threads."""
+    test/migration contexts to avoid leaking threads.
+
+    Also runs `_audit_wiring()` and logs CRITICAL for any integration
+    point that's been silently disconnected. This is the lifetime
+    guarantee: even if a future refactor breaks the sentinel's wiring,
+    the very next deploy will surface the regression in Railway logs
+    instead of silently dropping new orders."""
     global _sweeper_thread, _sweeper_started
 
     if _SENTINEL_DISABLED:
@@ -362,6 +474,22 @@ def start_sentinel() -> bool:
     # Only the actual server processes should spin up the sweeper.
     if not _should_run_sentinel():
         return False
+
+    # Wiring audit — fail loudly on regressions instead of silently
+    # serving traffic with no real-time sync.
+    problems = []
+    try:
+        problems = _audit_wiring()
+    except Exception:
+        log.exception("webhook sentinel: wiring audit crashed")
+    if problems:
+        log.critical(
+            "🚨 webhook sentinel: %d wiring problem(s) detected — real-time "
+            "order sync is degraded! Fix before continuing:\n  - %s",
+            len(problems), "\n  - ".join(problems),
+        )
+    else:
+        log.info("webhook sentinel: wiring audit passed (all integration points intact)")
 
     with _STATE_LOCK:
         if _sweeper_started:
