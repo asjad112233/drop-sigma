@@ -11795,6 +11795,8 @@ document.addEventListener("DOMContentLoaded", () => {
     <div id="_dlgTitle" style="font-size:18px;font-weight:800;color:var(--vf-text,#0f172a);margin-bottom:8px;text-align:center;"></div>
     <div id="_dlgMsg" style="font-size:14px;color:var(--vf-muted,#64748b);text-align:center;line-height:1.6;white-space:pre-line;"></div>
     <div id="_dlgDetails" style="display:none;margin-top:12px;padding:12px 14px;background:#fef2f2;border:1px solid #fecaca;border-radius:12px;font-size:12.5px;color:#b91c1c;line-height:1.5;"></div>
+    <!-- _prompt input area (shown only when _prompt() is invoked) -->
+    <div id="_dlgInputs" style="display:none;margin-top:16px;display:flex;flex-direction:column;gap:12px;"></div>
     <div id="_dlgBtns" style="display:flex;gap:10px;margin-top:24px;justify-content:center;"></div>
   </div>
 </div>
@@ -13082,11 +13084,21 @@ function runLoader(cb, delay=520){
 }
 function fireLoader(){runLoader(null,400);}
 
-// ─── Custom Dialog System (replaces browser alert/confirm) ────────────────────
+// ─── Custom Dialog System (Drop Sigma replacement for native alert/confirm/prompt) ─
+//
+// Hard rule for the whole codebase: NEVER call window.alert / window.confirm /
+// window.prompt directly. Native dialogs show the browser origin ("dropsigma.com
+// says…"), have no branding, and break the look of the rest of the app. Always
+// use _alert / _confirm / _prompt here instead — they share one Drop Sigma-
+// styled modal (`_dlgBg`) and resolve via Promise so you can `await` them.
 let _dlgResolve = null;
 function _dlgClose(val){
   const bg = document.getElementById("_dlgBg");
   if(bg) bg.style.display = "none";
+  // Always restore the inputs panel back to hidden so future _alert / _confirm
+  // calls don't show a stale input field from a previous _prompt.
+  const inputs = document.getElementById("_dlgInputs");
+  if(inputs){ inputs.style.display = "none"; inputs.innerHTML = ""; }
   if(_dlgResolve){ _dlgResolve(val); _dlgResolve = null; }
 }
 function _alert(msg, title="Notice", icon="ℹ️"){
@@ -13098,6 +13110,8 @@ function _alert(msg, title="Notice", icon="ℹ️"){
     document.getElementById("_dlgTitle").textContent = title;
     document.getElementById("_dlgMsg").textContent = msg;
     document.getElementById("_dlgDetails").style.display = "none";
+    const inputs = document.getElementById("_dlgInputs");
+    if(inputs){ inputs.style.display = "none"; inputs.innerHTML = ""; }
     document.getElementById("_dlgBtns").innerHTML = `
       <button onclick="_dlgClose(true)" style="flex:1;padding:11px 0;background:var(--vf-purple,#6366f1);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;">OK</button>`;
     bg.style.display = "flex";
@@ -13113,6 +13127,8 @@ function _confirm(msg, {title="Confirm", details="", icon="⚠️", danger=false
     document.getElementById("_dlgMsg").textContent = msg;
     const det = document.getElementById("_dlgDetails");
     if(details){ det.textContent = details; det.style.display = "block"; } else { det.style.display = "none"; }
+    const inputs = document.getElementById("_dlgInputs");
+    if(inputs){ inputs.style.display = "none"; inputs.innerHTML = ""; }
     const confirmColor = danger ? "#dc2626" : "var(--vf-purple,#6366f1)";
     document.getElementById("_dlgBtns").innerHTML = `
       <button onclick="_dlgClose(false)" style="flex:1;padding:11px 0;background:var(--vf-surface-2,#f1f5f9);color:var(--vf-text,#0f172a);border:1px solid var(--vf-line,#e2e8f0);border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;">${cancelText}</button>
@@ -13120,9 +13136,154 @@ function _confirm(msg, {title="Confirm", details="", icon="⚠️", danger=false
     bg.style.display = "flex";
   });
 }
-// Close on backdrop click
+/**
+ * Drop Sigma-branded replacement for window.prompt().
+ *
+ *   const name = await _prompt("Snippet title (e.g. \"30-day return policy\"):", {
+ *       title: "Add Snippet",
+ *       icon: "📝",
+ *       placeholder: "Type the title here…",
+ *       defaultValue: "",
+ *       multiline: false,
+ *       required: true,
+ *       confirmText: "Add",
+ *   });
+ *   if (name === null) return;   // user cancelled
+ *
+ * Multi-field form (returns {key: value} or null on cancel):
+ *
+ *   const out = await _prompt("Add a knowledge snippet:", {
+ *       title: "New Snippet",
+ *       fields: [
+ *           {key:"title",   label:"Snippet title",   placeholder:"e.g. 30-day return policy", required:true},
+ *           {key:"content", label:"Snippet content", placeholder:"What should the AI know?", multiline:true, required:true},
+ *       ],
+ *       confirmText: "Save",
+ *   });
+ *   if (!out) return;
+ *   await api({ title: out.title, text: out.content });
+ */
+function _prompt(msg, opts = {}){
+  const {
+    title = "Input",
+    icon = "✏️",
+    placeholder = "",
+    defaultValue = "",
+    multiline = false,
+    required = true,
+    confirmText = "OK",
+    cancelText = "Cancel",
+    fields = null,        // multi-field mode
+    maxLength = 2000,
+  } = opts;
+
+  return new Promise(resolve => {
+    _dlgResolve = resolve;
+    const bg = document.getElementById("_dlgBg");
+    document.getElementById("_dlgIcon").textContent = icon;
+    document.getElementById("_dlgIcon").style.display = "block";
+    document.getElementById("_dlgTitle").textContent = title;
+    document.getElementById("_dlgMsg").textContent = msg || "";
+    document.getElementById("_dlgDetails").style.display = "none";
+
+    const inputs = document.getElementById("_dlgInputs");
+    inputs.innerHTML = "";
+    inputs.style.display = "flex";
+    inputs.style.flexDirection = "column";
+    inputs.style.gap = "12px";
+
+    // Multi-field render
+    const fieldList = fields || [{
+      key: "_value", label: "", placeholder, defaultValue, multiline, required, maxLength,
+    }];
+
+    const inputEls = [];
+    for (const f of fieldList){
+      const wrap = document.createElement("div");
+      if (f.label){
+        const lbl = document.createElement("label");
+        lbl.textContent = f.label;
+        lbl.style.cssText = "display:block;font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;text-align:left;";
+        wrap.appendChild(lbl);
+      }
+      const isMulti = f.multiline ?? multiline;
+      const el = document.createElement(isMulti ? "textarea" : "input");
+      if (!isMulti) el.type = "text";
+      el.value = f.defaultValue ?? "";
+      el.placeholder = f.placeholder || "";
+      if (f.maxLength ?? maxLength) el.maxLength = f.maxLength ?? maxLength;
+      el.dataset.key = f.key || "_value";
+      el.dataset.required = String(f.required ?? required);
+      el.style.cssText = `width:100%;padding:11px 14px;font-size:14px;font-family:inherit;line-height:1.5;
+        border:1.5px solid #e2e8f0;border-radius:12px;outline:none;background:#fff;color:#0f172a;
+        transition:border-color .15s, box-shadow .15s;box-sizing:border-box;`
+        + (isMulti ? "resize:vertical;min-height:96px;" : "");
+      el.addEventListener("focus", () => {
+        el.style.borderColor = "#6366f1";
+        el.style.boxShadow = "0 0 0 3px rgba(99,102,241,.15)";
+      });
+      el.addEventListener("blur", () => {
+        el.style.borderColor = "#e2e8f0";
+        el.style.boxShadow = "none";
+      });
+      el.addEventListener("keydown", e => {
+        if (e.key === "Enter" && !isMulti){
+          e.preventDefault();
+          _dlgSubmitPrompt(inputEls, fields, resolve);
+        } else if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && isMulti){
+          e.preventDefault();
+          _dlgSubmitPrompt(inputEls, fields, resolve);
+        } else if (e.key === "Escape"){
+          e.preventDefault();
+          _dlgClose(null);
+        }
+      });
+      wrap.appendChild(el);
+      inputs.appendChild(wrap);
+      inputEls.push(el);
+    }
+
+    document.getElementById("_dlgBtns").innerHTML = `
+      <button id="_dlgCancelBtn" style="flex:1;padding:11px 0;background:var(--vf-surface-2,#f1f5f9);color:var(--vf-text,#0f172a);border:1px solid var(--vf-line,#e2e8f0);border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;">${cancelText}</button>
+      <button id="_dlgConfirmBtn" style="flex:1;padding:11px 0;background:var(--vf-purple,#6366f1);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;">${confirmText}</button>`;
+
+    document.getElementById("_dlgCancelBtn").onclick = () => _dlgClose(null);
+    document.getElementById("_dlgConfirmBtn").onclick = () => _dlgSubmitPrompt(inputEls, fields, resolve);
+
+    bg.style.display = "flex";
+    setTimeout(() => inputEls[0]?.focus(), 60);
+  });
+}
+function _dlgSubmitPrompt(inputEls, fields, _resolve){
+  // Validate required fields first — flash the red border, don't close.
+  for (const el of inputEls){
+    if (el.dataset.required === "true" && !(el.value || "").trim()){
+      el.style.borderColor = "#ef4444";
+      el.style.boxShadow = "0 0 0 3px rgba(239,68,68,.15)";
+      el.focus();
+      return;
+    }
+  }
+  // Single-field shortcut → return the value as a string.
+  if (!fields){
+    const val = (inputEls[0]?.value || "").trim();
+    _dlgClose(val || null);
+    return;
+  }
+  // Multi-field → return as object keyed by f.key.
+  const out = {};
+  for (const el of inputEls){
+    out[el.dataset.key] = (el.value || "").trim();
+  }
+  _dlgClose(out);
+}
+// Close on backdrop click + global Esc support
 document.addEventListener("DOMContentLoaded", ()=>{
-  document.getElementById("_dlgBg")?.addEventListener("click", e=>{ if(e.target.id=="_dlgBg") _dlgClose(false); });
+  document.getElementById("_dlgBg")?.addEventListener("click", e=>{
+    // For _prompt we resolve with null (= cancel) when the user clicks the
+    // backdrop, matching the Esc-key behaviour.
+    if(e.target.id=="_dlgBg") _dlgClose(null);
+  });
 });
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -13969,11 +14130,13 @@ async function rmaApprove(pk){
 }
 
 async function rmaReject(pk){
-  // Custom _prompt modal not built yet — native prompt is acceptable here
-  // because the user is being asked for a freeform reason string.
-  const reason = (typeof _prompt === 'function')
-    ? await _prompt('Why are you rejecting this return? (sent to the customer)', {title:'Reject Return', icon:'❌', placeholder:'Reason…'})
-    : prompt('Why are you rejecting this return? (sent to the customer)');
+  const reason = await _prompt('Why are you rejecting this return? (sent to the customer)', {
+    title: 'Reject Return',
+    icon: '❌',
+    placeholder: 'Reason…',
+    multiline: true,
+    confirmText: 'Reject return',
+  });
   if (reason === null || reason === undefined) return;
   const { ok, data } = await rmaApi('/rma/' + pk + '/reject/', {reason});
   if (ok){ rmaOpenDetail(pk); rmaRefreshPendingBadge(); }
@@ -14066,7 +14229,7 @@ async function rmaAddNote(pk){
 
 function rmaCopyTrackLink(token){
   const url = window.location.origin + '/r/' + token + '/';
-  navigator.clipboard.writeText(url).then(()=> alert('Customer tracking link copied:\n' + url));
+  navigator.clipboard.writeText(url).then(()=> _alert('Customer tracking link copied:\n' + url, 'Link copied', '🔗'));
 }
 
 /* ── Create manual RMA modal ───────────────────────────────── */
@@ -14261,7 +14424,7 @@ async function rmaSaveSettings(){
     setTimeout(() => { ss.textContent=''; }, 2500);
   } else {
     ss.textContent = '✗ Save failed'; ss.style.color = '#ef4444';
-    alert(data.error || 'Save failed.');
+    _alert(data.error || 'Save failed.', 'Save Failed', '❌');
   }
 }
 
@@ -14980,7 +15143,13 @@ async function v2TdToggleSnip(sid, newState){
 }
 
 async function v2TdDeleteSnip(sid){
-  if (!confirm('Delete this snippet permanently?')) return;
+  if (!(await _confirm('Delete this snippet permanently?', {
+    title: 'Delete Snippet',
+    icon: '🗑️',
+    danger: true,
+    confirmText: 'Delete',
+    details: 'The AI will stop using this snippet immediately. This cannot be undone.',
+  }))) return;
   try {
     const d = await _v2Api(V2_API.snippets + '?id=' + sid, { method:'DELETE' });
     if (!d.success){ _v2Toast(d.message || 'Delete failed', 'error'); return; }
@@ -14996,14 +15165,36 @@ async function v2TdDeleteSnip(sid){
 
 async function v2TdAddSnippet(){
   if (!V2_TD_CURRENT) return;
-  const title = prompt('Snippet title (e.g. "30-day return policy"):');
-  if (!title || !title.trim()) return;
-  const text = prompt('Snippet content (what should the AI know about this?):');
-  if (!text || !text.trim()) return;
+  const tname = (V2_TD_CURRENT.topic && V2_TD_CURRENT.topic.name) || '';
+  const out = await _prompt(
+    tname ? `Adding to "${tname}". Teach the AI a specific fact, policy, or rule.`
+          : 'Teach the AI a specific fact, policy, or response rule.',
+    {
+      title: "Add Knowledge Snippet",
+      icon: "📝",
+      confirmText: "Save snippet",
+      cancelText: "Cancel",
+      fields: [
+        { key: "title",   label: "Snippet title",
+          placeholder: 'e.g. "30-day return policy"',
+          required: true, maxLength: 120 },
+        { key: "content", label: "Snippet content",
+          placeholder: "What should the AI know about this? Be specific — the AI quotes this verbatim when relevant.",
+          required: true, multiline: true, maxLength: 2000 },
+      ],
+    }
+  );
+  if (!out) return; // user cancelled
+
   try {
     const d = await _v2Api(V2_API.snippets, {
       method:'POST',
-      body: JSON.stringify({ topic: V2_TD_CURRENT.key, title: title.trim(), text: text.trim(), is_enabled: true })
+      body: JSON.stringify({
+        topic: V2_TD_CURRENT.key,
+        title: out.title,
+        text:  out.content,
+        is_enabled: true,
+      })
     });
     if (!d.success){ _v2Toast(d.message || 'Save failed', 'error'); return; }
     await v2LoadSnippetsAll();
@@ -15176,7 +15367,13 @@ async function v2LibToggleEnable(id, newState){
 }
 
 async function v2LibDelete(id){
-  if (!confirm('Delete this snippet permanently?')) return;
+  if (!(await _confirm('Delete this snippet permanently?', {
+    title: 'Delete Snippet',
+    icon: '🗑️',
+    danger: true,
+    confirmText: 'Delete',
+    details: 'The AI will stop using this snippet immediately. This cannot be undone.',
+  }))) return;
   try {
     const d = await _v2Api(V2_API.snippets + '?id=' + id, { method:'DELETE' });
     if (!d.success){ _v2Toast(d.message || 'Delete failed', 'error'); return; }
@@ -16785,8 +16982,8 @@ function ovCancelCustom(){
 function ovApplyCustom(){
   const from = document.getElementById("ovCustomFrom").value;
   const to   = document.getElementById("ovCustomTo").value;
-  if (!from || !to) { alert("Please pick both dates."); return; }
-  if (from > to)   { alert("'From' date must be before 'To' date."); return; }
+  if (!from || !to) { _alert("Please pick both dates.", "Date Range", "📅"); return; }
+  if (from > to)   { _alert("'From' date must be before 'To' date.", "Invalid Range", "⚠️"); return; }
   _ovPeriod.period = "custom";
   _ovPeriod.from = from;
   _ovPeriod.to = to;
@@ -18406,7 +18603,7 @@ function _toast(msg, kind){
     host.appendChild(t);
     requestAnimationFrame(() => { t.style.transform = "translateY(0)"; t.style.opacity = "1"; });
     setTimeout(() => { t.style.opacity = "0"; t.style.transform = "translateY(8px)"; setTimeout(() => t.remove(), 220); }, 3600);
-  } catch(_){ alert(msg); }
+  } catch(_){ _alert(msg); }
 }
 
 async function poxSubmitVendorAssign(){
@@ -21907,8 +22104,13 @@ function tmCmd(command, value=null){
   document.execCommand(command, false, value);
 }
 
-function tmInsertLink(){
-  const url = prompt("Enter URL:");
+async function tmInsertLink(){
+  const url = await _prompt("Paste the URL you want to link to", {
+    title: "Insert Link",
+    icon: "🔗",
+    placeholder: "https://…",
+    confirmText: "Insert",
+  });
   if(url) tmCmd("createLink", url);
 }
 
@@ -23352,7 +23554,7 @@ function onEmailInboxChange(){
     if (typeof openConnectEmailModal === "function"){
       openConnectEmailModal();
     } else {
-      alert("Add Email modal not available.");
+      _alert("Add Email modal not available. Please refresh the page.", "Unavailable", "⚠️");
     }
     return;
   }
@@ -24908,11 +25110,7 @@ async function openCustomerEmail(customerEmail, customerName, orderNum){
   // 5) No prior thread → open compose with prefilled fields.
   // Guard: if no email account is connected, route to the gated handler.
   if (!connectedStoreEmail && (!connectedStoreAccounts || connectedStoreAccounts.length === 0)){
-    if (typeof _alert === 'function'){
-      await _alert('You need to connect your email account before composing a new message. Go to Emails → Add Email.', 'Connect Email First', '📧');
-    } else {
-      alert('Please connect your email first.');
-    }
+    await _alert('You need to connect your email account before composing a new message. Go to Emails → Add Email.', 'Connect Email First', '📧');
     return;
   }
 
@@ -25958,32 +26156,24 @@ async function openComposeModalGated(){
     // a "Connect now?" confirm.
     const inEmbed = document.body.dataset.embed === "emails";
     if (inEmbed){
-      if (typeof _alert === 'function'){
-        await _alert(
-          "Your administrator hasn't connected an email inbox to this store yet. Please ask them to connect one before composing.",
-          'No inbox connected', '📧'
-        );
-      } else {
-        alert("Your administrator hasn't connected an email inbox yet.");
-      }
+      await _alert(
+        "Your administrator hasn't connected an email inbox to this store yet. Please ask them to connect one before composing.",
+        'No inbox connected', '📧'
+      );
       return;
     }
-    if (typeof _confirm === 'function'){
-      const ok = await _confirm(
-        'You need to connect a Gmail account before composing emails. Connect one now?',
-        { title: 'Connect Email First', icon: '📧', confirmText: 'Connect', cancelText: 'Not now' }
-      );
-      if (ok){
-        // Try to open the "Add Email" modal if it exists; otherwise just
-        // surface a visual hint to the connect button.
-        if (typeof openAddEmailModal === 'function') openAddEmailModal();
-        else {
-          const addBtn = document.querySelector('[onclick*="openAddEmailModal"], [onclick*="connectGmailOAuth"], #addEmailBtn');
-          if (addBtn){ addBtn.scrollIntoView({behavior:'smooth', block:'center'}); addBtn.classList.add('em-pulse-attention'); setTimeout(()=>addBtn.classList.remove('em-pulse-attention'), 2400); }
-        }
+    const ok = await _confirm(
+      'You need to connect a Gmail account before composing emails. Connect one now?',
+      { title: 'Connect Email First', icon: '📧', confirmText: 'Connect', cancelText: 'Not now' }
+    );
+    if (ok){
+      // Try to open the "Add Email" modal if it exists; otherwise just
+      // surface a visual hint to the connect button.
+      if (typeof openAddEmailModal === 'function') openAddEmailModal();
+      else {
+        const addBtn = document.querySelector('[onclick*="openAddEmailModal"], [onclick*="connectGmailOAuth"], #addEmailBtn');
+        if (addBtn){ addBtn.scrollIntoView({behavior:'smooth', block:'center'}); addBtn.classList.add('em-pulse-attention'); setTimeout(()=>addBtn.classList.remove('em-pulse-attention'), 2400); }
       }
-    } else {
-      alert('Please connect your email first.');
     }
     return;
   }
@@ -26034,8 +26224,13 @@ function cmpFmt(cmd){
   document.getElementById("composeBodyRich").focus();
   cmpBodyChanged();
 }
-function cmpInsertLink(){
-  const url = prompt("Link URL (https://…):");
+async function cmpInsertLink(){
+  const url = await _prompt("Paste the URL you want to link to", {
+    title: "Insert Link",
+    icon: "🔗",
+    placeholder: "https://…",
+    confirmText: "Insert",
+  });
   if(!url) return;
   const sel = window.getSelection();
   if(!sel || !sel.toString().trim()){
@@ -26186,7 +26381,16 @@ async function cmpUseTemplate(tid){
 
 /* ── AI Draft ── */
 async function cmpAIDraft(){
-  const prompt = window.prompt("What should the AI write? e.g. 'Order shipping delay apology with a 10% discount offer'", "");
+  const prompt = await _prompt(
+    "Describe what the AI should write. Be specific — the more context you give, the better the draft.",
+    {
+      title: "✦ AI Draft",
+      icon: "✨",
+      placeholder: "e.g. Order shipping delay apology with a 10% discount offer",
+      multiline: true,
+      confirmText: "Generate draft",
+    }
+  );
   if(!prompt) return;
   const msg = document.getElementById("composeMessage");
   msg.style.color = "#475569"; msg.innerText = "✦ AI is drafting…";
@@ -26218,7 +26422,12 @@ async function cmpAIDraft(){
 
 /* ── Link to order ── */
 async function cmpLinkOrder(){
-  const num = window.prompt("Order number to link (e.g. 10247):", "");
+  const num = await _prompt("Enter the order number you want to link to this email.", {
+    title: "Link to Order",
+    icon: "🧾",
+    placeholder: "e.g. 10247",
+    confirmText: "Link order",
+  });
   if(!num) return;
   const msg = document.getElementById("composeMessage");
   try{
@@ -26253,7 +26462,7 @@ function cmpSaveDraft(){
     const msg = document.getElementById("composeMessage");
     msg.style.color = "#0a7b34"; msg.innerText = "💾 Draft saved offline (this browser only). Clearing browser data will remove it.";
   }catch(e){
-    alert("Could not save draft: " + e.message);
+    _alert("Could not save draft: " + e.message, "Save Failed", "❌");
   }
 }
 function _cmpRestoreDraft(){
@@ -28931,8 +29140,14 @@ async function approveTracking(submissionId){
     else await _alert(d.message||d.detail||`Approve failed (HTTP ${r.status}).`, "Error", "❌");
   }catch(e){await _alert(e.message, "Error", "❌");}
 }
-function promptRejectTracking(submissionId){
-  const reason=prompt("Enter rejection reason (visible to vendor):");
+async function promptRejectTracking(submissionId){
+  const reason = await _prompt("Why is this tracking being rejected? The vendor will see this reason.", {
+    title: "Reject Tracking",
+    icon: "❌",
+    placeholder: "e.g. Wrong courier — please resubmit with correct one",
+    multiline: true,
+    confirmText: "Reject submission",
+  });
   if(reason===null)return;
   rejectTracking(submissionId,reason);
 }
@@ -29991,8 +30206,23 @@ function tcFormat(type){
     }
   }
   else if(type==="link"){
-    const url = prompt("Enter URL:","https://");
-    if(url) document.execCommand("createLink", false, url);
+    // Note: tcFormat is sync (called from a click handler). We open the
+    // Drop Sigma prompt asynchronously and apply the link when the user
+    // confirms. The contenteditable selection survives across the await
+    // because we don't blur the input.
+    (async () => {
+      const url = await _prompt("Paste the URL you want to link to", {
+        title: "Insert Link",
+        icon: "🔗",
+        defaultValue: "https://",
+        placeholder: "https://…",
+        confirmText: "Insert",
+      });
+      if(url){
+        document.getElementById("chatInput")?.focus();
+        document.execCommand("createLink", false, url);
+      }
+    })();
   }
 }
 
