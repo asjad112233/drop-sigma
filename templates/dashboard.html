@@ -26953,7 +26953,11 @@ function changeProjectStore(){
     }
   }
 
-  window.location.href = `/?store_id=${newStoreId}&section=${section}${emailTab}`;
+  // Redirect straight to /dashboard/ so the homepage view doesn't strip
+  // our query string on the way. Going through `/` previously caused the
+  // selected project to silently revert because Django's homepage()
+  // does a bare redirect("/dashboard/") with no query preservation.
+  window.location.href = `/dashboard/?store_id=${newStoreId}&section=${section}${emailTab}`;
 }
 
 async function syncActiveProjectData(){

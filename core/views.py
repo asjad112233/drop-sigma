@@ -430,10 +430,17 @@ def features_page(request):
 # ── Homepage ─────────────────────────────────────────────────────────────────
 
 def homepage(request):
+    # Preserve any query string the caller attached (e.g. ?store_id=…&section=…
+    # from the project switcher). Without this, the switcher's selection
+    # silently gets stripped on the / → /dashboard/ hop and the page reloads
+    # with the previously-selected store.
+    qs = request.META.get("QUERY_STRING", "")
+    suffix = ("?" + qs) if qs else ""
+
     if request.user.is_authenticated and request.user.is_staff:
-        return redirect("/dashboard/")
+        return redirect(f"/dashboard/{suffix}")
     if request.user.is_authenticated and request.user.team_profile.exists():
-        return redirect("/employee/dashboard/")
+        return redirect(f"/employee/dashboard/{suffix}")
     return render(request, "home.html")
 
 
