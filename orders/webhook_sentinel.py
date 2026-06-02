@@ -68,12 +68,28 @@ log = logging.getLogger(__name__)
 
 # ─── Tunables ──────────────────────────────────────────────────────────────
 # Verification cache: after a successful verify+heal, skip re-probing this
-# store for this long (keeps the per-10s poll endpoint cheap). 5 min matches
-# the prompt-cache TTL and Cloudflare's __cf_bm cookie lifetime.
-_VERIFY_TTL_SECONDS = 300
+# store for this long. Tight (60s) because order confirmation emails are
+# time-critical — a tenant placing a test order can't wait 5 min for the
+# sentinel to notice a broken webhook. Cheap thanks to cache: the cost is
+# one extra HTTP call per active tab per minute per store.
+_VERIFY_TTL_SECONDS = 60
 
 # Background sweeper: how often the daemon thread walks every store.
-_SWEEPER_INTERVAL_SECONDS = 300  # 5 min
+# 60s so even idle stores (no one's logged in) get their webhook checked
+# every minute — worst-case lag from "webhook just rotted" to "sentinel
+# healed it" is 60 seconds.
+_SWEEPER_INTERVAL_SECONDS = 60
+
+# Initial delay before first sweep. Short enough that a fresh deploy heals
+# everyone within the first minute, long enough to let gunicorn warm up
+# and avoid stampeding the very first cold worker.
+_SWEEPER_STARTUP_DELAY_SECONDS = 10
+
+# When the sentinel detects a broken webhook and successfully heals it,
+# pull this many hours of recent orders to catch anything that landed in
+# the store while the webhook was dead. Keeps order-confirmation emails
+# from being silently dropped.
+_HEAL_CATCHUP_HOURS = 1
 
 # Safety: don't fire more than this many concurrent verifications. WC stores
 # behind shared hosting throttle aggressively if we hit /wp-json with bursts.
@@ -107,15 +123,29 @@ _heal_semaphore = threading.BoundedSemaphore(_MAX_CONCURRENT_HEALS)
 def ensure_webhook(store, request=None, *, force: bool = False) -> dict:
     """Verify + auto-heal real-time webhooks for `store`. Cheap on the hot path.
 
-    If we successfully verified this store within the last 5 min and the
-    cached status says ok, return the cached result without hitting the
-    network. Pass `force=True` to bypass the cache (e.g. user clicked
-    "Re-register Webhook" explicitly).
+    If we successfully verified this store within the last
+    _VERIFY_TTL_SECONDS and the cached status says ok, return the cached
+    result without hitting the network. Pass `force=True` to bypass the
+    cache (e.g. user clicked "Re-register Webhook" explicitly).
+
+    Side effect — catch-up sync: if this call transitions the store from
+    "broken or unknown" → "ok", we immediately background-pull the last
+    `_HEAL_CATCHUP_HOURS` of orders so any order that landed in the
+    store while the webhook was dead lands in our DB too. Without this,
+    the test order the tenant just placed (while waiting for the
+    sentinel to heal) would silently never arrive — and the auto-email
+    template attached to that order would never fire.
 
     Returns the same dict shape that _register_webhook_for_store returns:
         {ok, delivery_url, registered, errors, message}
     """
     store_id = store.id
+
+    # Snapshot the pre-heal status so we know whether this call actually
+    # transitions us from broken to ok (which is what triggers catch-up).
+    with _STATE_LOCK:
+        prev_status = _last_status.get(store_id)
+    was_broken = (prev_status is None) or (not prev_status.get("ok"))
 
     if not force:
         with _STATE_LOCK:
@@ -154,7 +184,50 @@ def ensure_webhook(store, request=None, *, force: bool = False) -> dict:
             # Don't cache a failure — we want the very next call to retry.
             _last_verified.pop(store_id, None)
 
+    # ── Catch-up sync on transition broken → ok ───────────────────────────
+    # The store may have received orders while its webhook was dead.
+    # Background-fetch them right now so the tenant doesn't lose data
+    # (and their auto-email-on-status-change templates fire on the missed
+    # orders too, as part of normal order processing).
+    if was_broken and result.get("ok"):
+        _kickoff_catchup_sync(store)
+
     return result
+
+
+def _kickoff_catchup_sync(store) -> None:
+    """Fire-and-forget pull of last _HEAL_CATCHUP_HOURS of orders.
+
+    Used right after a webhook heals — any order placed during the broken
+    window would have been missed by the webhook, so we go fetch them
+    explicitly. Cheap (single store-API call returning at most a few
+    orders) and safe to call from any thread."""
+    def _run():
+        try:
+            after = (datetime.now(_tz.utc) - timedelta(hours=_HEAL_CATCHUP_HOURS))
+            after_iso = after.strftime("%Y-%m-%dT%H:%M:%S")
+            if store.platform == "woocommerce":
+                from .services import sync_woocommerce_orders
+                count = sync_woocommerce_orders(store, after=after_iso)
+            elif store.platform == "shopify":
+                from .services import sync_shopify_orders
+                count = sync_shopify_orders(store, after=after_iso)
+            else:
+                return
+            if count:
+                log.info(
+                    "webhook sentinel catch-up: pulled %d order(s) for store %s (%s) "
+                    "from the last %dh after webhook heal",
+                    count, store.id, store.name, _HEAL_CATCHUP_HOURS,
+                )
+        except Exception as e:
+            log.warning(
+                "webhook sentinel catch-up failed for store %s (%s): %s",
+                store.id, store.name, e,
+            )
+
+    threading.Thread(target=_run, name=f"webhook-catchup-{store.id}",
+                     daemon=True).start()
 
 
 def record_delivery(store_id: int) -> None:
@@ -258,12 +331,14 @@ def _sweep_once() -> None:
 def _sweeper_loop() -> None:
     """Daemon thread body. Runs until process death."""
     log.info(
-        "webhook sentinel: sweeper thread started (interval=%ds, cache_ttl=%ds)",
+        "webhook sentinel: sweeper thread started (interval=%ds, cache_ttl=%ds, "
+        "startup_delay=%ds, catchup_hours=%d)",
         _SWEEPER_INTERVAL_SECONDS, _VERIFY_TTL_SECONDS,
+        _SWEEPER_STARTUP_DELAY_SECONDS, _HEAL_CATCHUP_HOURS,
     )
-    # Initial delay: let Django finish booting, gunicorn warm up, first
-    # requests settle. Avoids stampeding the first cold worker.
-    time.sleep(60)
+    # Short initial delay: let Django finish booting + gunicorn warm up,
+    # but heal any pre-existing broken webhooks within seconds of deploy.
+    time.sleep(_SWEEPER_STARTUP_DELAY_SECONDS)
     while True:
         try:
             _sweep_once()

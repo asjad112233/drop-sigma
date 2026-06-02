@@ -1,6 +1,7 @@
 import hashlib
 import hmac
 import base64
+import time
 import requests
 
 from django.http import JsonResponse
@@ -19,6 +20,12 @@ from teamapp.services import auto_assign_order
 from vendors.models import Vendor, ProductVendorAssignment
 
 from .models import Order, OrderActivity
+
+
+# Per-store throttle for the "safety pull" inside orders_poll_api. Without
+# this, every 10-sec poll on an idle-webhook store would re-hit the store
+# API needlessly. Capped at one pull per 30 sec per store per process.
+_ACTIVE_PULL_CACHE: dict[int, float] = {}
 
 
 from .serializers import OrderSerializer
@@ -119,26 +126,62 @@ def orders_poll_api(request):
     latest = qs.order_by("-id").values("id").first()
 
     # Opportunistic webhook sentinel ping for the currently-focused store.
-    # Cheap due to in-process 5-min cache; safe to call on every poll.
+    # Cheap due to in-process cache; safe to call on every poll.
+    #
+    # Belt-and-braces: even if the webhook IS healthy, if we haven't seen
+    # a delivery from this store in a while, pull recent orders from the
+    # store API directly. This guarantees that no matter what fails
+    # (webhook silently dropped, our endpoint briefly 500'd, ANY reason),
+    # the tenant's test order appears within one poll cycle (~10 sec).
     webhook_health = None
+    pulled_now = 0
     if store_id:
         try:
             store = Store.objects.filter(id=store_id, user=request.user).first()
             if store and store.platform in ("woocommerce", "shopify"):
                 from .webhook_sentinel import ensure_webhook, get_last_delivery_age
                 wh_res = ensure_webhook(store, request=request)
+                last_delivery = get_last_delivery_age(store.id)
                 webhook_health = {
                     "ok":                  bool(wh_res and wh_res.get("ok")),
                     "registered_topics":   wh_res.get("registered", []) if wh_res else [],
-                    "last_delivery_secs":  get_last_delivery_age(store.id),
+                    "last_delivery_secs":  last_delivery,
                 }
+
+                # Active-store safety pull: if the tab is open AND no webhook
+                # delivery has been seen in the last 90s (or ever), grab the
+                # most recent orders from the store NOW. Bounded to the last
+                # 15 minutes so it's a tiny payload. Caches its own
+                # "last pulled" timestamp so we never pull more than once
+                # per 30 sec per store.
+                now_ts = time.time()
+                last_pull = _ACTIVE_PULL_CACHE.get(store_id, 0)
+                stale = (last_delivery is None) or (last_delivery > 90)
+                if stale and (now_ts - last_pull) > 30:
+                    _ACTIVE_PULL_CACHE[store_id] = now_ts
+                    try:
+                        from datetime import datetime as _dt, timedelta as _td
+                        after_iso = (_dt.utcnow() - _td(minutes=15)).strftime("%Y-%m-%dT%H:%M:%S")
+                        if store.platform == "woocommerce":
+                            from .services import sync_woocommerce_orders
+                            pulled_now = sync_woocommerce_orders(store, after=after_iso) or 0
+                        elif store.platform == "shopify":
+                            from .services import sync_shopify_orders
+                            pulled_now = sync_shopify_orders(store, after=after_iso) or 0
+                    except Exception:
+                        pass
         except Exception:
             pass
+
+    # Re-query count if we just pulled (latest_id changed → frontend reloads)
+    if pulled_now:
+        latest = qs.order_by("-id").values("id").first()
 
     return Response({
         "latest_id":      latest["id"] if latest else None,
         "count":          qs.count(),
         "webhook_health": webhook_health,
+        "pulled_now":     pulled_now,
     })
 
 
