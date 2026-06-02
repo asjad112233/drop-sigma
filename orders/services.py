@@ -233,25 +233,91 @@ def _notify_employee_assigned(order, member):
 
 
 def setup_woocommerce_webhook(store, delivery_url):
-    """Register order.created + order.updated webhooks. Returns (webhook_id, created)."""
+    """Register order.created + order.updated webhooks idempotently.
+
+    Self-healing: if a webhook for the topic exists with a stale URL we
+    PUT-update it to point at `delivery_url` instead of leaving a dead one.
+
+    Returns a dict so callers can surface real status (not just swallow
+    failures silently like the old version did). Shape:
+        {
+            "ok": bool,                       # at least one topic is now correctly registered
+            "registered": ["order.created", ...],  # topics confirmed pointing at us
+            "errors":     [{"topic": "order.created", "stage": "create", "code": 401, "body": "..."}],
+            "webhook_ids": {"order.created": 12, "order.updated": 13},
+        }
+    """
     base = f"{store.store_url.rstrip('/')}/wp-json/wc/v3/webhooks"
     auth = (store.api_key, store.api_secret)
-
     sess = woo_session()
+    result = {"ok": False, "registered": [], "errors": [], "webhook_ids": {}}
+
+    # 1. Snapshot existing webhooks so we don't duplicate and so we can
+    #    repair stale delivery URLs.
+    existing_by_topic = {}  # topic -> {"id", "delivery_url"}
     try:
         existing = sess.get(base, auth=auth, params={"per_page": 100}, timeout=15, verify=False)
-        existing_topics = {}
         if existing.ok:
             for wh in existing.json():
-                if isinstance(wh, dict):
-                    existing_topics[wh.get("topic")] = wh.get("delivery_url", "")
-    except Exception:
-        existing_topics = {}
+                if isinstance(wh, dict) and wh.get("topic"):
+                    # Keep the most recent (last) entry per topic; WC lets you
+                    # have multiple with the same topic, but we only care about ours.
+                    existing_by_topic[wh["topic"]] = {
+                        "id": wh.get("id"),
+                        "delivery_url": (wh.get("delivery_url") or "").rstrip("/"),
+                    }
+        else:
+            result["errors"].append({
+                "topic": "*",
+                "stage": "list",
+                "code": existing.status_code,
+                "body": (existing.text or "")[:200],
+            })
+    except Exception as e:
+        result["errors"].append({
+            "topic": "*",
+            "stage": "list",
+            "code": 0,
+            "body": f"{type(e).__name__}: {e}"[:200],
+        })
 
-    last_id, last_created = None, False
+    want_url = delivery_url.rstrip("/")
+
     for topic in ("order.created", "order.updated"):
-        if existing_topics.get(topic, "").rstrip("/") == delivery_url.rstrip("/"):
-            continue  # already registered with correct URL
+        existing = existing_by_topic.get(topic)
+
+        # Case A: already registered correctly → nothing to do.
+        if existing and existing["delivery_url"] == want_url:
+            result["registered"].append(topic)
+            result["webhook_ids"][topic] = existing["id"]
+            continue
+
+        # Case B: stale URL → PUT-update so we don't pile up duplicate webhooks.
+        if existing and existing["id"]:
+            try:
+                r = sess.put(
+                    f"{base}/{existing['id']}",
+                    auth=auth,
+                    json={"delivery_url": delivery_url, "status": "active"},
+                    timeout=15,
+                    verify=False,
+                )
+                if r.ok:
+                    result["registered"].append(topic)
+                    result["webhook_ids"][topic] = existing["id"]
+                    continue
+                result["errors"].append({
+                    "topic": topic, "stage": "update",
+                    "code": r.status_code, "body": (r.text or "")[:200],
+                })
+            except Exception as e:
+                result["errors"].append({
+                    "topic": topic, "stage": "update",
+                    "code": 0, "body": f"{type(e).__name__}: {e}"[:200],
+                })
+            # Fall through to create as a last resort.
+
+        # Case C: not registered → create.
         payload = {
             "name": f"Drop Sigma {topic.replace('.', ' ').title()}",
             "topic": topic,
@@ -262,12 +328,23 @@ def setup_woocommerce_webhook(store, delivery_url):
         try:
             r = sess.post(base, auth=auth, json=payload, timeout=15, verify=False)
             if r.ok:
-                last_id = r.json().get("id")
-                last_created = True
-        except Exception:
-            pass
+                wh_id = r.json().get("id")
+                result["registered"].append(topic)
+                if wh_id:
+                    result["webhook_ids"][topic] = wh_id
+            else:
+                result["errors"].append({
+                    "topic": topic, "stage": "create",
+                    "code": r.status_code, "body": (r.text or "")[:200],
+                })
+        except Exception as e:
+            result["errors"].append({
+                "topic": topic, "stage": "create",
+                "code": 0, "body": f"{type(e).__name__}: {e}"[:200],
+            })
 
-    return last_id, last_created
+    result["ok"] = bool(result["registered"])
+    return result
 
 
 def _shopify_session(store):
@@ -327,12 +404,15 @@ def process_shopify_order(store, item):
 
 
 def setup_shopify_webhook(store, delivery_url):
-    """Register the full set of order webhooks in Shopify if not
-    already present. Subscribes to orders/create + orders/updated +
-    orders/fulfilled + orders/cancelled so the dashboard stays in
-    sync regardless of which lifecycle event fires.
+    """Register the full set of order webhooks in Shopify idempotently.
 
-    Returns (list_of_webhook_ids, count_created)."""
+    Subscribes to orders/create + orders/updated + orders/fulfilled +
+    orders/cancelled + orders/paid so the dashboard stays in sync
+    regardless of which lifecycle event fires.
+
+    Returns the same dict shape as setup_woocommerce_webhook:
+        {ok, registered: [topic,...], errors: [...], webhook_ids: {topic: id}}
+    """
     headers, auth = _shopify_session(store)
     base = f"{store.store_url.rstrip('/')}/admin/api/2024-01/webhooks.json"
     topics = [
@@ -342,24 +422,67 @@ def setup_shopify_webhook(store, delivery_url):
         "orders/cancelled",
         "orders/paid",
     ]
+    result = {"ok": False, "registered": [], "errors": [], "webhook_ids": {}}
 
     # Snapshot existing webhooks once so we don't re-create.
-    existing_by_topic = {}
+    existing_by_topic = {}  # topic -> (id, address)
     try:
         r = requests.get(base, headers=headers, auth=auth, timeout=15)
         if r.ok:
             for wh in r.json().get("webhooks", []):
-                if wh.get("address", "").rstrip("/") == delivery_url.rstrip("/"):
-                    existing_by_topic[wh.get("topic")] = wh.get("id")
-    except Exception:
-        pass
+                topic = wh.get("topic")
+                if topic:
+                    existing_by_topic[topic] = (
+                        wh.get("id"),
+                        (wh.get("address") or "").rstrip("/"),
+                    )
+        else:
+            result["errors"].append({
+                "topic": "*", "stage": "list",
+                "code": r.status_code, "body": (r.text or "")[:200],
+            })
+    except Exception as e:
+        result["errors"].append({
+            "topic": "*", "stage": "list",
+            "code": 0, "body": f"{type(e).__name__}: {e}"[:200],
+        })
 
-    ids = []
-    created_count = 0
+    want_url = delivery_url.rstrip("/")
+
     for topic in topics:
-        if topic in existing_by_topic:
-            ids.append(existing_by_topic[topic])
+        existing = existing_by_topic.get(topic)
+
+        # Case A: already registered correctly.
+        if existing and existing[1] == want_url:
+            result["registered"].append(topic)
+            result["webhook_ids"][topic] = existing[0]
             continue
+
+        # Case B: stale URL → PUT-update to point at us.
+        if existing and existing[0]:
+            try:
+                r = requests.put(
+                    f"{store.store_url.rstrip('/')}/admin/api/2024-01/webhooks/{existing[0]}.json",
+                    headers=headers, auth=auth,
+                    json={"webhook": {"id": existing[0], "address": delivery_url, "format": "json"}},
+                    timeout=15,
+                )
+                if r.ok:
+                    result["registered"].append(topic)
+                    result["webhook_ids"][topic] = existing[0]
+                    continue
+                result["errors"].append({
+                    "topic": topic, "stage": "update",
+                    "code": r.status_code, "body": (r.text or "")[:200],
+                })
+            except Exception as e:
+                result["errors"].append({
+                    "topic": topic, "stage": "update",
+                    "code": 0, "body": f"{type(e).__name__}: {e}"[:200],
+                })
+            # Fall through to create as last resort.
+
+        # Case C: not registered → create.
         payload = {
             "webhook": {
                 "topic":   topic,
@@ -369,15 +492,29 @@ def setup_shopify_webhook(store, delivery_url):
         }
         try:
             response = requests.post(base, headers=headers, auth=auth, json=payload, timeout=15)
-            response.raise_for_status()
-            wh = response.json().get("webhook") or {}
-            if wh.get("id"):
-                ids.append(wh["id"])
-                created_count += 1
-        except Exception:
-            # Soft-fail per topic — best effort.
-            continue
-    return ids, created_count
+            if response.ok:
+                wh = response.json().get("webhook") or {}
+                if wh.get("id"):
+                    result["registered"].append(topic)
+                    result["webhook_ids"][topic] = wh["id"]
+                else:
+                    result["errors"].append({
+                        "topic": topic, "stage": "create",
+                        "code": response.status_code, "body": "missing webhook.id in response",
+                    })
+            else:
+                result["errors"].append({
+                    "topic": topic, "stage": "create",
+                    "code": response.status_code, "body": (response.text or "")[:200],
+                })
+        except Exception as e:
+            result["errors"].append({
+                "topic": topic, "stage": "create",
+                "code": 0, "body": f"{type(e).__name__}: {e}"[:200],
+            })
+
+    result["ok"] = bool(result["registered"])
+    return result
 
 
 def sync_shopify_orders(store, after=None):

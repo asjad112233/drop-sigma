@@ -26577,7 +26577,32 @@ async function createStore(){
       return;
     }
 
-    message.innerText = "Store saved successfully!";
+    // Surface real-time webhook setup result. Silent failure used to leave
+    // tenants thinking the store was fully connected when in fact new
+    // orders would only arrive on manual Refresh.
+    const wh = data.webhook_status || null;
+    if(wh && wh.ok){
+      message.innerText = `Store saved. ✓ Real-time sync on (${(wh.registered||[]).length} webhook topics).`;
+    } else if(wh){
+      message.innerText = "Store saved, but real-time webhook setup failed — see warning below.";
+      try{
+        if(typeof _emailToast === "function"){
+          _emailToast(
+            "⚠️ Real-time sync didn't activate. New orders will only sync on Refresh. " +
+            "Click Diagnose on the store card to retry.",
+            7500
+          );
+        } else {
+          alert(
+            "Real-time webhook setup failed for this store.\n\n" +
+            "New orders will only appear when you click Refresh on the Orders page.\n" +
+            "Click Diagnose on the store card to see why and retry."
+          );
+        }
+      }catch(_){ /* toast helper not loaded yet — message above is enough */ }
+    } else {
+      message.innerText = "Store saved successfully!";
+    }
 
     if(data.store && data.store.id){
       selectedStoreId = String(data.store.id);

@@ -30,21 +30,80 @@ _SHOPIFY_OAUTH_MAX_AGE = 30 * 60
 
 
 def _register_webhook_for_store(store, request):
-    """Silently register webhook for WooCommerce or Shopify. Never raises."""
+    """Register real-time order webhooks for WooCommerce or Shopify.
+
+    Never raises — but unlike the old version, it RETURNS a rich status
+    dict so the calling endpoint can surface failures to the tenant
+    instead of silently leaving them with a broken store that never
+    receives real-time order events.
+
+    Shape:
+        {
+            "ok": bool,                         # webhook is now active
+            "delivery_url": "https://...",      # what was registered
+            "registered": [...],                # topics confirmed active
+            "errors":     [...],                # per-topic failures
+            "message":    "human-readable summary",
+        }
+    """
+    import logging
+    log = logging.getLogger(__name__)
+
     try:
         from stores.tunnel import get_base_url
         base = get_base_url(request=request, wait_secs=0)
+        if not base:
+            log.warning("webhook setup: no public base URL for store %s", store.id)
+            return {
+                "ok": False, "delivery_url": "", "registered": [], "errors": [],
+                "message": "Drop Sigma's public URL is not configured — real-time sync disabled.",
+            }
 
         if store.platform == "woocommerce":
             from orders.services import setup_woocommerce_webhook
             delivery_url = f"{base}/orders/webhook/woocommerce/{store.id}/"
-            setup_woocommerce_webhook(store, delivery_url)
+            res = setup_woocommerce_webhook(store, delivery_url)
         elif store.platform == "shopify":
             from orders.services import setup_shopify_webhook
             delivery_url = f"{base}/orders/webhook/shopify/{store.id}/"
-            setup_shopify_webhook(store, delivery_url)
-    except Exception:
-        pass
+            res = setup_shopify_webhook(store, delivery_url)
+        else:
+            return {
+                "ok": False, "delivery_url": "", "registered": [], "errors": [],
+                "message": f"Platform {store.platform!r} doesn't support webhooks.",
+            }
+
+        if not res["ok"]:
+            log.warning(
+                "webhook setup failed for store %s (%s): %s",
+                store.id, store.name, res["errors"],
+            )
+        else:
+            log.info(
+                "webhook setup OK for store %s (%s): %s",
+                store.id, store.name, ", ".join(res["registered"]),
+            )
+
+        return {
+            "ok":           res["ok"],
+            "delivery_url": delivery_url,
+            "registered":   res["registered"],
+            "errors":       res["errors"],
+            "message": (
+                f"✓ Real-time sync enabled ({len(res['registered'])} webhook topic(s))."
+                if res["ok"] else
+                "Real-time webhooks could not be registered — new orders will only "
+                "sync when you click Refresh. Click Diagnose for details."
+            ),
+        }
+    except Exception as e:
+        log.exception("webhook setup crashed for store %s: %s", store.id, e)
+        return {
+            "ok": False, "delivery_url": "", "registered": [], "errors": [
+                {"topic": "*", "stage": "exception", "code": 0, "body": str(e)[:200]}
+            ],
+            "message": f"Webhook setup error: {e}",
+        }
 
 
 def _kickoff_initial_sync(store, days=30):
@@ -143,7 +202,11 @@ def create_store_api(request):
         access_token=access_token,
     )
 
-    _register_webhook_for_store(store, request)
+    webhook_status = _register_webhook_for_store(store, request)
+
+    # Kick off the initial backfill so the tenant sees data immediately —
+    # the same way the OAuth and bulk-add flows already do.
+    _kickoff_initial_sync(store)
 
     # If the user previously deleted a store with AI training preserved,
     # restore it now (same URL) OR discard it (different URL = auto-reset).
@@ -158,6 +221,9 @@ def create_store_api(request):
         "success": True,
         "store": StoreSerializer(store).data,
         "ai_training_action": ai_action,  # "restored" | "reset" | None
+        # Surface webhook setup result so the UI can warn if real-time
+        # sync failed (instead of silently misleading the tenant).
+        "webhook_status": webhook_status,
     })
 
 
@@ -311,7 +377,7 @@ def wc_callback_api(request):
         logger.error(f"WC callback DB error: {e}")
         return Response({"success": False, "message": str(e)}, status=500)
 
-    _register_webhook_for_store(store, request)
+    webhook_status = _register_webhook_for_store(store, request)
     _kickoff_initial_sync(store)
 
     # Same restore-or-reset path as the manual create endpoint.
@@ -329,6 +395,7 @@ def wc_callback_api(request):
         "store_id": store.id,
         "created": created,
         "ai_training_action": ai_action,
+        "webhook_status": webhook_status,
     })
 
 
@@ -801,7 +868,109 @@ def _diagnose_store(store):
                 "fix": "Check the store URL is correct and the server is running."}
 
 
-# ✅ STORE HEALTH CHECK — real API ping with diagnosis
+def _diagnose_webhook(store, request):
+    """Check whether real-time order webhooks are wired up correctly.
+
+    For WooCommerce: queries /wp-json/wc/v3/webhooks and verifies that
+    order.created + order.updated entries exist with delivery_url
+    pointing at THIS Drop Sigma instance.
+    For Shopify: same idea via /admin/api/2024-01/webhooks.json.
+
+    Returns:
+        {
+            "platform": "woocommerce" | "shopify" | other,
+            "expected_url": "https://...",
+            "topics_active":  ["order.created", ...],   # registered + pointing at us
+            "topics_missing": ["order.updated", ...],   # not registered OR stale URL
+            "stale": [{"topic", "current_url"}, ...],   # registered but to wrong URL
+            "ok": bool,                                 # all expected topics active
+            "error": "..."                              # only set on probe failure
+        }
+    """
+    from stores.tunnel import get_base_url
+
+    base = get_base_url(request=request, wait_secs=0)
+    if not base:
+        return {"ok": False, "error": "No public base URL configured.",
+                "platform": store.platform, "topics_active": [], "topics_missing": []}
+
+    if store.platform == "woocommerce":
+        expected_url = f"{base}/orders/webhook/woocommerce/{store.id}/".rstrip("/")
+        wanted = ("order.created", "order.updated")
+        try:
+            from orders.services import woo_session
+            r = woo_session().get(
+                f"{store.store_url.rstrip('/')}/wp-json/wc/v3/webhooks",
+                auth=(store.api_key, store.api_secret),
+                params={"per_page": 100}, timeout=10, verify=False,
+            )
+            if not r.ok:
+                return {"ok": False, "platform": "woocommerce",
+                        "error": f"WC API returned {r.status_code}",
+                        "expected_url": expected_url,
+                        "topics_active": [], "topics_missing": list(wanted), "stale": []}
+            registered = {}  # topic -> delivery_url
+            for wh in (r.json() or []):
+                if isinstance(wh, dict) and wh.get("topic"):
+                    registered[wh["topic"]] = (wh.get("delivery_url") or "").rstrip("/")
+        except Exception as e:
+            return {"ok": False, "platform": "woocommerce",
+                    "error": f"{type(e).__name__}: {e}"[:200],
+                    "expected_url": expected_url,
+                    "topics_active": [], "topics_missing": list(wanted), "stale": []}
+
+    elif store.platform == "shopify":
+        expected_url = f"{base}/orders/webhook/shopify/{store.id}/".rstrip("/")
+        wanted = ("orders/create", "orders/updated", "orders/fulfilled",
+                  "orders/cancelled", "orders/paid")
+        try:
+            from orders.services import _shopify_session
+            headers, auth = _shopify_session(store)
+            r = requests.get(
+                f"{store.store_url.rstrip('/')}/admin/api/2024-01/webhooks.json",
+                headers=headers, auth=auth, timeout=10,
+            )
+            if not r.ok:
+                return {"ok": False, "platform": "shopify",
+                        "error": f"Shopify API returned {r.status_code}",
+                        "expected_url": expected_url,
+                        "topics_active": [], "topics_missing": list(wanted), "stale": []}
+            registered = {}
+            for wh in r.json().get("webhooks", []):
+                if wh.get("topic"):
+                    registered[wh["topic"]] = (wh.get("address") or "").rstrip("/")
+        except Exception as e:
+            return {"ok": False, "platform": "shopify",
+                    "error": f"{type(e).__name__}: {e}"[:200],
+                    "expected_url": expected_url,
+                    "topics_active": [], "topics_missing": list(wanted), "stale": []}
+    else:
+        return {"ok": True, "platform": store.platform,
+                "topics_active": [], "topics_missing": [], "stale": [],
+                "expected_url": "", "error": "Platform does not use webhooks."}
+
+    active, missing, stale = [], [], []
+    for topic in wanted:
+        url = registered.get(topic, "")
+        if not url:
+            missing.append(topic)
+        elif url == expected_url:
+            active.append(topic)
+        else:
+            stale.append({"topic": topic, "current_url": url})
+            missing.append(topic)
+
+    return {
+        "ok":             not missing,
+        "platform":       store.platform,
+        "expected_url":   expected_url,
+        "topics_active":  active,
+        "topics_missing": missing,
+        "stale":          stale,
+    }
+
+
+# ✅ STORE HEALTH CHECK — real API ping with diagnosis (+ webhook health)
 @api_view(["GET"])
 def store_health_api(request, store_id):
     if not request.user.is_authenticated:
@@ -809,7 +978,27 @@ def store_health_api(request, store_id):
     # Per-user scope: only diagnose stores the requester actually owns.
     store = get_object_or_404(Store, id=store_id, user=request.user)
     result = _diagnose_store(store)
-    return Response({"success": True, **result})
+
+    # Webhook check only runs if the API is reachable — no point asking
+    # WC about webhooks when the store is down.
+    webhook = None
+    if result.get("online"):
+        webhook = _diagnose_webhook(store, request)
+
+        # Auto-heal: if webhook is broken AND user explicitly passed ?heal=1,
+        # try to re-register on the spot so they can see the fix immediately.
+        if webhook and not webhook.get("ok") and request.GET.get("heal") == "1":
+            try:
+                heal_res = _register_webhook_for_store(store, request)
+                webhook["healed"] = bool(heal_res and heal_res.get("ok"))
+                webhook["heal_message"] = heal_res.get("message") if heal_res else ""
+                # Re-probe so the response reflects the post-heal state.
+                webhook.update(_diagnose_webhook(store, request))
+            except Exception as e:
+                webhook["healed"] = False
+                webhook["heal_message"] = str(e)
+
+    return Response({"success": True, "webhook": webhook, **result})
 
 
 

@@ -187,6 +187,19 @@ def sync_orders(request, store_id):
     except Exception as e:
         return JsonResponse({"success": False, "message": f"Sync failed: {e}"}, status=500)
 
+    # ── Self-heal webhook on manual Refresh ─────────────────────────────
+    # If the user is hitting Refresh, real-time sync probably isn't working
+    # (otherwise they wouldn't need to). Silently re-register the webhook
+    # so the NEXT new order arrives instantly without another Refresh.
+    # Fire-and-forget — never block the response on this.
+    webhook_healed = False
+    try:
+        from stores.views import _register_webhook_for_store
+        wh_res = _register_webhook_for_store(store, request)
+        webhook_healed = bool(wh_res and wh_res.get("ok"))
+    except Exception:
+        pass
+
     return JsonResponse({
         "success": True,
         "orders_synced": count,
@@ -194,6 +207,7 @@ def sync_orders(request, store_id):
         "range_label": range_label,
         "after": after_iso,
         "last_synced": store.last_synced.isoformat() if getattr(store, "last_synced", None) else None,
+        "webhook_healed": webhook_healed,
     })
 
 
@@ -1035,22 +1049,48 @@ def order_note_delete_api(request, note_id):
 
 @api_view(["POST"])
 def setup_webhook_api(request, store_id):
+    """Re-register real-time webhooks for a store. Idempotent + self-healing.
+
+    Returns a rich status payload so the UI can show exactly which topics
+    are now wired up and which failed (with the underlying HTTP error)."""
     store = get_object_or_404(Store, id=store_id)
+
+    # Per-user scope: tenants can only re-register their own store's webhooks.
+    if request.user.is_authenticated and store.user_id != request.user.id:
+        return Response({"success": False, "message": "Not allowed."}, status=403)
 
     try:
         from stores.tunnel import get_base_url
         base = get_base_url(request=request, wait_secs=5)
+        if not base:
+            return Response({
+                "success": False,
+                "message": "Could not determine Drop Sigma's public URL — webhook can't be wired up.",
+            }, status=500)
+
         if store.platform == "woocommerce":
             from .services import setup_woocommerce_webhook
             delivery_url = f"{base}/orders/webhook/woocommerce/{store_id}/"
-            webhook_id, created = setup_woocommerce_webhook(store, delivery_url)
+            result = setup_woocommerce_webhook(store, delivery_url)
         elif store.platform == "shopify":
             from .services import setup_shopify_webhook
             delivery_url = f"{base}/orders/webhook/shopify/{store_id}/"
-            webhook_id, created = setup_shopify_webhook(store, delivery_url)
+            result = setup_shopify_webhook(store, delivery_url)
         else:
             return Response({"success": False, "message": "Platform not supported"}, status=400)
-        return Response({"success": True, "webhook_id": webhook_id, "created": created})
+
+        return Response({
+            "success":      result["ok"],
+            "delivery_url": delivery_url,
+            "registered":   result["registered"],
+            "errors":       result["errors"],
+            "webhook_ids":  result["webhook_ids"],
+            "message": (
+                f"✓ {len(result['registered'])} webhook(s) active — real-time sync on."
+                if result["ok"] else
+                "Webhook setup failed. Check API permissions and try again."
+            ),
+        }, status=200 if result["ok"] else 502)
     except Exception as e:
         return Response({"success": False, "message": str(e)}, status=500)
 
