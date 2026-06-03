@@ -17,5 +17,9 @@ urlpatterns = [
     path("api/shopify-callback/", views.shopify_callback_api, name="shopify_callback_api"),
     path("api/check-connected/", views.check_connected_api, name="check_connected_api"),
     path("api/<int:store_id>/health/", views.store_health_api, name="store_health_api"),
+    # Deep webhook diagnostic — dumps sentinel state, recent delivery age,
+    # current WC/Shopify webhook list, expected URL. Pass ?heal=1 to fix +
+    # pull recent orders. Use this when "order didn't sync" needs a root cause.
+    path("api/<int:store_id>/webhook-diagnostic/", views.webhook_diagnostic_api, name="webhook_diagnostic_api"),
     path("connect/success/", views.connect_success_page, name="connect_success_page"),
 ]

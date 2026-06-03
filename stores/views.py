@@ -1001,6 +1001,128 @@ def store_health_api(request, store_id):
     return Response({"success": True, "webhook": webhook, **result})
 
 
+# ════════════════════════════════════════════════════════════════════════════
+# DEEP WEBHOOK DIAGNOSTIC — answers "why did order not sync?" for one store.
+# ════════════════════════════════════════════════════════════════════════════
+# Combines: sentinel cache state + last delivery age + current WC/Shopify
+# webhook list + recent Drop Sigma orders + (optionally) force-heal + pull.
+#
+# Pass ?heal=1 to: force webhook re-registration + pull last 2 hours of orders
+# from the store API so the missing order arrives immediately.
+@api_view(["GET", "POST"])
+def webhook_diagnostic_api(request, store_id):
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
+
+    store = get_object_or_404(Store, id=store_id, user=request.user)
+    heal = request.GET.get("heal") == "1" or request.method == "POST"
+
+    out = {
+        "success": True,
+        "store": {
+            "id":         store.id,
+            "name":       store.name,
+            "platform":   store.platform,
+            "store_url":  store.store_url,
+            "is_active":  store.is_active,
+            "last_synced": store.last_synced.isoformat() if getattr(store, "last_synced", None) else None,
+        },
+    }
+
+    # 1. Sentinel cache state — answers "did the sweeper see this store?"
+    try:
+        from orders.webhook_sentinel import (
+            get_status_snapshot, get_last_delivery_age,
+            _VERIFY_TTL_SECONDS, _SWEEPER_INTERVAL_SECONDS, ensure_webhook,
+        )
+        out["sentinel"] = {
+            "cached_status":      get_status_snapshot(store.id),
+            "last_delivery_secs": get_last_delivery_age(store.id),
+            "verify_ttl_secs":    _VERIFY_TTL_SECONDS,
+            "sweep_interval_secs": _SWEEPER_INTERVAL_SECONDS,
+        }
+    except Exception as e:
+        out["sentinel"] = {"error": str(e)}
+
+    # 2. Live store API ping
+    out["api_health"] = _diagnose_store(store)
+
+    # 3. Live webhook registration check (only if API is reachable)
+    if out["api_health"].get("online"):
+        out["webhook"] = _diagnose_webhook(store, request)
+    else:
+        out["webhook"] = {"skipped": "API not reachable — fix that first."}
+
+    # 4. Recent Drop Sigma orders (sanity check — what DOES exist in our DB?)
+    try:
+        from orders.models import Order
+        from django.utils import timezone
+        from datetime import timedelta
+        cutoff = timezone.now() - timedelta(hours=6)
+        recent = list(
+            Order.objects.filter(store=store, created_at__gte=cutoff)
+            .order_by("-created_at")
+            .values("id", "external_order_id", "customer_name",
+                    "fulfillment_status", "created_at", "total_price")[:10]
+        )
+        # Stringify datetimes for JSON.
+        for r in recent:
+            r["created_at"] = r["created_at"].isoformat() if r.get("created_at") else None
+            r["total_price"] = str(r["total_price"]) if r.get("total_price") is not None else None
+        out["recent_orders_in_drop_sigma"] = {
+            "count_last_6h": len(recent),
+            "orders":        recent,
+        }
+    except Exception as e:
+        out["recent_orders_in_drop_sigma"] = {"error": str(e)}
+
+    # 5. Heal + pull (only if explicitly requested)
+    if heal:
+        out["heal"] = {}
+        # 5a. Force webhook re-registration
+        try:
+            heal_res = ensure_webhook(store, request=request, force=True)
+            out["heal"]["webhook"] = heal_res
+        except Exception as e:
+            out["heal"]["webhook"] = {"error": str(e)}
+
+        # 5b. Pull last 2 hours of orders from the store API (catches the
+        #     order that triggered this diagnostic).
+        try:
+            from datetime import datetime, timedelta
+            after_iso = (datetime.utcnow() - timedelta(hours=2)).strftime("%Y-%m-%dT%H:%M:%S")
+            if store.platform == "woocommerce":
+                from orders.services import sync_woocommerce_orders
+                pulled = sync_woocommerce_orders(store, after=after_iso) or 0
+            elif store.platform == "shopify":
+                from orders.services import sync_shopify_orders
+                pulled = sync_shopify_orders(store, after=after_iso) or 0
+            else:
+                pulled = 0
+            out["heal"]["orders_pulled_last_2h"] = pulled
+        except Exception as e:
+            out["heal"]["pull_error"] = str(e)
+
+        # 5c. Re-snapshot recent orders so the response reflects post-heal state.
+        try:
+            from orders.models import Order
+            from django.utils import timezone as _tz
+            from datetime import timedelta as _td
+            cutoff2 = _tz.now() - _td(hours=6)
+            recent2 = list(
+                Order.objects.filter(store=store, created_at__gte=cutoff2)
+                .order_by("-created_at")
+                .values("id", "external_order_id", "customer_name",
+                        "fulfillment_status", "created_at", "total_price")[:10]
+            )
+            for r in recent2:
+                r["created_at"] = r["created_at"].isoformat() if r.get("created_at") else None
+                r["total_price"] = str(r["total_price"]) if r.get("total_price") is not None else None
+            out["heal"]["recent_orders_after_heal"] = recent2
+        except Exception as e:
+            out["heal"]["snapshot_error"] = str(e)
+
+    return Response(out)
 
 
 # 🔥 DELETE STORE
