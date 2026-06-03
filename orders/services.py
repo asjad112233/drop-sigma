@@ -99,6 +99,46 @@ def apply_vendor_auto_assignment(order):
                      actor="System")
 
 
+def _parse_iso_dt(value):
+    """Parse an ISO-8601 timestamp from WooCommerce/Shopify into an aware
+    datetime, or return None on any failure. WC `date_created_gmt` has no
+    Z suffix but is always UTC; WC `date_created` is local; Shopify
+    `created_at` is ISO with offset. We normalise everything to UTC."""
+    if not value:
+        return None
+    try:
+        from datetime import datetime, timezone as _tz
+        s = str(value).strip()
+        # WooCommerce returns date_created_gmt without timezone but it's UTC.
+        # date_created has no tz info either but is local — caller must
+        # prefer _gmt fields when available.
+        if s.endswith("Z"):
+            s = s[:-1] + "+00:00"
+        # If no timezone info, assume UTC (caller passed a _gmt field).
+        if "+" not in s and "T" in s and s.count("-") <= 2:
+            dt = datetime.fromisoformat(s)
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=_tz.utc)
+            return dt
+        return datetime.fromisoformat(s)
+    except Exception:
+        return None
+
+
+def _set_order_created_at(order_obj, dt):
+    """Patch Order.created_at directly via UPDATE so we bypass
+    auto_now_add=True (which otherwise locks the field at INSERT time).
+
+    Idempotent — skips if the existing value already matches to the second."""
+    if not dt or not order_obj:
+        return
+    current = getattr(order_obj, "created_at", None)
+    if current and abs((current - dt).total_seconds()) < 2:
+        return  # already in sync
+    Order.objects.filter(pk=order_obj.pk).update(created_at=dt)
+    order_obj.created_at = dt
+
+
 def process_woocommerce_order(store, item):
     """Parse one WooCommerce order dict and upsert into DB. Returns (order, created)."""
     billing = item.get("billing", {})
@@ -134,6 +174,13 @@ def process_woocommerce_order(store, item):
             "raw_data": item,
         }
     )
+
+    # Pin created_at to WC's actual order time, not the moment we synced.
+    # Without this, batched syncs land all orders with near-identical
+    # created_at (DB insert time) → sort-by-newest shows reverse-WC order.
+    wc_dt = _parse_iso_dt(item.get("date_created_gmt") or item.get("date_created"))
+    if wc_dt:
+        _set_order_created_at(order_obj, wc_dt)
 
     if created:
         log_activity(order_obj, "received",
@@ -384,6 +431,12 @@ def process_shopify_order(store, item):
             "raw_data": item,
         }
     )
+
+    # Pin created_at to Shopify's actual order time, not the moment we synced
+    # (Shopify returns ISO-8601 with offset in `created_at`).
+    sh_dt = _parse_iso_dt(item.get("created_at"))
+    if sh_dt:
+        _set_order_created_at(order_obj, sh_dt)
 
     if created:
         log_activity(order_obj, "received",

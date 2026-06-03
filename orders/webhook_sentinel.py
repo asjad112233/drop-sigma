@@ -436,6 +436,79 @@ def _sweep_once() -> None:
     )
 
 
+_BACKFILL_DONE = False
+_BACKFILL_LOCK = threading.Lock()
+
+
+def _backfill_created_at_once() -> None:
+    """One-shot rescue: fix Order.created_at for already-synced orders.
+
+    Background: pre-existing orders have created_at = DB insert time (because
+    the model used auto_now_add=True). When a batch sync ingested e.g. 50
+    orders in one go, all their created_at values were near-identical and
+    sorted in reverse-WC order, so the dashboard showed oldest-at-top. The
+    sync path is now fixed (process_*_order pin created_at to the real
+    platform date), but historical rows still need correcting.
+
+    This walks every Order where raw_data has a date field, parses it, and
+    issues an UPDATE if the stored created_at differs by more than 2 seconds.
+    Runs in the background — never blocks request serving.
+
+    Idempotent + safe to call repeatedly. Self-disables once successful so
+    every subsequent deploy doesn't re-scan unchanged rows."""
+    global _BACKFILL_DONE
+    with _BACKFILL_LOCK:
+        if _BACKFILL_DONE:
+            return
+        _BACKFILL_DONE = True  # set up-front so concurrent gunicorn workers
+                               # don't all kick off the same scan.
+
+    def _run():
+        from orders.models import Order
+        from orders.services import _parse_iso_dt
+        log.info("orders backfill: starting created_at backfill from raw_data")
+        scanned = 0
+        fixed = 0
+        try:
+            # Iterate cheaply via .only() — raw_data is heavy, but we need it.
+            qs = Order.objects.exclude(raw_data__isnull=True).only(
+                "id", "created_at", "raw_data", "store_id"
+            )
+            for o in qs.iterator(chunk_size=200):
+                scanned += 1
+                raw = o.raw_data or {}
+                # WC: prefer date_created_gmt → date_created
+                # Shopify: created_at
+                candidate = (
+                    raw.get("date_created_gmt")
+                    or raw.get("date_created")
+                    or raw.get("created_at")
+                )
+                if not candidate:
+                    continue
+                dt = _parse_iso_dt(candidate)
+                if not dt:
+                    continue
+                # Skip if already in sync (within 2 sec).
+                if o.created_at and abs((o.created_at - dt).total_seconds()) < 2:
+                    continue
+                Order.objects.filter(pk=o.pk).update(created_at=dt)
+                fixed += 1
+            log.info(
+                "orders backfill: complete — scanned %d, fixed %d created_at values",
+                scanned, fixed,
+            )
+        except Exception as e:
+            log.exception("orders backfill: crashed: %s", e)
+            # On failure, allow a retry on the next boot.
+            global _BACKFILL_DONE
+            with _BACKFILL_LOCK:
+                _BACKFILL_DONE = False
+
+    threading.Thread(target=_run, name="orders-created-at-backfill",
+                     daemon=True).start()
+
+
 def _sweeper_loop() -> None:
     """Daemon thread body. Runs until process death."""
     log.info(
@@ -449,6 +522,15 @@ def _sweeper_loop() -> None:
     # Short initial delay: let Django finish booting + gunicorn warm up,
     # but heal any pre-existing broken webhooks within seconds of deploy.
     time.sleep(_SWEEPER_STARTUP_DELAY_SECONDS)
+
+    # One-shot rescue for historical orders that landed with INSERT-time
+    # created_at (the old auto_now_add=True behaviour). Runs once per
+    # process lifetime in the background.
+    try:
+        _backfill_created_at_once()
+    except Exception as e:
+        log.exception("orders backfill: kickoff failed (non-fatal): %s", e)
+
     while True:
         try:
             _sweep_once()
