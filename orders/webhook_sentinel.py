@@ -91,6 +91,22 @@ _SWEEPER_STARTUP_DELAY_SECONDS = 10
 # from being silently dropped.
 _HEAL_CATCHUP_HOURS = 1
 
+# ── Freshness pull (the "I went to sleep and the order didn't sync" fix) ──
+# Even when the webhook says it's healthy, the sentinel periodically pulls
+# recent orders from each store. Reason: a healthy webhook can still drop
+# deliveries silently — Railway sleep, brief 5xx, network blip, WC retry
+# back-off. Without a defensive pull, those orders would only arrive when
+# the tenant clicks Refresh.
+#
+# Strategy:
+#   - If a store has had no webhook delivery in _STALE_DELIVERY_SECONDS,
+#     pull the last _FRESHNESS_PULL_HOURS of orders.
+#   - Throttle per-store to one pull every _FRESHNESS_PULL_INTERVAL so
+#     we never hammer a slow merchant store.
+_STALE_DELIVERY_SECONDS = 300         # 5 min without a webhook = pull defensively
+_FRESHNESS_PULL_HOURS = 2             # how far back to look on each pull
+_FRESHNESS_PULL_INTERVAL = 300        # min seconds between pulls per store
+
 # Safety: don't fire more than this many concurrent verifications. WC stores
 # behind shared hosting throttle aggressively if we hit /wp-json with bursts.
 _MAX_CONCURRENT_HEALS = 4
@@ -108,9 +124,10 @@ _SENTINEL_DISABLED = (
 # cache — that's fine, worst case is N workers each verify once per 5 min
 # instead of 1.)
 _STATE_LOCK = threading.RLock()
-_last_verified: dict[int, float] = {}   # store_id -> unix ts of last successful verify
-_last_status:   dict[int, dict] = {}    # store_id -> last ensure_webhook result
-_last_delivery: dict[int, float] = {}   # store_id -> unix ts of last webhook receive
+_last_verified:    dict[int, float] = {}   # store_id -> unix ts of last successful verify
+_last_status:      dict[int, dict] = {}    # store_id -> last ensure_webhook result
+_last_delivery:    dict[int, float] = {}   # store_id -> unix ts of last webhook receive
+_last_freshness:   dict[int, float] = {}   # store_id -> unix ts of last defensive pull
 
 # Sweeper lifecycle
 _sweeper_thread: Optional[threading.Thread] = None
@@ -230,6 +247,72 @@ def _kickoff_catchup_sync(store) -> None:
                      daemon=True).start()
 
 
+def _maybe_freshness_pull(store) -> bool:
+    """Defensive pull of recent orders when the webhook hasn't delivered
+    anything lately. Returns True if a pull was triggered.
+
+    This is the "I went to sleep, an order came, the webhook silently
+    missed it, I woke up to an empty dashboard" guard. The sweeper calls
+    this for every store on every pass. Throttled per-store so we never
+    hammer a slow merchant store.
+
+    Behaviour:
+      - If we received a webhook from this store within
+        _STALE_DELIVERY_SECONDS → skip (no pull needed, real-time is fine).
+      - If we pulled from this store within _FRESHNESS_PULL_INTERVAL →
+        skip (we already checked recently).
+      - Otherwise → kick off background sync_*_orders for the last
+        _FRESHNESS_PULL_HOURS.
+
+    Cost per store with no deliveries: ~1 store-API call every
+    _FRESHNESS_PULL_INTERVAL seconds (5 min by default). For 100 active
+    stores that's ~20 calls/min total → negligible."""
+    now_ts = time.time()
+    with _STATE_LOCK:
+        last_recv = _last_delivery.get(store.id)
+        last_pull = _last_freshness.get(store.id, 0)
+
+    # Real-time is firing fine → no defensive pull needed.
+    if last_recv is not None and (now_ts - last_recv) < _STALE_DELIVERY_SECONDS:
+        return False
+    # Already pulled recently → don't hammer the store API.
+    if (now_ts - last_pull) < _FRESHNESS_PULL_INTERVAL:
+        return False
+
+    # Record the pull attempt up front so concurrent sweepers don't double-fire.
+    with _STATE_LOCK:
+        _last_freshness[store.id] = now_ts
+
+    def _run():
+        try:
+            after = datetime.now(_tz.utc) - timedelta(hours=_FRESHNESS_PULL_HOURS)
+            after_iso = after.strftime("%Y-%m-%dT%H:%M:%S")
+            if store.platform == "woocommerce":
+                from .services import sync_woocommerce_orders
+                count = sync_woocommerce_orders(store, after=after_iso)
+            elif store.platform == "shopify":
+                from .services import sync_shopify_orders
+                count = sync_shopify_orders(store, after=after_iso)
+            else:
+                return
+            if count:
+                log.info(
+                    "webhook sentinel freshness-pull: store %s (%s) — pulled "
+                    "%d order(s) from last %dh (webhook idle %s)",
+                    store.id, store.name, count, _FRESHNESS_PULL_HOURS,
+                    f"{int(now_ts - last_recv)}s" if last_recv else "forever",
+                )
+        except Exception as e:
+            log.warning(
+                "webhook sentinel freshness-pull failed for store %s (%s): %s",
+                store.id, store.name, e,
+            )
+
+    threading.Thread(target=_run, name=f"webhook-freshness-{store.id}",
+                     daemon=True).start()
+    return True
+
+
 def record_delivery(store_id: int) -> None:
     """Mark that we just received a real webhook from this store.
 
@@ -261,16 +344,28 @@ def clear_cache(store_id: Optional[int] = None) -> None:
             _last_verified.clear()
             _last_status.clear()
             _last_delivery.clear()
+            _last_freshness.clear()
         else:
             _last_verified.pop(store_id, None)
             _last_status.pop(store_id, None)
             _last_delivery.pop(store_id, None)
+            _last_freshness.pop(store_id, None)
 
 
 # ─── Background sweeper ────────────────────────────────────────────────────
 
 def _sweep_once() -> None:
-    """One pass: verify every active webhook-capable store."""
+    """One pass: verify every active webhook-capable store + freshness-pull
+    any store that hasn't had a recent webhook delivery.
+
+    Two responsibilities per pass:
+      1. Webhook health verify+heal (existing behaviour).
+      2. Defensive freshness pull (NEW) — even when the webhook is "ok",
+         if no real-time delivery has been seen in the last few minutes
+         we pull recent orders directly from the store API. This is the
+         "tenant was asleep, webhook silently dropped during Railway sleep,
+         tenant woke to an empty dashboard" guard.
+    """
     # Lazy import — Django apps must be ready before we touch models.
     from stores.models import Store
 
@@ -292,10 +387,22 @@ def _sweep_once() -> None:
     healed = 0
     failed = 0
     skipped = 0
+    pulls_kicked = 0
 
     for store in stores:
-        # Honour the same cache the on-demand path uses — if a recent
-        # user action already verified this store, no point re-probing.
+        # Freshness pull ALWAYS runs — independent of webhook cache state.
+        # Internally throttled so a healthy webhook means no pull.
+        try:
+            if _maybe_freshness_pull(store):
+                pulls_kicked += 1
+        except Exception as e:
+            log.exception(
+                "webhook sentinel: freshness check crashed for store %s (%s): %s",
+                store.id, store.name, e,
+            )
+
+        # Honour the verify cache for the (more expensive) webhook
+        # registration probe.
         with _STATE_LOCK:
             cached_at = _last_verified.get(store.id, 0)
             cached_status = _last_status.get(store.id)
@@ -323,8 +430,9 @@ def _sweep_once() -> None:
             )
 
     log.info(
-        "webhook sentinel sweep: %d healthy/healed · %d failed · %d cached-skip · %d total",
-        healed, failed, skipped, len(stores),
+        "webhook sentinel sweep: %d healthy/healed · %d failed · %d cached-skip · "
+        "%d freshness-pulls · %d total",
+        healed, failed, skipped, pulls_kicked, len(stores),
     )
 
 
@@ -332,9 +440,11 @@ def _sweeper_loop() -> None:
     """Daemon thread body. Runs until process death."""
     log.info(
         "webhook sentinel: sweeper thread started (interval=%ds, cache_ttl=%ds, "
-        "startup_delay=%ds, catchup_hours=%d)",
+        "startup_delay=%ds, catchup_hours=%d, stale_delivery=%ds, "
+        "freshness_pull=%dh @ every %ds)",
         _SWEEPER_INTERVAL_SECONDS, _VERIFY_TTL_SECONDS,
         _SWEEPER_STARTUP_DELAY_SECONDS, _HEAL_CATCHUP_HOURS,
+        _STALE_DELIVERY_SECONDS, _FRESHNESS_PULL_HOURS, _FRESHNESS_PULL_INTERVAL,
     )
     # Short initial delay: let Django finish booting + gunicorn warm up,
     # but heal any pre-existing broken webhooks within seconds of deploy.

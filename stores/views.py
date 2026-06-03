@@ -1033,13 +1033,23 @@ def webhook_diagnostic_api(request, store_id):
     try:
         from orders.webhook_sentinel import (
             get_status_snapshot, get_last_delivery_age,
-            _VERIFY_TTL_SECONDS, _SWEEPER_INTERVAL_SECONDS, ensure_webhook,
+            _VERIFY_TTL_SECONDS, _SWEEPER_INTERVAL_SECONDS,
+            _STALE_DELIVERY_SECONDS, _FRESHNESS_PULL_HOURS,
+            _FRESHNESS_PULL_INTERVAL, _last_freshness, _STATE_LOCK,
+            ensure_webhook,
         )
+        import time as _time
+        with _STATE_LOCK:
+            last_fresh = _last_freshness.get(store.id)
         out["sentinel"] = {
-            "cached_status":      get_status_snapshot(store.id),
-            "last_delivery_secs": get_last_delivery_age(store.id),
-            "verify_ttl_secs":    _VERIFY_TTL_SECONDS,
-            "sweep_interval_secs": _SWEEPER_INTERVAL_SECONDS,
+            "cached_status":          get_status_snapshot(store.id),
+            "last_delivery_secs":     get_last_delivery_age(store.id),
+            "last_freshness_pull_secs": (_time.time() - last_fresh) if last_fresh else None,
+            "verify_ttl_secs":        _VERIFY_TTL_SECONDS,
+            "sweep_interval_secs":    _SWEEPER_INTERVAL_SECONDS,
+            "stale_delivery_secs":    _STALE_DELIVERY_SECONDS,
+            "freshness_pull_hours":   _FRESHNESS_PULL_HOURS,
+            "freshness_pull_interval_secs": _FRESHNESS_PULL_INTERVAL,
         }
     except Exception as e:
         out["sentinel"] = {"error": str(e)}
