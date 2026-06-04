@@ -2236,7 +2236,20 @@ body.vf-light-mode .sb-toggle{background:rgba(15,23,42,.06)!important;border-col
 body.vf-light-mode .sb-toggle:hover{background:rgba(15,23,42,.12)!important;color:#101828!important;}
 /* Collapsed layout */
 #appLayout.sb-collapsed{grid-template-columns:64px minmax(0,1fr)!important;}
+/* Emails section owns its OWN contextual sidebar with folders, search,
+   compose, etc. — it needs the full 240px column even when the main
+   sidebar is collapsed. Without this override, opening Emails while
+   the main nav is collapsed squeezes the email sidebar into 64px and
+   clips every label ("Back to mai…", "Live Sync · Onlin…", etc.). */
+body[data-active-section="emails"] #appLayout.sb-collapsed{
+  grid-template-columns:240px minmax(0,1fr)!important;
+}
 #appLayout.sb-collapsed .sidebar{padding:10px 10px 0!important;align-items:center!important;overflow:visible!important;}
+/* Reset the collapsed-sidebar paddings/align rules for the email sidebar
+   specifically — it manages its own internal padding via .ec-* classes. */
+body[data-active-section="emails"] #appLayout.sb-collapsed .sidebar.sidebar-email{
+  padding:0!important;align-items:stretch!important;overflow:hidden!important;
+}
 #appLayout.sb-collapsed .sidebar h2{display:none!important;}
 /* Hide labels, sub-items, dividers in collapsed */
 #appLayout.sb-collapsed .sb-section-label{display:none!important;}
