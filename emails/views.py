@@ -42,8 +42,92 @@ def _get_gmail_access_token(refresh_token):
     return resp.json()["access_token"]
 
 
+# ─── Outbound email formatting helpers ────────────────────────────────────
+# Three bug fixes baked into one place so every send path shares the same
+# behaviour:
+#
+#   1. Display name in From header — without it, Gmail shows the raw
+#      "sales@trapstaraustralia.org" instead of "Trapstar Australia"
+#      AND falls back to a default placeholder avatar. With a quoted
+#      display name, Gmail shows colored initials.
+#
+#   2. Plain-text body → HTML — the dashboard's reply textarea returns
+#      plain text with \n line breaks. The send path wraps it in
+#      MIMEText(..., "html") so \n collapses to a single space in the
+#      recipient's inbox (Gmail renders all paragraphs as one wall of
+#      text). We detect plain text and convert it to <p>/<br>.
+#
+#   3. Safe quoting per RFC 5322 — display names with commas, quotes,
+#      or special chars must be quoted-string-escaped or some servers
+#      bounce the message.
+
+
+def _format_from_header(account, store=None):
+    """Build an RFC 5322 From header that includes a display name.
+
+    Preference order for the display name:
+      1. account.sender_name        (per-inbox custom name — future field)
+      2. account.email's local part friendly cased
+                                    (last fallback)
+      3. store.name                 (e.g. "Trapstar Australia")
+
+    Falls back to a bare email if nothing usable is found."""
+    from email.utils import formataddr
+
+    display = ""
+    # account.sender_name doesn't exist on EmailAccount today but might
+    # in the future — getattr() is safe forward/backward-compat.
+    candidate = getattr(account, "sender_name", "") or ""
+    if candidate.strip():
+        display = candidate.strip()
+    elif store is not None and getattr(store, "name", ""):
+        display = str(store.name).strip()
+
+    if not display:
+        return account.email
+    # formataddr handles all RFC 5322 quoting + escaping correctly,
+    # e.g. names with commas or quotes are wrapped in "..." with
+    # backslash escapes.
+    return formataddr((display, account.email))
+
+
+def _normalise_email_body(body):
+    """Return HTML suitable for MIMEText(html_body, "html").
+
+    If the body already looks like HTML (contains a tag), return it as-is.
+    Otherwise convert plain-text with \\n line breaks into proper HTML:
+    blank lines become paragraph breaks, single newlines become <br>.
+    Without this, replies typed into the dashboard textarea arrive in
+    Gmail as one giant paragraph with no formatting.
+
+    Empty input returns an empty string."""
+    if not body:
+        return ""
+    text = str(body)
+    # Already HTML — leave alone. A reasonably permissive check: presence
+    # of any opening tag suggests the caller built HTML themselves
+    # (templates, AI drafts that include <p>/<br>, etc.).
+    if re.search(r"<\s*(p|br|div|span|table|html|a|h[1-6]|ul|ol|li|strong|em|b|i|img)[\s>/]", text, re.IGNORECASE):
+        return text
+
+    # Plain text. Escape HTML special chars first so a stray "&" or "<"
+    # doesn't break the rendered output, then split on blank lines into
+    # paragraphs, then turn remaining single \n into <br>.
+    import html
+    escaped = html.escape(text)
+    # Normalise line endings.
+    escaped = escaped.replace("\r\n", "\n").replace("\r", "\n")
+    paragraphs = [p for p in re.split(r"\n\s*\n", escaped)]
+    rendered = "".join(
+        f"<p style=\"margin:0 0 12px;\">{p.replace(chr(10), '<br>')}</p>"
+        for p in paragraphs if p.strip()
+    )
+    return rendered or escaped
+
+
 def _gmail_api_send(account, recipient, subject, html_body, files=None,
-                    in_reply_to=None, references=None, thread_id=None):
+                    in_reply_to=None, references=None, thread_id=None,
+                    cc=None, bcc=None, from_header=None):
     """
     Send via Gmail HTTP API.
     Pass in_reply_to + references (RFC-822 Message-IDs) and thread_id (Gmail's threadId)
@@ -58,14 +142,20 @@ def _gmail_api_send(account, recipient, subject, html_body, files=None,
     access_token = _get_gmail_access_token(account.oauth_refresh_token)
 
     msg = _MMP()
-    msg["From"] = account.email
+    # Use the caller-supplied From header (with display name) when given,
+    # otherwise fall back to a bare email so older call sites still work.
+    msg["From"] = from_header or account.email
     msg["To"] = recipient
     msg["Subject"] = subject
+    if cc:
+        msg["Cc"] = cc
     if in_reply_to:
         msg["In-Reply-To"] = in_reply_to
     if references:
         msg["References"] = references
-    msg.attach(_MMT(html_body, "html"))
+    # Always normalise the body so plain-text replies typed in the
+    # dashboard textarea render with paragraph breaks in Gmail.
+    msg.attach(_MMT(_normalise_email_body(html_body), "html"))
 
     for f in (files or []):
         part = _MMB("application", "octet-stream")
@@ -86,6 +176,36 @@ def _gmail_api_send(account, recipient, subject, html_body, files=None,
     )
     if not resp.ok:
         raise Exception(f"Gmail API error: {resp.text[:200]}")
+
+    # Send Bcc as separate messages so the To/Cc recipients don't see
+    # the Bcc list (matches Gmail/SMTP semantics). Best-effort — if one
+    # fails the rest still go through.
+    for extra in _expand_recipients(bcc):
+        if extra and extra != recipient:
+            try:
+                bcc_msg = _MMP()
+                bcc_msg["From"] = from_header or account.email
+                bcc_msg["To"] = extra
+                bcc_msg["Subject"] = subject
+                bcc_msg.attach(_MMT(_normalise_email_body(html_body), "html"))
+                for f in (files or []):
+                    try:
+                        f.seek(0)
+                    except Exception:
+                        pass
+                    part = _MMB("application", "octet-stream")
+                    part.set_payload(f.read())
+                    _enc.encode_base64(part)
+                    part.add_header("Content-Disposition", f'attachment; filename="{f.name}"')
+                    bcc_msg.attach(part)
+                bcc_raw = _b64.urlsafe_b64encode(bcc_msg.as_bytes()).decode()
+                requests.post(
+                    "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
+                    headers={"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"},
+                    json={"raw": bcc_raw}, timeout=30,
+                )
+            except Exception:
+                pass
 
 
 def _brevo_send(from_email, to_email, subject, html_body, attachments=None):
@@ -130,12 +250,14 @@ def extract_clean_email(value):
 
 def _smtp_send_direct(account, recipient, subject, html_body, files=None,
                       in_reply_to=None, references=None, thread_id=None,
-                      cc=None, bcc=None):
+                      cc=None, bcc=None, from_header=None):
     """Send via stored SMTP credentials (custom hosting / non-Gmail accounts).
     in_reply_to / references RFC-822 Message-IDs keep replies threaded.
-    cc/bcc = comma-separated email strings."""
+    cc/bcc = comma-separated email strings.
+    from_header = full RFC 5322 From string (e.g. '"Store Name" <a@b>').
+                  Falls back to bare account.email if not given."""
     msg = MIMEMultipart("alternative")
-    msg["From"] = account.email
+    msg["From"] = from_header or account.email
     msg["To"] = recipient
     msg["Subject"] = subject
     if cc:
@@ -146,7 +268,7 @@ def _smtp_send_direct(account, recipient, subject, html_body, files=None,
         msg["In-Reply-To"] = in_reply_to
     if references:
         msg["References"] = references
-    msg.attach(MIMEText(html_body, "html"))
+    msg.attach(MIMEText(_normalise_email_body(html_body), "html"))
 
     for f in (files or []):
         part = MIMEBase("application", "octet-stream")
@@ -194,29 +316,26 @@ def send_email_with_store_account(store, recipient, subject, body, files=None,
     if not account:
         raise Exception("No connected email account found for this store.")
 
+    # Build a proper "Store Name" <email> From header once — both the Gmail
+    # API and SMTP paths use it. Without this, recipients see the raw
+    # email address (no display name) and a placeholder avatar in Gmail.
+    from_header = _format_from_header(account, store=store)
+
     if account.auth_type == "oauth" and account.oauth_refresh_token:
-        # Gmail API: pass cc/bcc to the helper (which adds the headers + recipients)
-        try:
-            _gmail_api_send(account, recipient, subject, body, files=files,
-                            in_reply_to=in_reply_to, references=references, thread_id=thread_id,
-                            cc=cc, bcc=bcc)
-        except TypeError:
-            # Backward-compat if _gmail_api_send hasn't been extended yet — send
-            # cc/bcc as additional separate envelopes so messages still go through.
-            _gmail_api_send(account, recipient, subject, body, files=files,
-                            in_reply_to=in_reply_to, references=references, thread_id=thread_id)
-            for extra in _expand_recipients(cc) + _expand_recipients(bcc):
-                if extra and extra != recipient:
-                    try:
-                        _gmail_api_send(account, extra, subject, body, files=files)
-                    except Exception:
-                        pass
+        _gmail_api_send(account, recipient, subject, body, files=files,
+                        in_reply_to=in_reply_to, references=references, thread_id=thread_id,
+                        cc=cc, bcc=bcc, from_header=from_header)
     elif account.auth_type == "password" and account.app_password:
         _smtp_send_direct(account, recipient, subject, body, files=files,
                           in_reply_to=in_reply_to, references=references, thread_id=thread_id,
-                          cc=cc, bcc=bcc)
+                          cc=cc, bcc=bcc, from_header=from_header)
     else:
-        _brevo_send(account.email, recipient, subject, body, attachments=files)
+        # Brevo: also normalise the body so plain-text replies don't
+        # arrive as one wall of text. Brevo doesn't accept a custom From
+        # display name without sender verification, so we just send the
+        # bare email there (consistent with old behaviour).
+        _brevo_send(account.email, recipient, subject,
+                    _normalise_email_body(body), attachments=files)
 
     return account.email
 
