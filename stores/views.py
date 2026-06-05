@@ -583,6 +583,18 @@ def shopify_callback_api(request):
         return Response({"success": False, "message": "Shopify did not return an access token."}, status=400)
     granted_scope = token_data.get("scope", "")
 
+    # Shopify-2025: the response also includes refresh_token +
+    # *_expires_in (seconds-from-now) for the new "expiring offline" token
+    # format. We persist these so the API client can transparently
+    # refresh the access token before it expires.
+    refresh_token = token_data.get("refresh_token") or ""
+    expires_in = token_data.get("expires_in") or 0          # access-token TTL (sec)
+    refresh_expires_in = token_data.get("refresh_token_expires_in") or 0
+    from datetime import timedelta as _td
+    from django.utils import timezone as _tz
+    token_expires_at = (_tz.now() + _td(seconds=int(expires_in))) if expires_in else None
+    refresh_expires_at = (_tz.now() + _td(seconds=int(refresh_expires_in))) if refresh_expires_in else None
+
     # ── (4) Create / update the Store row ──
     name = state_payload.get("name") or shop.split(".")[0]
     store_url = f"https://{shop}"
@@ -596,6 +608,9 @@ def shopify_callback_api(request):
             "api_secret":   settings.SHOPIFY_API_SECRET,
             "access_token": access_token,
             "is_active":    True,
+            "refresh_token":            refresh_token,
+            "token_expires_at":         token_expires_at,
+            "refresh_token_expires_at": refresh_expires_at,
         }
     )
 

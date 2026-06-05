@@ -394,13 +394,129 @@ def setup_woocommerce_webhook(store, delivery_url):
     return result
 
 
+def _refresh_shopify_token(store) -> bool:
+    """Exchange refresh_token for a fresh access_token. Returns True on
+    success. Idempotent — safe to call when token is still valid.
+
+    Shopify-2025 issues expiring offline tokens (~24h TTL on access,
+    ~60 days on refresh). Without refresh logic, every Shopify store
+    silently breaks 24h after install. This is the heart of the
+    auto-refresh-on-401 mechanism.
+
+    https://shopify.dev/docs/apps/build/authentication-authorization/access-tokens/online-access-tokens
+    """
+    import logging as _l
+    log = _l.getLogger(__name__)
+
+    if not store or store.platform != "shopify":
+        return False
+    if not store.refresh_token:
+        log.warning(
+            "Shopify refresh: store %s (%s) has no refresh_token — must reconnect",
+            store.id, store.name,
+        )
+        return False
+
+    from django.conf import settings as _s
+    from django.utils import timezone as _tz
+    from datetime import timedelta as _td
+
+    shop_host = store.store_url.replace("https://", "").replace("http://", "").rstrip("/")
+    try:
+        r = requests.post(
+            f"https://{shop_host}/admin/oauth/access_token",
+            json={
+                "client_id":     _s.SHOPIFY_API_KEY,
+                "client_secret": _s.SHOPIFY_API_SECRET,
+                "refresh_token": store.refresh_token,
+                "grant_type":    "refresh_token",
+            },
+            timeout=20,
+        )
+    except Exception as e:
+        log.warning("Shopify refresh request failed for store %s: %s", store.id, e)
+        return False
+
+    if not r.ok:
+        log.warning(
+            "Shopify refresh failed for store %s (HTTP %s): %s",
+            store.id, r.status_code, (r.text or "")[:200],
+        )
+        return False
+
+    data = r.json() or {}
+    new_access = data.get("access_token") or ""
+    new_refresh = data.get("refresh_token") or store.refresh_token  # may rotate or stay same
+    expires_in = data.get("expires_in") or 0
+    refresh_expires_in = data.get("refresh_token_expires_in") or 0
+
+    if not new_access:
+        log.warning("Shopify refresh: store %s returned no access_token", store.id)
+        return False
+
+    store.access_token = new_access
+    store.refresh_token = new_refresh
+    store.token_expires_at = (_tz.now() + _td(seconds=int(expires_in))) if expires_in else None
+    if refresh_expires_in:
+        store.refresh_token_expires_at = _tz.now() + _td(seconds=int(refresh_expires_in))
+    store.save(update_fields=[
+        "access_token", "refresh_token",
+        "token_expires_at", "refresh_token_expires_at",
+    ])
+    log.info("Shopify refresh OK for store %s (%s), new TTL=%ss", store.id, store.name, expires_in)
+    return True
+
+
 def _shopify_session(store):
-    """Return (headers, auth) tuple for Shopify API requests."""
+    """Return (headers, auth) tuple for Shopify API requests.
+
+    Side effect: if the stored access_token is about to expire (within
+    60 seconds) AND we have a refresh_token, transparently refresh
+    BEFORE returning the headers. This pre-empts the typical
+    "request lands 1 sec after token expiry → 401" race.
+    """
+    # Pre-emptive refresh window — refresh slightly before expiry so
+    # in-flight calls always use a valid token.
+    try:
+        from django.utils import timezone as _tz
+        if (store.platform == "shopify"
+                and store.token_expires_at
+                and store.refresh_token
+                and (store.token_expires_at - _tz.now()).total_seconds() < 60):
+            _refresh_shopify_token(store)
+    except Exception:
+        pass
+
     headers = {"Content-Type": "application/json"}
     if store.access_token:
         headers["X-Shopify-Access-Token"] = store.access_token
         return headers, None
     return headers, (store.api_key, store.api_secret)
+
+
+def shopify_request(store, method, url, **kwargs):
+    """Wrapper for requests.<method>() to a Shopify Admin API URL with
+    auto-refresh-on-401. Use this instead of `requests.get/post(...)`
+    when calling any Shopify endpoint that uses store.access_token.
+
+    Why: even with pre-emptive refresh in _shopify_session, a token
+    could be invalidated server-side (manual revoke, scope change). On
+    a 401 we refresh once and retry the request — transparent for
+    callers."""
+    headers, auth = _shopify_session(store)
+    headers.update(kwargs.pop("headers", {}) or {})
+
+    fn = getattr(requests, method.lower())
+    resp = fn(url, headers=headers, auth=auth, **kwargs)
+
+    if resp.status_code == 401 and store.platform == "shopify" and store.refresh_token:
+        # One-shot refresh + retry. If still 401 after refresh, the
+        # refresh_token itself is dead — merchant has to reconnect.
+        if _refresh_shopify_token(store):
+            headers["X-Shopify-Access-Token"] = store.access_token
+            resp = fn(url, headers=headers, auth=auth, **kwargs)
+
+    return resp
 
 
 def process_shopify_order(store, item):
