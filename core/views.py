@@ -396,7 +396,7 @@ def contact_submit(request):
 
         return JsonResponse({"ok": True})
     except Exception as exc:
-        return JsonResponse({"ok": False, "error": "Could not send. Please email hello@dropsigma.com directly."}, status=500)
+        return JsonResponse({"ok": False, "error": "Could not send. Please email support@dropsigma.com directly."}, status=500)
 
 
 def cookies_page(request):

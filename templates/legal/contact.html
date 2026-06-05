@@ -95,7 +95,7 @@
     <div class="contact-side">
       <div class="contact-box gradient">
         <h3>General &amp; sales</h3>
-        <a href="mailto:hello@dropsigma.com">hello@dropsigma.com</a>
+        <a href="mailto:support@dropsigma.com">support@dropsigma.com</a>
         <p>For pricing questions, demos, and anything else.</p>
       </div>
       <div class="contact-box">
@@ -110,7 +110,7 @@
       </div>
       <div class="contact-box">
         <h3>Press &amp; partnerships</h3>
-        <a href="mailto:hello@dropsigma.com">hello@dropsigma.com</a>
+        <a href="mailto:support@dropsigma.com">support@dropsigma.com</a>
         <p>Integration ideas, podcast invites, media kit requests.</p>
       </div>
     </div>
@@ -135,12 +135,12 @@ function _dsSubmitContact(e){
         f.reset();
       }else{
         s.className = 'form-status err';
-        s.textContent = (j && j.error) ? j.error : 'Could not send. Please email us directly at hello@dropsigma.com.';
+        s.textContent = (j && j.error) ? j.error : 'Could not send. Please email us directly at support@dropsigma.com.';
       }
     })
     .catch(function(){
       s.className = 'form-status err';
-      s.textContent = 'Network error. Please email us directly at hello@dropsigma.com.';
+      s.textContent = 'Network error. Please email us directly at support@dropsigma.com.';
     });
   return false;
 }
