@@ -13826,6 +13826,25 @@ async function rmaLoadList(){
     const orderCell = r.order_id
       ? `<strong>#${rmaEsc(r.order_id)}</strong><div style="font-size:11px;color:#64748b;">${rmaEsc(r.order_date)}</div>`
       : `<span style="color:#94a3b8;">Manual</span>`;
+    // 3-dot "more" button → Delete RMA (and any other future row-level
+    // actions). Lives next to the primary action so it doesn't clutter
+    // the main UX but is one click away when needed (e.g. clearing
+    // personal-data test RMAs before recording the App Store demo).
+    const moreMenu = `
+      <span style="position:relative;display:inline-block;margin-left:6px;">
+        <button class="rma-rowact" onclick="event.stopPropagation();rmaToggleRowMenu(event,${r.id})"
+                title="More actions" style="padding:6px 9px;line-height:1;">⋯</button>
+        <div id="rmaRowMenu_${r.id}" class="rma-row-menu"
+             style="display:none;position:absolute;right:0;top:calc(100% + 4px);background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 24px rgba(15,23,42,.12);min-width:170px;z-index:50;padding:6px;font-size:13px;text-align:left;"
+             onclick="event.stopPropagation()">
+          <button onclick="rmaConfirmDelete(${r.id}, ${JSON.stringify(r.rma_number).replace(/"/g, '&quot;')})"
+                  style="display:flex;align-items:center;gap:8px;width:100%;padding:8px 10px;background:transparent;border:none;border-radius:6px;color:#dc2626;font-weight:600;cursor:pointer;font-family:inherit;font-size:13px;"
+                  onmouseover="this.style.background='#fef2f2'"
+                  onmouseout="this.style.background='transparent'">
+            🗑️ Delete RMA
+          </button>
+        </div>
+      </span>`;
     return `
       <tr class="click" onclick="rmaOpenDetail(${r.id})">
         <td><span class="rma-num">${rmaEsc(r.rma_number)}</span></td>
@@ -13835,7 +13854,7 @@ async function rmaLoadList(){
         <td><span class="rma-reason">${rmaEsc(r.reason_label)}</span></td>
         <td><span class="rma-pill ${r.status}">${rmaEsc(r.status_display)}</span></td>
         <td>${rmaEsc(r.age_label)}</td>
-        <td>${rowAction}</td>
+        <td style="white-space:nowrap;">${rowAction}${moreMenu}</td>
       </tr>`;
   }).join('');
 
@@ -14204,6 +14223,74 @@ async function rmaReopen(pk){
   const { ok, data } = await rmaApi('/rma/' + pk + '/reopen/');
   if (ok){ rmaOpenDetail(pk); rmaRefreshPendingBadge(); }
   else await _alert(data.error || 'Could not reopen.', 'Error', '❌');
+}
+
+// ─── Row-level "more" menu (3-dot dropdown) ─────────────────────────────
+// Only one menu can be open at a time. Clicking anywhere else closes it.
+function rmaToggleRowMenu(evt, rmaId){
+  // Close any other row menus before opening this one.
+  document.querySelectorAll('.rma-row-menu').forEach(el => {
+    if (el.id !== `rmaRowMenu_${rmaId}`) el.style.display = 'none';
+  });
+  const menu = document.getElementById(`rmaRowMenu_${rmaId}`);
+  if (!menu) return;
+  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+  // One-shot global handler to close when user clicks elsewhere. Stops
+  // the menu from sticking around if the user clicks outside it.
+  if (menu.style.display === 'block'){
+    setTimeout(() => {
+      const closer = (e) => {
+        if (!menu.contains(e.target)){
+          menu.style.display = 'none';
+          document.removeEventListener('click', closer);
+        }
+      };
+      document.addEventListener('click', closer);
+    }, 0);
+  }
+}
+
+// Delete RMA permanently — danger confirm + DELETE request + list refresh.
+// Used to clear out test/demo RMAs (e.g. before recording the Shopify
+// App Store demo, the tenant deletes practice RMAs with personal names
+// so the reviewer doesn't see them).
+async function rmaConfirmDelete(pk, rmaNumber){
+  // Close the row menu first so it doesn't linger behind the modal.
+  document.querySelectorAll('.rma-row-menu').forEach(el => el.style.display = 'none');
+
+  const ok = await _confirm(
+    `Permanently delete ${rmaNumber || 'this RMA'}? This removes the RMA and all its messages, timeline events, and customer-portal access.`,
+    {
+      title: 'Delete RMA',
+      icon: '🗑️',
+      danger: true,
+      confirmText: 'Delete RMA',
+      cancelText: 'Keep it',
+      details: 'This cannot be undone. The underlying order, if any, is NOT deleted.',
+    }
+  );
+  if (!ok) return;
+
+  try {
+    const r = await fetch(`/rma/${pk}/delete/`, {
+      method: 'DELETE',
+      headers: { 'X-CSRFToken': getCSRFToken(), 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+    });
+    let d = {};
+    try { d = await r.json(); } catch(_){ d = {}; }
+    if (!r.ok || !d.ok){
+      await _alert(d.error || `Delete failed (HTTP ${r.status}).`, 'Delete Failed', '❌');
+      return;
+    }
+    if (typeof _emailToast === 'function'){
+      _emailToast(`✓ ${d.rma_number || 'RMA'} deleted`, 3000);
+    }
+    rmaLoadList();
+    rmaRefreshPendingBadge();
+  } catch(e){
+    await _alert(e.message || 'Delete failed.', 'Delete Failed', '❌');
+  }
 }
 
 function rmaInsertSnippet(key){

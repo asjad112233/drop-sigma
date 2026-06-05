@@ -21,6 +21,7 @@ urlpatterns = [
     path("<int:pk>/refund/",      views.rma_refund,          name="rma_refund"),
     path("<int:pk>/resolve/",     views.rma_resolve,         name="rma_resolve"),
     path("<int:pk>/reopen/",      views.rma_reopen,          name="rma_reopen"),
+    path("<int:pk>/delete/",      views.rma_delete,          name="rma_delete"),
     path("<int:pk>/message/",     views.rma_message,         name="rma_message"),
     path("<int:pk>/note/",        views.rma_internal_note,   name="rma_internal_note"),
     path("settings/save/",        views.rma_settings_view,   name="rma_settings_save"),

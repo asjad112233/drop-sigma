@@ -15,7 +15,7 @@ from decimal import Decimal, InvalidOperation
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse, HttpResponse, Http404
 from django.contrib.auth.decorators import login_required
-from django.views.decorators.http import require_POST, require_GET
+from django.views.decorators.http import require_POST, require_GET, require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.db import transaction, IntegrityError
 from django.db.models import Count, Sum, Q, Avg, F
@@ -654,6 +654,45 @@ def rma_reopen(request, pk):
         rma.save(update_fields=["status", "resolved_at", "resolved_by", "rejected_at", "reject_note"])
         _log_event(rma, "status_change", f"Reopened to {target}", actor_user=request.user, actor_label="You")
     return JsonResponse({"ok": True, "status": target})
+
+
+@login_required(login_url="/login/")
+@require_http_methods(["POST", "DELETE"])
+def rma_delete(request, pk):
+    """Permanently delete an RMA + its messages, events, photos, attachments.
+
+    Tenant-scoped via _user_rma_qs so an account can only ever delete its
+    own RMAs. Used by the dashboard's 3-dot menu on each RMA card to clear
+    out test data (e.g. before a Shopify App Store demo recording, the
+    tenant deletes practice RMAs with personal names so the reviewer
+    doesn't see them).
+
+    Returns:
+      {ok: true, deleted_id: <pk>}   on success
+      {ok: false, error: "..."}      on failure (with 4xx/5xx status)
+    """
+    with transaction.atomic():
+        try:
+            rma = _user_rma_qs(request.user).select_for_update(of=("self",)).get(pk=int(pk))
+        except (RMA.DoesNotExist, ValueError, TypeError):
+            raise Http404("RMA not found")
+
+        # Cascade-delete every related row Django doesn't auto-cascade
+        # (most relations are on_delete=CASCADE, but be defensive). Log
+        # the deletion at INFO so we can audit who deleted what.
+        rma_id = rma.pk
+        rma_number = rma.rma_number
+        try:
+            rma.delete()
+        except Exception as e:
+            return JsonResponse({"ok": False, "error": str(e)[:200]}, status=500)
+
+    import logging as _log
+    _log.getLogger(__name__).info(
+        "RMA %s (%s) deleted by user %s (%s)",
+        rma_number, rma_id, request.user.id, request.user.email or request.user.username,
+    )
+    return JsonResponse({"ok": True, "deleted_id": rma_id, "rma_number": rma_number})
 
 
 @login_required(login_url="/login/")
