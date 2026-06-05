@@ -13827,24 +13827,15 @@ async function rmaLoadList(){
       ? `<strong>#${rmaEsc(r.order_id)}</strong><div style="font-size:11px;color:#64748b;">${rmaEsc(r.order_date)}</div>`
       : `<span style="color:#94a3b8;">Manual</span>`;
     // 3-dot "more" button → Delete RMA (and any other future row-level
-    // actions). Lives next to the primary action so it doesn't clutter
-    // the main UX but is one click away when needed (e.g. clearing
-    // personal-data test RMAs before recording the App Store demo).
+    // actions). The dropdown lives at document.body (not in the row)
+    // because the RMA table is inside an overflow-clipped container
+    // that would otherwise hide the menu. See rmaToggleRowMenu below.
     const moreMenu = `
-      <span style="position:relative;display:inline-block;margin-left:6px;">
-        <button class="rma-rowact" onclick="event.stopPropagation();rmaToggleRowMenu(event,${r.id})"
-                title="More actions" style="padding:6px 9px;line-height:1;">⋯</button>
-        <div id="rmaRowMenu_${r.id}" class="rma-row-menu"
-             style="display:none;position:absolute;right:0;top:calc(100% + 4px);background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 24px rgba(15,23,42,.12);min-width:170px;z-index:50;padding:6px;font-size:13px;text-align:left;"
-             onclick="event.stopPropagation()">
-          <button onclick="rmaConfirmDelete(${r.id}, ${JSON.stringify(r.rma_number).replace(/"/g, '&quot;')})"
-                  style="display:flex;align-items:center;gap:8px;width:100%;padding:8px 10px;background:transparent;border:none;border-radius:6px;color:#dc2626;font-weight:600;cursor:pointer;font-family:inherit;font-size:13px;"
-                  onmouseover="this.style.background='#fef2f2'"
-                  onmouseout="this.style.background='transparent'">
-            🗑️ Delete RMA
-          </button>
-        </div>
-      </span>`;
+      <button class="rma-rowact rma-row-more-btn"
+              data-rma-id="${r.id}"
+              data-rma-number="${rmaEsc(r.rma_number)}"
+              onclick="event.stopPropagation();rmaToggleRowMenu(event,${r.id})"
+              title="More actions" style="padding:6px 9px;line-height:1;margin-left:6px;">⋯</button>`;
     return `
       <tr class="click" onclick="rmaOpenDetail(${r.id})">
         <td><span class="rma-num">${rmaEsc(r.rma_number)}</span></td>
@@ -14226,27 +14217,99 @@ async function rmaReopen(pk){
 }
 
 // ─── Row-level "more" menu (3-dot dropdown) ─────────────────────────────
-// Only one menu can be open at a time. Clicking anywhere else closes it.
+// The RMA table lives inside containers with overflow:hidden / overflow:auto
+// which silently clip any absolutely-positioned child. We work around that
+// by rendering a SINGLE shared menu at document.body (position:fixed),
+// positioning it under the clicked button via getBoundingClientRect().
+// This is the standard "portal" pattern for dropdowns inside scrollable
+// regions — guarantees the menu paints over everything.
+let _rmaRowMenuEl = null;
+let _rmaRowMenuCloser = null;
+function _rmaEnsureRowMenu(){
+  if (_rmaRowMenuEl) return _rmaRowMenuEl;
+  const menu = document.createElement('div');
+  menu.id = 'rmaRowMenuPortal';
+  menu.style.cssText = `
+    position:fixed;display:none;z-index:99999;background:#fff;
+    border:1px solid #e2e8f0;border-radius:10px;
+    box-shadow:0 10px 30px rgba(15,23,42,.15);
+    min-width:180px;padding:6px;font-size:13px;text-align:left;
+    font-family:inherit;
+  `;
+  menu.addEventListener('click', e => e.stopPropagation());
+  document.body.appendChild(menu);
+  _rmaRowMenuEl = menu;
+  return menu;
+}
+
 function rmaToggleRowMenu(evt, rmaId){
-  // Close any other row menus before opening this one.
-  document.querySelectorAll('.rma-row-menu').forEach(el => {
-    if (el.id !== `rmaRowMenu_${rmaId}`) el.style.display = 'none';
-  });
-  const menu = document.getElementById(`rmaRowMenu_${rmaId}`);
-  if (!menu) return;
-  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
-  // One-shot global handler to close when user clicks elsewhere. Stops
-  // the menu from sticking around if the user clicks outside it.
-  if (menu.style.display === 'block'){
-    setTimeout(() => {
-      const closer = (e) => {
-        if (!menu.contains(e.target)){
-          menu.style.display = 'none';
-          document.removeEventListener('click', closer);
-        }
-      };
-      document.addEventListener('click', closer);
-    }, 0);
+  evt.stopPropagation();
+  const btn = evt.currentTarget || evt.target;
+  const menu = _rmaEnsureRowMenu();
+
+  // If menu is already open for THIS row, close it (toggle).
+  if (menu.style.display === 'block' && menu.dataset.rmaId === String(rmaId)){
+    rmaCloseRowMenu();
+    return;
+  }
+
+  const rmaNumber = (btn && btn.dataset && btn.dataset.rmaNumber) || `#${rmaId}`;
+  const safeNumber = JSON.stringify(rmaNumber);
+
+  menu.dataset.rmaId = String(rmaId);
+  menu.innerHTML = `
+    <button onclick="rmaCloseRowMenu();rmaConfirmDelete(${rmaId}, ${safeNumber.replace(/"/g, '&quot;')})"
+            style="display:flex;align-items:center;gap:8px;width:100%;padding:9px 12px;background:transparent;border:none;border-radius:6px;color:#dc2626;font-weight:600;cursor:pointer;font-family:inherit;font-size:13px;text-align:left;"
+            onmouseover="this.style.background='#fef2f2'"
+            onmouseout="this.style.background='transparent'">
+      🗑️ Delete RMA
+    </button>`;
+
+  // Position the menu directly under the clicked 3-dot button, right-aligned.
+  const r = btn.getBoundingClientRect();
+  menu.style.display = 'block';
+  const menuWidth = menu.offsetWidth || 180;
+  // Right-align: menu's right edge = button's right edge.
+  let left = r.right - menuWidth;
+  let top = r.bottom + 6;
+  // Keep within viewport.
+  if (left < 8) left = 8;
+  if (top + menu.offsetHeight + 8 > window.innerHeight){
+    top = r.top - menu.offsetHeight - 6;  // flip above
+  }
+  menu.style.left = `${left}px`;
+  menu.style.top  = `${top}px`;
+
+  // One-shot global closer (click outside, scroll, resize, Esc).
+  if (_rmaRowMenuCloser){
+    document.removeEventListener('click', _rmaRowMenuCloser);
+    window.removeEventListener('scroll', _rmaRowMenuCloser, true);
+    window.removeEventListener('resize', _rmaRowMenuCloser);
+    document.removeEventListener('keydown', _rmaRowMenuCloser);
+  }
+  _rmaRowMenuCloser = (e) => {
+    if (e && e.type === 'keydown' && e.key !== 'Escape') return;
+    rmaCloseRowMenu();
+  };
+  setTimeout(() => {
+    document.addEventListener('click', _rmaRowMenuCloser);
+    window.addEventListener('scroll', _rmaRowMenuCloser, true);
+    window.addEventListener('resize', _rmaRowMenuCloser);
+    document.addEventListener('keydown', _rmaRowMenuCloser);
+  }, 0);
+}
+
+function rmaCloseRowMenu(){
+  if (_rmaRowMenuEl){
+    _rmaRowMenuEl.style.display = 'none';
+    delete _rmaRowMenuEl.dataset.rmaId;
+  }
+  if (_rmaRowMenuCloser){
+    document.removeEventListener('click', _rmaRowMenuCloser);
+    window.removeEventListener('scroll', _rmaRowMenuCloser, true);
+    window.removeEventListener('resize', _rmaRowMenuCloser);
+    document.removeEventListener('keydown', _rmaRowMenuCloser);
+    _rmaRowMenuCloser = null;
   }
 }
 
@@ -14255,8 +14318,8 @@ function rmaToggleRowMenu(evt, rmaId){
 // App Store demo, the tenant deletes practice RMAs with personal names
 // so the reviewer doesn't see them).
 async function rmaConfirmDelete(pk, rmaNumber){
-  // Close the row menu first so it doesn't linger behind the modal.
-  document.querySelectorAll('.rma-row-menu').forEach(el => el.style.display = 'none');
+  // Close the portal menu first so it doesn't linger behind the modal.
+  rmaCloseRowMenu();
 
   const ok = await _confirm(
     `Permanently delete ${rmaNumber || 'this RMA'}? This removes the RMA and all its messages, timeline events, and customer-portal access.`,
