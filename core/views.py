@@ -744,6 +744,51 @@ def _is_subscribed(user):
 
 @login_required(login_url="/login/")
 def dashboard_page(request):
+    # ── Shopify install entry-point ──────────────────────────────────────
+    # The Shopify Partner Dashboard's "App URL" is set to /dashboard/, so
+    # when a merchant clicks "Install" (from the App Store, Dev Dashboard,
+    # or the "Welcome back · Drop Sigma Test" store-picker) Shopify
+    # redirects the browser HERE with a `?shop=xxx.myshopify.com` query
+    # param. Without this branch the shop param gets silently dropped
+    # and the install never starts — exactly the bug the user hit when
+    # the Shopify store didn't appear after clicking Install.
+    #
+    # If a logged-in Drop Sigma user lands here with a `shop=` param, kick
+    # off the standard OAuth flow (same code path that powers the
+    # "+ Add Store > Shopify > One-Click Connect" button).
+    shop_param = (request.GET.get("shop") or "").strip().lower()
+    if shop_param and shop_param.endswith(".myshopify.com"):
+        if request.user.is_authenticated:
+            try:
+                from stores.views import _shopify_oauth_build_auth_url
+                # Use the shop's subdomain as the display name by default;
+                # the user can rename later in the Stores UI.
+                display_name = shop_param.split(".")[0].replace("-", " ").title()
+                resp = _shopify_oauth_build_auth_url(request, name=display_name, store_url=shop_param)
+                # _shopify_oauth_build_auth_url returns a DRF Response. Extract
+                # the auth_url and redirect the browser to Shopify so the user
+                # can approve scopes.
+                data = getattr(resp, "data", None) or {}
+                auth_url = data.get("auth_url")
+                if auth_url:
+                    return redirect(auth_url)
+            except Exception:
+                import logging as _l
+                _l.getLogger(__name__).exception(
+                    "Shopify install entry-point failed for shop=%s", shop_param,
+                )
+                # Fall through to the normal dashboard render so the user
+                # at least sees the app instead of a blank error page.
+        else:
+            # Not logged in but Shopify just sent the merchant here to install.
+            # Bounce to login while preserving the full ?shop= query so the
+            # post-login redirect resumes the install — instead of dropping
+            # the param and leaving the merchant stranded on the dashboard.
+            from urllib.parse import urlencode as _uenc
+            next_qs = _uenc({"shop": shop_param})
+            login_qs = _uenc({"next": f"/dashboard/?{next_qs}", "tab": "admin"})
+            return redirect(f"/login/?{login_qs}")
+
     if not request.user.is_staff:
         if request.user.team_profile.exists():
             return redirect("/employee/dashboard/")
