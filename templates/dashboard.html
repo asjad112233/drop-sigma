@@ -27029,36 +27029,98 @@ async function loadProjectSwitcher(){
   const switcher = document.getElementById("projectSwitcher");
   if(!switcher) return;
 
-  try{
-    const response = await fetch("/stores/api/");
-    const data = await response.json();
+  // Distinguish three failure modes so the user gets an actionable message
+  // (and so we never silently land on "Unable to load projects" with no
+  //  hint about whether it's a server bug, an auth issue, or just an
+  //  empty account). Surfaces a retry chip too.
+  let response, raw;
+  try {
+    response = await fetch("/stores/api/", { credentials: "same-origin" });
+    raw = await response.text();
+  } catch(networkErr){
+    console.error("Project switcher: network failure", networkErr);
+    _projectSwitcherError(switcher, "Network error — check connection", true);
+    return;
+  }
 
-    if(!data.success || !data.stores || data.stores.length === 0){
-      switcher.innerHTML = `<option value="">No projects found</option>`;
-      selectedStoreId = selectedStoreId || "";
-      updateActiveStoreLabels();
-      return;
-    }
+  // 401/403 → session expired. Send the user back to login instead of
+  // showing a confusing dropdown.
+  if (response.status === 401 || response.status === 403) {
+    console.warn("Project switcher: not authenticated, redirecting to login");
+    window.location.href = "/login/?next=" + encodeURIComponent(location.pathname + location.search);
+    return;
+  }
 
-    const stores = data.stores || [];
-    const selectedExists = stores.some(store => String(store.id) === String(selectedStoreId));
+  // 5xx OR HTML in the body (typical Django error page) → server bug.
+  // This is the case that used to silently show "Unable to load projects"
+  // when the database schema drifted out of sync with the models.
+  if (!response.ok || raw.trim().startsWith("<")) {
+    console.error("Project switcher: server returned " + response.status, raw.slice(0, 200));
+    _projectSwitcherError(
+      switcher,
+      `Server error (HTTP ${response.status}) — try refresh, or contact support if it persists`,
+      true,
+    );
+    return;
+  }
 
-    if(!selectedStoreId || !selectedExists){
-      selectedStoreId = String(stores[0].id);
-      const currentSection = new URLSearchParams(window.location.search).get("section") || getActiveSectionName() || "overview";
-      window.history.replaceState({}, "", `/dashboard/?store_id=${selectedStoreId}&section=${currentSection}`);
-    }
+  let data;
+  try {
+    data = JSON.parse(raw);
+  } catch(parseErr){
+    console.error("Project switcher: response was not JSON", parseErr, raw.slice(0, 200));
+    _projectSwitcherError(switcher, "Server returned malformed data", true);
+    return;
+  }
 
-    switcher.innerHTML = stores.map(store => `
-      <option value="${store.id}" ${String(store.id) === String(selectedStoreId) ? "selected" : ""}>
-        ${escapeHtml(store.name)}
-      </option>
-    `).join("");
-
+  if (!data.success || !data.stores || data.stores.length === 0) {
+    switcher.innerHTML = `<option value="">No projects yet — add a store →</option>`;
+    selectedStoreId = selectedStoreId || "";
     updateActiveStoreLabels();
-  }catch(error){
-    console.log("Project switcher error:", error);
-    switcher.innerHTML = `<option value="">Unable to load projects</option>`;
+    return;
+  }
+
+  const stores = data.stores;
+  const selectedExists = stores.some(s => String(s.id) === String(selectedStoreId));
+  if (!selectedStoreId || !selectedExists) {
+    selectedStoreId = String(stores[0].id);
+    const currentSection = new URLSearchParams(window.location.search).get("section") || getActiveSectionName() || "overview";
+    window.history.replaceState({}, "", `/dashboard/?store_id=${selectedStoreId}&section=${currentSection}`);
+  }
+
+  switcher.innerHTML = stores.map(store => `
+    <option value="${store.id}" ${String(store.id) === String(selectedStoreId) ? "selected" : ""}>
+      ${escapeHtml(store.name)}
+    </option>
+  `).join("");
+  updateActiveStoreLabels();
+}
+
+// Render a clear error state in the project switcher area with a retry button.
+// Replaces the old silent "Unable to load projects" option which gave the
+// user no actionable next step.
+function _projectSwitcherError(switcher, message, allowRetry){
+  switcher.innerHTML = `<option value="">⚠ ${escapeHtml(message)}</option>`;
+  switcher.disabled = true;
+  switcher.style.borderColor = "#ef4444";
+
+  // Inject a one-time retry chip just below the dropdown.
+  if (allowRetry && !document.getElementById("__psRetry")) {
+    const wrap = switcher.parentElement;
+    if (wrap) {
+      const chip = document.createElement("button");
+      chip.id = "__psRetry";
+      chip.type = "button";
+      chip.textContent = "🔄 Retry";
+      chip.style.cssText = "margin-top:6px;padding:4px 10px;background:#ef4444;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;";
+      chip.onclick = () => {
+        chip.remove();
+        switcher.disabled = false;
+        switcher.style.borderColor = "";
+        loadProjectSwitcher();
+      };
+      wrap.appendChild(chip);
+    }
   }
 }
 
