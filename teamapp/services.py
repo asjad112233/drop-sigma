@@ -78,8 +78,13 @@ def ensure_tenant_default_channels(tenant):
     """Make sure `tenant` (a tenant/admin User) owns the three default group
     channels. Returns a list of ChatChannel rows owned by this tenant.
 
-    Idempotent — safe to call from signals / login hooks / explicit setup.
+    Idempotent + race-safe — two concurrent signals can't both create
+    duplicate channels because we wrap the .create() in an atomic block
+    and let the (owner, name, is_dm=False) unique constraint fail fast
+    if a competitor already inserted. Then we fetch the winner.
     """
+    from django.db import IntegrityError, transaction
+
     if tenant is None or not getattr(tenant, "id", None):
         return []
     channels = []
@@ -96,9 +101,21 @@ def ensure_tenant_default_channels(tenant):
         while ChatChannel.objects.filter(slug=slug).exists():
             slug = f"{base_slug}-{ctr}"[:50]
             ctr += 1
-        ch = ChatChannel.objects.create(
-            owner=tenant, name=name, slug=slug, description=desc, is_dm=False,
-        )
+        try:
+            with transaction.atomic():
+                ch = ChatChannel.objects.create(
+                    owner=tenant, name=name, slug=slug, description=desc, is_dm=False,
+                )
+        except IntegrityError:
+            # Lost the race — another signal/worker just created this
+            # exact (owner, name) channel. Fetch the winner instead of
+            # producing a duplicate.
+            ch = ChatChannel.objects.filter(
+                owner=tenant, name=name, is_dm=False,
+            ).first()
+            if ch is None:
+                # Truly unexpected — re-raise so we don't swallow a real bug.
+                raise
         # Always add the tenant to their own channels.
         ChannelMember.objects.get_or_create(
             channel=ch, user=tenant, defaults={"is_active": True},

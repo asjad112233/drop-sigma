@@ -83,6 +83,23 @@ class ChatChannel(models.Model):
     members      = models.ManyToManyField(User, blank=True, related_name="channel_memberships", through="ChannelMember")
     created_at   = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        # Hard guarantee that a tenant can never end up with two
+        # non-DM channels of the same name. The previous race
+        # condition (two near-simultaneous Store.post_save signals
+        # both passing the existence check) is impossible once this
+        # constraint exists — the second .create() raises
+        # IntegrityError instead of silently producing a duplicate.
+        # DM channels are excluded from the constraint because their
+        # owner is NULL and we identify them by participants.
+        constraints = [
+            models.UniqueConstraint(
+                fields=["owner", "name"],
+                condition=models.Q(is_dm=False),
+                name="uniq_chatchannel_owner_name_non_dm",
+            ),
+        ]
+
     def __str__(self):
         return f"#{self.name}"
 
