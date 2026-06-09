@@ -111,6 +111,50 @@ def _is_waf_handshake_error(exc) -> bool:
     return any(p in msg for p in _WAF_HANDSHAKE_PATTERNS)
 
 
+def _looks_like_challenge_response(response) -> bool:
+    """True if the response body is a WAF challenge page (Sucuri
+    sgcaptcha, Cloudflare 'Just a moment', etc.) rather than a real
+    WC API response. Used to detect WAFs that return a 2xx STATUS
+    code with an HTML challenge body — these would otherwise slip
+    past the SSL-error-based escalation in _SmartWooSession._call.
+
+    Inspects status code + Content-Type + body text. Returns True
+    only when we're confident this is a challenge — false negative
+    is safer than false positive (false positive would re-route a
+    real WC response through unnecessary retry tiers)."""
+    try:
+        status = getattr(response, "status_code", 0)
+        # Only flag 2xx/3xx — 4xx/5xx are real merchant responses,
+        # let them through to existing error handlers.
+        if status >= 400:
+            return False
+        ctype = (response.headers.get("Content-Type") or "").lower()
+    except Exception:
+        return False
+    # JSON Content-Type → trust it, no further check needed.
+    if "application/json" in ctype or "text/json" in ctype:
+        return False
+    # HTML Content-Type with body signatures of common WAF challenges.
+    try:
+        body = (response.text or "")[:4000].lower()
+    except Exception:
+        return False
+    if not body:
+        return False
+    challenge_markers = (
+        "sgcaptcha",                # Sucuri Generic Captcha
+        "/.well-known/sgcaptcha",
+        "just a moment",            # Cloudflare interstitial
+        "cf-challenge",
+        "cf_chl_",
+        "checking your browser",    # Cloudflare / others
+        "ddos protection by",
+        "<title>403 - forbidden",   # Kinsta nginx page
+        "enable javascript",
+    )
+    return any(m in body for m in challenge_markers)
+
+
 def _looks_like_json_response(response) -> bool:
     """True iff the HTTP response body is plausibly a JSON document.
 
@@ -178,58 +222,70 @@ class _SmartWooSession:
         return self._call(method.lower(), url, **kw)
 
     def _call(self, method, url, **kw):
+        # ── Tier 1: primary (cloudscraper) ────────────────────────
+        primary_exc = None
         try:
-            return getattr(self._primary, method)(url, **kw)
+            r = getattr(self._primary, method)(url, **kw)
+            # If primary RETURNED a response BUT body is a challenge
+            # page (Sucuri sgcaptcha, Cloudflare "Just a moment", etc.)
+            # rather than the JSON we asked for, treat it as failure
+            # and escalate. WC API only returns JSON; anything else
+            # for a /wp-json/* endpoint is a WAF block in disguise.
+            if not _looks_like_challenge_response(r):
+                return r
+            _woolog.info(
+                "WooCommerce primary returned challenge body (HTTP %s, %s bytes) "
+                "for %s — escalating to bare-requests fallback",
+                getattr(r, "status_code", "?"), len(getattr(r, "text", "")), url,
+            )
+            primary_exc = requests.exceptions.SSLError("WAF challenge body in primary response")
         except (requests.exceptions.SSLError,
                 requests.exceptions.ConnectionError,
-                requests.exceptions.Timeout) as primary_exc:
-            if not _is_waf_handshake_error(primary_exc):
+                requests.exceptions.Timeout) as exc:
+            if not _is_waf_handshake_error(exc):
                 raise
+            primary_exc = exc
+            _woolog.info(
+                "WooCommerce primary failed with %s for %s — trying bare requests",
+                type(exc).__name__, url,
+            )
 
-            # ── Tier 1.5: bare requests.Session + browser UA ───────
-            # cloudscraper's fingerprint can trip up Kinsta-class WAFs
-            # (live production diagnostic 2026-06-09 proved bare
-            # requests passes Kinsta's nginx WAF cleanly where
-            # cloudscraper hits SSLV3 alert). Try once with a plain
-            # requests session before falling all the way to
-            # curl_cffi's much heavier retry tier.
-            try:
-                bare = requests.Session()
-                bare.headers.update(_WOO_HEADERS)
-                _woolog.info(
-                    "WooCommerce primary (cloudscraper) failed with %s for %s — "
-                    "trying bare requests fallback",
-                    type(primary_exc).__name__, url,
-                )
-                return getattr(bare, method)(url, **kw)
-            except (requests.exceptions.SSLError,
-                    requests.exceptions.ConnectionError,
-                    requests.exceptions.Timeout) as bare_exc:
-                # Bare requests ALSO blocked — proceed to curl_cffi tier.
-                _woolog.info(
-                    "WooCommerce bare-requests fallback also failed with %s "
-                    "for %s — entering curl_cffi retry tier",
-                    type(bare_exc).__name__, url,
-                )
-                final_exc = bare_exc
-            except Exception:
-                # Non-network error from bare requests — surface the
-                # ORIGINAL primary exception (more diagnostic context).
-                raise primary_exc
+        # ── Tier 1.5: bare requests.Session + browser UA ──────────
+        bare_exc = None
+        try:
+            bare = requests.Session()
+            bare.headers.update(_WOO_HEADERS)
+            r = getattr(bare, method)(url, **kw)
+            if not _looks_like_challenge_response(r):
+                return r
+            _woolog.info(
+                "WooCommerce bare-requests returned challenge body (HTTP %s) "
+                "for %s — escalating to curl_cffi retry",
+                getattr(r, "status_code", "?"), url,
+            )
+            bare_exc = requests.exceptions.SSLError("WAF challenge body in bare-requests response")
+        except (requests.exceptions.SSLError,
+                requests.exceptions.ConnectionError,
+                requests.exceptions.Timeout) as exc:
+            bare_exc = exc
+            _woolog.info(
+                "WooCommerce bare-requests failed with %s for %s — trying curl_cffi",
+                type(exc).__name__, url,
+            )
 
-            # ── Tier 2: curl_cffi Chrome ClientHello impersonation ──
-            if not _CURL_CFFI_AVAILABLE:
-                raise final_exc
-            try:
-                return self._curl_cffi_retry(method, url, **kw)
-            except Exception as retry_exc:
-                _woolog.warning(
-                    "WooCommerce WAF retry via curl_cffi also failed for %s: "
-                    "primary=%s, bare=%s, retry=%s",
-                    url, type(primary_exc).__name__,
-                    type(final_exc).__name__, type(retry_exc).__name__,
-                )
-                raise primary_exc
+        # ── Tier 2: curl_cffi Chrome ClientHello impersonation ────
+        if not _CURL_CFFI_AVAILABLE:
+            raise bare_exc or primary_exc
+        try:
+            return self._curl_cffi_retry(method, url, **kw)
+        except Exception as retry_exc:
+            _woolog.warning(
+                "WooCommerce WAF retry via curl_cffi also failed for %s: "
+                "primary=%s, bare=%s, retry=%s",
+                url, type(primary_exc).__name__,
+                type(bare_exc).__name__, type(retry_exc).__name__,
+            )
+            raise primary_exc
 
     def _curl_cffi_retry(self, method, url, **kw):
         """Try MULTIPLE evasion strategies in order until one succeeds.
