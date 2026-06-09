@@ -440,25 +440,28 @@ class _SmartWooSession:
 def woo_session():
     """Return a session that survives merchant-side WAFs.
 
-    Tier 1 (primary, always runs): cloudscraper for Cloudflare-style JS
-        challenges. Falls back to bare `requests` if cloudscraper isn't
-        installed. Working stores ONLY ever hit this tier.
+    Tier 1 (primary, always runs): bare `requests.Session` + browser
+        User-Agent. The live production diagnostic on 2026-06-09 proved
+        this works fine — cloudscraper's specific TLS/cookie behaviour
+        was what Kinsta's nginx WAF was rejecting with the SSLV3 alert
+        we chased for 6 hours. Plain requests + Mozilla UA passes
+        through cleanly because Kinsta only flags requests that LOOK
+        like scraper behaviour (cloudscraper inserts JS-challenge cookies,
+        custom cipher suites etc.).
 
     Tier 2 (retry, only on WAF handshake errors): curl_cffi impersonating
         Chrome 131's exact TLS ClientHello — defeats JA3/JA4 fingerprint
         blocks (Kinsta, WP Engine, Sucuri managed plans).
 
+    cloudscraper is kept on disk (still in requirements) so we can
+    flip back if a Cloudflare-challenge-protected store regresses, but
+    it is no longer the default primary.
+
     Returns a `requests.Session()`-compatible object exposing .get / .post
     / .put / .delete / .request — drop-in replacement for any caller
     that previously used `requests.Session()`.
     """
-    if _WOO_SCRAPER_AVAILABLE:
-        primary = _cs.create_scraper(
-            browser={"browser": "chrome", "platform": "darwin", "desktop": True},
-            delay=2,
-        )
-    else:
-        primary = requests.Session()
+    primary = requests.Session()
     primary.headers.update(_WOO_HEADERS)
     return _SmartWooSession(primary)
 
