@@ -1,19 +1,44 @@
 from teamapp.services import auto_assign_order
+import logging
 import requests
 
+_woolog = logging.getLogger("orders.woo_session")
+
 # ── WooCommerce / WP REST helper ────────────────────────────────────────────
-# Many merchants put their WooCommerce store behind Cloudflare, which
-# aggressively challenges `/wp-json/*` requests from plain Python `requests`
-# (HTTP 406 / 403 / 503). `cloudscraper` solves the JS challenge + browser
-# fingerprint check transparently. Fall back to plain `requests` if the
-# library isn't installed (older deploys), and add browser-like headers
-# either way so non-Cloudflare WAFs (Wordfence, SiteGround, etc.) also
-# stop flagging the call.
+# Two-tier strategy with hard isolation between the tiers:
+#
+# PRIMARY tier — `cloudscraper` (or bare `requests` fallback). Solves
+#   Cloudflare JS challenges and works for every store we currently sync
+#   successfully. We never change behaviour here, so working stores
+#   stay working.
+#
+# RETRY tier — `curl_cffi` impersonating Chrome 131's TLS fingerprint
+#   AT THE BYTE LEVEL (real curl-impersonate). Defeats JA3/JA4
+#   fingerprint blocking (Kinsta, WP Engine, Sucuri "managed" plans).
+#   This tier ONLY fires when the primary call raises an SSLError /
+#   ConnectionError matching the WAF-handshake-block pattern. A
+#   normal HTTP 4xx / 5xx response from the primary does NOT trigger
+#   it — that's a real merchant-side response that the existing
+#   diagnose code already handles correctly.
+#
+# Critically: the retry tier sends API-shape headers (Accept: json,
+# X-Requested-With: XMLHttpRequest, Sec-Fetch-Mode: cors) instead of
+# Chrome's default navigation-shape headers (Accept: html, Sec-Fetch-
+# Mode: navigate). That distinction is what an earlier attempt got
+# wrong — navigation headers + Authorization: Basic was a giveaway
+# pattern Wordfence 403'd on.
 try:
     import cloudscraper as _cs
     _WOO_SCRAPER_AVAILABLE = True
 except Exception:
     _WOO_SCRAPER_AVAILABLE = False
+
+try:
+    from curl_cffi import requests as _cffi_req
+    from curl_cffi import exceptions as _cffi_ex
+    _CURL_CFFI_AVAILABLE = True
+except Exception:
+    _CURL_CFFI_AVAILABLE = False
 
 
 _WOO_HEADERS = {
@@ -28,24 +53,182 @@ _WOO_HEADERS = {
     "Connection": "keep-alive",
 }
 
+# Headers a real WordPress-admin dashboard XHR sends when calling its own
+# REST API. Used ONLY in the curl_cffi retry tier to make our request
+# shape match what Wordfence / other WAFs consider "legitimate
+# authenticated REST traffic" (instead of "browser navigating to
+# /wp-json/* with Basic auth" — the giveaway pattern).
+_WOO_API_HEADERS_CURLCFFI = {
+    "User-Agent": _WOO_HEADERS["User-Agent"],
+    "Accept": "application/json, text/javascript, */*; q=0.01",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Accept-Encoding": "gzip, deflate, br",
+    "X-Requested-With": "XMLHttpRequest",
+    "Sec-Fetch-Mode": "cors",
+    "Sec-Fetch-Site": "same-origin",
+    "Sec-Fetch-Dest": "empty",
+    "Connection": "keep-alive",
+}
+
+
+# Substrings that, when they appear in an exception message, indicate a
+# hosting-WAF block at the TLS layer (silent drop or active rejection)
+# rather than a genuine cert / DNS / refused problem. Mirrors the list
+# in stores.views — kept in sync deliberately.
+_WAF_HANDSHAKE_PATTERNS = (
+    # Silent-drop family — server eats our handshake
+    "eof occurred in violation of protocol",
+    "ssl: unexpected_eof",
+    "connection reset by peer",
+    "connection aborted",
+    "read timed out",
+    "remote end closed connection",
+    # Active TLS-alert family — server actively rejects our ClientHello
+    "alert handshake failure",
+    "sslv3_alert_handshake_failure",
+    "tlsv1 alert handshake failure",
+    "alert internal error",
+    "alert protocol version",
+    "alert access denied",
+    "alert insufficient security",
+    "alert unrecognized name",
+    "alert decrypt error",
+)
+
+
+def _is_waf_handshake_error(exc) -> bool:
+    """Heuristic for 'this exception looks like a WAF blocking our TLS
+    handshake, NOT a genuine cert / DNS / refused problem.' Drives the
+    retry-with-curl_cffi decision. Conservative: returns False on
+    anything ambiguous so we only retry when we're confident."""
+    if not exc:
+        return False
+    msg = str(exc).lower()
+    return any(p in msg for p in _WAF_HANDSHAKE_PATTERNS)
+
+
+class _SmartWooSession:
+    """Drop-in `requests.Session()`-compatible wrapper that:
+
+      1. Routes every call through the PRIMARY session (cloudscraper or
+         bare requests). If primary succeeds OR fails with a non-WAF
+         exception, this is the ONLY path that runs — working stores
+         see zero behavioural change.
+
+      2. If primary raises SSLError / ConnectionError matching the WAF
+         handshake-block pattern, retries ONCE through curl_cffi with
+         a real Chrome TLS fingerprint + WC-admin-XHR-shape headers.
+         This is the only way to defeat Kinsta-class WAFs that reject
+         Python's TLS fingerprint at the handshake layer.
+
+      3. Translates curl_cffi's exception classes into the
+         `requests.exceptions.*` equivalents so the diagnose endpoint
+         and other downstream catch blocks keep working unchanged.
+
+    Returns `requests.Response` from the primary path; returns
+    `curl_cffi.requests.Response` from the retry path — both expose
+    .status_code / .text / .json() / .headers / .content / .raise_for_status
+    with identical signatures, so callers don't need to special-case.
+    """
+
+    def __init__(self, primary):
+        self._primary = primary
+        self.headers = primary.headers   # callers mutate this; preserve the contract
+
+    # Verb shortcuts — same signature as `requests.Session.<verb>`.
+    def get(self, url, **kw):    return self._call("get",    url, **kw)
+    def post(self, url, **kw):   return self._call("post",   url, **kw)
+    def put(self, url, **kw):    return self._call("put",    url, **kw)
+    def delete(self, url, **kw): return self._call("delete", url, **kw)
+    def request(self, method, url, **kw):
+        return self._call(method.lower(), url, **kw)
+
+    def _call(self, method, url, **kw):
+        try:
+            return getattr(self._primary, method)(url, **kw)
+        except (requests.exceptions.SSLError,
+                requests.exceptions.ConnectionError,
+                requests.exceptions.Timeout) as primary_exc:
+            if not _CURL_CFFI_AVAILABLE:
+                raise
+            if not _is_waf_handshake_error(primary_exc):
+                raise
+            # WAF handshake block detected → retry through curl_cffi
+            # impersonating Chrome at the TLS-fingerprint layer.
+            try:
+                return self._curl_cffi_retry(method, url, **kw)
+            except Exception as retry_exc:
+                # Retry didn't save us. Log both for diagnosis and
+                # re-raise the ORIGINAL exception so existing
+                # firewall-classification logic in stores.views keeps
+                # routing this to the right error card.
+                _woolog.warning(
+                    "WooCommerce WAF retry via curl_cffi also failed for %s: "
+                    "primary=%s, retry=%s",
+                    url, type(primary_exc).__name__, type(retry_exc).__name__,
+                )
+                raise primary_exc
+
+    def _curl_cffi_retry(self, method, url, **kw):
+        """Send the same request with a byte-for-byte Chrome ClientHello
+        and admin-XHR-shape headers. This is the ONLY thing that defeats
+        Kinsta-class TLS-fingerprint blocks. `default_headers=False`
+        suppresses curl_cffi's default browser-NAVIGATION header set so
+        we don't accidentally send Sec-Fetch-Mode: navigate + Auth: Basic
+        (the giveaway pattern Wordfence 403'd on)."""
+        sess = _cffi_req.Session(
+            impersonate="chrome131",
+            default_headers=False,   # critical — we set ALL headers explicitly
+        )
+        sess.headers.update(_WOO_API_HEADERS_CURLCFFI)
+        try:
+            response = getattr(sess, method)(url, **kw)
+            _woolog.info(
+                "WooCommerce WAF retry via curl_cffi succeeded for %s "
+                "(HTTP %s) — primary cloudscraper was blocked",
+                url, getattr(response, "status_code", "?"),
+            )
+            return response
+        except Exception as e:
+            # Translate curl_cffi exceptions to requests equivalents so
+            # the OUTER exception handler in _call() sees a recognisable
+            # type and can decide whether to re-raise the primary or
+            # surface the retry's error.
+            if _CURL_CFFI_AVAILABLE:
+                if isinstance(e, _cffi_ex.Timeout):
+                    raise requests.exceptions.Timeout(str(e)) from e
+                if isinstance(e, _cffi_ex.ConnectionError):
+                    msg = str(e).lower()
+                    if any(t in msg for t in ("ssl", "tls", "alert", "handshake", "cert")):
+                        raise requests.exceptions.SSLError(str(e)) from e
+                    raise requests.exceptions.ConnectionError(str(e)) from e
+            raise
+
 
 def woo_session():
-    """Return a session that survives Cloudflare's bot challenges.
+    """Return a session that survives merchant-side WAFs.
 
-    Use this in place of bare `requests` for every WooCommerce REST call so
-    merchant stores hidden behind Cloudflare keep working without asking
-    them to whitelist our IP or disable Bot Fight Mode. Behaves identically
-    to a `requests.Session()` — supports .get / .post / .put / .delete
-    with the same kwargs (auth=, params=, json=, timeout=, headers=)."""
+    Tier 1 (primary, always runs): cloudscraper for Cloudflare-style JS
+        challenges. Falls back to bare `requests` if cloudscraper isn't
+        installed. Working stores ONLY ever hit this tier.
+
+    Tier 2 (retry, only on WAF handshake errors): curl_cffi impersonating
+        Chrome 131's exact TLS ClientHello — defeats JA3/JA4 fingerprint
+        blocks (Kinsta, WP Engine, Sucuri managed plans).
+
+    Returns a `requests.Session()`-compatible object exposing .get / .post
+    / .put / .delete / .request — drop-in replacement for any caller
+    that previously used `requests.Session()`.
+    """
     if _WOO_SCRAPER_AVAILABLE:
-        s = _cs.create_scraper(
+        primary = _cs.create_scraper(
             browser={"browser": "chrome", "platform": "darwin", "desktop": True},
             delay=2,
         )
     else:
-        s = requests.Session()
-    s.headers.update(_WOO_HEADERS)
-    return s
+        primary = requests.Session()
+    primary.headers.update(_WOO_HEADERS)
+    return _SmartWooSession(primary)
 
 COURIER_URL_TEMPLATES = {
     "yuntrack":       "https://www.yuntrack.com/parcelTracking?id={num}",
