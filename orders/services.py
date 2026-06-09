@@ -219,32 +219,76 @@ class _SmartWooSession:
         proxy_url = (os.getenv("WOO_PROXY_URL") or "").strip() or None
         proxies = {"http": proxy_url, "https": proxy_url} if proxy_url else None
 
+        # Optional Cloudflare-Worker relay. The worker URL receives our
+        # request with X-Target-URL + X-Proxy-Secret headers, then makes
+        # the actual call FROM Cloudflare's network (whose IPs are
+        # whitelisted by virtually every managed-WP host because they
+        # use Cloudflare as a CDN partner). FREE on CF's 100k-req/day
+        # tier — see cf-worker/SETUP.md for the 5-min setup steps.
+        cf_worker_url    = (os.getenv("WOO_CF_PROXY_URL") or "").strip() or None
+        cf_worker_secret = (os.getenv("WOO_CF_PROXY_SECRET") or "").strip() or None
+
+        # ── Strategy shape ──────────────────────────────────────────
+        #   ('direct', impersonation, url, proxies_dict_or_None, label)
+        #   ('cfworker', impersonation, real_target_url, label)
+        # Each is tried in order; first one that returns a real (non-WAF)
+        # response wins.
         strategies = [
-            ("chrome131",     url,            None,    "chrome+wpjson"),
-            ("firefox133",    url,            None,    "firefox+wpjson"),
-            ("safari17_2_ios",url,            None,    "safari+wpjson"),
-            ("chrome131",     rest_route_url, None,    "chrome+restroute"),
+            ("direct", "chrome131",      url,            None,    "chrome+wpjson"),
+            ("direct", "firefox133",     url,            None,    "firefox+wpjson"),
+            ("direct", "safari17_2_ios", url,            None,    "safari+wpjson"),
+            ("direct", "chrome131",      rest_route_url, None,    "chrome+restroute"),
         ]
+
+        # Cloudflare Worker relay strategies — cheap & free, prefer them
+        # over residential proxy because no per-request data cost.
+        if cf_worker_url and cf_worker_secret:
+            strategies += [
+                ("cfworker", "chrome131", url,            "chrome+cfworker"),
+                ("cfworker", "chrome131", rest_route_url, "chrome+cfworker+restroute"),
+            ]
+
+        # Residential-IP proxy strategies — paid, last resort.
         if proxies:
             strategies += [
-                ("chrome131",     url, proxies, "chrome+wpjson+proxy"),
-                ("firefox133",    url, proxies, "firefox+wpjson+proxy"),
-                ("chrome131",     rest_route_url, proxies, "chrome+restroute+proxy"),
+                ("direct", "chrome131",  url,            proxies, "chrome+wpjson+proxy"),
+                ("direct", "firefox133", url,            proxies, "firefox+wpjson+proxy"),
+                ("direct", "chrome131",  rest_route_url, proxies, "chrome+restroute+proxy"),
             ]
 
         last_response   = None  # last 4xx body so we can log on final failure
         last_exception  = None
-        for imp, try_url, proxies_arg, label in strategies:
+        for strategy in strategies:
+            kind = strategy[0]
+            logged_target = url  # what we tell the log we're trying to reach
+            label = "?"
             try:
-                sess = _cffi_req.Session(
-                    impersonate=imp,
-                    default_headers=False,
-                )
-                sess.headers.update(headers)
-                call_kw = dict(kw)
-                if proxies_arg:
-                    call_kw["proxies"] = proxies_arg
-                response = getattr(sess, method)(try_url, **call_kw)
+                if kind == "cfworker":
+                    _, imp, target_url, label = strategy
+                    logged_target = target_url
+                    sess = _cffi_req.Session(
+                        impersonate=imp,
+                        default_headers=False,
+                    )
+                    # Pass merchant-style headers + ADD the worker control
+                    # headers. The worker strips its control headers before
+                    # forwarding so the upstream sees only merchant ones.
+                    sess.headers.update(headers)
+                    sess.headers["X-Target-URL"]   = target_url
+                    sess.headers["X-Proxy-Secret"] = cf_worker_secret
+                    response = getattr(sess, method)(cf_worker_url, **kw)
+                else:  # "direct"
+                    _, imp, try_url, proxies_arg, label = strategy
+                    logged_target = try_url
+                    sess = _cffi_req.Session(
+                        impersonate=imp,
+                        default_headers=False,
+                    )
+                    sess.headers.update(headers)
+                    call_kw = dict(kw)
+                    if proxies_arg:
+                        call_kw["proxies"] = proxies_arg
+                    response = getattr(sess, method)(try_url, **call_kw)
                 status = getattr(response, "status_code", 0)
                 # Success or a real WC response → we're done.
                 # 2xx = OK. 4xx WC API errors (auth, validation) are
@@ -258,7 +302,7 @@ class _SmartWooSession:
                 if status < 400 or status in (401, 404, 422):
                     _woolog.info(
                         "WooCommerce WAF retry %s succeeded for %s (HTTP %s)",
-                        label, try_url, status,
+                        label, logged_target, status,
                     )
                     return response
                 # WAF-shape 4xx — remember it for the final log and
