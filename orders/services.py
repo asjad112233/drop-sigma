@@ -316,8 +316,24 @@ class _SmartWooSession:
                     )
                     sess.headers.update(headers)
                     call_kw = dict(kw)
+                    # CRITICAL: curl_cffi's proxy API is `proxy=<url>`
+                    # (singular string), NOT `proxies={"http":..,"https":..}`
+                    # which is the `requests` library convention. Passing
+                    # `proxies=` to curl_cffi is SILENTLY IGNORED — the
+                    # request goes direct (not through the proxy) and
+                    # we get the same Railway-IP 403 as without a proxy
+                    # set at all. Took 4 hours and a residential proxy
+                    # subscription to discover this. Verified via local
+                    # test:
+                    #   curl_cffi + proxies={...}  → HTTP 403 (no proxy used)
+                    #   curl_cffi + proxy=<url>     → HTTP 200 OK ✓
                     if proxies_arg:
-                        call_kw["proxies"] = proxies_arg
+                        # `proxies_arg` is a dict (built upstream for
+                        # familiarity); curl_cffi just wants the URL.
+                        # Prefer https, fall back to http.
+                        proxy_str = proxies_arg.get("https") or proxies_arg.get("http")
+                        if proxy_str:
+                            call_kw["proxy"] = proxy_str
                     response = getattr(sess, method)(try_url, **call_kw)
                 status = getattr(response, "status_code", 0)
                 # Success or a real WC response → we're done.
