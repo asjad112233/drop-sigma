@@ -21,7 +21,7 @@ cloudscraper==1.2.71
 # call hits a WAF TLS-handshake block (Kinsta-class hosting firewalls
 # that reject Python's TLS fingerprint). Working stores never enter
 # this code path. See _SmartWooSession docstring for the contract.
-curl_cffi>=0.7.0,<1.0
+curl_cffi==0.13.0
 click-didyoumean==0.3.1
 click-plugins==1.1.1.2
 click-repl==0.3.0

@@ -1123,6 +1123,121 @@ def _diagnose_webhook(store, request):
 
 
 # ✅ STORE HEALTH CHECK — real API ping with diagnosis (+ webhook health)
+# ════════════════════════════════════════════════════════════════════════════
+# DIAGNOSTIC: live proxy test (debug WAF/proxy routing for one store)
+# Hit: GET /stores/api/<store_id>/proxy-test/
+# Returns step-by-step results: env vars, direct call, proxy call, etc.
+# Superadmin-only (production stays clean).
+# ════════════════════════════════════════════════════════════════════════════
+@api_view(["GET"])
+def proxy_diagnostic_api(request, store_id):
+    """Step-by-step proxy debug. Tells us EXACTLY what curl_cffi does
+    when given the configured proxy URL. Critical for diagnosing the
+    "all 9 strategies fail" case after WOO_PROXY_URL is configured.
+
+    Returns JSON like:
+      {
+        "env": {"WOO_PROXY_URL_set": true, "preview": "http://sp..."},
+        "tests": [
+          {"name": "direct", "result": "...", "http_code": ...},
+          {"name": "via curl_cffi proxy=...", "result": "...", "http_code": ...},
+          ...
+        ]
+      }
+    """
+    if not request.user.is_authenticated or not request.user.is_superuser:
+        return Response({"success": False, "message": "superadmin only"}, status=403)
+    store = get_object_or_404(Store, id=store_id)
+    import time
+    url = f"{store.store_url.rstrip('/')}/wp-json/wc/v3/"
+    auth = (store.api_key, store.api_secret)
+    proxy_env = (_os.getenv("WOO_PROXY_URL") or "").strip()
+
+    out = {
+        "store_id": store.id,
+        "store_url": store.store_url,
+        "target": url,
+        "env": {
+            "WOO_PROXY_URL_set": bool(proxy_env),
+            "WOO_PROXY_URL_preview": proxy_env[:30] + "..." if len(proxy_env) > 30 else proxy_env,
+            "WOO_PROXY_URL_length": len(proxy_env),
+        },
+        "tests": [],
+    }
+    # Test 1: bare requests (no proxy) — baseline
+    try:
+        t = time.time()
+        r = _req.get(url, auth=auth, timeout=15)
+        out["tests"].append({
+            "name": "bare requests (no proxy)",
+            "http_code": r.status_code,
+            "body_first_byte": (r.text[:1] if r.text else ""),
+            "elapsed_s": round(time.time() - t, 2),
+        })
+    except Exception as e:
+        out["tests"].append({"name": "bare requests", "exception": f"{type(e).__name__}: {str(e)[:200]}"})
+
+    # Test 2: curl_cffi WITHOUT proxy
+    try:
+        from curl_cffi import requests as cffi_req
+        sess = cffi_req.Session(impersonate="chrome131", default_headers=False)
+        sess.headers.update({"Accept": "application/json", "User-Agent": "Mozilla/5.0"})
+        t = time.time()
+        r = sess.get(url, auth=auth, timeout=15)
+        out["tests"].append({
+            "name": "curl_cffi chrome131 NO proxy",
+            "http_code": r.status_code,
+            "body_first_byte": (r.text[:1] if r.text else ""),
+            "elapsed_s": round(time.time() - t, 2),
+        })
+    except Exception as e:
+        out["tests"].append({"name": "curl_cffi NO proxy", "exception": f"{type(e).__name__}: {str(e)[:200]}"})
+
+    # Test 3: curl_cffi WITH proxy= (singular) — the actual code path
+    if proxy_env:
+        try:
+            from curl_cffi import requests as cffi_req
+            sess = cffi_req.Session(impersonate="chrome131", default_headers=False)
+            sess.headers.update({"Accept": "application/json", "User-Agent": "Mozilla/5.0"})
+            t = time.time()
+            r = sess.get(url, auth=auth, proxy=proxy_env, timeout=20)
+            out["tests"].append({
+                "name": "curl_cffi chrome131 + proxy=<env>",
+                "http_code": r.status_code,
+                "body_first_byte": (r.text[:1] if r.text else ""),
+                "elapsed_s": round(time.time() - t, 2),
+            })
+        except Exception as e:
+            out["tests"].append({"name": "curl_cffi + proxy=", "exception": f"{type(e).__name__}: {str(e)[:200]}"})
+
+        # Test 4: curl_cffi via proxy hitting ipinfo to see source IP
+        try:
+            from curl_cffi import requests as cffi_req
+            sess = cffi_req.Session(impersonate="chrome131", default_headers=False)
+            t = time.time()
+            r = sess.get("https://ipinfo.io/json", proxy=proxy_env, timeout=15)
+            out["tests"].append({
+                "name": "curl_cffi + proxy=<env> hitting ipinfo.io",
+                "http_code": r.status_code,
+                "body": r.text[:300] if r.text else "",
+                "elapsed_s": round(time.time() - t, 2),
+            })
+        except Exception as e:
+            out["tests"].append({"name": "curl_cffi + proxy ipinfo", "exception": f"{type(e).__name__}: {str(e)[:200]}"})
+
+    # Test 5: import + version check
+    try:
+        import curl_cffi
+        out["env"]["curl_cffi_version"] = curl_cffi.__version__
+    except Exception as e:
+        out["env"]["curl_cffi_version"] = f"ERROR: {e}"
+
+    return Response(out)
+
+
+import os as _os
+
+
 @api_view(["GET"])
 def store_health_api(request, store_id):
     if not request.user.is_authenticated:

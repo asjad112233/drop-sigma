@@ -373,15 +373,18 @@ class _SmartWooSession:
                     # WAF-shape 4xx — remember it for the final log and
                     # try the next strategy.
                     last_response = response
-                    _woolog.debug(
+                    # Emit at INFO so we can debug strategy-by-strategy
+                    # behaviour in production logs (don't need to enable
+                    # DEBUG just to see retry intermediate steps).
+                    _woolog.info(
                         "WooCommerce WAF retry %s returned HTTP %s — trying next",
                         label, status,
                     )
             except Exception as e:
                 last_exception = e
-                _woolog.debug(
-                    "WooCommerce WAF retry %s raised %s — trying next",
-                    label, type(e).__name__,
+                _woolog.info(
+                    "WooCommerce WAF retry %s raised %s: %s — trying next",
+                    label, type(e).__name__, str(e)[:200],
                 )
                 continue
 
