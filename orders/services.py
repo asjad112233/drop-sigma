@@ -181,14 +181,60 @@ class _SmartWooSession:
             default_headers=False,   # critical — we set ALL headers explicitly
         )
         sess.headers.update(_WOO_API_HEADERS_CURLCFFI)
+        # Adding Origin + Referer makes the request look like an XHR
+        # fired FROM the store's own wp-admin — defeats plugin-level
+        # WAFs that whitelist "same-origin" admin traffic. Origin is
+        # set to the store's own URL (extracted from the request URL).
+        try:
+            from urllib.parse import urlparse
+            parsed = urlparse(url)
+            origin = f"{parsed.scheme}://{parsed.netloc}"
+            sess.headers["Origin"]  = origin
+            sess.headers["Referer"] = origin + "/wp-admin/"
+        except Exception:
+            pass
         try:
             response = getattr(sess, method)(url, **kw)
+            status = getattr(response, "status_code", 0)
+            # If the retry succeeded at the protocol layer but the
+            # server still blocked us at the application layer (403
+            # from Wordfence-style plugins, 406 from "Not Acceptable"
+            # WAF rules, 444 "No Response" nginx pattern), surface
+            # the FIRST 600 chars of the response body in the log so
+            # we know which WAF is doing the block — informs the next
+            # iteration of headers / impersonation.
+            #
+            # We also re-raise the original primary SSLError so the
+            # diagnose code routes this back to the "Hosting Firewall"
+            # message instead of the misleading "Invalid API
+            # Credentials" (a WAF-403 is NOT an auth-403).
+            if status in (403, 406, 444, 429):
+                body_preview = ""
+                try:
+                    body_preview = (getattr(response, "text", "") or "")[:600]
+                except Exception:
+                    pass
+                _woolog.warning(
+                    "WooCommerce WAF retry via curl_cffi: TLS layer OK "
+                    "but server returned HTTP %s for %s — likely a "
+                    "plugin-level WAF (Wordfence / Sucuri / etc). "
+                    "Response body preview: %r",
+                    status, url, body_preview,
+                )
+                # Signal "still a firewall block" to downstream catchers.
+                raise requests.exceptions.SSLError(
+                    f"WAF blocked at HTTP {status} despite Chrome TLS "
+                    f"fingerprint — likely Wordfence-class plugin firewall"
+                )
             _woolog.info(
                 "WooCommerce WAF retry via curl_cffi succeeded for %s "
                 "(HTTP %s) — primary cloudscraper was blocked",
-                url, getattr(response, "status_code", "?"),
+                url, status,
             )
             return response
+        except requests.exceptions.SSLError:
+            # Already re-raised above for the WAF-403 path — pass through.
+            raise
         except Exception as e:
             # Translate curl_cffi exceptions to requests equivalents so
             # the OUTER exception handler in _call() sees a recognisable
