@@ -183,23 +183,51 @@ class _SmartWooSession:
         except (requests.exceptions.SSLError,
                 requests.exceptions.ConnectionError,
                 requests.exceptions.Timeout) as primary_exc:
-            if not _CURL_CFFI_AVAILABLE:
-                raise
             if not _is_waf_handshake_error(primary_exc):
                 raise
-            # WAF handshake block detected → retry through curl_cffi
-            # impersonating Chrome at the TLS-fingerprint layer.
+
+            # ── Tier 1.5: bare requests.Session + browser UA ───────
+            # cloudscraper's fingerprint can trip up Kinsta-class WAFs
+            # (live production diagnostic 2026-06-09 proved bare
+            # requests passes Kinsta's nginx WAF cleanly where
+            # cloudscraper hits SSLV3 alert). Try once with a plain
+            # requests session before falling all the way to
+            # curl_cffi's much heavier retry tier.
+            try:
+                bare = requests.Session()
+                bare.headers.update(_WOO_HEADERS)
+                _woolog.info(
+                    "WooCommerce primary (cloudscraper) failed with %s for %s — "
+                    "trying bare requests fallback",
+                    type(primary_exc).__name__, url,
+                )
+                return getattr(bare, method)(url, **kw)
+            except (requests.exceptions.SSLError,
+                    requests.exceptions.ConnectionError,
+                    requests.exceptions.Timeout) as bare_exc:
+                # Bare requests ALSO blocked — proceed to curl_cffi tier.
+                _woolog.info(
+                    "WooCommerce bare-requests fallback also failed with %s "
+                    "for %s — entering curl_cffi retry tier",
+                    type(bare_exc).__name__, url,
+                )
+                final_exc = bare_exc
+            except Exception:
+                # Non-network error from bare requests — surface the
+                # ORIGINAL primary exception (more diagnostic context).
+                raise primary_exc
+
+            # ── Tier 2: curl_cffi Chrome ClientHello impersonation ──
+            if not _CURL_CFFI_AVAILABLE:
+                raise final_exc
             try:
                 return self._curl_cffi_retry(method, url, **kw)
             except Exception as retry_exc:
-                # Retry didn't save us. Log both for diagnosis and
-                # re-raise the ORIGINAL exception so existing
-                # firewall-classification logic in stores.views keeps
-                # routing this to the right error card.
                 _woolog.warning(
                     "WooCommerce WAF retry via curl_cffi also failed for %s: "
-                    "primary=%s, retry=%s",
-                    url, type(primary_exc).__name__, type(retry_exc).__name__,
+                    "primary=%s, bare=%s, retry=%s",
+                    url, type(primary_exc).__name__,
+                    type(final_exc).__name__, type(retry_exc).__name__,
                 )
                 raise primary_exc
 
@@ -440,28 +468,35 @@ class _SmartWooSession:
 def woo_session():
     """Return a session that survives merchant-side WAFs.
 
-    Tier 1 (primary, always runs): bare `requests.Session` + browser
-        User-Agent. The live production diagnostic on 2026-06-09 proved
-        this works fine — cloudscraper's specific TLS/cookie behaviour
-        was what Kinsta's nginx WAF was rejecting with the SSLV3 alert
-        we chased for 6 hours. Plain requests + Mozilla UA passes
-        through cleanly because Kinsta only flags requests that LOOK
-        like scraper behaviour (cloudscraper inserts JS-challenge cookies,
-        custom cipher suites etc.).
+    Tier 1 (primary): cloudscraper — solves Sucuri / Cloudflare
+        JS captcha challenges. Required for stores like
+        trapstaraustralia.org and breathedivinity.ca which sit
+        behind Sucuri's sgcaptcha challenge page.
 
-    Tier 2 (retry, only on WAF handshake errors): curl_cffi impersonating
-        Chrome 131's exact TLS ClientHello — defeats JA3/JA4 fingerprint
-        blocks (Kinsta, WP Engine, Sucuri managed plans).
+    Tier 1.5 (fallback on SSL): bare `requests.Session` + browser UA.
+        Used when cloudscraper's specific TLS/cookie behaviour is
+        what's getting blocked (Kinsta's nginx WAF flags
+        cloudscraper's fingerprint as scraping). Live production
+        diagnostic on 2026-06-09 proved bare requests passes through
+        Kinsta cleanly where cloudscraper hits SSLV3 alert.
 
-    cloudscraper is kept on disk (still in requirements) so we can
-    flip back if a Cloudflare-challenge-protected store regresses, but
-    it is no longer the default primary.
+    Tier 2 (retry): curl_cffi impersonating Chrome 131's exact TLS
+        ClientHello — last-resort defeat of JA3/JA4 fingerprint
+        blocks (managed-WP hosts with custom WAFs).
 
-    Returns a `requests.Session()`-compatible object exposing .get / .post
-    / .put / .delete / .request — drop-in replacement for any caller
-    that previously used `requests.Session()`.
+    The SmartWooSession wrapper picks the right tier based on the
+    primary call's response: SSL handshake error → switch to bare
+    requests for THIS call. 4xx/5xx response → pass through.
+
+    Returns a `requests.Session()`-compatible object.
     """
-    primary = requests.Session()
+    if _WOO_SCRAPER_AVAILABLE:
+        primary = _cs.create_scraper(
+            browser={"browser": "chrome", "platform": "darwin", "desktop": True},
+            delay=2,
+        )
+    else:
+        primary = requests.Session()
     primary.headers.update(_WOO_HEADERS)
     return _SmartWooSession(primary)
 
