@@ -799,17 +799,34 @@ def _get_outbound_ip():
 
 
 # Substrings that, when they appear in an SSLError / ConnectionError
-# message, almost always mean "hosting firewall is silently dropping
-# our packets" rather than a real SSL / cert problem.
+# message, almost always mean a hosting firewall / WAF is dropping or
+# actively rejecting our handshake — NOT a real SSL / cert problem.
+#
+# Two flavours of rejection produce different strings:
+#  • Silent drop (Kinsta default IP block) → timeout / EOF / reset.
+#  • Active TLS-layer rejection (WAFs like Kinsta + Sucuri that decide
+#    our TLS fingerprint isn't a real browser) → "alert handshake
+#    failure" / "alert <name>". OpenSSL prefixes these with SSLV3_
+#    even on TLS 1.2/1.3 — it's a historical macro name, not the
+#    actual protocol version.
 _FIREWALL_BLOCK_PATTERNS = (
-    "eof occurred in violation of protocol",  # TCP closed mid-handshake
-    "ssl: unexpected_eof",                     # OpenSSL 3.x variant
-    "connection reset by peer",                # RST during handshake
-    "connection aborted",                       # urllib3's protocol-error wrap
-    "tlsv1 alert internal error",              # WAF sends a generic alert
-    "tlsv1 alert protocol version",            # WAF rejects our handshake
-    "read timed out",                          # silent drop after TCP accept
-    "remote end closed connection",            # truncated TLS handshake
+    # Silent-drop family
+    "eof occurred in violation of protocol",
+    "ssl: unexpected_eof",
+    "connection reset by peer",
+    "connection aborted",
+    "read timed out",
+    "remote end closed connection",
+    # Active TLS-alert family (server rejects our handshake)
+    "alert handshake failure",         # most common WAF response
+    "sslv3_alert_handshake_failure",   # raw OpenSSL macro form
+    "tlsv1 alert handshake failure",
+    "alert internal error",
+    "alert protocol version",
+    "alert access denied",
+    "alert insufficient security",
+    "alert unrecognized name",         # SNI-fussy WAFs
+    "alert decrypt error",
 )
 
 
