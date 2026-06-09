@@ -1,5 +1,6 @@
 from teamapp.services import auto_assign_order
 import logging
+import os
 import requests
 
 _woolog = logging.getLogger("orders.woo_session")
@@ -170,76 +171,145 @@ class _SmartWooSession:
                 raise primary_exc
 
     def _curl_cffi_retry(self, method, url, **kw):
-        """Send the same request with a byte-for-byte Chrome ClientHello
-        and admin-XHR-shape headers. This is the ONLY thing that defeats
-        Kinsta-class TLS-fingerprint blocks. `default_headers=False`
-        suppresses curl_cffi's default browser-NAVIGATION header set so
-        we don't accidentally send Sec-Fetch-Mode: navigate + Auth: Basic
-        (the giveaway pattern Wordfence 403'd on)."""
-        sess = _cffi_req.Session(
-            impersonate="chrome131",
-            default_headers=False,   # critical — we set ALL headers explicitly
-        )
-        sess.headers.update(_WOO_API_HEADERS_CURLCFFI)
-        # Adding Origin + Referer makes the request look like an XHR
-        # fired FROM the store's own wp-admin — defeats plugin-level
-        # WAFs that whitelist "same-origin" admin traffic. Origin is
-        # set to the store's own URL (extracted from the request URL).
-        try:
-            from urllib.parse import urlparse
-            parsed = urlparse(url)
-            origin = f"{parsed.scheme}://{parsed.netloc}"
-            sess.headers["Origin"]  = origin
-            sess.headers["Referer"] = origin + "/wp-admin/"
-        except Exception:
-            pass
-        try:
-            response = getattr(sess, method)(url, **kw)
-            status = getattr(response, "status_code", 0)
-            # If the retry succeeded at the protocol layer but the
-            # server still blocked us at the application layer (403
-            # from Wordfence-style plugins, 406 from "Not Acceptable"
-            # WAF rules, 444 "No Response" nginx pattern), surface
-            # the FIRST 600 chars of the response body in the log so
-            # we know which WAF is doing the block — informs the next
-            # iteration of headers / impersonation.
-            #
-            # We also re-raise the original primary SSLError so the
-            # diagnose code routes this back to the "Hosting Firewall"
-            # message instead of the misleading "Invalid API
-            # Credentials" (a WAF-403 is NOT an auth-403).
-            if status in (403, 406, 444, 429):
-                body_preview = ""
-                try:
-                    body_preview = (getattr(response, "text", "") or "")[:600]
-                except Exception:
-                    pass
-                _woolog.warning(
-                    "WooCommerce WAF retry via curl_cffi: TLS layer OK "
-                    "but server returned HTTP %s for %s — likely a "
-                    "plugin-level WAF (Wordfence / Sucuri / etc). "
-                    "Response body preview: %r",
-                    status, url, body_preview,
+        """Try MULTIPLE evasion strategies in order until one succeeds.
+
+        Strategy ladder (fastest-to-slowest, cheapest-to-most-expensive):
+
+          1. Chrome 131 TLS fingerprint  + standard /wp-json URL  (direct)
+          2. Firefox 133 TLS fingerprint + standard /wp-json URL  (direct)
+          3. Safari 17.2 TLS fingerprint + standard /wp-json URL  (direct)
+          4. Chrome 131  + `?rest_route=` URL variant (some WAFs only
+             pattern-match on `/wp-json/*`; the ?rest_route= form
+             reaches the same WC endpoint but slips past path-based
+             rules)
+          5. If `WOO_PROXY_URL` env is set: repeat steps 1-3 through
+             that proxy. Use a residential-IP proxy service
+             (BrightData, NetNut, Oxylabs, Smartproxy) for stores
+             behind IP-reputation firewalls like Kinsta's nginx
+             firewall. Format: `https://user:pass@host:port` or
+             `socks5://user:pass@host:port`.
+
+        First strategy that returns 2xx OR 404 wins (404 means the URL
+        was valid + we reached the WC layer — different from a WAF
+        403). 4xx WAF responses on every strategy → raise SSLError so
+        the firewall-card UX still surfaces.
+        """
+        from urllib.parse import urlparse, urlencode, urlunparse, parse_qsl
+        parsed = urlparse(url)
+        origin = f"{parsed.scheme}://{parsed.netloc}"
+        headers = dict(_WOO_API_HEADERS_CURLCFFI)
+        headers["Origin"]  = origin
+        headers["Referer"] = origin + "/wp-admin/"
+
+        # Build the alternate `?rest_route=` URL — WC's officially-
+        # supported pretty-permalink-independent form. Only convert
+        # paths that start with /wp-json/wc/v3/ to /wc/v3/.
+        rest_route_url = url
+        if "/wp-json/" in parsed.path:
+            new_path = parsed.path.split("/wp-json", 1)[1]  # e.g. /wc/v3/orders
+            existing = dict(parse_qsl(parsed.query))
+            existing["rest_route"] = new_path
+            rest_route_url = urlunparse((
+                parsed.scheme, parsed.netloc, "/",
+                "", urlencode(existing), parsed.fragment,
+            ))
+
+        # Optional residential-IP proxy (read at call-time so a
+        # superadmin can toggle it without a redeploy via env var).
+        proxy_url = (os.getenv("WOO_PROXY_URL") or "").strip() or None
+        proxies = {"http": proxy_url, "https": proxy_url} if proxy_url else None
+
+        strategies = [
+            ("chrome131",     url,            None,    "chrome+wpjson"),
+            ("firefox133",    url,            None,    "firefox+wpjson"),
+            ("safari17_2_ios",url,            None,    "safari+wpjson"),
+            ("chrome131",     rest_route_url, None,    "chrome+restroute"),
+        ]
+        if proxies:
+            strategies += [
+                ("chrome131",     url, proxies, "chrome+wpjson+proxy"),
+                ("firefox133",    url, proxies, "firefox+wpjson+proxy"),
+                ("chrome131",     rest_route_url, proxies, "chrome+restroute+proxy"),
+            ]
+
+        last_response   = None  # last 4xx body so we can log on final failure
+        last_exception  = None
+        for imp, try_url, proxies_arg, label in strategies:
+            try:
+                sess = _cffi_req.Session(
+                    impersonate=imp,
+                    default_headers=False,
                 )
-                # Signal "still a firewall block" to downstream catchers.
-                raise requests.exceptions.SSLError(
-                    f"WAF blocked at HTTP {status} despite Chrome TLS "
-                    f"fingerprint — likely Wordfence-class plugin firewall"
+                sess.headers.update(headers)
+                call_kw = dict(kw)
+                if proxies_arg:
+                    call_kw["proxies"] = proxies_arg
+                response = getattr(sess, method)(try_url, **call_kw)
+                status = getattr(response, "status_code", 0)
+                # Success or a real WC response → we're done.
+                # 2xx = OK. 4xx WC API errors (auth, validation) are
+                # genuine merchant responses — NOT WAF blocks — and
+                # should pass through to existing handlers.
+                #   • 401 = real auth failure (creds wrong)
+                #   • 404 = endpoint wrong (e.g. WC not installed)
+                #   • 422 = WC validation error
+                # The 403 / 406 / 444 / 429 codes are the WAF
+                # signature pattern — keep trying the next strategy.
+                if status < 400 or status in (401, 404, 422):
+                    _woolog.info(
+                        "WooCommerce WAF retry %s succeeded for %s (HTTP %s)",
+                        label, try_url, status,
+                    )
+                    return response
+                # WAF-shape 4xx — remember it for the final log and
+                # try the next strategy.
+                last_response = response
+                _woolog.debug(
+                    "WooCommerce WAF retry %s returned HTTP %s — trying next",
+                    label, status,
                 )
-            _woolog.info(
-                "WooCommerce WAF retry via curl_cffi succeeded for %s "
-                "(HTTP %s) — primary cloudscraper was blocked",
-                url, status,
+            except Exception as e:
+                last_exception = e
+                _woolog.debug(
+                    "WooCommerce WAF retry %s raised %s — trying next",
+                    label, type(e).__name__,
+                )
+                continue
+
+        # ── All strategies exhausted. Log the LAST 4xx body for
+        # diagnosis (which WAF page came back) so we can decide if
+        # adding another header / impersonation would help next
+        # time, then signal upstream that this remains a firewall
+        # block (so the diagnose UI shows the right card).
+        if last_response is not None:
+            body_preview = ""
+            try:
+                body_preview = (getattr(last_response, "text", "") or "")[:800]
+            except Exception:
+                pass
+            status = getattr(last_response, "status_code", "?")
+            _woolog.warning(
+                "WooCommerce WAF retry: exhausted ALL %d strategies for %s "
+                "(last HTTP %s). Likely an IP-reputation block at the "
+                "server / hosting layer (Kinsta nginx firewall, WP Engine "
+                "guard, etc.) that no header or fingerprint trick can "
+                "bypass — needs WOO_PROXY_URL or customer-side IP "
+                "whitelist. Final body preview: %r",
+                len(strategies), url, status, body_preview,
             )
-            return response
+            raise requests.exceptions.SSLError(
+                f"All {len(strategies)} WAF-evasion strategies returned "
+                f"HTTP {status}. IP-reputation block at hosting layer; "
+                f"set WOO_PROXY_URL or customer must whitelist our IP."
+            )
+        # No 4xx ever returned — every attempt errored out. Surface
+        # the last exception (translated to requests-compatible).
+        e = last_exception
+        try:
+            raise e
         except requests.exceptions.SSLError:
-            # Already re-raised above for the WAF-403 path — pass through.
             raise
         except Exception as e:
-            # Translate curl_cffi exceptions to requests equivalents so
-            # the OUTER exception handler in _call() sees a recognisable
-            # type and can decide whether to re-raise the primary or
-            # surface the retry's error.
             if _CURL_CFFI_AVAILABLE:
                 if isinstance(e, _cffi_ex.Timeout):
                     raise requests.exceptions.Timeout(str(e)) from e
