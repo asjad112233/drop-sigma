@@ -108,6 +108,36 @@ def _is_waf_handshake_error(exc) -> bool:
     return any(p in msg for p in _WAF_HANDSHAKE_PATTERNS)
 
 
+def _looks_like_json_response(response) -> bool:
+    """True iff the HTTP response body is plausibly a JSON document.
+
+    Why this exists: the `?rest_route=` URL variant in the retry ladder
+    can silently fall through to the site's homepage when WP's
+    permalink config doesn't honour the query parameter — returning
+    200 OK with an HTML body. The naive status-code check thinks
+    we succeeded; the caller then calls `response.json()` and gets
+    "Expecting value: line 1 column 1 (char 0)" with no clue why.
+    Sniff Content-Type + first body char so we treat HTML-200 as a
+    soft fail and keep walking the strategy ladder."""
+    try:
+        ctype = (response.headers.get("Content-Type") or "").lower()
+    except Exception:
+        ctype = ""
+    if "application/json" in ctype or "text/json" in ctype:
+        return True
+    # Some WC installs return JSON with text/html or no Content-Type
+    # at all (misconfigured but technically valid). Fall back to
+    # inspecting the first non-whitespace byte: JSON arrays/objects
+    # always start with [ or {, HTML always starts with <.
+    try:
+        body = (response.text or "").lstrip()
+    except Exception:
+        return False
+    if not body:
+        return False
+    return body[0] in ("{", "[")
+
+
 class _SmartWooSession:
     """Drop-in `requests.Session()`-compatible wrapper that:
 
@@ -300,18 +330,37 @@ class _SmartWooSession:
                 # The 403 / 406 / 444 / 429 codes are the WAF
                 # signature pattern — keep trying the next strategy.
                 if status < 400 or status in (401, 404, 422):
-                    _woolog.info(
-                        "WooCommerce WAF retry %s succeeded for %s (HTTP %s)",
-                        label, logged_target, status,
+                    # CRITICAL: also verify the body is actually a WC
+                    # JSON response, not an HTML page that happened to
+                    # return 200. The `?rest_route=` URL variant can
+                    # silently fall through to the WordPress homepage
+                    # (200 OK + HTML body) when the site's permalink
+                    # config doesn't recognise the parameter. Returning
+                    # that to the caller would break `response.json()`
+                    # with the cryptic "Expecting value: line 1 col 1
+                    # (char 0)" error.
+                    if _looks_like_json_response(response):
+                        _woolog.info(
+                            "WooCommerce WAF retry %s succeeded for %s (HTTP %s)",
+                            label, logged_target, status,
+                        )
+                        return response
+                    # 200 with non-JSON body = soft fail. Treat like a
+                    # WAF 4xx and keep walking the ladder.
+                    last_response = response
+                    _woolog.debug(
+                        "WooCommerce WAF retry %s returned HTTP %s but body "
+                        "is NOT JSON (likely WP homepage fallback) — trying next",
+                        label, status,
                     )
-                    return response
-                # WAF-shape 4xx — remember it for the final log and
-                # try the next strategy.
-                last_response = response
-                _woolog.debug(
-                    "WooCommerce WAF retry %s returned HTTP %s — trying next",
-                    label, status,
-                )
+                else:
+                    # WAF-shape 4xx — remember it for the final log and
+                    # try the next strategy.
+                    last_response = response
+                    _woolog.debug(
+                        "WooCommerce WAF retry %s returned HTTP %s — trying next",
+                        label, status,
+                    )
             except Exception as e:
                 last_exception = e
                 _woolog.debug(
