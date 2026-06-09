@@ -108,31 +108,47 @@ def _log_ip_async(request):
     browser, os_name, device_type = _parse_ua(ua)
 
     def _run():
-        from .models import UserIPLog
-        threshold = timezone.now() - datetime.timedelta(minutes=15)
-        latest = UserIPLog.objects.filter(user_id=user_id).order_by("-last_seen").first()
+        # CRITICAL: this thread MUST release its DB connection back to the
+        # pool when it's done. Django auto-closes connections only on the
+        # main request thread — background threads leak otherwise. We saw
+        # this in production as `FATAL: sorry, too many clients already`
+        # on 2026-06-09 once tenant traffic ramped (Railway logs).
+        from django.db import connections
+        try:
+            from .models import UserIPLog
+            threshold = timezone.now() - datetime.timedelta(minutes=15)
+            latest = UserIPLog.objects.filter(user_id=user_id).order_by("-last_seen").first()
 
-        if latest and latest.last_seen > threshold and latest.ip_address == ip:
-            # Just bump last_seen
-            UserIPLog.objects.filter(pk=latest.pk).update(
-                last_seen=timezone.now(),
-                browser=browser, os_name=os_name, device_type=device_type
-            )
-            return
+            if latest and latest.last_seen > threshold and latest.ip_address == ip:
+                # Just bump last_seen
+                UserIPLog.objects.filter(pk=latest.pk).update(
+                    last_seen=timezone.now(),
+                    browser=browser, os_name=os_name, device_type=device_type
+                )
+                return
 
-        geo = _geo_lookup(ip)
-        if latest and latest.ip_address == ip:
-            UserIPLog.objects.filter(pk=latest.pk).update(
-                last_seen=timezone.now(),
-                browser=browser, os_name=os_name, device_type=device_type,
-                **geo
-            )
-        else:
-            UserIPLog.objects.create(
-                user_id=user_id, ip_address=ip,
-                browser=browser, os_name=os_name, device_type=device_type,
-                **geo
-            )
+            geo = _geo_lookup(ip)
+            if latest and latest.ip_address == ip:
+                UserIPLog.objects.filter(pk=latest.pk).update(
+                    last_seen=timezone.now(),
+                    browser=browser, os_name=os_name, device_type=device_type,
+                    **geo
+                )
+            else:
+                UserIPLog.objects.create(
+                    user_id=user_id, ip_address=ip,
+                    browser=browser, os_name=os_name, device_type=device_type,
+                    **geo
+                )
+        except Exception:
+            # Never let analytics break the request flow.
+            pass
+        finally:
+            # Always close — even on early return or exception.
+            try:
+                connections.close_all()
+            except Exception:
+                pass
 
     t = threading.Thread(target=_run, daemon=True)
     t.start()
@@ -315,6 +331,10 @@ class VisitTrackingMiddleware:
         }
 
         def _persist():
+            # Background threads MUST release their DB connection back to
+            # the pool when done — see ImpersonationMiddleware._run for
+            # the same fix and the 2026-06-09 "too many clients" incident.
+            from django.db import connections
             try:
                 from .models import VisitLog
                 browser, os_name, device_type, is_bot_ua = _device_from_ua(snapshot["ua"])
@@ -346,6 +366,11 @@ class VisitTrackingMiddleware:
             except Exception:
                 # Never let analytics break the request
                 pass
+            finally:
+                try:
+                    connections.close_all()
+                except Exception:
+                    pass
 
         threading.Thread(target=_persist, daemon=True).start()
         return response
