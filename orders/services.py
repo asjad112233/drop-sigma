@@ -2,13 +2,31 @@ from teamapp.services import auto_assign_order
 import requests
 
 # ── WooCommerce / WP REST helper ────────────────────────────────────────────
-# Many merchants put their WooCommerce store behind Cloudflare, which
-# aggressively challenges `/wp-json/*` requests from plain Python `requests`
-# (HTTP 406 / 403 / 503). `cloudscraper` solves the JS challenge + browser
-# fingerprint check transparently. Fall back to plain `requests` if the
-# library isn't installed (older deploys), and add browser-like headers
-# either way so non-Cloudflare WAFs (Wordfence, SiteGround, etc.) also
-# stop flagging the call.
+# Many merchants put their WooCommerce store behind a WAF (Cloudflare,
+# Kinsta, WP Engine, SiteGround, Wordfence, Sucuri...). Modern WAFs do
+# TWO levels of bot detection:
+#
+#   1. TLS-fingerprint (JA3 / JA4) inspection of the ClientHello — they
+#      recognise Python's `requests` ClientHello as "not a real browser"
+#      and either silent-drop the packets or reply with
+#      SSLV3_ALERT_HANDSHAKE_FAILURE before any HTTP layer runs.
+#   2. Cookie / JS challenge after the handshake (cloudscraper-class).
+#
+# `cloudscraper` only fixes (2). The Kinsta-style blocks we saw in prod
+# (sslv3 handshake failure on /wp-json/wc/v3/ for breathedivinityuk.com)
+# need (1). `curl_cffi` solves it: it's a Python binding to
+# curl-impersonate, which sends a byte-for-byte identical ClientHello
+# to whichever real browser version we ask for.
+#
+# Preference order (most-evasive first, falling back gracefully):
+#   curl_cffi (chrome131)  →  cloudscraper  →  bare requests + headers
+try:
+    from curl_cffi import requests as _cffi_req
+    from curl_cffi import exceptions as _cffi_ex
+    _CURL_CFFI_AVAILABLE = True
+except Exception:
+    _CURL_CFFI_AVAILABLE = False
+
 try:
     import cloudscraper as _cs
     _WOO_SCRAPER_AVAILABLE = True
@@ -29,23 +47,92 @@ _WOO_HEADERS = {
 }
 
 
-def woo_session():
-    """Return a session that survives Cloudflare's bot challenges.
+class _WooSessionAdapter:
+    """Drop-in wrapper that exposes a `requests.Session()`-compatible
+    interface (.get / .post / .put / .delete) but routes through
+    curl_cffi underneath.
 
-    Use this in place of bare `requests` for every WooCommerce REST call so
-    merchant stores hidden behind Cloudflare keep working without asking
-    them to whitelist our IP or disable Bot Fight Mode. Behaves identically
-    to a `requests.Session()` — supports .get / .post / .put / .delete
-    with the same kwargs (auth=, params=, json=, timeout=, headers=)."""
+    Why the wrapper exists: ~10 call sites across the codebase wrap
+    woo_session() calls in `try / except requests.exceptions.SSLError`
+    / `Timeout` / `ConnectionError`. curl_cffi raises ITS OWN exception
+    classes from `curl_cffi.exceptions` — those wouldn't be caught,
+    leaking as generic `Exception` and breaking existing diagnose /
+    retry / error-classification logic. The wrapper translates each
+    curl_cffi exception to its requests equivalent so every existing
+    caller keeps working unchanged.
+    """
+    def __init__(self, sess, kind):
+        self._sess = sess
+        self._kind = kind            # for log/debug — which backend served the call
+        self.headers = sess.headers  # exposed so callers can mutate (some do)
+
+    # Verb shortcuts — same signature as requests.Session.
+    def get(self, url, **kw):    return self._call("get", url, **kw)
+    def post(self, url, **kw):   return self._call("post", url, **kw)
+    def put(self, url, **kw):    return self._call("put", url, **kw)
+    def delete(self, url, **kw): return self._call("delete", url, **kw)
+    def request(self, method, url, **kw):
+        return self._call(method.lower(), url, **kw)
+
+    def _call(self, method, url, **kw):
+        try:
+            return getattr(self._sess, method)(url, **kw)
+        except Exception as e:
+            if self._kind != "curl_cffi" or not _CURL_CFFI_AVAILABLE:
+                raise
+            # Translate curl_cffi exceptions to requests-equivalent ones so
+            # existing `except requests.exceptions.X:` blocks still catch them.
+            if isinstance(e, _cffi_ex.Timeout):
+                raise requests.exceptions.Timeout(str(e)) from e
+            if isinstance(e, _cffi_ex.ConnectionError):
+                # curl_cffi's ConnectionError covers DNS, refused, reset,
+                # AND TLS handshake failures (it doesn't separate SSL).
+                # Sniff for handshake-related text to decide which
+                # requests exception to raise so the diagnose classifier
+                # routes to the "firewall" branch instead of "offline".
+                msg = str(e).lower()
+                if ("handshake" in msg or "ssl" in msg or "tls" in msg
+                        or "alert" in msg or "cert" in msg):
+                    raise requests.exceptions.SSLError(str(e)) from e
+                raise requests.exceptions.ConnectionError(str(e)) from e
+            if isinstance(e, _cffi_ex.RequestException):
+                raise requests.exceptions.RequestException(str(e)) from e
+            raise
+
+
+def woo_session():
+    """Return an HTTP session that maximally evades merchant-side WAFs.
+
+    Tier 1 (preferred): curl_cffi impersonating Chrome 131 — sends a
+        byte-for-byte real-Chrome TLS ClientHello so JA3/JA4-fingerprint
+        WAFs (Kinsta, WP Engine, Sucuri) can't distinguish us from a
+        real browser. This is the ONLY thing that defeats the
+        SSLV3_ALERT_HANDSHAKE_FAILURE class of block.
+    Tier 2: cloudscraper — solves Cloudflare's JS / cookie challenges
+        but uses Python's default TLS fingerprint (loses Tier 1 wars).
+    Tier 3: bare requests + browser-like headers. Last resort.
+
+    Returns a session-like object exposing .get / .post / .put / .delete
+    with the same kwargs as `requests.Session.<verb>` — auth=, params=,
+    json=, data=, headers=, timeout=, verify=.
+    """
+    if _CURL_CFFI_AVAILABLE:
+        # `impersonate` picks Chrome's exact ClientHello / cipher list /
+        # ALPN order. chrome131 = latest stable at time of writing; if a
+        # WAF starts blocking it later we can rotate to chrome133 etc.
+        s = _cffi_req.Session(impersonate="chrome131")
+        s.headers.update(_WOO_HEADERS)
+        return _WooSessionAdapter(s, "curl_cffi")
     if _WOO_SCRAPER_AVAILABLE:
         s = _cs.create_scraper(
             browser={"browser": "chrome", "platform": "darwin", "desktop": True},
             delay=2,
         )
-    else:
-        s = requests.Session()
+        s.headers.update(_WOO_HEADERS)
+        return _WooSessionAdapter(s, "cloudscraper")
+    s = requests.Session()
     s.headers.update(_WOO_HEADERS)
-    return s
+    return _WooSessionAdapter(s, "requests")
 
 COURIER_URL_TEMPLATES = {
     "yuntrack":       "https://www.yuntrack.com/parcelTracking?id={num}",

@@ -16,6 +16,13 @@ celery==5.6.3
 certifi==2026.4.22
 charset-normalizer==3.4.7
 cloudscraper==1.2.71
+# curl_cffi: Python binding to curl-impersonate. Sends a byte-for-byte
+# real-Chrome TLS ClientHello so JA3/JA4-fingerprint WAFs (Kinsta, WP
+# Engine, Sucuri) can't tell Drop Sigma from a real browser. Required
+# to defeat the SSLV3_ALERT_HANDSHAKE_FAILURE class of WAF block seen
+# on Kinsta-hosted WooCommerce stores. Used by
+# `orders.services.woo_session()`.
+curl_cffi>=0.7.0,<1.0
 click-didyoumean==0.3.1
 click-plugins==1.1.1.2
 click-repl==0.3.0
