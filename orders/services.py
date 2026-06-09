@@ -229,10 +229,11 @@ class _SmartWooSession:
         """
         from urllib.parse import urlparse, urlencode, urlunparse, parse_qsl
         parsed = urlparse(url)
-        origin = f"{parsed.scheme}://{parsed.netloc}"
         headers = dict(_WOO_API_HEADERS_CURLCFFI)
-        headers["Origin"]  = origin
-        headers["Referer"] = origin + "/wp-admin/"
+        # NOTE: previously also set Origin + Referer headers to mimic an
+        # in-admin XHR. Live diagnostic proved Kinsta's WAF rejects
+        # those (probably because legit API clients don't send them).
+        # Now matches the minimal header set that succeeds in production.
 
         # Build the alternate `?rest_route=` URL — WC's officially-
         # supported pretty-permalink-independent form. Only convert
