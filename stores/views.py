@@ -755,6 +755,107 @@ def _http_get_subprocess(url, auth=None, headers=None, timeout=12):
     return int(proc.stdout.strip()), None
 
 
+# ─── Outbound-IP discovery + hosting-firewall classifier ────────────────
+# Managed WordPress hosts (Kinsta, WP Engine, SiteGround, Cloudways,
+# Hostinger…) routinely block traffic from cloud / datacenter IPs as
+# bot protection. Drop Sigma runs on Railway, so it gets blocked. The
+# old code mis-labelled this as "SSL Certificate Error" because Python
+# raises `SSLError` when a TCP-then-silent-drop server eats the TLS
+# handshake — sending users to chase a non-existent cert problem.
+#
+# Now we detect the pattern (timeout / EOF in handshake / reset by peer)
+# and tell the user it's a hosting firewall, plus surface our outbound
+# IP so they can whitelist it in their host's dashboard.
+
+# Module-level cache for our outbound IP. Lifetime: 1 hour. Railway's
+# IP is usually static-per-deploy but can change on redeploy.
+_OUTBOUND_IP_CACHE = {"ip": None, "fetched_at": 0}
+
+
+def _get_outbound_ip():
+    """Return the public IP this server uses for outbound HTTPS.
+    Cached for 1 hour. Returns None if discovery fails — the caller
+    should handle that gracefully (the error message stays useful
+    without the IP, just less actionable)."""
+    import time
+    now = time.time()
+    if _OUTBOUND_IP_CACHE["ip"] and (now - _OUTBOUND_IP_CACHE["fetched_at"]) < 3600:
+        return _OUTBOUND_IP_CACHE["ip"]
+    # Try two providers in case one is down. 3s timeout each — we don't
+    # want IP discovery itself to make the diagnose endpoint slow.
+    for url in ("https://api.ipify.org", "https://ifconfig.me/ip"):
+        try:
+            r = _req.get(url, timeout=3)
+            if r.status_code == 200:
+                ip = (r.text or "").strip()
+                # Basic sanity — ipv4 or ipv6 shape
+                if ip and len(ip) < 64 and " " not in ip and "\n" not in ip:
+                    _OUTBOUND_IP_CACHE["ip"] = ip
+                    _OUTBOUND_IP_CACHE["fetched_at"] = now
+                    return ip
+        except Exception:
+            continue
+    return None
+
+
+# Substrings that, when they appear in an SSLError / ConnectionError
+# message, almost always mean "hosting firewall is silently dropping
+# our packets" rather than a real SSL / cert problem.
+_FIREWALL_BLOCK_PATTERNS = (
+    "eof occurred in violation of protocol",  # TCP closed mid-handshake
+    "ssl: unexpected_eof",                     # OpenSSL 3.x variant
+    "connection reset by peer",                # RST during handshake
+    "connection aborted",                       # urllib3's protocol-error wrap
+    "tlsv1 alert internal error",              # WAF sends a generic alert
+    "tlsv1 alert protocol version",            # WAF rejects our handshake
+    "read timed out",                          # silent drop after TCP accept
+    "remote end closed connection",            # truncated TLS handshake
+)
+
+
+def _looks_like_hosting_firewall(err_text):
+    """True if the error string smells like a WAF / firewall silent
+    drop — i.e. NOT a genuine SSL / cert problem."""
+    if not err_text:
+        return False
+    low = str(err_text).lower()
+    return any(p in low for p in _FIREWALL_BLOCK_PATTERNS)
+
+
+def _firewall_block_response(store):
+    """Shared response builder for the hosting-firewall case. Surfaces
+    our outbound IP so the user can whitelist it in their host's
+    firewall panel without having to ask us for it."""
+    ip = _get_outbound_ip()
+    ip_line = (f"Drop Sigma's outbound IP: {ip}"
+               if ip else "Outbound IP: contact support to retrieve.")
+    return {
+        "online": False,
+        "issue":  "firewall",
+        "title":  "Hosting Firewall Blocking API Access",
+        "message": (
+            "Your store loads in browsers but your hosting provider's "
+            "firewall is silently dropping our API requests. This is "
+            "common with Kinsta, WP Engine, SiteGround, Cloudways, "
+            "Hostinger and other managed WordPress hosts that block "
+            "cloud / datacenter IPs by default.\n\n"
+            "This is NOT an SSL or certificate problem — your "
+            "certificate is fine."
+        ),
+        "fix": (
+            f"{ip_line}\n\n"
+            "Fix (do ONE of these):\n"
+            "1. Ask your host to whitelist the IP above for outbound "
+            "REST API access (most common fix).\n"
+            "2. In your hosting panel, disable cloud-IP / bot blocking "
+            "for the path  /wp-json/wc/v3/*\n"
+            "3. Kinsta: MyKinsta dashboard → Tools → IP Deny → "
+            "remove or whitelist. WP Engine: User Portal → Security → "
+            "Allow List."
+        ),
+    }
+
+
 def _diagnose_store(store):
     """
     Attempt to reach the store API and return a detailed diagnosis dict.
@@ -840,14 +941,28 @@ def _diagnose_store(store):
 
     except _req.exceptions.SSLError as e:
         err = str(e).lower()
+        # Genuine cert problems (browser would also fail) → SSL message.
         if "certificate has expired" in err or "certificate verify failed" in err:
             detail = "Your SSL certificate has expired."
         elif "self signed" in err or "self-signed" in err:
             detail = "Your store is using a self-signed SSL certificate."
-        elif "hostname mismatch" in err or "hostname" in err:
+        elif "hostname mismatch" in err:
+            detail = "The SSL certificate does not match the domain name."
+        # Everything else under SSLError that LOOKS like a cert issue but
+        # is actually a hosting firewall silently dropping our packets →
+        # firewall message with our outbound IP for whitelisting.
+        elif _looks_like_hosting_firewall(err):
+            return _firewall_block_response(store)
+        elif "hostname" in err:
             detail = "The SSL certificate does not match the domain name."
         else:
-            detail = "An SSL/TLS handshake error occurred."
+            # Last-resort generic SSL fallback. Still mentions firewall
+            # as a possibility so users don't chase a non-existent cert
+            # bug forever.
+            detail = ("An SSL/TLS handshake error occurred. If the site "
+                      "loads in your browser, this is most likely a "
+                      "hosting firewall blocking our IP rather than a "
+                      "certificate problem.")
         return {"online": False, "issue": "ssl",
                 "title": "SSL Certificate Error",
                 "message": f"{detail}\n\nThe secure connection to your store could not be established.",
@@ -865,16 +980,21 @@ def _diagnose_store(store):
                     "title": "Connection Refused",
                     "message": "The server actively refused the connection. The web server may be stopped or a firewall is blocking access.",
                     "fix": "Restart your web server (Apache/Nginx) or check your firewall rules. Contact your hosting provider if the issue persists."}
+        # Connection reset / aborted mid-handshake = hosting firewall.
+        if _looks_like_hosting_firewall(err):
+            return _firewall_block_response(store)
         return {"online": False, "issue": "offline",
                 "title": "Store Unreachable",
                 "message": "Cannot connect to the store server. The server may be down, restarting, or experiencing a network outage.",
                 "fix": "Wait a few minutes and try again. If the problem continues, contact your hosting provider to check server status."}
 
     except _req.exceptions.Timeout:
-        return {"online": False, "issue": "timeout",
-                "title": "Connection Timed Out",
-                "message": "The store server did not respond within 10 seconds. It may be overloaded or experiencing high traffic.",
-                "fix": "Try again in a few minutes. If timeouts persist, check your server's performance or upgrade your hosting plan."}
+        # If DNS resolved (we got past the ConnectionError branch above)
+        # and we still timed out at the HTTPS layer, it's almost always
+        # because a firewall is silently dropping our packets — pure
+        # server-overload timeouts return 5xx instead. Show the
+        # firewall message with the whitelisting fix.
+        return _firewall_block_response(store)
 
     except Exception as e:
         return {"online": False, "issue": "unknown",

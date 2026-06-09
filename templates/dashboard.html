@@ -19205,6 +19205,10 @@ async function _showStoreDiagnosis(storeId){
     refused: {ring:"#ef4444", bg:"#fef2f2", inner:"linear-gradient(145deg,#fff7f7,#fee2e2)"},
     offline: {ring:"#ef4444", bg:"#fef2f2", inner:"linear-gradient(145deg,#fff7f7,#fee2e2)"},
     timeout: {ring:"#f97316", bg:"#fff7ed", inner:"linear-gradient(145deg,#fff7ed,#ffedd5)"},
+    // Hosting WAF / firewall silently dropping our packets — distinct
+    // from a real SSL or DNS failure. Indigo to signal "this is about
+    // network access, not a broken cert."
+    firewall:{ring:"#6366f1", bg:"#eef2ff", inner:"linear-gradient(145deg,#eef2ff,#e0e7ff)"},
     auth:    {ring:"#8b5cf6", bg:"#f5f3ff", inner:"linear-gradient(145deg,#f5f3ff,#ede9fe)"},
     not_found:{ring:"#f97316",bg:"#fff7ed", inner:"linear-gradient(145deg,#fff7ed,#ffedd5)"},
     server_error:{ring:"#ef4444",bg:"#fef2f2",inner:"linear-gradient(145deg,#fff7f7,#fee2e2)"},
