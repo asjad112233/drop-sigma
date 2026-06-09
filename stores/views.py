@@ -1232,6 +1232,27 @@ def proxy_diagnostic_api(request, store_id):
     except Exception as e:
         out["env"]["curl_cffi_version"] = f"ERROR: {e}"
 
+    # Test 6: hit the ACTUAL /orders endpoint (the one that sync uses)
+    # via woo_session — i.e. test the full production code path. This
+    # is the smoking-gun test that should match production behaviour.
+    try:
+        orders_url = f"{store.store_url.rstrip('/')}/wp-json/wc/v3/orders"
+        from orders.services import woo_session
+        t = time.time()
+        r = woo_session().get(orders_url, auth=auth, params={"per_page": 5}, timeout=30)
+        out["tests"].append({
+            "name": "woo_session().get(/orders) — actual sync code path",
+            "http_code": r.status_code,
+            "body_first_byte": (r.text[:1] if r.text else ""),
+            "body_preview": (r.text[:200] if r.text else ""),
+            "elapsed_s": round(time.time() - t, 2),
+        })
+    except Exception as e:
+        out["tests"].append({
+            "name": "woo_session().get(/orders)",
+            "exception": f"{type(e).__name__}: {str(e)[:300]}",
+        })
+
     return Response(out)
 
 

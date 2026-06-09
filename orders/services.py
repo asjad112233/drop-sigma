@@ -61,14 +61,17 @@ _WOO_HEADERS = {
 # /wp-json/* with Basic auth" — the giveaway pattern).
 _WOO_API_HEADERS_CURLCFFI = {
     "User-Agent": _WOO_HEADERS["User-Agent"],
-    "Accept": "application/json, text/javascript, */*; q=0.01",
+    "Accept": "application/json",
     "Accept-Language": "en-US,en;q=0.9",
     "Accept-Encoding": "gzip, deflate, br",
-    "X-Requested-With": "XMLHttpRequest",
-    "Sec-Fetch-Mode": "cors",
-    "Sec-Fetch-Site": "same-origin",
-    "Sec-Fetch-Dest": "empty",
     "Connection": "keep-alive",
+    # NOTE: previously we sent X-Requested-With + Sec-Fetch-* to mimic a
+    # logged-in WP-admin XHR. But the live production diagnostic on
+    # 2026-06-09 proved Kinsta accepts our request just fine with plain
+    # Accept: application/json (and rejects the XHR-shape variant).
+    # Likely Kinsta's nginx WAF flags `X-Requested-With` from external
+    # IPs as suspicious cross-origin scraping. Removing those headers
+    # makes our request look like any other curl-style API client.
 }
 
 
