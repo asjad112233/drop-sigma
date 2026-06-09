@@ -13309,6 +13309,13 @@ let allEmails = [];
 let allThreads = [];
 let currentThreadContact = null;
 let currentThreadEmails = [];
+// Monotonic generation counter for openThread(). Every call records its
+// own gen at entry; before any DOM write or scroll, it checks whether
+// it's still the latest. If the user clicked a different email (or the
+// 3-sec fast poller fired) in the meantime, gen has been incremented
+// and the older call bails out — preventing the "previous email
+// reappears after switching" race and the chained scroll fights.
+let _openThreadGen = 0;
 let threadUiState = loadThreadUiState();
 let emailFilter = "";
 let emailLiveTimer = null;
@@ -23303,12 +23310,29 @@ async function fastInboxTick(){
       _fastInboxLastMaxId = maxId;
       // Fire email-settings-driven notifications: sound + browser notif
       try{ _maybeNotifyNewEmail(newCount, d.preview); }catch(_){}
+      // Snapshot the gen BEFORE awaiting — if the user clicks a thread
+      // during the silent reload, we'll detect that and skip the auto
+      // re-openThread (otherwise the poller's stale `currentThreadContact`
+      // capture would clobber the user's chosen thread).
+      const _tickGen = _openThreadGen;
       // Reload silently — never flash "Loading..." over the cached list on
       // background polls (the 3-sec poller would otherwise replace innerHTML
       // every time new mail arrived).
       try { await loadEmails({silent: true, preserveSelection: true}); } catch(e){}
-      if(typeof currentThreadContact !== "undefined" && currentThreadContact){
-        try { await openThread(currentThreadContact, {keepUnread: true}); } catch(e){}
+      if(typeof currentThreadContact !== "undefined" && currentThreadContact
+         && _tickGen === _openThreadGen){
+        // Only fire openThread if the FP for this thread would actually
+        // change — fingerprint check inside openThread skips the body
+        // rewrite, but the openThread call itself still costs a fetch
+        // and triggers UI side-effects. Compare against `allThreads` so
+        // we can preempt cheaply.
+        const _row = (allThreads || []).find(t => t.contact === currentThreadContact);
+        const _knownLatest = _row && _row.latest_id;
+        const _last = currentThreadEmails && currentThreadEmails.length
+          ? currentThreadEmails[currentThreadEmails.length - 1].id : 0;
+        if(!_knownLatest || _knownLatest > _last){
+          try { await openThread(currentThreadContact, {keepUnread: true, preserveReply: true}); } catch(e){}
+        }
       }
     }
   }catch(e){ /* swallow — next tick will retry */ }
@@ -25307,6 +25331,13 @@ async function openCustomerEmail(customerEmail, customerName, orderNum){
 window.openCustomerEmail = openCustomerEmail;
 
 async function openThread(contact, options={}){
+  // Generation token — every call gets a unique gen. If the user clicks
+  // a different thread (or the fast poller fires) while THIS call's
+  // fetch is in flight, _openThreadGen will be incremented and this
+  // call must abort before writing to the DOM. Otherwise a slower
+  // response from an EARLIER click overwrites a faster response from
+  // the LATER click — the "previous email reappears" race.
+  const myGen = ++_openThreadGen;
   currentThreadContact = contact;
   const msg = document.getElementById("emailActionMessage");
   if(msg) msg.innerText = "";
@@ -25324,7 +25355,11 @@ async function openThread(contact, options={}){
 
   try{
     const response = await fetch(`/emails/api/thread/?store_id=${selectedStoreId}&contact=${encodeURIComponent(contact)}`);
+    // User switched away while the fetch was in flight — abandon this
+    // render so we don't clobber the newer thread's content.
+    if(myGen !== _openThreadGen) return;
     const data = await response.json();
+    if(myGen !== _openThreadGen) return;
 
     if(!data.success){
       clearEmailDetail();
@@ -25387,20 +25422,30 @@ async function openThread(contact, options={}){
     // msg id, count). If unchanged, leave the existing DOM alone.
     const _bodyEl = document.getElementById("emailDetailBody");
     const _fp = `${contact}|${lastMsg.id}|${currentThreadEmails.length}`;
-    if(_bodyEl && _bodyEl.dataset.fp !== _fp){
-      const _wasNearBottom = (() => {
-        if(!_bodyEl) return true;
-        const gap = _bodyEl.scrollHeight - _bodyEl.scrollTop - _bodyEl.clientHeight;
-        return gap < 120; // user is essentially at the bottom
-      })();
+    // Track whether THIS call actually rewrote the body — used below to
+    // gate the unconditional `setTimeout(scrollChatToBottom, 60)` so we
+    // don't scroll on no-op fast-poll refreshes (was the up/down jumping).
+    const _didRewriteBody = _bodyEl && _bodyEl.dataset.fp !== _fp;
+    // Whether the user was near the bottom of the OLD content — if they
+    // were scrolled up reading older mail, we leave them alone.
+    const _wasNearBottom = (() => {
+      if(!_bodyEl) return true;
+      const gap = _bodyEl.scrollHeight - _bodyEl.scrollTop - _bodyEl.clientHeight;
+      return gap < 120;
+    })();
+    if(_didRewriteBody){
       _bodyEl.innerHTML = renderThreadChat(currentThreadEmails);
       _bodyEl.dataset.fp = _fp;
       requestAnimationFrame(flushEmailIframes); // write HTML email content into iframes
-      // If user was reading at the bottom, keep them there as new messages append.
+      // Iframe-aware scroll: jump now, then re-jump after each iframe
+      // finishes loading (their height grows = scroll position becomes
+      // "above bottom" without this). Fixes the visible up/down jumping
+      // when the user-clicked-a-new-email AND iframes are still hydrating.
       if(_wasNearBottom){
-        requestAnimationFrame(() => { _bodyEl.scrollTop = _bodyEl.scrollHeight; });
+        scrollEmailDetailToBottom(myGen);
       }
     }
+    if(myGen !== _openThreadGen) return;
     const _displayName = cleanSenderName(threadInfo.name || contact || "Customer");
     const _replyLabel = document.getElementById("replyToLabel");
     if(_replyLabel) _replyLabel.innerText = `Reply to ${_displayName}`;
@@ -25411,13 +25456,22 @@ async function openThread(contact, options={}){
 
     // Load members then render both the old strip and new chip
     await loadEmailTeamMembers();
+    if(myGen !== _openThreadGen) return;
     renderAssignStrip(threadInfo);
 
     if(!options.preserveReply){
       document.getElementById("emailReplyText").value = "";
       closeSuggestionBox();
       autoResizeReply();
-      setTimeout(() => { scrollChatToBottom(); }, 60);
+      // Only re-fire a scroll when we actually rewrote the body. The
+      // fingerprint-skipped no-op path (every fast-poll tick when no
+      // new messages) must NOT keep yanking scroll position around —
+      // that was the "bar bar up-down auto" the user reported.
+      if(_didRewriteBody && _wasNearBottom){
+        setTimeout(() => {
+          if(myGen === _openThreadGen) scrollChatToBottom();
+        }, 60);
+      }
     }
 
     // Auto-suggest a tone-aware reply (non-blocking, respects setting)
@@ -25749,6 +25803,45 @@ function toggleQuoted(id){
 function scrollChatToBottom(){
   const body = document.getElementById("emailDetailBody");
   if(body) body.scrollTop = body.scrollHeight;
+}
+
+/* Iframe + image-aware scroll. Plain `scrollTop = scrollHeight` races
+   with email-iframe hydration (`flushEmailIframes` writes HTML AFTER
+   the first scroll fires; iframes grow; the previous scroll position
+   becomes "above bottom"). Also races with any inline <img>s in the
+   chat body. We jump now, again on next paint, and once more when each
+   iframe / image finishes loading — landing on the true bottom every
+   time. `expectGen` is the openThread generation token; if the user
+   switched away mid-scroll the helper no-ops so we don't yank scroll
+   on a thread the user is no longer viewing. */
+function scrollEmailDetailToBottom(expectGen){
+  const body = document.getElementById("emailDetailBody");
+  if(!body) return;
+  const safe = () => {
+    if(typeof expectGen === "number" && expectGen !== _openThreadGen) return;
+    body.scrollTop = body.scrollHeight;
+  };
+  safe();
+  requestAnimationFrame(safe);
+  // Iframes (one per HTML email message) — re-scroll when each loads.
+  body.querySelectorAll("iframe").forEach(f => {
+    const fn = () => {
+      f.removeEventListener("load", fn);
+      safe();
+    };
+    f.addEventListener("load", fn);
+  });
+  // Inline images (Markdown / inline-attached) — same pattern.
+  body.querySelectorAll("img").forEach(img => {
+    if(img.complete && img.naturalHeight !== 0) return;
+    const fn = () => {
+      img.removeEventListener("load",  fn);
+      img.removeEventListener("error", fn);
+      safe();
+    };
+    img.addEventListener("load",  fn);
+    img.addEventListener("error", fn);
+  });
 }
 
 function clearEmailDetail(){
