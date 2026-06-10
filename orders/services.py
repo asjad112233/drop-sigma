@@ -87,6 +87,13 @@ _WAF_HANDSHAKE_PATTERNS = (
     "connection aborted",
     "read timed out",
     "remote end closed connection",
+    # Connection-establish failures — Kinsta / similar managed-WP
+    # WAFs are known to drop SYN packets silently from datacenter IPs,
+    # which manifests as a connect timeout (NOT an SSL-layer error).
+    # Treat it as a WAF block so we escalate to the proxy ladder.
+    "connect timeout",
+    "connection to ",       # "Connection to host.com timed out"
+    "max retries exceeded",
     # Active TLS-alert family — server actively rejects our ClientHello
     "alert handshake failure",
     "sslv3_alert_handshake_failure",
@@ -357,32 +364,70 @@ class _SmartWooSession:
         cf_worker_url    = (os.getenv("WOO_CF_PROXY_URL") or "").strip() or None
         cf_worker_secret = (os.getenv("WOO_CF_PROXY_SECRET") or "").strip() or None
 
+        # Non-Chrome UA strategy — for managed-WP hosts (Kinsta) that
+        # have a WAF rule explicitly blocking the Chrome User-Agent on
+        # /wp-json/ endpoints. Live diagnostic 2026-06-10 against
+        # breathedivinityuk.com (Kinsta) proved:
+        #     UA = Chrome 131               → HTTP 403 (Kinsta WAF page)
+        #     UA = WooCommerce-API-Client/1.0 → HTTP 401 (passed Kinsta,
+        #                                       hit WC auth ✓)
+        # Sucuri-protected stores (Trapstar AU, Breathe Divinity .ca)
+        # already passed at Tier 1 via cloudscraper, so they never
+        # reach this tier. But if they did, chrome131 TLS + non-Chrome
+        # UA looks inconsistent to Sucuri and triggers a JS challenge —
+        # which is why we ONLY use this UA on proxy strategies (BD-class
+        # IP-blocked stores; Sucuri stores don't need a proxy and never
+        # walk this branch of the ladder).
+        _api_client_headers = dict(_WOO_API_HEADERS_CURLCFFI)
+        _api_client_headers["User-Agent"] = "WooCommerce-API-Client/1.0"
+
         # ── Strategy shape ──────────────────────────────────────────
-        #   ('direct', impersonation, url, proxies_dict_or_None, label)
-        #   ('cfworker', impersonation, real_target_url, label)
+        #   ('direct', impersonation, url, proxies_dict_or_None, headers, label)
+        #   ('cfworker', impersonation, real_target_url, headers, label)
         # Each is tried in order; first one that returns a real (non-WAF)
         # response wins.
         strategies = [
-            ("direct", "chrome131",      url,            None,    "chrome+wpjson"),
-            ("direct", "firefox133",     url,            None,    "firefox+wpjson"),
-            ("direct", "safari17_2_ios", url,            None,    "safari+wpjson"),
-            ("direct", "chrome131",      rest_route_url, None,    "chrome+restroute"),
+            ("direct", "chrome131",      url,            None,    headers, "chrome+wpjson"),
+            ("direct", "firefox133",     url,            None,    headers, "firefox+wpjson"),
+            ("direct", "safari17_2_ios", url,            None,    headers, "safari+wpjson"),
+            ("direct", "chrome131",      rest_route_url, None,    headers, "chrome+restroute"),
         ]
 
         # Cloudflare Worker relay strategies — cheap & free, prefer them
         # over residential proxy because no per-request data cost.
         if cf_worker_url and cf_worker_secret:
             strategies += [
-                ("cfworker", "chrome131", url,            "chrome+cfworker"),
-                ("cfworker", "chrome131", rest_route_url, "chrome+cfworker+restroute"),
+                ("cfworker", "chrome131", url,            headers, "chrome+cfworker"),
+                ("cfworker", "chrome131", rest_route_url, headers, "chrome+cfworker+restroute"),
             ]
 
-        # Residential-IP proxy strategies — paid, last resort.
+        # Residential-IP proxy strategies — paid, last resort. Try the
+        # non-Chrome-UA variant FIRST because it's the proven fix for
+        # Kinsta-class hosts that block Chrome UA on /wp-json/. Then
+        # fall back to Chrome-UA variants in case the merchant WAF
+        # only allows Chrome-shaped clients (rare but possible).
+        # Each strategy creates a NEW _cffi_req.Session → NEW TCP
+        # connection → NEW Decodo rotation IP, so retrying through
+        # the ladder automatically rotates IPs too (no separate retry
+        # loop needed).
         if proxies:
             strategies += [
-                ("direct", "chrome131",  url,            proxies, "chrome+wpjson+proxy"),
-                ("direct", "firefox133", url,            proxies, "firefox+wpjson+proxy"),
-                ("direct", "chrome131",  rest_route_url, proxies, "chrome+restroute+proxy"),
+                # Tier 3a: non-Chrome UA (WooCommerce-API-Client/1.0).
+                # Empirically the right answer for Kinsta nginx WAFs.
+                ("direct", "chrome131",  url,            proxies, _api_client_headers, "wcclient-ua+proxy"),
+                ("direct", "chrome131",  rest_route_url, proxies, _api_client_headers, "wcclient-ua+restroute+proxy"),
+                # Extra rotation attempts on the non-Chrome UA — each
+                # one picks a new Decodo IP, so this is "try 4 IPs with
+                # the working UA" before giving up. Covers the ~10-20%
+                # of IPs already in merchant blocklists.
+                ("direct", "chrome131",  url,            proxies, _api_client_headers, "wcclient-ua+proxy+rot3"),
+                ("direct", "chrome131",  url,            proxies, _api_client_headers, "wcclient-ua+proxy+rot4"),
+                # Tier 3b: Chrome UA fallback. Some hosts may have the
+                # opposite rule (allow Chrome, block library UAs). Kept
+                # as fallback for completeness.
+                ("direct", "chrome131",  url,            proxies, headers, "chrome+wpjson+proxy"),
+                ("direct", "firefox133", url,            proxies, headers, "firefox+wpjson+proxy"),
+                ("direct", "chrome131",  rest_route_url, proxies, headers, "chrome+restroute+proxy"),
             ]
 
         last_response   = None  # last 4xx body so we can log on final failure
@@ -393,7 +438,7 @@ class _SmartWooSession:
             label = "?"
             try:
                 if kind == "cfworker":
-                    _, imp, target_url, label = strategy
+                    _, imp, target_url, strategy_headers, label = strategy
                     logged_target = target_url
                     sess = _cffi_req.Session(
                         impersonate=imp,
@@ -402,18 +447,18 @@ class _SmartWooSession:
                     # Pass merchant-style headers + ADD the worker control
                     # headers. The worker strips its control headers before
                     # forwarding so the upstream sees only merchant ones.
-                    sess.headers.update(headers)
+                    sess.headers.update(strategy_headers)
                     sess.headers["X-Target-URL"]   = target_url
                     sess.headers["X-Proxy-Secret"] = cf_worker_secret
                     response = getattr(sess, method)(cf_worker_url, **kw)
                 else:  # "direct"
-                    _, imp, try_url, proxies_arg, label = strategy
+                    _, imp, try_url, proxies_arg, strategy_headers, label = strategy
                     logged_target = try_url
                     sess = _cffi_req.Session(
                         impersonate=imp,
                         default_headers=False,
                     )
-                    sess.headers.update(headers)
+                    sess.headers.update(strategy_headers)
                     call_kw = dict(kw)
                     # CRITICAL: curl_cffi's proxy API is `proxy=<url>`
                     # (singular string), NOT `proxies={"http":..,"https":..}`
@@ -532,111 +577,26 @@ class _SmartWooSession:
             raise
 
 
-class _DirectProxySession:
-    """Dead-simple WC session that uses curl_cffi + the configured
-    `WOO_PROXY_URL` for EVERY request. No tiers, no escalation, no
-    cloudscraper. Verified working live (10/06/2026 curl test) against
-    a Kinsta-blocked store via a Decodo UK residential rotating proxy:
-    HTTP 200 + JSON returned.
-
-    Use this when WOO_PROXY_URL is set. For stores that don't need a
-    proxy (Trapstar, Breathe Divinity .ca), the proxy still works —
-    Decodo's residential IPs are accepted by Sucuri/Cloudflare WAFs
-    too because they're real residential ISPs. So one proxy fits all.
-    """
-    def __init__(self, proxy_url):
-        self._proxy = proxy_url
-        self.headers = dict(_WOO_HEADERS)
-
-    def get(self, url, **kw):    return self._do("get",    url, **kw)
-    def post(self, url, **kw):   return self._do("post",   url, **kw)
-    def put(self, url, **kw):    return self._do("put",    url, **kw)
-    def delete(self, url, **kw): return self._do("delete", url, **kw)
-    def request(self, method, url, **kw):
-        return self._do(method.lower(), url, **kw)
-
-    def _do(self, method, url, **kw):
-        """Make the proxy call, retrying with a new residential IP if
-        the merchant's WAF blocks our current rotation. Decodo's
-        rotating port (gate.decodo.com:7000) gives us a NEW IP per
-        connection — most IPs work, but ~10-20% are already in
-        merchant blocklists. Retrying picks a fresh IP from the pool.
-
-        Up to MAX_ATTEMPTS rotations. First non-WAF response wins.
-        """
-        MAX_ATTEMPTS = 6
-        kw["proxy"] = self._proxy
-        last_response = None
-        last_exception = None
-        for attempt in range(1, MAX_ATTEMPTS + 1):
-            sess = _cffi_req.Session(impersonate="chrome131", default_headers=False)
-            sess.headers.update(self.headers)
-            try:
-                r = getattr(sess, method)(url, **kw)
-                # If response is NOT a WAF challenge page, return it.
-                # This includes 2xx + JSON (success), 4xx + JSON
-                # (genuine merchant error like 401 invalid creds),
-                # 5xx (server error). All real responses pass through.
-                if not _looks_like_challenge_response(r):
-                    if attempt > 1:
-                        _woolog.info(
-                            "WooCommerce proxy: succeeded on attempt %d/%d "
-                            "for %s (HTTP %s)",
-                            attempt, MAX_ATTEMPTS, url, r.status_code,
-                        )
-                    return r
-                # Challenge body → try again with a new rotation.
-                last_response = r
-                _woolog.info(
-                    "WooCommerce proxy: WAF block on attempt %d/%d for %s "
-                    "(HTTP %s) — retrying with new IP",
-                    attempt, MAX_ATTEMPTS, url, r.status_code,
-                )
-            except Exception as e:
-                last_exception = e
-                _woolog.info(
-                    "WooCommerce proxy: attempt %d/%d raised %s for %s — retrying",
-                    attempt, MAX_ATTEMPTS, type(e).__name__, url,
-                )
-
-        # All attempts exhausted. If we got a WAF response back, return
-        # that — the caller will see the WAF body and handle it. If we
-        # only got exceptions, translate and re-raise.
-        if last_response is not None:
-            _woolog.warning(
-                "WooCommerce proxy: exhausted %d rotations for %s — "
-                "merchant WAF blocking entire Decodo UK pool",
-                MAX_ATTEMPTS, url,
-            )
-            return last_response
-        e = last_exception
-        if isinstance(e, _cffi_ex.Timeout):
-            raise requests.exceptions.Timeout(str(e)) from e
-        if isinstance(e, _cffi_ex.ConnectionError):
-            msg = str(e).lower()
-            if any(t in msg for t in ("ssl", "tls", "alert", "handshake", "cert")):
-                raise requests.exceptions.SSLError(str(e)) from e
-            raise requests.exceptions.ConnectionError(str(e)) from e
-        raise e
-
-
 def woo_session():
     """Return a session that survives merchant-side WAFs.
 
-    When `WOO_PROXY_URL` env var is set: use it via curl_cffi for
-    EVERY WC request (dead-simple, no tiers). Proxy URL must be a
-    residential proxy gateway (Decodo, BrightData, etc.) — datacenter
-    proxies are not enough because managed-WP hosts block them.
+    Tier 1 (primary): cloudscraper — solves Sucuri / Cloudflare
+        JS captcha challenges. Required for stores like
+        trapstaraustralia.org and breathedivinity.ca which sit
+        behind Sucuri's sgcaptcha challenge page.
 
-    When `WOO_PROXY_URL` is NOT set: fall back to the 3-tier WAF
-    detection (cloudscraper → bare requests → curl_cffi retry). This
-    keeps the codebase honest for installs that don't have a proxy
-    subscription yet.
+    Tier 1.5 (fallback on SSL): bare `requests.Session` + browser UA.
+        Used when cloudscraper's specific TLS/cookie behaviour is
+        what's getting blocked.
+
+    Tier 2 (retry): curl_cffi impersonating Chrome 131's exact TLS
+        ClientHello — last-resort defeat of JA3/JA4 fingerprint
+        blocks. Walks an internal strategy ladder that includes
+        a residential-proxy + non-Chrome-UA strategy for Kinsta-
+        class WAFs that block the Chrome User-Agent on /wp-json/.
+
+    Returns a `requests.Session()`-compatible object.
     """
-    proxy_url = (os.getenv("WOO_PROXY_URL") or "").strip()
-    if proxy_url and _CURL_CFFI_AVAILABLE:
-        return _DirectProxySession(proxy_url)
-    # ── No proxy configured → fall back to original 3-tier behaviour ──
     if _WOO_SCRAPER_AVAILABLE:
         primary = _cs.create_scraper(
             browser={"browser": "chrome", "platform": "darwin", "desktop": True},
