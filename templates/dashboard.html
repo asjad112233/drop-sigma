@@ -5532,13 +5532,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     <div class="sb-divider"></div>
 
-
-    <!-- ── SOURCING (Dedicated Manager) ── -->
-    <div class="sb-section-label">Sourcing</div>
-    <button id="navSourcing" data-tip="Your Sourcing Manager" onclick="showSection('sourcing')">
-      <svg class="sb-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg>
-      My Manager
-    </button>
     <!-- ── TOOLS ── -->
     <div class="sb-section-label">Tools</div>
     <button id="navStock" data-tip="Stock" onclick="showSection('stock')">
@@ -5553,12 +5546,6 @@ document.addEventListener("DOMContentLoaded", () => {
       <svg class="sb-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6a2 2 0 0 0 2 2h10"/><path d="M21 17v-6a2 2 0 0 0-2-2H9"/><polyline points="6 4 3 7 6 10"/><polyline points="18 14 21 17 18 20"/></svg>
       Returns & Refunds
       <span id="rmaNavBadge" style="display:none;position:absolute;top:8px;right:8px;background:#ef4444;color:#fff;font-size:9px;font-weight:900;border-radius:999px;padding:1px 5px;min-width:16px;text-align:center;line-height:1.4;"></span>
-    </button>
-
-    <button id="navSourcingPartners" data-tip="Sourcing Partners" onclick="showSection('sourcingPartners')" style="position:relative;">
-      <svg class="sb-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-6 9 6v9a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3z"/><circle cx="12" cy="13" r="3"/></svg>
-      Sourcing Partners
-      <span id="spNavBadge" style="display:none;position:absolute;top:8px;right:8px;background:#ef4444;color:#fff;font-size:9px;font-weight:900;border-radius:999px;padding:1px 5px;min-width:16px;text-align:center;line-height:1.4;"></span>
     </button>
 
     <div class="sb-divider"></div>
@@ -16227,20 +16214,12 @@ function showSection(section){
     if (typeof rmaInitOnOpen === 'function') rmaInitOnOpen();
   }
 
-  if(section === "sourcingPartners"){
-    document.getElementById("sourcingPartnersSection").classList.add("active");
-    document.getElementById("navSourcingPartners").classList.add("active");
-    // Trigger sidebar-swap CSS (mirrors emails section behaviour).
-    document.body.setAttribute('data-active-section', 'sourcingPartners');
-    if (typeof spvInitWorkspace === 'function') spvInitWorkspace();
-  }
-
-  if(section === "sourcing"){
-    const ss = document.getElementById("sourcingSection");
-    const nb = document.getElementById("navSourcing");
-    if(ss) ss.classList.add("active");
-    if(nb) nb.classList.add("active");
-    if(typeof loadSourcingManager === "function") loadSourcingManager();
+  // Sourcing (My Manager) + Sourcing Partners are not yet available in
+  // production. Entry points are hidden; redirect any stray deep-link to
+  // Overview so nothing throws or hits removed endpoints.
+  if(section === "sourcingPartners" || section === "sourcing"){
+    if(typeof showSection === "function"){ showSection("overview"); }
+    return;
   }
 
 
@@ -24418,11 +24397,13 @@ function _tmFitThumb(iframe, slot){
     iframe.style.top  = '0';
   };
   const cleanupFns = [];
-  const onLoad = () => {
+  let initialised = false;
+  const onReady = () => {
+    if(initialised) return;
     const iDoc = iframe.contentDocument;
     if(!iDoc) return;
+    initialised = true;
     refit();
-    // Each unloaded image re-triggers refit when it resolves.
     iDoc.querySelectorAll('img').forEach(img => {
       if(img.complete && img.naturalHeight > 0) return;
       const done = () => refit();
@@ -24444,13 +24425,34 @@ function _tmFitThumb(iframe, slot){
         cleanupFns.push(() => clearTimeout(id));
       });
     }
-    // Card width can also change (window resize) — listen on parent.
     if(typeof ResizeObserver === 'function'){
       const cardRo = new ResizeObserver(refit);
       try { cardRo.observe(slot); } catch(_) {}
       cleanupFns.push(() => { try { cardRo.disconnect(); } catch(_) {} });
     }
   };
+  // Same readyState-poll trick as `_tmAutoHeight` — iframe `load`
+  // event waits for every <img> from the merchant's CDN, leaving
+  // the thumbnail stuck at the placeholder height in the meantime.
+  // readyState transitions out of 'loading' as soon as the DOC is
+  // parsed (≤20 ms after srcdoc assignment for our small templates),
+  // so refit() runs immediately and per-img listeners keep
+  // re-scaling as pictures arrive.
+  const pollReady = (attempt) => {
+    if(initialised) return;
+    const iDoc = iframe.contentDocument;
+    if(iDoc && iDoc.readyState !== 'loading'){
+      onReady();
+      return;
+    }
+    if(attempt < 250){
+      const id = setTimeout(() => pollReady(attempt + 1), 20);
+      cleanupFns.push(() => clearTimeout(id));
+    }
+  };
+  const kickId = setTimeout(() => pollReady(0), 0);
+  cleanupFns.push(() => clearTimeout(kickId));
+  const onLoad = () => onReady();
   iframe.addEventListener('load', onLoad, {once:true});
   cleanupFns.push(() => iframe.removeEventListener('load', onLoad));
   iframe._tmFitCleanup = () => {
@@ -25214,9 +25216,12 @@ function _tmAutoHeight(iframe, {minHeight = 0, observerTtlMs = 8000} = {}){
   };
   // Listener stash for cleanup.
   const cleanupFns = [];
-  const onLoad = () => {
+  let initialised = false;
+  const onReady = () => {
+    if(initialised) return;
     const doc = iframe.contentDocument;
     if(!doc) return;
+    initialised = true;
     // Pass 1: measure immediately (catches text-only + cached-image
     // content instantly — no perceptible delay).
     measure();
@@ -25250,6 +25255,36 @@ function _tmAutoHeight(iframe, {minHeight = 0, observerTtlMs = 8000} = {}){
       });
     }
   };
+  // CRITICAL FIX (image-load race): the iframe `load` event waits
+  // for EVERY sub-resource (every <img>, every web font) to finish
+  // loading. For a template whose product images are on a slow
+  // third-party CDN, `load` can take 5–30 s, during which the
+  // preview stays collapsed at min-height because measure() never
+  // ran. Instead poll `contentDocument.readyState`: it leaves
+  // 'loading' as soon as the DOM is PARSED, long before images
+  // start fetching. onReady fires then, measure() runs against
+  // the fully-parsed DOM (image elements already have their
+  // width/height attributes so layout is correct), and the per-
+  // image load listeners take over to keep growing the iframe as
+  // each picture arrives. `load` is kept only as a final safety
+  // net for browsers that somehow miss the readyState transition.
+  const pollReady = (attempt) => {
+    if(initialised) return;
+    const doc = iframe.contentDocument;
+    if(doc && doc.readyState !== 'loading'){
+      onReady();
+      return;
+    }
+    if(attempt < 250){  // ~5 s of polling at 20 ms intervals
+      const id = setTimeout(() => pollReady(attempt + 1), 20);
+      cleanupFns.push(() => clearTimeout(id));
+    }
+  };
+  // Kick off the poll on the next tick so the caller gets to assign
+  // srcdoc first (this function may be called BEFORE srcdoc set).
+  const kickId = setTimeout(() => pollReady(0), 0);
+  cleanupFns.push(() => clearTimeout(kickId));
+  const onLoad = () => onReady();
   iframe.addEventListener('load', onLoad, {once:true});
   cleanupFns.push(() => iframe.removeEventListener('load', onLoad));
   iframe._tmAutoHeightCleanup = () => {
