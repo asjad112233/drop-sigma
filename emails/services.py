@@ -2170,7 +2170,19 @@ SAMPLE_TEMPLATE_DATA = {
     'store_name': 'Northbrook Co.',
     'store_url': 'https://store.example.com',
     'store_logo': '',
-    'product_image': 'https://placehold.co/200x200/f1f5f9/64748b?text=Product',
+    # Inline SVG data-URI — zero network round-trip, renders in <1 ms.
+    # Previously we pointed at placehold.co; every template preview /
+    # thumbnail then had to wait for a third-party HTTP request before
+    # the iframe height settled, which is the main reason the editor
+    # preview "took forever to load" on slow connections.
+    'product_image': (
+        'data:image/svg+xml;utf8,'
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">'
+        '<rect width="200" height="200" fill="%23f1f5f9"/>'
+        '<text x="100" y="108" font-family="-apple-system,Segoe UI,Roboto,sans-serif"'
+        ' font-size="14" font-weight="600" fill="%2364748b" text-anchor="middle">Product</text>'
+        '</svg>'
+    ),
     'subtotal': '$109.99',
     'discount_code': 'SAVE10',
     'discount_amount': '$10.00',

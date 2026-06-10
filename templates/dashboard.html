@@ -24389,6 +24389,76 @@ let _tmEditingId = null;
 let _tmPreviewMode = false;
 let _tmBodySel = null; // saved selection for var insertion
 
+// Auto-fit a thumbnail iframe inside its 260×300px card slot.
+// Re-runs on every image load + via ResizeObserver so a slow product
+// image fetch doesn't leave the thumbnail locked at its pre-image
+// height (which is what produced the "tenant's preview is half-clipped"
+// regression). Width-based scale only; the FIXED thumbnail samples
+// (_TM_THUMB_SAMPLES) keep content height consistent across stores so
+// scale-to-fit-width always lands cleanly.
+function _tmFitThumb(iframe, slot){
+  if(!iframe || !slot) return;
+  if(iframe._tmFitCleanup){
+    try { iframe._tmFitCleanup(); } catch(_) {}
+  }
+  const refit = () => {
+    const iDoc = iframe.contentDocument;
+    if(!iDoc) return;
+    const contentH = iDoc.documentElement.scrollHeight
+                  || iDoc.body?.scrollHeight
+                  || 900;
+    const cardW = slot.offsetWidth || 260;
+    const scale = cardW / 600;
+    // Only write when changed to avoid reflow thrash on ResizeObserver double-fires.
+    const newH = contentH + 'px';
+    if(iframe.style.height !== newH) iframe.style.height = newH;
+    const newT = 'scale(' + scale + ')';
+    if(iframe.style.transform !== newT) iframe.style.transform = newT;
+    iframe.style.left = '0';
+    iframe.style.top  = '0';
+  };
+  const cleanupFns = [];
+  const onLoad = () => {
+    const iDoc = iframe.contentDocument;
+    if(!iDoc) return;
+    refit();
+    // Each unloaded image re-triggers refit when it resolves.
+    iDoc.querySelectorAll('img').forEach(img => {
+      if(img.complete && img.naturalHeight > 0) return;
+      const done = () => refit();
+      img.addEventListener('load',  done);
+      img.addEventListener('error', done);
+      cleanupFns.push(() => {
+        img.removeEventListener('load',  done);
+        img.removeEventListener('error', done);
+      });
+    });
+    if(typeof ResizeObserver === 'function'){
+      const ro = new ResizeObserver(refit);
+      try { ro.observe(iDoc.body); } catch(_) {}
+      const ttl = setTimeout(() => { try { ro.disconnect(); } catch(_) {} }, 6000);
+      cleanupFns.push(() => { try { ro.disconnect(); } catch(_) {} clearTimeout(ttl); });
+    } else {
+      [120, 360, 800, 1600, 3200].forEach(t => {
+        const id = setTimeout(refit, t);
+        cleanupFns.push(() => clearTimeout(id));
+      });
+    }
+    // Card width can also change (window resize) — listen on parent.
+    if(typeof ResizeObserver === 'function'){
+      const cardRo = new ResizeObserver(refit);
+      try { cardRo.observe(slot); } catch(_) {}
+      cleanupFns.push(() => { try { cardRo.disconnect(); } catch(_) {} });
+    }
+  };
+  iframe.addEventListener('load', onLoad, {once:true});
+  cleanupFns.push(() => iframe.removeEventListener('load', onLoad));
+  iframe._tmFitCleanup = () => {
+    cleanupFns.forEach(fn => { try { fn(); } catch(_) {} });
+    iframe._tmFitCleanup = null;
+  };
+}
+
 // Shared template renderer — handles [#if var]...[/if] and [var|fallback] blocks
 function _tmRender(html, ctx){
   if(!html) return '';
@@ -24418,7 +24488,8 @@ let _tmSamples = {
   store_logo:"",customer_email:"sarah.williams@example.com",customer_phone:"+1 (415) 555-0123",
   subtotal:"$109.99",discount_code:"SAVE10",discount_amount:"$10.00",
   shipping_amount:"$5.00",tax_amount:"$10.00",order_total:"$124.99",
-  product_image:"https://placehold.co/200x200/f1f5f9/64748b?text=Product",
+  // Inline SVG data-URI: zero network call, instant render.
+  product_image:'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect width="200" height="200" fill="%23f1f5f9"/><text x="100" y="108" font-family="-apple-system,Segoe UI,Roboto,sans-serif" font-size="14" font-weight="600" fill="%2364748b" text-anchor="middle">Product</text></svg>',
   shipping_address:"123 Market Street",shipping_city:"San Francisco",shipping_state:"CA",
   shipping_postcode:"94103",shipping_country:"United States",
   shipping_full_address:"123 Market Street, San Francisco, CA 94103, United States",
@@ -24449,7 +24520,8 @@ const _TM_THUMB_SAMPLES = Object.freeze({
   customer_email:"sarah.williams@example.com",customer_phone:"+1 (415) 555-0123",
   subtotal:"$109.99",discount_code:"SAVE10",discount_amount:"$10.00",
   shipping_amount:"$5.00",tax_amount:"$10.00",order_total:"$124.99",
-  product_image:"https://placehold.co/200x200/f1f5f9/64748b?text=Product",
+  // Inline SVG data-URI: zero network call, instant render.
+  product_image:'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect width="200" height="200" fill="%23f1f5f9"/><text x="100" y="108" font-family="-apple-system,Segoe UI,Roboto,sans-serif" font-size="14" font-weight="600" fill="%2364748b" text-anchor="middle">Product</text></svg>',
   shipping_address:"123 Market Street",shipping_city:"San Francisco",shipping_state:"CA",
   shipping_postcode:"94103",shipping_country:"United States",
   shipping_full_address:"123 Market Street, San Francisco, CA 94103, United States",
@@ -24741,20 +24813,16 @@ function tmRenderCards(list){
       iframe.setAttribute('sandbox', 'allow-same-origin');
       iframe.style.cssText = 'width:600px;height:1800px;border:none;pointer-events:none;transform-origin:top left;display:block;position:absolute;top:0;left:0;';
       slot.style.position = 'relative';
-      iframe.srcdoc = '<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{box-sizing:border-box;}body{margin:0;padding:0;}</style></head><body style="margin:0;padding:0;">' + rendered + '</body></html>';
-      // After load: width-only scale, exactly as it was when Trapstar's
-      // cards looked clean. The fixed thumb dataset above guarantees
-      // every store's content fits in the 300px-tall card.
-      iframe.addEventListener('load', function(){
-        const iDoc = iframe.contentDocument;
-        if(!iDoc) return;
-        const contentH = iDoc.documentElement.scrollHeight || iDoc.body?.scrollHeight || 900;
-        iframe.style.height = contentH + 'px';
-        const scale = (slot.offsetWidth || 260) / 600;
-        iframe.style.transform = 'scale(' + scale + ')';
-        iframe.style.left = '0';
-        iframe.style.top  = '0';
-      });
+      iframe.srcdoc = '<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{box-sizing:border-box;}body{margin:0;padding:0;}img{max-width:100%;height:auto;}</style></head><body style="margin:0;padding:0;">' + rendered + '</body></html>';
+      // Auto-fit: every time the iframe's content height changes
+      // (initial load, image load, font swap), re-measure and
+      // re-apply the width-only scale. This catches the case where
+      // the iframe loads its DOC instantly but the placeholder /
+      // product images finish fetching later — without re-measuring,
+      // the iframe locked at the pre-image height and the card
+      // showed a clipped preview. _tmFitThumb is the same idea as
+      // _tmAutoHeight but for the scale-to-fit thumbnail case.
+      _tmFitThumb(iframe, slot);
       slot.appendChild(iframe);
     });
   });
@@ -25095,6 +25163,101 @@ function tmSwitchBodyTab(tab){
 
 function tmAutoPreview(){ tmUpdatePreview(); }
 
+// ─── Iframe auto-height helper (used by editor preview AND card thumbnails) ──
+// HISTORICAL BUG: every prior version of this code captured the iframe
+// content height ONCE at iframe `load`, then locked the iframe at
+// that height forever. That's almost-but-not-quite right — iframes
+// fire `load` as soon as the DOC parses, BEFORE async resources
+// (images, web fonts) finish fetching. For a template whose sample
+// order has product images on a slow third-party CDN, the height
+// captured at load-time was the height with image placeholders at
+// 0×0. Once the images later fetched and rendered, the content
+// grew but the iframe stayed at the locked smaller height, so the
+// bottom of the email (items list, totals, shipping address,
+// footer) got chopped off. Tenants with one-item local-image orders
+// were lucky; tenants with multi-item slow-image orders saw broken
+// previews.
+//
+// `_tmAutoHeight` fixes this for every iframe forever:
+//   1. Measure height immediately on first load (instant feedback).
+//   2. Listen to every <img> load/error and re-measure when each
+//      one resolves — handles slow CDN fetches without polling.
+//   3. ResizeObserver on the iframe body catches any other content
+//      reflow (font swaps, JS-rendered widgets, late style changes).
+//   4. Auto-disconnect after a quiet period so we don't leak
+//      observers across rapid edits (each tmUpdatePreview spins up
+//      a new one; old ones get cleaned).
+//
+// Set `minHeight` to keep the bordered preview frame visible during
+// the very first 50–200 ms before the iframe's DOC parses. Without
+// it the preview would visually collapse to 0 px on every edit.
+function _tmAutoHeight(iframe, {minHeight = 0, observerTtlMs = 8000} = {}){
+  if(!iframe) return;
+  // Cancel any previous auto-height session attached to THIS iframe
+  // (rapid edits / re-renders fire tmUpdatePreview repeatedly).
+  if(iframe._tmAutoHeightCleanup){
+    try { iframe._tmAutoHeightCleanup(); } catch(_) {}
+  }
+  const measure = () => {
+    const doc = iframe.contentDocument;
+    if(!doc) return;
+    const h = doc.documentElement?.scrollHeight
+           || doc.body?.scrollHeight
+           || 0;
+    if(h > 0){
+      const targetH = Math.max(h, minHeight);
+      // Only write to style if it actually changed — avoids reflow
+      // thrash when ResizeObserver double-fires.
+      const cur = parseInt(iframe.style.height, 10) || 0;
+      if(cur !== targetH) iframe.style.height = targetH + 'px';
+    }
+  };
+  // Listener stash for cleanup.
+  const cleanupFns = [];
+  const onLoad = () => {
+    const doc = iframe.contentDocument;
+    if(!doc) return;
+    // Pass 1: measure immediately (catches text-only + cached-image
+    // content instantly — no perceptible delay).
+    measure();
+    // Pass 2: each unloaded <img> triggers a remeasure when it
+    // finishes (or fails). This is the actual fix for the
+    // "preview locked at small height" bug above.
+    const imgs = doc.querySelectorAll('img');
+    imgs.forEach(img => {
+      if(img.complete && img.naturalHeight > 0) return;  // already loaded
+      const onImgDone = () => { measure(); };
+      img.addEventListener('load',  onImgDone);
+      img.addEventListener('error', onImgDone);
+      cleanupFns.push(() => {
+        img.removeEventListener('load',  onImgDone);
+        img.removeEventListener('error', onImgDone);
+      });
+    });
+    // Pass 3: catch-all for any other reflow (font swap, late style
+    // injection). Disconnects after `observerTtlMs` of quiet time.
+    if(typeof ResizeObserver === 'function'){
+      const ro = new ResizeObserver(measure);
+      try { ro.observe(doc.body); } catch(_) {}
+      const ttl = setTimeout(() => { try { ro.disconnect(); } catch(_) {} }, observerTtlMs);
+      cleanupFns.push(() => { try { ro.disconnect(); } catch(_) {} clearTimeout(ttl); });
+    } else {
+      // Fallback for ancient browsers (none in production, but safe):
+      // poll a few times then stop.
+      [120, 360, 800, 1600, 3200].forEach(t => {
+        const id = setTimeout(measure, t);
+        cleanupFns.push(() => clearTimeout(id));
+      });
+    }
+  };
+  iframe.addEventListener('load', onLoad, {once:true});
+  cleanupFns.push(() => iframe.removeEventListener('load', onLoad));
+  iframe._tmAutoHeightCleanup = () => {
+    cleanupFns.forEach(fn => { try { fn(); } catch(_) {} });
+    iframe._tmAutoHeightCleanup = null;
+  };
+}
+
 function tmUpdatePreview(){
   const rawHtml = document.getElementById("tmBodyEditor")?.innerHTML||"";
   const preview = document.getElementById("tmBodyPreview");
@@ -25103,24 +25266,12 @@ function tmUpdatePreview(){
   let html = _tmChipsToTokens(rawHtml);
   html = html.replace(/<span[^>]*class="[^"]*tm-chip[^"]*"[^>]*data-var="([^"]+)"[^>]*>[\s\S]*?<\/span>/g, '\x7b\x7b$1\x7d\x7d');
   const rendered = _tmRender(html, _tmSamples);
-  const fullHtml = '<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{box-sizing:border-box;}body{margin:0;padding:0;}</style></head><body style="margin:0;padding:0;">' + rendered + '</body></html>';
-  // BUGFIX: reset height to its CSS min BEFORE assigning new srcdoc.
-  // The previous version only ever GREW the iframe (`if(h > 200) set
-  // height = h`) so editing a template down from 1500 px to 800 px
-  // left a 700-px-tall empty band under the rendered content. Setting
-  // height to "" first means the CSS `min-height:400px` re-applies
-  // and the onload handler then grows to whatever the new content
-  // actually needs.
+  const fullHtml = '<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{box-sizing:border-box;}body{margin:0;padding:0;}img{max-width:100%;height:auto;}</style></head><body style="margin:0;padding:0;">' + rendered + '</body></html>';
+  // Reset to CSS min-height so the preview doesn't visually collapse
+  // during the brief reload window; _tmAutoHeight will grow it as
+  // content settles (including after async image fetches).
   preview.style.height = '';
-  // Use addEventListener({once:true}) instead of .onload= so rapid
-  // edits during typing don't stack overlapping handlers that race
-  // each other and leave the iframe at a stale height.
-  preview.addEventListener('load', function _onPreviewLoad(){
-    const h = preview.contentDocument?.documentElement?.scrollHeight
-            || preview.contentDocument?.body?.scrollHeight
-            || 0;
-    if(h > 0) preview.style.height = h + 'px';
-  }, {once:true});
+  _tmAutoHeight(preview, {minHeight: 400, observerTtlMs: 10000});
   preview.srcdoc = fullHtml;
 }
 
