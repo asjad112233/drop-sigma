@@ -24405,6 +24405,37 @@ let _tmSamples = {
   tracking_number:"TRK-1234567890",tracking_company:"DHL Express",tracking_link:"",tracking_id_only:"TRK-1234567890",
 };
 
+// ── Thumbnail-only sample data ─────────────────────────────────────────────
+// The card thumbnail iframe MUST render at a predictable height across
+// every store, regardless of how long the merchant's latest synced
+// order happens to be. If we fed the thumbnail iframe the live
+// per-store `_tmSamples` (which can contain a multi-item HTML items
+// list, full shipping address, etc.), one store's cards would render
+// twice as tall as another's, and the width-based scale-to-fit would
+// either crop the bottom of the taller store's emails or letterbox
+// the shorter one. Both look bad next to each other.
+//
+// So thumbnails always render with this FIXED short dataset — same
+// shape as `_tmSamples` but with a single-line items string. The
+// editor / full-preview paths still use `_tmSamples` (real order data)
+// so the merchant sees what their actual outgoing emails look like.
+const _TM_THUMB_SAMPLES = Object.freeze({
+  customer_name:"Sarah Williams",order_id:"#10248",order_date:"May 1, 2026",
+  // Plain-string items keep thumbnail height predictable. The real
+  // multi-row HTML items table only kicks in for the live preview.
+  order_items:"2× Premium T-Shirt, 1× Watch",
+  store_name:"Northbrook Co.",store_url:"#",store_logo:"",
+  customer_email:"sarah.williams@example.com",customer_phone:"+1 (415) 555-0123",
+  subtotal:"$109.99",discount_code:"SAVE10",discount_amount:"$10.00",
+  shipping_amount:"$5.00",tax_amount:"$10.00",order_total:"$124.99",
+  product_image:"https://placehold.co/200x200/f1f5f9/64748b?text=Product",
+  shipping_address:"123 Market Street",shipping_city:"San Francisco",shipping_state:"CA",
+  shipping_postcode:"94103",shipping_country:"United States",
+  shipping_full_address:"123 Market Street, San Francisco, CA 94103, United States",
+  payment_method:"Credit Card",payment_status:"Paid",
+  tracking_number:"TRK-1234567890",tracking_company:"DHL Express",tracking_link:"",tracking_id_only:"TRK-1234567890",
+});
+
 async function loadTemplates(){
   const grid = document.getElementById("tmCardsGrid");
   const loading = document.getElementById("tmListLoading");
@@ -24618,52 +24649,45 @@ function tmRenderCards(list){
     </div>`;
   }).join("");
 
-  // Inject iframe thumbnails programmatically to avoid srcdoc escaping issues
+  // Inject iframe thumbnails programmatically to avoid srcdoc escaping issues.
+  // CRITICAL: thumbnails render with the FIXED `_TM_THUMB_SAMPLES`
+  // dataset — NOT the per-store `_tmSamples` (live order data). That
+  // way every store's cards render at the same predictable content
+  // height and the original width-based scale-to-fit produces an
+  // edge-to-edge clean fill for everyone (this was the look that was
+  // working for Trapstar AU before the "use real order data" change).
+  // The editor and full-preview paths still use `_tmSamples` so the
+  // merchant sees their actual outgoing email content there.
   requestAnimationFrame(()=>{
     list.forEach(t=>{
       if(!t.body_html) return;
       const slot = grid.querySelector(`[data-tm-thumb="${t.id}"]`);
       if(!slot) return;
-      const rendered = _tmRender(t.body_html, _tmSamples);
+      // Override store_name so each store's cards still feel branded.
+      const thumbCtx = Object.assign({}, _TM_THUMB_SAMPLES, {
+        store_name: (_tmSamples && _tmSamples.store_name) || _TM_THUMB_SAMPLES.store_name,
+        store_url:  (_tmSamples && _tmSamples.store_url)  || _TM_THUMB_SAMPLES.store_url,
+        store_logo: (_tmSamples && _tmSamples.store_logo) || _TM_THUMB_SAMPLES.store_logo,
+      });
+      const rendered = _tmRender(t.body_html, thumbCtx);
       const iframe = document.createElement('iframe');
       iframe.scrolling = 'no';
       iframe.tabIndex = -1;
       iframe.style.cssText = 'width:600px;height:1800px;border:none;pointer-events:none;transform-origin:top left;display:block;position:absolute;top:0;left:0;';
       slot.style.position = 'relative';
       iframe.srcdoc = '<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{box-sizing:border-box;}body{margin:0;padding:0;}</style></head><body style="margin:0;padding:0;">' + rendered + '</body></html>';
-      // After load: scale so the WHOLE template fits the card — both
-      // dimensions. We used to scale by width only, which worked when
-      // the sample order had a short items list (Trapstar AU: 1 item,
-      // total content ~700px tall → scaled to 303px ≈ card height,
-      // looked clean edge-to-edge). For a store whose latest order has
-      // a long items list / multi-line shipping address (BD: tall
-      // content ~1500px), the same width-scale produced a 650px-tall
-      // scaled iframe inside a 300px-tall card with `overflow:hidden`,
-      // chopping the bottom of the email and leaving cards looking
-      // half-cropped while another store's cards looked complete.
-      //
-      // Now: pick the smaller of the two scale factors so neither
-      // dimension overflows. Tall templates get a bit of horizontal
-      // letterboxing instead of being chopped, and every store's
-      // cards look proportionally consistent regardless of how many
-      // items their latest synced order happened to have.
+      // After load: width-only scale, exactly as it was when Trapstar's
+      // cards looked clean. The fixed thumb dataset above guarantees
+      // every store's content fits in the 300px-tall card.
       iframe.addEventListener('load', function(){
         const iDoc = iframe.contentDocument;
         if(!iDoc) return;
         const contentH = iDoc.documentElement.scrollHeight || iDoc.body?.scrollHeight || 900;
         iframe.style.height = contentH + 'px';
-        const cardW = slot.offsetWidth  || 260;
-        const cardH = slot.offsetHeight || 300;
-        const scaleByWidth  = cardW / 600;
-        const scaleByHeight = cardH / contentH;
-        const scale = Math.min(scaleByWidth, scaleByHeight);
+        const scale = (slot.offsetWidth || 260) / 600;
         iframe.style.transform = 'scale(' + scale + ')';
-        // Centre horizontally + vertically so any leftover letterbox
-        // sits symmetrically around the scaled template.
-        const scaledW = 600     * scale;
-        const scaledH = contentH * scale;
-        iframe.style.left = ((cardW - scaledW) / 2) + 'px';
-        iframe.style.top  = ((cardH - scaledH) / 2) + 'px';
+        iframe.style.left = '0';
+        iframe.style.top  = '0';
       });
       slot.appendChild(iframe);
     });
