@@ -582,10 +582,5 @@ Include with:
       }
     }).catch(()=>{});
   }, POLL_MS);
-
-  // Expose a refresh hook so other parts of the SPA (e.g. the SP chat panel
-  // after it bulk-clears chat-category notifications on entry) can force the
-  // bell badge to redraw immediately, instead of waiting for the 20s poll.
-  window.dsNotifRefresh = refresh;
 })();
 </script>

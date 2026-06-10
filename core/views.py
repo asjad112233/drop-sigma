@@ -814,13 +814,6 @@ def dashboard_page(request):
     except Exception:
         pass
 
-    # Wallet top-up uses the PayPal JS SDK, which needs the platform client id
-    # at render time. Resolve it the same way the checkout page does.
-    try:
-        _wallet_paypal_cid = _platform_creds()["paypal_client_id"] or ""
-    except Exception:
-        _wallet_paypal_cid = ""
-
     response = render(request, "dashboard.html", {
         "is_impersonating":  bool(imp_id),
         "impersonate_name":  imp_name,
@@ -830,7 +823,6 @@ def dashboard_page(request):
         "is_flagged":        is_flagged,
         "display_name":      display_name,
         "user_initials":     initials,
-        "wallet_paypal_client_id": _wallet_paypal_cid,
     })
     response["Cache-Control"] = "no-cache, no-store, must-revalidate"
     response["Pragma"] = "no-cache"

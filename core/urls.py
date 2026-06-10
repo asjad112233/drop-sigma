@@ -8,7 +8,6 @@ from . import views
 from . import password_reset as _pr
 from teamapp import views as teamapp_views
 from vendors import views as vendor_views
-from sourcing_partners import views as sp_views
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -74,16 +73,6 @@ urlpatterns = [
     path("rma/", include("rma.urls")),
     path("r/",   include("rma.urls_customer")),
 
-    # DropSigma Sourcing Partners — verified vendors tenants can chat with
-    path("sourcing-partners/", include("sourcing_partners.urls")),
-    # Short alias for the dedicated-manager endpoint (consumed by the
-    # dashboard chat header).
-    path("sourcing/api/my-manager/", sp_views.api_my_manager,
-         name="sp_api_my_manager_alias"),
-
-    # DropSigma Operations Portal — internal back-office for the ops team
-    path("ops/",               include("sourcing_ops.urls")),
-
     # Apps
     path("stores/", include("stores.urls")),
     path("orders/", include("orders.urls")),
@@ -101,26 +90,7 @@ urlpatterns = [
     path("stock/", include("stock.urls")),
     path("superadmin/", include("superadmin.urls")),
     path("notifications/", include("notifications.urls")),
-]
-
-# ── Media file serving ────────────────────────────────────────────────
-# `static()` from django.conf.urls.static ONLY registers when DEBUG=True,
-# which means uploaded chat images / attachments return 404 in production
-# AND in dev when DEBUG isn't explicitly enabled. We need media to work
-# everywhere, so we register an explicit `serve` route. On production
-# Railway this still works since uploads land on the same filesystem;
-# when we migrate to S3/CDN later the URL pattern will be replaced.
-from django.urls import re_path
-from django.views.static import serve as _static_serve
-urlpatterns += [
-    re_path(
-        r'^' + settings.MEDIA_URL.lstrip('/') + r'(?P<path>.*)$',
-        _static_serve,
-        {'document_root': settings.MEDIA_ROOT},
-    ),
-]
-# Keep the legacy DEBUG-gated helper too so collectstatic/etc still works
-urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 
 # ── Local-only promo/ad routes (never deployed) ──────────────────────
