@@ -24396,67 +24396,61 @@ function _tmFitThumb(iframe, slot){
     iframe.style.left = '0';
     iframe.style.top  = '0';
   };
-  const cleanupFns = [];
-  let initialised = false;
-  const onReady = () => {
-    if(initialised) return;
+  // Same simple-and-robust polling strategy as `_tmAutoHeight`:
+  // always re-read `iframe.contentDocument` fresh so we never hold
+  // a stale body reference, refit() at tight intervals early then
+  // back off, stop when height stabilises or TTL expires.
+  let lastH = -1;
+  let stable = 0;
+  let cancelled = false;
+  let pollerId = null;
+  const startedAt = Date.now();
+  const TTL_MS = 10000;
+  const checkH = () => {
     const iDoc = iframe.contentDocument;
-    if(!iDoc) return;
-    initialised = true;
-    refit();
-    iDoc.querySelectorAll('img').forEach(img => {
-      if(img.complete && img.naturalHeight > 0) return;
-      const done = () => refit();
-      img.addEventListener('load',  done);
-      img.addEventListener('error', done);
-      cleanupFns.push(() => {
-        img.removeEventListener('load',  done);
-        img.removeEventListener('error', done);
-      });
-    });
-    if(typeof ResizeObserver === 'function'){
-      const ro = new ResizeObserver(refit);
-      try { ro.observe(iDoc.body); } catch(_) {}
-      const ttl = setTimeout(() => { try { ro.disconnect(); } catch(_) {} }, 6000);
-      cleanupFns.push(() => { try { ro.disconnect(); } catch(_) {} clearTimeout(ttl); });
-    } else {
-      [120, 360, 800, 1600, 3200].forEach(t => {
-        const id = setTimeout(refit, t);
-        cleanupFns.push(() => clearTimeout(id));
-      });
+    let h = 0;
+    if(iDoc){
+      h = iDoc.documentElement?.scrollHeight || iDoc.body?.scrollHeight || 0;
     }
-    if(typeof ResizeObserver === 'function'){
-      const cardRo = new ResizeObserver(refit);
-      try { cardRo.observe(slot); } catch(_) {}
-      cleanupFns.push(() => { try { cardRo.disconnect(); } catch(_) {} });
+    if(h > 0) refit();
+    if(h > 0 && h === lastH){
+      stable += 1;
+    } else {
+      stable = 0;
+      lastH = h;
     }
   };
-  // Same readyState-poll trick as `_tmAutoHeight` — iframe `load`
-  // event waits for every <img> from the merchant's CDN, leaving
-  // the thumbnail stuck at the placeholder height in the meantime.
-  // readyState transitions out of 'loading' as soon as the DOC is
-  // parsed (≤20 ms after srcdoc assignment for our small templates),
-  // so refit() runs immediately and per-img listeners keep
-  // re-scaling as pictures arrive.
-  const pollReady = (attempt) => {
-    if(initialised) return;
-    const iDoc = iframe.contentDocument;
-    if(iDoc && iDoc.readyState !== 'loading'){
-      onReady();
+  const nextDelay = () => {
+    const elapsed = Date.now() - startedAt;
+    if(elapsed < 1000) return 50;
+    if(elapsed < 3000) return 100;
+    return 250;
+  };
+  const tick = () => {
+    if(cancelled) return;
+    checkH();
+    const elapsed = Date.now() - startedAt;
+    if(stable >= 4 || elapsed > TTL_MS){
+      pollerId = null;
       return;
     }
-    if(attempt < 250){
-      const id = setTimeout(() => pollReady(attempt + 1), 20);
-      cleanupFns.push(() => clearTimeout(id));
-    }
+    pollerId = setTimeout(tick, nextDelay());
   };
-  const kickId = setTimeout(() => pollReady(0), 0);
-  cleanupFns.push(() => clearTimeout(kickId));
-  const onLoad = () => onReady();
-  iframe.addEventListener('load', onLoad, {once:true});
-  cleanupFns.push(() => iframe.removeEventListener('load', onLoad));
+  pollerId = setTimeout(tick, 0);
+  // Card width can also change (window resize) — keep one cheap
+  // ResizeObserver on the slot itself; that's external to iframe
+  // so it can't go stale.
+  let cardRo = null;
+  if(typeof ResizeObserver === 'function'){
+    try {
+      cardRo = new ResizeObserver(() => refit());
+      cardRo.observe(slot);
+    } catch(_) {}
+  }
   iframe._tmFitCleanup = () => {
-    cleanupFns.forEach(fn => { try { fn(); } catch(_) {} });
+    cancelled = true;
+    if(pollerId){ clearTimeout(pollerId); pollerId = null; }
+    if(cardRo){ try { cardRo.disconnect(); } catch(_) {} cardRo = null; }
     iframe._tmFitCleanup = null;
   };
 }
@@ -25193,102 +25187,78 @@ function tmAutoPreview(){ tmUpdatePreview(); }
 // Set `minHeight` to keep the bordered preview frame visible during
 // the very first 50–200 ms before the iframe's DOC parses. Without
 // it the preview would visually collapse to 0 px on every edit.
-function _tmAutoHeight(iframe, {minHeight = 0, observerTtlMs = 8000} = {}){
+function _tmAutoHeight(iframe, {minHeight = 0, observerTtlMs = 12000} = {}){
   if(!iframe) return;
-  // Cancel any previous auto-height session attached to THIS iframe
-  // (rapid edits / re-renders fire tmUpdatePreview repeatedly).
+  // Cancel any previous auto-height session attached to THIS iframe.
   if(iframe._tmAutoHeightCleanup){
     try { iframe._tmAutoHeightCleanup(); } catch(_) {}
   }
+  // SIMPLE-AND-ROBUST height tracker — no event listeners on
+  // potentially-stale documents, no readyState gymnastics, no
+  // ResizeObservers on bodies that get replaced when srcdoc reloads.
+  // Just poll `iframe.contentDocument.documentElement.scrollHeight`
+  // at a schedule that's tight at the start (catches initial parse
+  // + reflow within 50–200 ms) and gradually backs off (catches
+  // slow CDN image loads without burning CPU). Stops automatically
+  // when (a) we've seen the same height 4 times in a row, or
+  // (b) `observerTtlMs` has elapsed. Always re-reads contentDocument
+  // fresh, so it works even if the iframe doc was swapped after
+  // srcdoc reassignment.
+  let lastH = -1;
+  let stable = 0;
+  let cancelled = false;
+  let pollerId = null;
+  const startedAt = Date.now();
   const measure = () => {
+    if(cancelled) return;
     const doc = iframe.contentDocument;
-    if(!doc) return;
-    const h = doc.documentElement?.scrollHeight
-           || doc.body?.scrollHeight
-           || 0;
+    let h = 0;
+    if(doc){
+      h = doc.documentElement?.scrollHeight
+       || doc.body?.scrollHeight
+       || 0;
+    }
     if(h > 0){
       const targetH = Math.max(h, minHeight);
-      // Only write to style if it actually changed — avoids reflow
-      // thrash when ResizeObserver double-fires.
       const cur = parseInt(iframe.style.height, 10) || 0;
-      if(cur !== targetH) iframe.style.height = targetH + 'px';
+      if(cur !== targetH){
+        iframe.style.height = targetH + 'px';
+      }
     }
-  };
-  // Listener stash for cleanup.
-  const cleanupFns = [];
-  let initialised = false;
-  const onReady = () => {
-    if(initialised) return;
-    const doc = iframe.contentDocument;
-    if(!doc) return;
-    initialised = true;
-    // Pass 1: measure immediately (catches text-only + cached-image
-    // content instantly — no perceptible delay).
-    measure();
-    // Pass 2: each unloaded <img> triggers a remeasure when it
-    // finishes (or fails). This is the actual fix for the
-    // "preview locked at small height" bug above.
-    const imgs = doc.querySelectorAll('img');
-    imgs.forEach(img => {
-      if(img.complete && img.naturalHeight > 0) return;  // already loaded
-      const onImgDone = () => { measure(); };
-      img.addEventListener('load',  onImgDone);
-      img.addEventListener('error', onImgDone);
-      cleanupFns.push(() => {
-        img.removeEventListener('load',  onImgDone);
-        img.removeEventListener('error', onImgDone);
-      });
-    });
-    // Pass 3: catch-all for any other reflow (font swap, late style
-    // injection). Disconnects after `observerTtlMs` of quiet time.
-    if(typeof ResizeObserver === 'function'){
-      const ro = new ResizeObserver(measure);
-      try { ro.observe(doc.body); } catch(_) {}
-      const ttl = setTimeout(() => { try { ro.disconnect(); } catch(_) {} }, observerTtlMs);
-      cleanupFns.push(() => { try { ro.disconnect(); } catch(_) {} clearTimeout(ttl); });
+    if(h > 0 && h === lastH){
+      stable += 1;
     } else {
-      // Fallback for ancient browsers (none in production, but safe):
-      // poll a few times then stop.
-      [120, 360, 800, 1600, 3200].forEach(t => {
-        const id = setTimeout(measure, t);
-        cleanupFns.push(() => clearTimeout(id));
-      });
+      stable = 0;
+      lastH = h;
     }
   };
-  // CRITICAL FIX (image-load race): the iframe `load` event waits
-  // for EVERY sub-resource (every <img>, every web font) to finish
-  // loading. For a template whose product images are on a slow
-  // third-party CDN, `load` can take 5–30 s, during which the
-  // preview stays collapsed at min-height because measure() never
-  // ran. Instead poll `contentDocument.readyState`: it leaves
-  // 'loading' as soon as the DOM is PARSED, long before images
-  // start fetching. onReady fires then, measure() runs against
-  // the fully-parsed DOM (image elements already have their
-  // width/height attributes so layout is correct), and the per-
-  // image load listeners take over to keep growing the iframe as
-  // each picture arrives. `load` is kept only as a final safety
-  // net for browsers that somehow miss the readyState transition.
-  const pollReady = (attempt) => {
-    if(initialised) return;
-    const doc = iframe.contentDocument;
-    if(doc && doc.readyState !== 'loading'){
-      onReady();
+  // Polling schedule: every 50 ms for the first 1 s (catches initial
+  // DOM parse + most cached-image renders), 100 ms for the next 2 s
+  // (catches the warm-CDN window), 250 ms thereafter until the TTL
+  // (catches slow-CDN image loads + font swaps). Stops early once
+  // the height has been stable for 4 consecutive measurements.
+  const nextDelay = () => {
+    const elapsed = Date.now() - startedAt;
+    if(elapsed < 1000) return 50;
+    if(elapsed < 3000) return 100;
+    return 250;
+  };
+  const tick = () => {
+    if(cancelled) return;
+    measure();
+    const elapsed = Date.now() - startedAt;
+    if(stable >= 4 || elapsed > observerTtlMs){
+      pollerId = null;
       return;
     }
-    if(attempt < 250){  // ~5 s of polling at 20 ms intervals
-      const id = setTimeout(() => pollReady(attempt + 1), 20);
-      cleanupFns.push(() => clearTimeout(id));
-    }
+    pollerId = setTimeout(tick, nextDelay());
   };
-  // Kick off the poll on the next tick so the caller gets to assign
-  // srcdoc first (this function may be called BEFORE srcdoc set).
-  const kickId = setTimeout(() => pollReady(0), 0);
-  cleanupFns.push(() => clearTimeout(kickId));
-  const onLoad = () => onReady();
-  iframe.addEventListener('load', onLoad, {once:true});
-  cleanupFns.push(() => iframe.removeEventListener('load', onLoad));
+  // First measurement on the very next tick (gives the caller's
+  // `srcdoc =` assignment a microtask to propagate).
+  pollerId = setTimeout(tick, 0);
   iframe._tmAutoHeightCleanup = () => {
-    cleanupFns.forEach(fn => { try { fn(); } catch(_) {} });
+    cancelled = true;
+    if(pollerId){ clearTimeout(pollerId); pollerId = null; }
     iframe._tmAutoHeightCleanup = null;
   };
 }
@@ -25302,12 +25272,21 @@ function tmUpdatePreview(){
   html = html.replace(/<span[^>]*class="[^"]*tm-chip[^"]*"[^>]*data-var="([^"]+)"[^>]*>[\s\S]*?<\/span>/g, '\x7b\x7b$1\x7d\x7d');
   const rendered = _tmRender(html, _tmSamples);
   const fullHtml = '<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{box-sizing:border-box;}body{margin:0;padding:0;}img{max-width:100%;height:auto;}</style></head><body style="margin:0;padding:0;">' + rendered + '</body></html>';
-  // Reset to CSS min-height so the preview doesn't visually collapse
-  // during the brief reload window; _tmAutoHeight will grow it as
-  // content settles (including after async image fetches).
+  // Reset height so CSS min-height applies during the reload window.
   preview.style.height = '';
-  _tmAutoHeight(preview, {minHeight: 400, observerTtlMs: 10000});
+  // CRITICAL ORDER: assign srcdoc BEFORE wiring _tmAutoHeight.
+  // Background: srcdoc assignment triggers a NEW doc load. Before
+  // that, contentDocument is still the previous doc — which is
+  // already in readyState 'complete' for re-opens of the editor.
+  // If we wired the polling first, it would see readyState !==
+  // 'loading' against the stale doc and fire onReady() immediately,
+  // measuring the OLD content (or empty), locking initialised=true,
+  // and ignoring the new content that arrives moments later.
+  // Setting srcdoc first puts contentDocument into 'loading' state
+  // so the very first readyState poll correctly waits, then fires
+  // when the NEW doc finishes parsing.
   preview.srcdoc = fullHtml;
+  _tmAutoHeight(preview, {minHeight: 400, observerTtlMs: 10000});
 }
 
 function tmSaveBodySelection(){
