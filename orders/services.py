@@ -532,31 +532,111 @@ class _SmartWooSession:
             raise
 
 
+class _DirectProxySession:
+    """Dead-simple WC session that uses curl_cffi + the configured
+    `WOO_PROXY_URL` for EVERY request. No tiers, no escalation, no
+    cloudscraper. Verified working live (10/06/2026 curl test) against
+    a Kinsta-blocked store via a Decodo UK residential rotating proxy:
+    HTTP 200 + JSON returned.
+
+    Use this when WOO_PROXY_URL is set. For stores that don't need a
+    proxy (Trapstar, Breathe Divinity .ca), the proxy still works —
+    Decodo's residential IPs are accepted by Sucuri/Cloudflare WAFs
+    too because they're real residential ISPs. So one proxy fits all.
+    """
+    def __init__(self, proxy_url):
+        self._proxy = proxy_url
+        self.headers = dict(_WOO_HEADERS)
+
+    def get(self, url, **kw):    return self._do("get",    url, **kw)
+    def post(self, url, **kw):   return self._do("post",   url, **kw)
+    def put(self, url, **kw):    return self._do("put",    url, **kw)
+    def delete(self, url, **kw): return self._do("delete", url, **kw)
+    def request(self, method, url, **kw):
+        return self._do(method.lower(), url, **kw)
+
+    def _do(self, method, url, **kw):
+        """Make the proxy call, retrying with a new residential IP if
+        the merchant's WAF blocks our current rotation. Decodo's
+        rotating port (gate.decodo.com:7000) gives us a NEW IP per
+        connection — most IPs work, but ~10-20% are already in
+        merchant blocklists. Retrying picks a fresh IP from the pool.
+
+        Up to MAX_ATTEMPTS rotations. First non-WAF response wins.
+        """
+        MAX_ATTEMPTS = 6
+        kw["proxy"] = self._proxy
+        last_response = None
+        last_exception = None
+        for attempt in range(1, MAX_ATTEMPTS + 1):
+            sess = _cffi_req.Session(impersonate="chrome131", default_headers=False)
+            sess.headers.update(self.headers)
+            try:
+                r = getattr(sess, method)(url, **kw)
+                # If response is NOT a WAF challenge page, return it.
+                # This includes 2xx + JSON (success), 4xx + JSON
+                # (genuine merchant error like 401 invalid creds),
+                # 5xx (server error). All real responses pass through.
+                if not _looks_like_challenge_response(r):
+                    if attempt > 1:
+                        _woolog.info(
+                            "WooCommerce proxy: succeeded on attempt %d/%d "
+                            "for %s (HTTP %s)",
+                            attempt, MAX_ATTEMPTS, url, r.status_code,
+                        )
+                    return r
+                # Challenge body → try again with a new rotation.
+                last_response = r
+                _woolog.info(
+                    "WooCommerce proxy: WAF block on attempt %d/%d for %s "
+                    "(HTTP %s) — retrying with new IP",
+                    attempt, MAX_ATTEMPTS, url, r.status_code,
+                )
+            except Exception as e:
+                last_exception = e
+                _woolog.info(
+                    "WooCommerce proxy: attempt %d/%d raised %s for %s — retrying",
+                    attempt, MAX_ATTEMPTS, type(e).__name__, url,
+                )
+
+        # All attempts exhausted. If we got a WAF response back, return
+        # that — the caller will see the WAF body and handle it. If we
+        # only got exceptions, translate and re-raise.
+        if last_response is not None:
+            _woolog.warning(
+                "WooCommerce proxy: exhausted %d rotations for %s — "
+                "merchant WAF blocking entire Decodo UK pool",
+                MAX_ATTEMPTS, url,
+            )
+            return last_response
+        e = last_exception
+        if isinstance(e, _cffi_ex.Timeout):
+            raise requests.exceptions.Timeout(str(e)) from e
+        if isinstance(e, _cffi_ex.ConnectionError):
+            msg = str(e).lower()
+            if any(t in msg for t in ("ssl", "tls", "alert", "handshake", "cert")):
+                raise requests.exceptions.SSLError(str(e)) from e
+            raise requests.exceptions.ConnectionError(str(e)) from e
+        raise e
+
+
 def woo_session():
     """Return a session that survives merchant-side WAFs.
 
-    Tier 1 (primary): cloudscraper — solves Sucuri / Cloudflare
-        JS captcha challenges. Required for stores like
-        trapstaraustralia.org and breathedivinity.ca which sit
-        behind Sucuri's sgcaptcha challenge page.
+    When `WOO_PROXY_URL` env var is set: use it via curl_cffi for
+    EVERY WC request (dead-simple, no tiers). Proxy URL must be a
+    residential proxy gateway (Decodo, BrightData, etc.) — datacenter
+    proxies are not enough because managed-WP hosts block them.
 
-    Tier 1.5 (fallback on SSL): bare `requests.Session` + browser UA.
-        Used when cloudscraper's specific TLS/cookie behaviour is
-        what's getting blocked (Kinsta's nginx WAF flags
-        cloudscraper's fingerprint as scraping). Live production
-        diagnostic on 2026-06-09 proved bare requests passes through
-        Kinsta cleanly where cloudscraper hits SSLV3 alert.
-
-    Tier 2 (retry): curl_cffi impersonating Chrome 131's exact TLS
-        ClientHello — last-resort defeat of JA3/JA4 fingerprint
-        blocks (managed-WP hosts with custom WAFs).
-
-    The SmartWooSession wrapper picks the right tier based on the
-    primary call's response: SSL handshake error → switch to bare
-    requests for THIS call. 4xx/5xx response → pass through.
-
-    Returns a `requests.Session()`-compatible object.
+    When `WOO_PROXY_URL` is NOT set: fall back to the 3-tier WAF
+    detection (cloudscraper → bare requests → curl_cffi retry). This
+    keeps the codebase honest for installs that don't have a proxy
+    subscription yet.
     """
+    proxy_url = (os.getenv("WOO_PROXY_URL") or "").strip()
+    if proxy_url and _CURL_CFFI_AVAILABLE:
+        return _DirectProxySession(proxy_url)
+    # ── No proxy configured → fall back to original 3-tier behaviour ──
     if _WOO_SCRAPER_AVAILABLE:
         primary = _cs.create_scraper(
             browser={"browser": "chrome", "platform": "darwin", "desktop": True},
