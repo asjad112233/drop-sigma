@@ -894,7 +894,10 @@ def _diagnose_store(store):
         return {"online": False, "issue": "unsupported", "title": "Platform Not Supported",
                 "message": "This platform does not support health checks yet.", "fix": ""}
 
-    # Try direct request first; fall back to subprocess if DNS fails in this process
+    # Try direct request first; fall back to subprocess if DNS fails in this process.
+    # Returns (status_code, response_or_subprocess_tuple) — the second slot is
+    # either the live `requests.Response` (so we can sniff Content-Type/body
+    # for WAF detection on 4xx) or None when the subprocess fallback ran.
     def _do_request():
         kwargs = {"timeout": 10}
         if auth:
@@ -909,7 +912,7 @@ def _diagnose_store(store):
                 r = woo_session().get(url, **kwargs)
             else:
                 r = _req.get(url, **kwargs)
-            return r.status_code, None
+            return r.status_code, r
         except _req.exceptions.ConnectionError as e:
             err = str(e).lower()
             if "nodename nor servname" in err or "getaddrinfo failed" in err or "name or service not known" in err:
@@ -925,19 +928,66 @@ def _diagnose_store(store):
                     raise _req.exceptions.ConnectionError(sub_e)
             raise
 
+    def _is_real_wc_error_body(resp):
+        """True iff the response body smells like a genuine WordPress /
+        WooCommerce REST error (JSON), not a WAF block page (HTML / plain
+        text). Used to split a 401/403 between "wrong API key" and
+        "hosting firewall blocked us before we hit WordPress".
+
+        Conservative: returns False on anything we can't sniff, which
+        sends the diagnostic into the firewall branch (safer error
+        message than "your API key is wrong" when the merchant's key
+        is actually fine).
+        """
+        if resp is None:
+            return False
+        try:
+            ctype = (resp.headers.get("Content-Type") or "").lower()
+        except Exception:
+            ctype = ""
+        if "application/json" in ctype or "text/json" in ctype:
+            return True
+        # Some WC installs return JSON with text/html or no Content-Type.
+        # Sniff the first non-whitespace byte: JSON starts with { or [.
+        try:
+            body = (resp.text or "").lstrip()
+        except Exception:
+            return False
+        return bool(body) and body[0] in ("{", "[")
+
     try:
         import subprocess
-        status_code, _ = _do_request()
+        status_code, response = _do_request()
 
         if status_code in range(200, 300):
             return {"online": True, "issue": None, "title": "Store Online",
                     "message": "Store API is reachable and responding correctly.", "fix": ""}
 
-        if status_code in (401, 403):
+        # 401 is ALWAYS a real auth failure — WAFs return 403, not 401,
+        # so 401 means the request reached WordPress and WP rejected
+        # the credentials. Surface the auth message regardless of body.
+        if status_code == 401:
             return {"online": False, "issue": "auth",
                     "title": "Invalid API Credentials",
                     "message": f"The store responded with HTTP {status_code}. Your API key or secret is incorrect or has been revoked.",
                     "fix": "Go to your store's admin panel and regenerate API keys, then update them here."}
+
+        # 403 is the ambiguous one:
+        #   • JSON body → genuine WC permission error (key lacks scope
+        #     like `manage_options`) → "Invalid API Credentials" works.
+        #   • HTML / plain-text body → WAF/hosting firewall block page
+        #     (Kinsta, Sucuri, Wordfence, etc.) BEFORE the request ever
+        #     reaches WordPress. The tenant's API key is fine — their
+        #     host is blocking our IP. Show the firewall card with
+        #     whitelisting instructions instead of the misleading
+        #     "your API key is wrong" message.
+        if status_code == 403:
+            if _is_real_wc_error_body(response):
+                return {"online": False, "issue": "auth",
+                        "title": "Invalid API Credentials",
+                        "message": f"The store responded with HTTP {status_code}. Your API key or secret is incorrect or has been revoked.",
+                        "fix": "Go to your store's admin panel and regenerate API keys, then update them here."}
+            return _firewall_block_response(store)
 
         if status_code == 404:
             return {"online": False, "issue": "not_found",

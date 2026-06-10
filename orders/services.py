@@ -146,13 +146,34 @@ def _looks_like_challenge_response(response) -> bool:
     # callers can show "invalid credentials" instead of looping.
     if "application/json" in ctype or "text/json" in ctype:
         return False
-    # Read body once for the markers below.
+    # Read body once for the body-shape checks below.
     try:
         body = (response.text or "")[:4000].lower()
     except Exception:
+        body = ""
+    # Body looks like JSON even though Content-Type didn't say so
+    # (some WC installs misconfigure their headers). Treat as real
+    # WC response.
+    stripped = body.lstrip()
+    if stripped and stripped[0] in ("{", "["):
         return False
+    # ── HARD RULE: any 4xx with a non-JSON body = WAF block. ────────
+    # Real WC 4xx errors are ALWAYS JSON. A 4xx with HTML / plain text
+    # / empty body necessarily came from the edge (Kinsta nginx WAF,
+    # Sucuri firewall, Cloudflare, Wordfence) BEFORE the request hit
+    # WordPress. We were previously matching only specific block-page
+    # markers and missed Kinsta's 4xx variants that don't include the
+    # `<title>403 - Forbidden</title>` string (different page returned
+    # depending on the rule that fired). Now we catch them all.
+    if 400 <= status < 500:
+        return True
     if not body:
         return False
+    # ── 2xx/3xx WITH a challenge body — Sucuri sgcaptcha and Cloudflare
+    # interstitial both return 200 OK with their challenge HTML. Sniff
+    # for known WAF markers to detect these. (For 4xx we already
+    # returned True above, so these markers are only checked on
+    # 2xx/3xx.)
     challenge_markers = (
         "sgcaptcha",                  # Sucuri Generic Captcha
         "/.well-known/sgcaptcha",
@@ -162,10 +183,6 @@ def _looks_like_challenge_response(response) -> bool:
         "checking your browser",      # Cloudflare / others
         "ddos protection by",
         "enable javascript",
-        # WAF block pages — these come back as HTTP 403 / 406 / etc
-        # at the EDGE before reaching WordPress, so the body is a
-        # generic forbidden page with no WP content.
-        "<title>403 - forbidden",     # Kinsta nginx firewall page
         "<title>access denied",       # Sucuri / generic
         "blocked by",                 # Wordfence / Sucuri banners
         "your ip has been temporarily blocked",
