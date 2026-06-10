@@ -1,0 +1,2095 @@
+<!-- ════════════════════════════════════════════════════════════════════════
+     Supplier Database section
+     ──────────────────────────────────────────────────────────────────────
+     - List view: grid of supplier cards (gradient covers, tier badges,
+       stats, contact, action buttons)
+     - Toolbar: search, tier filter chips, "+ New Supplier"
+     - Create modal: full Supplier form
+     - Detail modal: tabs (Overview / Catalog / Performance / Contacts)
+       with Edit / Add Product / Delete Product actions
+     ──────────────────────────────────────────────────────────────────── -->
+<div id="opsSuppliersRoot">
+  <div class="ops-loading">Loading supplier database…</div>
+</div>
+
+<style>
+  /* ── Section-scoped tokens ─────────────────────────────────────── */
+  #opsSuppliersRoot{--sup-card-bg:#fff;--sup-shadow:0 1px 0 rgba(15,23,42,.02),0 18px 38px -26px rgba(15,23,42,.22);}
+
+  /* ── Toolbar ───────────────────────────────────────────────────── */
+  .sup-toolbar{
+    display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+    background:#fff;border:1px solid var(--ops-border);border-radius:16px;
+    padding:12px 14px;margin-bottom:16px;
+    box-shadow:0 1px 0 rgba(15,23,42,.02),0 10px 28px -22px rgba(15,23,42,.16);
+  }
+  .sup-search{
+    flex:1;min-width:200px;position:relative;
+  }
+  .sup-search input{
+    width:100%;padding:9px 14px 9px 36px;border-radius:10px;
+    border:1px solid #e5e7eb;background:#f8fafc;font-size:13px;
+    font-weight:600;color:var(--ops-text);outline:none;
+    transition:border-color .12s,background .12s,box-shadow .12s;
+  }
+  .sup-search input:focus{
+    border-color:var(--ops-violet);background:#fff;
+    box-shadow:0 0 0 3px rgba(99,102,241,.12);
+  }
+  .sup-search::before{
+    content:"🔎";position:absolute;left:11px;top:50%;
+    transform:translateY(-50%);font-size:13px;opacity:.7;pointer-events:none;
+  }
+  .sup-chips{display:flex;gap:6px;flex-wrap:wrap;}
+  .sup-chip{
+    padding:6px 12px;border-radius:999px;font-size:11.5px;font-weight:800;
+    border:1px solid #e5e7eb;background:#fff;color:var(--ops-text-2);
+    cursor:pointer;letter-spacing:.005em;transition:all .12s;
+    display:inline-flex;align-items:center;gap:6px;
+  }
+  .sup-chip:hover{background:#f1f5f9;border-color:#cbd5e1;}
+  .sup-chip.active{
+    background:linear-gradient(135deg,#0f172a,#1f2937);color:#fff;border-color:#0f172a;
+    box-shadow:0 6px 14px -8px rgba(15,23,42,.45);
+  }
+  .sup-chip .ct{
+    background:rgba(15,23,42,.08);color:var(--ops-text-2);font-weight:900;
+    font-size:10.5px;padding:0 6px;border-radius:999px;line-height:16px;min-width:18px;text-align:center;
+  }
+  .sup-chip.active .ct{background:rgba(255,255,255,.18);color:#fff;}
+
+  /* ── Grid ──────────────────────────────────────────────────────── */
+  .sup-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:14px;}
+  .sup-card{
+    background:var(--sup-card-bg);border:1px solid var(--ops-border);border-radius:18px;
+    overflow:hidden;display:flex;flex-direction:column;cursor:pointer;
+    transition:transform .15s ease, box-shadow .15s ease, border-color .15s;
+    box-shadow:var(--sup-shadow);
+  }
+  .sup-card:hover{transform:translateY(-2px);border-color:rgba(99,102,241,.22);box-shadow:0 18px 38px -18px rgba(15,23,42,.28);}
+  .sup-cover{
+    height:78px;position:relative;color:#fff;display:flex;align-items:center;justify-content:center;
+    font-size:34px;letter-spacing:-.02em;
+    text-shadow:0 2px 12px rgba(0,0,0,.18);
+  }
+  .sup-cover::after{
+    content:"";position:absolute;inset:0;
+    background:linear-gradient(180deg,rgba(255,255,255,0) 30%,rgba(0,0,0,.18) 100%);
+  }
+  .sup-cover .tier{
+    position:absolute;top:10px;right:10px;z-index:1;
+    padding:4px 9px;border-radius:999px;font-size:10px;font-weight:900;
+    text-transform:uppercase;letter-spacing:.08em;
+    background:rgba(255,255,255,.92);color:#0f172a;
+    box-shadow:0 2px 8px rgba(0,0,0,.18);
+  }
+  .sup-cover .tier.preferred{background:linear-gradient(135deg,#d4af37,#f4c430);color:#3b2a06;}
+  .sup-cover .tier.standard{background:linear-gradient(135deg,#6366f1,#a855f7);color:#fff;}
+  .sup-cover .tier.watch{background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;}
+  .sup-cover .tier.blocked{background:linear-gradient(135deg,#dc2626,#991b1b);color:#fff;}
+  .sup-cover .emoji{position:relative;z-index:1;}
+
+  .sup-body{padding:14px 16px 12px;display:flex;flex-direction:column;flex:1;}
+  .sup-name{font-size:15px;font-weight:900;letter-spacing:-.015em;color:var(--ops-text);line-height:1.2;}
+  .sup-loc{font-size:11.5px;color:var(--ops-text-2);font-weight:700;margin-top:4px;display:flex;align-items:center;gap:6px;}
+  .sup-loc .flag{font-size:14px;}
+
+  .sup-stats{
+    display:grid;grid-template-columns:repeat(2,1fr);gap:6px 12px;margin-top:11px;
+    padding-top:11px;border-top:1px dashed rgba(15,23,42,.08);
+  }
+  .sup-stat{display:flex;flex-direction:column;}
+  .sup-stat .lbl{font-size:9.5px;color:var(--ops-muted);font-weight:800;text-transform:uppercase;letter-spacing:.07em;}
+  .sup-stat .v{font-size:12.5px;font-weight:800;color:var(--ops-text);margin-top:1px;font-variant-numeric:tabular-nums;}
+  .sup-stat .v.gold{color:#b8860b;}
+
+  .sup-contact{
+    margin-top:11px;padding-top:10px;border-top:1px dashed rgba(15,23,42,.08);
+    font-size:11.5px;color:var(--ops-text-2);
+  }
+  .sup-contact .nm{font-weight:800;color:var(--ops-text);}
+  .sup-contact .em{font-size:11px;color:var(--ops-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+  .sup-actions{display:flex;gap:6px;padding:10px 14px 14px;}
+  .sup-actions .ops-btn{flex:1;justify-content:center;}
+
+  /* ── Modal shell (shared by Create and Detail) ─────────────────── */
+  .sup-modal-back{
+    position:fixed;inset:0;background:rgba(10,11,22,.55);
+    backdrop-filter:blur(4px);z-index:1000;
+    display:flex;align-items:flex-start;justify-content:center;
+    padding:40px 16px;overflow-y:auto;
+    animation:supFadeIn .18s ease;
+  }
+  @keyframes supFadeIn{from{opacity:0;}to{opacity:1;}}
+  .sup-modal{
+    background:#fff;border-radius:22px;width:100%;max-width:880px;
+    box-shadow:0 30px 80px -20px rgba(15,23,42,.55);
+    border:1px solid rgba(212,175,55,.18);
+    overflow:hidden;animation:supSlideUp .22s ease;
+  }
+  @keyframes supSlideUp{from{transform:translateY(12px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+  .sup-modal-head{
+    padding:18px 22px;border-bottom:1px solid var(--ops-border);
+    display:flex;align-items:center;gap:12px;
+    background:linear-gradient(180deg,#fafbff,#fff);
+  }
+  .sup-modal-head .ic{
+    width:42px;height:42px;border-radius:12px;
+    background:linear-gradient(135deg,var(--ops-gold),var(--ops-violet));
+    color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;
+    box-shadow:0 6px 18px rgba(212,175,55,.32);
+  }
+  .sup-modal-head .ttl{font-size:17px;font-weight:900;letter-spacing:-.015em;}
+  .sup-modal-head .sub{font-size:11.5px;color:var(--ops-text-2);font-weight:600;margin-top:2px;}
+  .sup-modal-head .x{
+    margin-left:auto;width:30px;height:30px;border-radius:10px;
+    background:#f1f5f9;border:none;font-size:18px;font-weight:900;color:#475569;cursor:pointer;
+  }
+  .sup-modal-head .x:hover{background:#e2e8f0;}
+
+  .sup-modal-body{padding:18px 22px;max-height:62vh;overflow-y:auto;}
+  .sup-modal-foot{
+    padding:14px 22px;border-top:1px solid var(--ops-border);
+    display:flex;gap:8px;justify-content:flex-end;background:#fafbfc;
+  }
+
+  /* ── Form grid ─────────────────────────────────────────────────── */
+  .sup-form-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:11px 14px;}
+  .sup-form-grid.three{grid-template-columns:repeat(3,1fr);}
+  .sup-field{display:flex;flex-direction:column;gap:4px;}
+  .sup-field.full{grid-column:1 / -1;}
+  .sup-field label{font-size:10.5px;font-weight:800;color:var(--ops-text-2);
+    text-transform:uppercase;letter-spacing:.07em;}
+  .sup-field input, .sup-field select, .sup-field textarea{
+    padding:8px 11px;border-radius:9px;border:1px solid #e5e7eb;
+    background:#fff;font-size:13px;font-weight:600;color:var(--ops-text);
+    font-family:inherit;outline:none;transition:border-color .12s,box-shadow .12s;
+  }
+  .sup-field input:focus, .sup-field select:focus, .sup-field textarea:focus{
+    border-color:var(--ops-violet);box-shadow:0 0 0 3px rgba(99,102,241,.14);
+  }
+  .sup-field textarea{resize:vertical;min-height:62px;}
+  .sup-field .colorpair{display:flex;gap:6px;align-items:center;}
+  .sup-field input[type="color"]{padding:0;width:42px;height:34px;border-radius:8px;cursor:pointer;}
+  .sup-form-section{
+    margin-top:10px;font-size:10.5px;font-weight:900;color:var(--ops-muted);
+    text-transform:uppercase;letter-spacing:.08em;
+    padding:14px 0 8px;border-top:1px dashed rgba(15,23,42,.08);grid-column:1 / -1;
+  }
+  .sup-form-section:first-child{padding-top:0;border-top:none;}
+
+  /* Live preview swatch for cover */
+  .sup-cover-preview{
+    height:60px;border-radius:12px;display:flex;align-items:center;justify-content:center;
+    font-size:28px;color:#fff;font-weight:900;
+    text-shadow:0 2px 12px rgba(0,0,0,.2);grid-column:1 / -1;
+  }
+
+  /* ── Detail modal tabs ─────────────────────────────────────────── */
+  .sup-tabs{
+    display:flex;gap:4px;padding:0 22px;border-bottom:1px solid var(--ops-border);
+    background:linear-gradient(180deg,#fafbff,#fff);
+  }
+  .sup-tab{
+    padding:11px 14px;font-size:12px;font-weight:800;color:var(--ops-text-2);
+    border:none;background:transparent;cursor:pointer;border-bottom:2px solid transparent;
+    letter-spacing:.005em;transition:color .12s,border-color .12s;
+  }
+  .sup-tab:hover{color:var(--ops-text);}
+  .sup-tab.active{color:var(--ops-text);border-bottom-color:var(--ops-gold);}
+  .sup-tab-panel{display:none;}
+  .sup-tab-panel.active{display:block;}
+
+  /* Overview info rows */
+  .sup-info-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px 16px;}
+  .sup-info{display:flex;flex-direction:column;gap:2px;}
+  .sup-info .lbl{font-size:10px;font-weight:800;color:var(--ops-muted);
+    text-transform:uppercase;letter-spacing:.07em;}
+  .sup-info .v{font-size:13px;font-weight:700;color:var(--ops-text);}
+  .sup-info .v.empty{color:var(--ops-muted);font-weight:600;font-style:italic;}
+
+  /* Catalog products list */
+  .sup-prod-list{display:flex;flex-direction:column;gap:8px;}
+  .sup-prod-row{
+    display:grid;grid-template-columns:48px 1fr auto auto;gap:12px;align-items:center;
+    padding:10px 12px;background:#f8fafc;border:1px solid var(--ops-border);
+    border-radius:12px;
+  }
+  .sup-prod-row .thumb{
+    width:48px;height:48px;border-radius:10px;background:#fff;border:1px solid #e5e7eb;
+    overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:18px;color:#94a3b8;
+  }
+  .sup-prod-row .thumb img{width:100%;height:100%;object-fit:cover;}
+  .sup-prod-row .info{min-width:0;}
+  .sup-prod-row .sku{font-size:11px;font-weight:800;color:var(--ops-violet);font-family:ui-monospace,Menlo,monospace;letter-spacing:0;}
+  .sup-prod-row .nm{font-size:13px;font-weight:800;color:var(--ops-text);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .sup-prod-row .var{font-size:11px;color:var(--ops-text-2);font-weight:600;margin-top:1px;}
+  .sup-prod-row .price{
+    font-size:13px;font-weight:900;color:var(--ops-text);
+    font-variant-numeric:tabular-nums;text-align:right;
+    cursor:pointer;border-radius:8px;padding:4px 8px;
+    transition:background .15s;
+  }
+  .sup-prod-row .price:hover{background:rgba(212,175,55,.08);}
+  .sup-prod-row .price.needs-cost{
+    color:#dc2626;
+  }
+  .sup-prod-row .price.needs-cost:hover{background:rgba(239,68,68,.08);}
+  .sup-prod-row .price .price-warn{
+    display:inline-block;font-size:11.5px;font-weight:900;color:#dc2626;
+    background:linear-gradient(135deg,#fee2e2,#fecaca);
+    padding:3px 9px;border-radius:8px;border:1px solid rgba(220,38,38,.25);
+    letter-spacing:.02em;
+  }
+  .sup-prod-row .price .sub{font-size:10.5px;color:var(--ops-muted);font-weight:600;margin-top:2px;}
+
+  /* Performance grid */
+  .sup-perf-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;}
+  .sup-perf{
+    background:#f8fafc;border:1px solid var(--ops-border);border-radius:14px;
+    padding:14px 16px;position:relative;overflow:hidden;
+  }
+  .sup-perf::before{
+    content:"";position:absolute;left:0;top:0;width:3px;height:100%;
+    background:linear-gradient(180deg,var(--ops-gold),var(--ops-violet));
+  }
+  .sup-perf .lbl{font-size:10px;font-weight:800;color:var(--ops-muted);text-transform:uppercase;letter-spacing:.07em;}
+  .sup-perf .v{font-size:22px;font-weight:900;color:var(--ops-text);margin-top:4px;font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+  .sup-perf .sub{font-size:11px;color:var(--ops-text-2);font-weight:600;margin-top:1px;}
+
+  /* Contacts list */
+  .sup-contact-list{display:flex;flex-direction:column;gap:8px;}
+  .sup-contact-row{
+    padding:10px 12px;background:#f8fafc;border:1px solid var(--ops-border);
+    border-radius:12px;display:flex;align-items:center;gap:12px;
+  }
+  .sup-contact-row .av{
+    width:36px;height:36px;border-radius:10px;
+    background:linear-gradient(135deg,var(--ops-violet),var(--ops-violet-2));
+    color:#fff;font-weight:900;font-size:13px;display:flex;align-items:center;justify-content:center;
+  }
+  .sup-contact-row .nm{font-size:13px;font-weight:800;color:var(--ops-text);}
+  .sup-contact-row .role{font-size:11px;color:var(--ops-text-2);font-weight:600;}
+  .sup-contact-row .primary-flag{font-size:10px;font-weight:900;color:var(--ops-gold);text-transform:uppercase;letter-spacing:.07em;}
+
+  /* Empty inside-modal */
+  .sup-empty-inline{
+    padding:30px 20px;text-align:center;color:var(--ops-muted);
+    border:1px dashed rgba(15,23,42,.12);border-radius:14px;font-size:13px;
+  }
+  .sup-empty-inline .ic{font-size:32px;margin-bottom:6px;opacity:.7;}
+
+  /* ── Import from tenant store (3-step modal) ───────────────────── */
+  .sup-imp-back{
+    position:fixed;inset:0;background:rgba(10,11,22,.62);
+    backdrop-filter:blur(5px);z-index:1100;
+    display:flex;align-items:flex-start;justify-content:center;
+    padding:40px 16px;overflow-y:auto;animation:supFadeIn .18s ease;
+  }
+  .sup-imp-modal{
+    background:#fff;border-radius:22px;width:100%;max-width:860px;
+    max-height:90vh;overflow:hidden;display:flex;flex-direction:column;
+    box-shadow:0 30px 80px -20px rgba(15,23,42,.55);
+    border:1px solid rgba(212,175,55,.18);
+    animation:supSlideUp .22s ease;
+  }
+  .sup-imp-head{
+    padding:16px 22px;border-bottom:1px solid var(--ops-border);
+    display:flex;align-items:center;gap:12px;
+    background:linear-gradient(180deg,#fafbff,#fff);flex-shrink:0;
+  }
+  .sup-imp-head .ic{
+    width:40px;height:40px;border-radius:12px;
+    background:linear-gradient(135deg,var(--ops-gold),var(--ops-violet));
+    color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;
+    box-shadow:0 6px 18px rgba(212,175,55,.32);
+  }
+  .sup-imp-head .ttl{font-size:16px;font-weight:900;letter-spacing:-.015em;}
+  .sup-imp-head .sub{font-size:11.5px;color:var(--ops-text-2);font-weight:600;margin-top:2px;}
+  .sup-imp-head .back{
+    width:30px;height:30px;border-radius:10px;background:#f1f5f9;border:none;
+    font-size:14px;font-weight:900;color:#475569;cursor:pointer;margin-right:4px;
+  }
+  .sup-imp-head .back:hover{background:#e2e8f0;}
+  .sup-imp-head .x{
+    margin-left:auto;width:30px;height:30px;border-radius:10px;
+    background:#f1f5f9;border:none;font-size:18px;font-weight:900;color:#475569;cursor:pointer;
+  }
+  .sup-imp-head .x:hover{background:#e2e8f0;}
+
+  .sup-imp-body{padding:16px 22px;overflow-y:auto;flex:1;}
+  .sup-imp-foot{
+    padding:12px 22px;border-top:1px solid var(--ops-border);
+    display:flex;gap:8px;justify-content:space-between;align-items:center;
+    background:#fafbfc;flex-shrink:0;
+  }
+  .sup-imp-foot .sub{font-size:11.5px;color:var(--ops-text-2);font-weight:700;}
+
+  /* Step 1 — search + store grid */
+  .sup-imp-search{
+    position:relative;margin-bottom:14px;
+  }
+  .sup-imp-search input{
+    width:100%;padding:10px 14px 10px 38px;border-radius:10px;
+    border:1px solid #e5e7eb;background:#f8fafc;font-size:13px;
+    font-weight:600;color:var(--ops-text);outline:none;
+    transition:border-color .12s,background .12s,box-shadow .12s;
+  }
+  .sup-imp-search input:focus{
+    border-color:var(--ops-violet);background:#fff;
+    box-shadow:0 0 0 3px rgba(99,102,241,.12);
+  }
+  .sup-imp-search::before{
+    content:"🔎";position:absolute;left:13px;top:50%;
+    transform:translateY(-50%);font-size:13px;opacity:.7;pointer-events:none;
+  }
+  .sup-imp-grid{
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;
+  }
+  .sup-imp-store{
+    background:#fff;border:1px solid var(--ops-border);border-radius:14px;
+    padding:12px 14px;cursor:pointer;transition:all .14s ease;display:flex;flex-direction:column;gap:6px;
+    box-shadow:0 1px 0 rgba(15,23,42,.02);
+  }
+  .sup-imp-store:hover{
+    transform:translateY(-1px);border-color:rgba(99,102,241,.34);
+    box-shadow:0 10px 28px -16px rgba(15,23,42,.28);
+  }
+  .sup-imp-store.disabled{opacity:.55;cursor:not-allowed;}
+  .sup-imp-store.disabled:hover{transform:none;box-shadow:0 1px 0 rgba(15,23,42,.02);}
+  .sup-imp-store .topline{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  .sup-imp-store .pbadge{
+    padding:3px 8px;border-radius:999px;font-size:10px;font-weight:900;
+    letter-spacing:.04em;text-transform:uppercase;display:inline-flex;gap:4px;align-items:center;
+  }
+  .sup-imp-store .pbadge.shopify{background:linear-gradient(135deg,#95bf47,#5e8e3e);color:#fff;}
+  .sup-imp-store .pbadge.woocommerce{background:linear-gradient(135deg,#7f54b3,#574494);color:#fff;}
+  .sup-imp-store .status{
+    padding:2px 7px;border-radius:999px;font-size:9.5px;font-weight:900;
+    letter-spacing:.06em;text-transform:uppercase;margin-left:auto;
+  }
+  .sup-imp-store .status.active{background:rgba(16,185,129,.14);color:#047857;}
+  .sup-imp-store .status.inactive{background:rgba(239,68,68,.12);color:#b91c1c;}
+  .sup-imp-store .nm{font-size:13.5px;font-weight:900;color:var(--ops-text);letter-spacing:-.01em;line-height:1.25;}
+  .sup-imp-store .url{
+    font-size:11px;color:var(--ops-violet);font-weight:700;text-decoration:none;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  .sup-imp-store .url:hover{text-decoration:underline;}
+  .sup-imp-store .owner{font-size:11px;color:var(--ops-text-2);font-weight:700;line-height:1.35;}
+  .sup-imp-store .owner .em{color:var(--ops-muted);font-weight:600;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .sup-imp-store .warn{
+    margin-top:4px;padding:5px 8px;border-radius:8px;font-size:10.5px;font-weight:800;
+    background:rgba(245,158,11,.12);color:#92400e;line-height:1.3;
+  }
+
+  /* Step 2 — product list */
+  .sup-imp-qa{
+    display:flex;gap:6px;flex-wrap:wrap;margin:10px 0;align-items:center;
+  }
+  .sup-imp-qa .ops-btn{font-size:11.5px;padding:6px 10px;}
+  .sup-imp-qa .count{
+    margin-left:auto;font-size:12px;font-weight:800;color:var(--ops-text-2);
+    padding:5px 10px;border-radius:999px;background:#f1f5f9;
+  }
+  .sup-imp-prods{display:flex;flex-direction:column;gap:6px;}
+  .sup-imp-prod{
+    display:grid;grid-template-columns:24px 48px 1fr auto;gap:10px;align-items:center;
+    padding:9px 12px;background:#f8fafc;border:1px solid var(--ops-border);border-radius:11px;
+    cursor:pointer;transition:background .12s, border-color .12s;
+  }
+  .sup-imp-prod:hover{background:#f1f5f9;border-color:#cbd5e1;}
+  .sup-imp-prod.selected{background:#fef9e7;border-color:var(--ops-gold);}
+  .sup-imp-prod.in-catalog{opacity:.65;}
+  .sup-imp-prod input[type="checkbox"]{
+    width:18px;height:18px;cursor:pointer;accent-color:var(--ops-gold);
+  }
+  .sup-imp-prod .thumb{
+    width:48px;height:48px;border-radius:9px;background:#fff;border:1px solid #e5e7eb;
+    overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:18px;color:#94a3b8;
+    cursor:zoom-in;
+  }
+  .sup-imp-prod .thumb img{width:100%;height:100%;object-fit:cover;}
+  .sup-imp-prod .info{min-width:0;}
+  .sup-imp-prod .nm{font-size:13px;font-weight:800;color:var(--ops-text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .sup-imp-prod .meta{
+    display:flex;gap:8px;align-items:center;margin-top:2px;flex-wrap:wrap;
+    font-size:11px;color:var(--ops-text-2);font-weight:600;
+  }
+  .sup-imp-prod .sku{
+    font-family:ui-monospace,Menlo,monospace;font-size:11px;color:var(--ops-violet);
+    font-weight:800;letter-spacing:0;
+  }
+  .sup-imp-prod .sku.missing{color:#b91c1c;}
+  .sup-imp-prod .vchip{
+    padding:1px 7px;border-radius:999px;background:rgba(99,102,241,.1);
+    color:var(--ops-violet);font-size:10.5px;font-weight:800;
+  }
+  .sup-imp-prod .price{
+    font-size:12px;color:var(--ops-muted);font-weight:700;text-align:right;
+    font-variant-numeric:tabular-nums;
+  }
+  .sup-imp-prod .price .ic{color:var(--ops-gold);font-weight:900;}
+  .sup-imp-prod .badge-already{
+    padding:3px 8px;border-radius:999px;
+    background:linear-gradient(135deg,#d4af37,#f4c430);color:#3b2a06;
+    font-size:9.5px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;
+  }
+
+  /* Step 3 — configure */
+  .sup-imp-info{
+    padding:12px 14px;border-radius:12px;
+    background:linear-gradient(135deg,rgba(99,102,241,.07),rgba(168,85,247,.07));
+    border:1px solid rgba(99,102,241,.18);
+    font-size:12.5px;color:var(--ops-text);font-weight:600;line-height:1.5;margin-bottom:14px;
+  }
+  .sup-imp-info strong{color:var(--ops-text);font-weight:900;}
+  .sup-imp-defaults{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px 14px;margin-bottom:14px;
+  }
+  .sup-imp-defaults .sup-field input,
+  .sup-imp-defaults .sup-field select{padding:8px 11px;}
+  .sup-imp-skipnote{
+    padding:8px 12px;border-radius:10px;font-size:11.5px;font-weight:700;
+    background:rgba(245,158,11,.12);color:#92400e;margin:8px 0;
+  }
+
+  /* Status banners reused across steps */
+  .sup-imp-err{
+    padding:12px 14px;border-radius:12px;background:rgba(239,68,68,.08);
+    border:1px solid rgba(239,68,68,.22);color:#991b1b;
+    font-size:12.5px;font-weight:700;line-height:1.45;
+  }
+  .sup-imp-loading{
+    padding:40px 20px;text-align:center;color:var(--ops-muted);font-size:13px;font-weight:700;
+  }
+  .sup-imp-empty{
+    padding:36px 20px;text-align:center;color:var(--ops-muted);
+    border:1px dashed rgba(15,23,42,.12);border-radius:14px;font-size:13px;
+  }
+  .sup-imp-empty .ic{font-size:32px;margin-bottom:6px;opacity:.7;}
+
+  @media (max-width: 720px){
+    .sup-form-grid, .sup-info-grid{grid-template-columns:1fr;}
+    .sup-prod-row{grid-template-columns:48px 1fr;}
+    .sup-prod-row .price, .sup-prod-row .actions{grid-column:1 / -1;text-align:left;}
+    .sup-imp-grid{grid-template-columns:1fr;}
+    .sup-imp-prod{grid-template-columns:24px 48px 1fr;}
+    .sup-imp-prod .price{grid-column:1 / -1;text-align:left;}
+  }
+</style>
+
+<script>
+/* ════════════════════════════════════════════════════════════════════
+   Supplier Database — JS controller
+   ════════════════════════════════════════════════════════════════════ */
+(function(){
+  // Local cache so we don't re-fetch on chip clicks
+  const STATE = {
+    suppliers: [],
+    facets:    {all:0,preferred:0,standard:0,watch:0,blocked:0},
+    tier:      'all',
+    q:         '',
+    selectedId: null,
+    detail: null,    // last loaded detail payload {supplier,contacts,images,products}
+    detailTab: 'overview',
+  };
+
+  // Payment-term human labels (mirrors model choices)
+  const PAYMENT_TERMS = [
+    ['prepaid',   '100% prepaid'],
+    ['30_70',     '30% deposit · 70% before ship'],
+    ['50_50',     '50% deposit · 50% on delivery'],
+    ['net_30',    'Net-30 (credit)'],
+    ['net_60',    'Net-60 (credit)'],
+    ['custom',    'Custom'],
+  ];
+  const TIERS = [
+    ['preferred', 'Preferred · top supplier'],
+    ['standard',  'Standard · trusted'],
+    ['watch',     'Watch · monitor performance'],
+    ['blocked',   'Blocked · do not use'],
+  ];
+
+  // ── Render helpers ────────────────────────────────────────────────
+  function tierBadge(tier){
+    const map = {preferred:'★ Preferred', standard:'✓ Standard', watch:'⚠ Watch', blocked:'⛔ Blocked'};
+    return `<span class="tier ${opsEsc(tier)}">${opsEsc(map[tier]||tier||'')}</span>`;
+  }
+
+  function renderToolbar(){
+    const f = STATE.facets || {all:0};
+    const chips = [
+      ['all',       'All'],
+      ['preferred', '★ Preferred'],
+      ['standard',  '✓ Standard'],
+      ['watch',     '⚠ Watch'],
+      ['blocked',   '⛔ Blocked'],
+    ].map(([k, lbl]) => {
+      const ct = f[k] || 0;
+      return `<button class="sup-chip ${STATE.tier===k?'active':''}" data-tier="${opsEsc(k)}">
+        ${opsEsc(lbl)} <span class="ct">${ct}</span>
+      </button>`;
+    }).join('');
+
+    return `
+      <div class="sup-toolbar">
+        <div class="sup-search">
+          <input type="search" id="supSearchInput" placeholder="Search by name, contact, country, specialty…"
+                 value="${opsEsc(STATE.q)}" autocomplete="off">
+        </div>
+        <div class="sup-chips">${chips}</div>
+        <button class="ops-btn primary" id="supNewBtn">+ New Supplier</button>
+      </div>
+    `;
+  }
+
+  function renderCard(s){
+    const gradient = `linear-gradient(135deg, ${opsEsc(s.gradient_from||'#6366f1')} 0%, ${opsEsc(s.gradient_to||'#a855f7')} 100%)`;
+    const stats = [
+      ['Rating',  `★ ${(s.rating||0).toFixed(1)}`,    'gold'],
+      ['On-time', `${s.on_time_pct||0}%`,             ''],
+      ['Lead',    `${s.default_lead_days||0}d`,       ''],
+      ['MOQ',     `${(s.moq||0).toLocaleString()}`,   ''],
+    ];
+    const contactBlock = s.contact_name
+      ? `<div class="nm">${opsEsc(s.contact_name)}${s.contact_role ? ' <span style="color:var(--ops-muted);font-weight:600;">· '+opsEsc(s.contact_role)+'</span>' : ''}</div>
+         <div class="em">${opsEsc(s.email || s.phone || '—')}</div>`
+      : `<div class="em">No primary contact yet</div>`;
+
+    return `
+      <div class="sup-card" data-id="${s.id}">
+        <div class="sup-cover" style="background:${gradient};">
+          ${tierBadge(s.tier)}
+          <span class="emoji">${opsEsc(s.cover_emoji||'🏭')}</span>
+        </div>
+        <div class="sup-body">
+          <div class="sup-name">${opsEsc(s.name)}</div>
+          <div class="sup-loc">
+            ${s.flag ? `<span class="flag">${s.flag}</span>` : ''}
+            <span>${opsEsc([s.city, s.country].filter(Boolean).join(', ') || '—')}</span>
+          </div>
+          <div class="sup-stats">
+            ${stats.map(([l,v,cls]) => `
+              <div class="sup-stat">
+                <div class="lbl">${opsEsc(l)}</div>
+                <div class="v ${cls}">${opsEsc(v)}</div>
+              </div>`).join('')}
+          </div>
+          <div class="sup-contact">${contactBlock}</div>
+        </div>
+        <div class="sup-actions">
+          <button class="ops-btn sm ghost" data-action="view">View detail</button>
+          <button class="ops-btn sm gold"  data-action="add-product">+ Product</button>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderGrid(){
+    const list = STATE.suppliers;
+    if (!list.length){
+      return `<div class="ops-empty" style="background:#fff;border:1px solid var(--ops-border);border-radius:18px;">
+                <div class="ic">🏬</div>
+                <h3>No suppliers match</h3>
+                <p>Adjust your search or tier filter to find more.</p>
+              </div>`;
+    }
+    return `<div class="sup-grid">${list.map(renderCard).join('')}</div>`;
+  }
+
+  function renderRoot(){
+    const root = document.getElementById('opsSuppliersRoot');
+    if (!root) return;
+    root.innerHTML = renderToolbar() + renderGrid();
+    bindToolbar();
+    bindCards();
+  }
+
+  // ── Event binding ─────────────────────────────────────────────────
+  function bindToolbar(){
+    const input = document.getElementById('supSearchInput');
+    if (input){
+      let t = null;
+      input.addEventListener('input', (e) => {
+        clearTimeout(t);
+        const v = e.target.value;
+        t = setTimeout(() => { STATE.q = v; load(); }, 220);
+      });
+    }
+    document.querySelectorAll('#opsSuppliersRoot .sup-chip').forEach(c => {
+      c.addEventListener('click', () => {
+        STATE.tier = c.dataset.tier || 'all';
+        load();
+      });
+    });
+    const btn = document.getElementById('supNewBtn');
+    if (btn) btn.addEventListener('click', openCreateModal);
+  }
+
+  function bindCards(){
+    document.querySelectorAll('#opsSuppliersRoot .sup-card').forEach(card => {
+      const id = parseInt(card.dataset.id, 10);
+      card.addEventListener('click', (e) => {
+        // Direct click on card body (not action btns) → view
+        const isBtn = e.target.closest('[data-action]');
+        if (isBtn){
+          e.stopPropagation();
+          const action = isBtn.dataset.action;
+          if (action === 'view')        openDetailModal(id, 'overview');
+          if (action === 'add-product') openDetailModal(id, 'catalog', {addProduct:true});
+        } else {
+          openDetailModal(id, 'overview');
+        }
+      });
+    });
+  }
+
+  // ── Data fetch ────────────────────────────────────────────────────
+  async function load(){
+    const root = document.getElementById('opsSuppliersRoot');
+    if (root && !STATE.suppliers.length){
+      root.innerHTML = '<div class="ops-loading">Loading supplier database…</div>';
+    }
+    const params = new URLSearchParams();
+    if (STATE.q)                       params.set('q', STATE.q);
+    if (STATE.tier && STATE.tier!=='all') params.set('tier', STATE.tier);
+    const url = '/ops/api/suppliers/' + (params.toString() ? ('?' + params.toString()) : '');
+    const resp = await opsFetch(url);
+    if (!resp.ok){
+      root.innerHTML = '<div class="ops-empty"><div class="ic">⚠️</div><h3>Could not load suppliers</h3><p>'+
+        opsEsc(resp.data && resp.data.error || 'Network error')+'</p></div>';
+      return;
+    }
+    STATE.suppliers = resp.data.suppliers || [];
+    STATE.facets    = resp.data.facets || STATE.facets;
+    renderRoot();
+  }
+
+  // ── Modal helpers ─────────────────────────────────────────────────
+  function closeModal(){
+    const back = document.querySelector('.sup-modal-back');
+    if (back) back.remove();
+  }
+  function mountModal(html){
+    closeModal();
+    const back = document.createElement('div');
+    back.className = 'sup-modal-back';
+    back.innerHTML = html;
+    back.addEventListener('click', (e) => { if (e.target === back) closeModal(); });
+    document.body.appendChild(back);
+    return back;
+  }
+
+  // ── CREATE supplier modal ─────────────────────────────────────────
+  function openCreateModal(){
+    const tierOpts = TIERS.map(([k,l]) =>
+      `<option value="${opsEsc(k)}" ${k==='standard'?'selected':''}>${opsEsc(l)}</option>`).join('');
+    const ptOpts = PAYMENT_TERMS.map(([k,l]) =>
+      `<option value="${opsEsc(k)}" ${k==='30_70'?'selected':''}>${opsEsc(l)}</option>`).join('');
+
+    const html = `
+      <div class="sup-modal">
+        <div class="sup-modal-head">
+          <div class="ic">+</div>
+          <div>
+            <div class="ttl">New Supplier</div>
+            <div class="sub">Add a verified factory or sourcing partner to your network</div>
+          </div>
+          <button class="x" data-close>×</button>
+        </div>
+        <form id="supCreateForm">
+          <div class="sup-modal-body">
+
+            <div class="sup-form-grid">
+              <div class="sup-form-section">Identity</div>
+              <div class="sup-field">
+                <label>Supplier name *</label>
+                <input name="name" required placeholder="e.g. Shenzhen Tech Manufacturing Co.">
+              </div>
+              <div class="sup-field">
+                <label>Legal name</label>
+                <input name="legal_name" placeholder="As registered">
+              </div>
+              <div class="sup-field">
+                <label>Tier</label>
+                <select name="tier">${tierOpts}</select>
+              </div>
+              <div class="sup-field">
+                <label>Specialties (comma-separated)</label>
+                <input name="specialties" placeholder="Apparel, Cosmetics">
+              </div>
+
+              <div class="sup-form-section">Location</div>
+              <div class="sup-field">
+                <label>Country</label>
+                <input name="country" placeholder="China">
+              </div>
+              <div class="sup-field">
+                <label>City</label>
+                <input name="city" placeholder="Shenzhen">
+              </div>
+              <div class="sup-field full">
+                <label>Address</label>
+                <input name="address" placeholder="Street, district, postal code">
+              </div>
+              <div class="sup-field">
+                <label>Timezone</label>
+                <input name="timezone" placeholder="Asia/Shanghai">
+              </div>
+              <div class="sup-field">
+                <label>Languages (comma-separated)</label>
+                <input name="languages" placeholder="English, Mandarin">
+              </div>
+
+              <div class="sup-form-section">Primary contact</div>
+              <div class="sup-field">
+                <label>Contact name</label>
+                <input name="contact_name" placeholder="Ms. Li Wei">
+              </div>
+              <div class="sup-field">
+                <label>Role</label>
+                <input name="contact_role" placeholder="Sales rep">
+              </div>
+              <div class="sup-field">
+                <label>Email</label>
+                <input name="email" type="email" placeholder="sales@supplier.com">
+              </div>
+              <div class="sup-field">
+                <label>Phone</label>
+                <input name="phone" placeholder="+86 138 0000 0000">
+              </div>
+              <div class="sup-field">
+                <label>WhatsApp</label>
+                <input name="whatsapp" placeholder="+86 138 0000 0000">
+              </div>
+              <div class="sup-field">
+                <label>WeChat</label>
+                <input name="wechat" placeholder="wechat-id">
+              </div>
+
+              <div class="sup-form-section">Commercial</div>
+              <div class="sup-field">
+                <label>Website</label>
+                <input name="website" placeholder="https://supplier.com">
+              </div>
+              <div class="sup-field">
+                <label>Alibaba URL</label>
+                <input name="alibaba_url" placeholder="https://alibaba.com/...">
+              </div>
+              <div class="sup-field">
+                <label>Default lead time (days)</label>
+                <input name="default_lead_days" type="number" min="1" value="10">
+              </div>
+              <div class="sup-field">
+                <label>MOQ (units)</label>
+                <input name="moq" type="number" min="1" value="1">
+              </div>
+              <div class="sup-field">
+                <label>Payment terms</label>
+                <select name="payment_terms">${ptOpts}</select>
+              </div>
+              <div class="sup-field">
+                <label>Payment methods (comma-separated)</label>
+                <input name="payment_methods" placeholder="T/T, PayPal">
+              </div>
+              <div class="sup-field">
+                <label>Currency</label>
+                <input name="currency" value="USD" maxlength="10">
+              </div>
+              <div class="sup-field">
+                <label>Tax ID</label>
+                <input name="tax_id">
+              </div>
+              <div class="sup-field full">
+                <label>Business license #</label>
+                <input name="business_license_no">
+              </div>
+
+              <div class="sup-form-section">Branding</div>
+              <div class="sup-field">
+                <label>Cover emoji</label>
+                <input name="cover_emoji" value="🏭" maxlength="2">
+              </div>
+              <div class="sup-field">
+                <label>Gradient (from / to)</label>
+                <div class="colorpair">
+                  <input name="cover_gradient_from" type="color" value="#6366f1">
+                  <input name="cover_gradient_to"   type="color" value="#a855f7">
+                </div>
+              </div>
+              <div class="sup-cover-preview" id="supCoverPreview"
+                   style="background:linear-gradient(135deg,#6366f1,#a855f7);">🏭</div>
+
+              <div class="sup-form-section">Internal notes</div>
+              <div class="sup-field full">
+                <label>Notes (ops-only)</label>
+                <textarea name="notes" placeholder="Anything the ops team should know"></textarea>
+              </div>
+            </div>
+
+          </div>
+          <div class="sup-modal-foot">
+            <button type="button" class="ops-btn ghost" data-close>Cancel</button>
+            <button type="submit" class="ops-btn primary" id="supCreateSubmit">Create supplier</button>
+          </div>
+        </form>
+      </div>
+    `;
+    const back = mountModal(html);
+    back.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', closeModal));
+
+    // Live cover preview
+    const form = back.querySelector('#supCreateForm');
+    const preview = back.querySelector('#supCoverPreview');
+    function updPreview(){
+      const from = form.cover_gradient_from.value || '#6366f1';
+      const to   = form.cover_gradient_to.value   || '#a855f7';
+      const em   = form.cover_emoji.value || '🏭';
+      preview.style.background = `linear-gradient(135deg, ${from}, ${to})`;
+      preview.textContent = em;
+    }
+    ['cover_gradient_from','cover_gradient_to','cover_emoji'].forEach(n => {
+      form[n].addEventListener('input', updPreview);
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const data = {};
+      new FormData(form).forEach((v, k) => { data[k] = v; });
+      // numbers
+      data.default_lead_days = parseInt(data.default_lead_days||'10', 10) || 10;
+      data.moq = parseInt(data.moq||'1', 10) || 1;
+      const btn = form.querySelector('#supCreateSubmit');
+      btn.disabled = true; btn.textContent = 'Creating…';
+      const resp = await opsFetch('/ops/api/suppliers/create/', {method:'POST', body:data});
+      btn.disabled = false; btn.textContent = 'Create supplier';
+      if (!resp.ok){
+        opsToast(resp.data && resp.data.error || 'Could not create supplier', 'error');
+        return;
+      }
+      opsToast('Supplier created · '+(resp.data.supplier.name||''), 'success');
+      closeModal();
+      await load();
+      // Open detail of newly-created supplier
+      openDetailModal(resp.data.supplier.id, 'overview');
+    });
+  }
+
+  // ── DETAIL modal (with tabs) ──────────────────────────────────────
+  async function openDetailModal(id, tab, opts){
+    opts = opts || {};
+    STATE.selectedId = id;
+    STATE.detailTab = tab || 'overview';
+
+    const loadingHtml = `
+      <div class="sup-modal">
+        <div class="sup-modal-head">
+          <div class="ic">🏬</div>
+          <div><div class="ttl">Loading supplier…</div><div class="sub">One moment</div></div>
+          <button class="x" data-close>×</button>
+        </div>
+        <div class="sup-modal-body"><div class="ops-loading">Loading…</div></div>
+      </div>`;
+    const back = mountModal(loadingHtml);
+    back.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', closeModal));
+
+    const resp = await opsFetch(`/ops/api/supplier/${id}/`);
+    if (!resp.ok){
+      back.querySelector('.sup-modal-body').innerHTML =
+        '<div class="ops-empty"><h3>Could not load supplier</h3></div>';
+      return;
+    }
+    STATE.detail = resp.data;
+    renderDetailModal(opts);
+  }
+
+  function renderDetailModal(opts){
+    opts = opts || {};
+    const d = STATE.detail;
+    const s = d.supplier;
+    const gradient = `linear-gradient(135deg, ${s.gradient_from} 0%, ${s.gradient_to} 100%)`;
+
+    const head = `
+      <div class="sup-modal-head" style="background:${gradient};color:#fff;border-bottom-color:rgba(0,0,0,.12);">
+        <div class="ic" style="background:rgba(255,255,255,.18);box-shadow:none;">${opsEsc(s.cover_emoji||'🏭')}</div>
+        <div>
+          <div class="ttl" style="color:#fff;">${opsEsc(s.name)}</div>
+          <div class="sub" style="color:rgba(255,255,255,.85);">
+            ${s.flag ? s.flag+' ' : ''}${opsEsc([s.city, s.country].filter(Boolean).join(', ') || '—')}
+            · <strong>${opsEsc((s.tier_label||s.tier||'').split('·')[0])}</strong>
+            · ★ ${(s.rating||0).toFixed(1)}
+          </div>
+        </div>
+        <button class="x" data-close style="background:rgba(255,255,255,.18);color:#fff;">×</button>
+      </div>
+    `;
+    const tabs = `
+      <div class="sup-tabs">
+        ${['overview','catalog','performance','contacts'].map(t => `
+          <button class="sup-tab ${STATE.detailTab===t?'active':''}" data-tab="${t}">${
+            t==='overview'?'Overview':
+            t==='catalog'?`Catalog <span style="color:var(--ops-muted);font-weight:600;">(${d.products.length})</span>`:
+            t==='performance'?'Performance':
+            'Contacts'
+          }</button>`).join('')}
+      </div>
+    `;
+
+    const html = `
+      <div class="sup-modal" style="max-width:920px;">
+        ${head}
+        ${tabs}
+        <div class="sup-modal-body" id="supDetailBody"></div>
+        <div class="sup-modal-foot">
+          <button class="ops-btn ghost" data-close>Close</button>
+          <button class="ops-btn primary" id="supSaveBtn" style="display:none;">Save changes</button>
+        </div>
+      </div>
+    `;
+    const back = mountModal(html);
+    back.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', closeModal));
+    back.querySelectorAll('.sup-tab').forEach(b => b.addEventListener('click', () => {
+      STATE.detailTab = b.dataset.tab;
+      renderDetailBody();
+    }));
+
+    renderDetailBody();
+    if (opts.addProduct){
+      // auto-open the product form
+      STATE.detailTab = 'catalog';
+      renderDetailBody();
+      setTimeout(() => openProductForm(), 50);
+    }
+  }
+
+  function renderDetailBody(){
+    const d = STATE.detail;
+    if (!d) return;
+    const body = document.querySelector('#supDetailBody');
+    if (!body) return;
+    // sync tab pills
+    document.querySelectorAll('.sup-tab').forEach(t =>
+      t.classList.toggle('active', t.dataset.tab === STATE.detailTab));
+
+    if (STATE.detailTab === 'overview')    body.innerHTML = renderOverview(d);
+    if (STATE.detailTab === 'catalog')     body.innerHTML = renderCatalog(d);
+    if (STATE.detailTab === 'performance') body.innerHTML = renderPerformance(d);
+    if (STATE.detailTab === 'contacts')    body.innerHTML = renderContacts(d);
+
+    if (STATE.detailTab === 'overview'){
+      bindOverviewEdit();
+    } else {
+      const sv = document.getElementById('supSaveBtn');
+      if (sv) sv.style.display = 'none';
+    }
+    if (STATE.detailTab === 'catalog'){
+      bindCatalogActions();
+    }
+  }
+
+  // ── Overview (editable) ───────────────────────────────────────────
+  function renderOverview(d){
+    const s = d.supplier;
+    const ptOpts = PAYMENT_TERMS.map(([k,l]) =>
+      `<option value="${opsEsc(k)}" ${k===s.payment_terms?'selected':''}>${opsEsc(l)}</option>`).join('');
+    const tierOpts = TIERS.map(([k,l]) =>
+      `<option value="${opsEsc(k)}" ${k===s.tier?'selected':''}>${opsEsc(l)}</option>`).join('');
+
+    return `
+      <form id="supEditForm" class="sup-form-grid">
+        <div class="sup-form-section">Identity</div>
+        <div class="sup-field"><label>Supplier name</label><input name="name" value="${opsEsc(s.name)}" required></div>
+        <div class="sup-field"><label>Legal name</label><input name="legal_name" value="${opsEsc(s.legal_name||'')}"></div>
+        <div class="sup-field"><label>Tier</label><select name="tier">${tierOpts}</select></div>
+        <div class="sup-field"><label>Specialties</label><input name="specialties" value="${opsEsc((s.specialties||[]).join(', '))}"></div>
+
+        <div class="sup-form-section">Location</div>
+        <div class="sup-field"><label>Country</label><input name="country" value="${opsEsc(s.country||'')}"></div>
+        <div class="sup-field"><label>City</label><input name="city" value="${opsEsc(s.city||'')}"></div>
+        <div class="sup-field full"><label>Address</label><input name="address" value="${opsEsc(s.address||'')}"></div>
+        <div class="sup-field"><label>Timezone</label><input name="timezone" value="${opsEsc(s.timezone||'')}"></div>
+        <div class="sup-field"><label>Languages</label><input name="languages" value="${opsEsc((s.languages||[]).join(', '))}"></div>
+
+        <div class="sup-form-section">Contact</div>
+        <div class="sup-field"><label>Contact name</label><input name="contact_name" value="${opsEsc(s.contact_name||'')}"></div>
+        <div class="sup-field"><label>Role</label><input name="contact_role" value="${opsEsc(s.contact_role||'')}"></div>
+        <div class="sup-field"><label>Email</label><input name="email" value="${opsEsc(s.email||'')}"></div>
+        <div class="sup-field"><label>Phone</label><input name="phone" value="${opsEsc(s.phone||'')}"></div>
+        <div class="sup-field"><label>WhatsApp</label><input name="whatsapp" value="${opsEsc(s.whatsapp||'')}"></div>
+        <div class="sup-field"><label>WeChat</label><input name="wechat" value="${opsEsc(s.wechat||'')}"></div>
+
+        <div class="sup-form-section">Commercial</div>
+        <div class="sup-field"><label>Website</label><input name="website" value="${opsEsc(s.website||'')}"></div>
+        <div class="sup-field"><label>Alibaba</label><input name="alibaba_url" value="${opsEsc(s.alibaba_url||'')}"></div>
+        <div class="sup-field"><label>Lead days</label><input name="default_lead_days" type="number" min="1" value="${s.default_lead_days||10}"></div>
+        <div class="sup-field"><label>MOQ</label><input name="moq" type="number" min="1" value="${s.moq||1}"></div>
+        <div class="sup-field"><label>Payment terms</label><select name="payment_terms">${ptOpts}</select></div>
+        <div class="sup-field"><label>Payment methods</label><input name="payment_methods" value="${opsEsc((s.payment_methods||[]).join(', '))}"></div>
+        <div class="sup-field"><label>Currency</label><input name="currency" value="${opsEsc(s.currency||'USD')}" maxlength="10"></div>
+        <div class="sup-field"><label>Tax ID</label><input name="tax_id" value="${opsEsc(s.tax_id||'')}"></div>
+        <div class="sup-field full"><label>Business license #</label><input name="business_license_no" value="${opsEsc(s.business_license_no||'')}"></div>
+
+        <div class="sup-form-section">Branding & Notes</div>
+        <div class="sup-field"><label>Cover emoji</label><input name="cover_emoji" maxlength="2" value="${opsEsc(s.cover_emoji||'🏭')}"></div>
+        <div class="sup-field"><label>Gradient</label>
+          <div class="colorpair">
+            <input name="cover_gradient_from" type="color" value="${opsEsc(s.gradient_from||'#6366f1')}">
+            <input name="cover_gradient_to"   type="color" value="${opsEsc(s.gradient_to||'#a855f7')}">
+          </div>
+        </div>
+        <div class="sup-field full"><label>Notes</label><textarea name="notes">${opsEsc(s.notes||'')}</textarea></div>
+      </form>
+    `;
+  }
+
+  function bindOverviewEdit(){
+    const form = document.getElementById('supEditForm');
+    const save = document.getElementById('supSaveBtn');
+    if (!form || !save) return;
+    save.style.display = 'inline-flex';
+    save.textContent = 'Save changes';
+    save.onclick = async () => {
+      const data = {};
+      new FormData(form).forEach((v, k) => { data[k] = v; });
+      data.default_lead_days = parseInt(data.default_lead_days||'10', 10) || 10;
+      data.moq = parseInt(data.moq||'1', 10) || 1;
+      save.disabled = true; save.textContent = 'Saving…';
+      const resp = await opsFetch(`/ops/api/supplier/${STATE.selectedId}/update/`, {method:'POST', body:data});
+      save.disabled = false; save.textContent = 'Save changes';
+      if (!resp.ok){
+        opsToast(resp.data && resp.data.error || 'Could not save', 'error');
+        return;
+      }
+      opsToast('Supplier updated', 'success');
+      // refresh local detail and grid
+      STATE.detail.supplier = resp.data.supplier;
+      await load();
+      // re-open with refreshed data
+      openDetailModal(STATE.selectedId, 'overview');
+    };
+  }
+
+  // ── Catalog ───────────────────────────────────────────────────────
+  function renderCatalog(d){
+    const products = d.products || [];
+    const rows = products.length
+      ? products.map(p => {
+          const needsCost = !p.unit_cost_usd || Number(p.unit_cost_usd) === 0;
+          const priceCls = needsCost ? 'price needs-cost' : 'price';
+          return `
+          <div class="sup-prod-row" data-pid="${p.id}">
+            <div class="thumb">${p.product_image_url
+              ? `<img src="${opsEsc(p.product_image_url)}" alt="">`
+              : '📦'}</div>
+            <div class="info">
+              <div class="sku">${opsEsc(p.sku)}</div>
+              <div class="nm">${opsEsc(p.product_name)}</div>
+              ${p.variant_summary ? `<div class="var">${opsEsc(p.variant_summary)}</div>` : ''}
+            </div>
+            <div class="${priceCls}">
+              ${needsCost
+                ? '<span class="price-warn">⚠ Set cost</span>'
+                : opsUSD(p.unit_cost_usd)}
+              <div class="sub">+ ${opsUSD(p.shipping_unit_usd||0)} ship · ${p.lead_days||0}d · MOQ ${p.moq||1}</div>
+            </div>
+            <div class="actions" style="display:flex;gap:6px;align-items:center;">
+              ${p.is_preferred ? '<span class="ops-pill" style="padding:3px 8px;border-radius:999px;background:linear-gradient(135deg,#d4af37,#f4c430);color:#3b2a06;font-size:10px;font-weight:900;letter-spacing:.05em;">★ PREFERRED</span>' : ''}
+              <button class="ops-btn sm gold" data-action="edit-product" data-pid="${p.id}" title="Edit price &amp; settings">✏️ Edit</button>
+              <button class="ops-btn sm" data-action="delete-product" data-pid="${p.id}" title="Remove from catalog">✕</button>
+            </div>
+          </div>
+        `; }).join('')
+      : '<div class="sup-empty-inline"><div class="ic">📦</div>No products linked yet · click <strong>Add product</strong> below to start the SKU catalog.</div>';
+
+    return `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:8px;flex-wrap:wrap;">
+        <div style="font-size:13px;color:var(--ops-text-2);font-weight:700;">
+          ${products.length} SKU${products.length===1?'':'s'} linked · auto-fills the Quote workspace next order
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="ops-btn ghost" data-action="import-from-store">📥 Import from tenant store</button>
+          <button class="ops-btn gold" data-action="add-product">+ Add product</button>
+        </div>
+      </div>
+      <div class="sup-prod-list">${rows}</div>
+    `;
+  }
+
+  function bindCatalogActions(){
+    document.querySelectorAll('#supDetailBody [data-action="add-product"]').forEach(b => {
+      b.addEventListener('click', openProductForm);
+    });
+    document.querySelectorAll('#supDetailBody [data-action="import-from-store"]').forEach(b => {
+      b.addEventListener('click', openImportModal);
+    });
+    document.querySelectorAll('#supDetailBody [data-action="edit-product"]').forEach(b => {
+      b.addEventListener('click', () => {
+        const pid = parseInt(b.dataset.pid, 10);
+        if (pid) openProductEditForm(pid);
+      });
+    });
+    // Clicking anywhere on the price cell also opens the edit form
+    document.querySelectorAll('#supDetailBody .sup-prod-row .price').forEach(el => {
+      el.addEventListener('click', () => {
+        const row = el.closest('.sup-prod-row');
+        const pid = row && parseInt(row.dataset.pid, 10);
+        if (pid) openProductEditForm(pid);
+      });
+    });
+    document.querySelectorAll('#supDetailBody [data-action="delete-product"]').forEach(b => {
+      b.addEventListener('click', async () => {
+        const pid = parseInt(b.dataset.pid, 10);
+        if (!confirm('Delete this product from the catalog?')) return;
+        const resp = await opsFetch(`/ops/api/supplier-product/${pid}/delete/`, {method:'POST', body:{}});
+        if (!resp.ok){
+          opsToast(resp.data && resp.data.error || 'Could not delete', 'error');
+          return;
+        }
+        opsToast('Product removed', 'success');
+        // Refresh detail
+        await refreshDetail();
+        renderDetailBody();
+      });
+    });
+  }
+
+  async function refreshDetail(){
+    if (!STATE.selectedId) return;
+    const r = await opsFetch(`/ops/api/supplier/${STATE.selectedId}/`);
+    if (r.ok) STATE.detail = r.data;
+  }
+
+  function openProductForm(){
+    const s = STATE.detail && STATE.detail.supplier;
+    if (!s) return;
+    const html = `
+      <div class="sup-modal" style="max-width:640px;">
+        <div class="sup-modal-head">
+          <div class="ic">📦</div>
+          <div>
+            <div class="ttl">Add product to ${opsEsc(s.name)}</div>
+            <div class="sub">Links a SKU to this supplier with locked pricing</div>
+          </div>
+          <button class="x" data-close>×</button>
+        </div>
+        <form id="supProductForm">
+          <div class="sup-modal-body">
+            <div class="sup-form-grid">
+              <div class="sup-field"><label>SKU *</label><input name="sku" required placeholder="MERCHANT-SKU-123"></div>
+              <div class="sup-field"><label>Product name *</label><input name="product_name" required placeholder="Wireless Earbuds Pro"></div>
+              <div class="sup-field full"><label>Image URL</label><input name="product_image_url" placeholder="https://..."></div>
+              <div class="sup-field full"><label>Variant summary</label><input name="variant_summary" placeholder="Color: 5 options · Size: S/M/L"></div>
+
+              <div class="sup-field"><label>Unit cost (USD) *</label><input name="unit_cost_usd" type="number" step="0.01" min="0.01" required></div>
+              <div class="sup-field"><label>Shipping per unit (USD)</label><input name="shipping_unit_usd" type="number" step="0.01" min="0" value="0"></div>
+              <div class="sup-field"><label>MOQ</label><input name="moq" type="number" min="1" value="${s.moq||1}"></div>
+              <div class="sup-field"><label>Lead time (days)</label><input name="lead_days" type="number" min="1" value="${s.default_lead_days||10}"></div>
+              <div class="sup-field full">
+                <label>Suggested tenant price (USD) <span style="color:var(--ops-muted);font-weight:600;text-transform:none;letter-spacing:0;">— leave blank to auto-set at 1.4× cost</span></label>
+                <input name="suggested_tenant_price_usd" type="number" step="0.01" min="0">
+              </div>
+              <div class="sup-field">
+                <label>Preferred for this SKU</label>
+                <select name="is_preferred"><option value="1" selected>Yes — auto-pick this supplier</option><option value="">No</option></select>
+              </div>
+              <div class="sup-field">
+                <label>In stock</label>
+                <select name="is_in_stock"><option value="1" selected>Yes</option><option value="">No</option></select>
+              </div>
+              <div class="sup-field full"><label>Notes</label><textarea name="notes" placeholder="Anything important about this SKU"></textarea></div>
+            </div>
+          </div>
+          <div class="sup-modal-foot">
+            <button type="button" class="ops-btn ghost" data-close>Cancel</button>
+            <button type="submit" class="ops-btn primary" id="supProdSubmit">Add product</button>
+          </div>
+        </form>
+      </div>
+    `;
+    const back = mountModal(html);
+    back.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => {
+      // Close product form, re-render detail modal underneath
+      closeModal();
+      openDetailModal(STATE.selectedId, 'catalog');
+    }));
+
+    const form = back.querySelector('#supProductForm');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const data = {};
+      new FormData(form).forEach((v, k) => { data[k] = v; });
+      data.is_preferred = !!data.is_preferred;
+      data.is_in_stock = !!data.is_in_stock;
+      data.unit_cost_usd = parseFloat(data.unit_cost_usd||'0') || 0;
+      data.shipping_unit_usd = parseFloat(data.shipping_unit_usd||'0') || 0;
+      data.moq = parseInt(data.moq||'1', 10) || 1;
+      data.lead_days = parseInt(data.lead_days||'10', 10) || 10;
+      if (data.suggested_tenant_price_usd === '')
+        delete data.suggested_tenant_price_usd;
+      else
+        data.suggested_tenant_price_usd = parseFloat(data.suggested_tenant_price_usd) || 0;
+
+      const btn = form.querySelector('#supProdSubmit');
+      btn.disabled = true; btn.textContent = 'Adding…';
+      const resp = await opsFetch(`/ops/api/supplier/${STATE.selectedId}/products/create/`,
+        {method:'POST', body:data});
+      btn.disabled = false; btn.textContent = 'Add product';
+      if (!resp.ok){
+        opsToast(resp.data && resp.data.error || 'Could not add product', 'error');
+        return;
+      }
+      opsToast('Product added to catalog', 'success');
+      closeModal();
+      await refreshDetail();
+      openDetailModal(STATE.selectedId, 'catalog');
+    });
+  }
+
+  /* ── Edit an existing catalog product (price, lead, MOQ, etc.) ──── */
+  function openProductEditForm(productId){
+    const s = STATE.detail && STATE.detail.supplier;
+    const p = (STATE.detail && STATE.detail.products || []).find(x => x.id === productId);
+    if (!s || !p) return;
+
+    const html = `
+      <div class="sup-modal" style="max-width:640px;">
+        <div class="sup-modal-head">
+          <div class="ic">✏️</div>
+          <div>
+            <div class="ttl">Edit · ${opsEsc(p.product_name)}</div>
+            <div class="sub">SKU <span style="font-family:ui-monospace,Menlo,monospace;color:#6366f1;">${opsEsc(p.sku)}</span> · ${opsEsc(s.name)}</div>
+          </div>
+          <button class="x" data-close>×</button>
+        </div>
+        <form id="supProductEditForm">
+          ${p.product_image_url ? `
+          <div style="padding:14px 18px 0 18px;display:flex;align-items:center;gap:12px;">
+            <img src="${opsEsc(p.product_image_url)}" alt=""
+                 style="width:64px;height:64px;border-radius:12px;object-fit:cover;border:1px solid rgba(15,23,42,.08);">
+            <div style="font-size:11.5px;color:var(--ops-muted);font-weight:700;">
+              ${p.variant_summary ? opsEsc(p.variant_summary) : 'No variants'}
+            </div>
+          </div>` : ''}
+          <div class="sup-modal-body">
+            <div class="sup-form-grid">
+              <div class="sup-field full">
+                <label>Product name</label>
+                <input name="product_name" value="${opsEsc(p.product_name||'')}">
+              </div>
+
+              <div class="sup-field">
+                <label>Unit cost (USD) <span style="color:#dc2626;">*</span></label>
+                <input name="unit_cost_usd" type="number" step="0.01" min="0"
+                       value="${p.unit_cost_usd || ''}" required autofocus>
+              </div>
+              <div class="sup-field">
+                <label>Shipping per unit (USD)</label>
+                <input name="shipping_unit_usd" type="number" step="0.01" min="0"
+                       value="${p.shipping_unit_usd || 0}">
+              </div>
+
+              <div class="sup-field">
+                <label>MOQ (min order qty)</label>
+                <input name="moq" type="number" min="1" value="${p.moq||1}">
+              </div>
+              <div class="sup-field">
+                <label>Lead time (days)</label>
+                <input name="lead_days" type="number" min="1" value="${p.lead_days||10}">
+              </div>
+
+              <div class="sup-field full">
+                <label>Suggested tenant price (USD) <span style="color:var(--ops-muted);font-weight:600;text-transform:none;letter-spacing:0;">— leave blank to auto-recompute at 1.4× cost</span></label>
+                <input name="suggested_tenant_price_usd" type="number" step="0.01" min="0"
+                       value="${p.suggested_tenant_price_usd || ''}">
+              </div>
+
+              <div class="sup-field">
+                <label>Preferred for this SKU</label>
+                <select name="is_preferred">
+                  <option value="1" ${p.is_preferred?'selected':''}>Yes — auto-pick this supplier</option>
+                  <option value="" ${!p.is_preferred?'selected':''}>No</option>
+                </select>
+              </div>
+              <div class="sup-field">
+                <label>In stock</label>
+                <select name="is_in_stock">
+                  <option value="1" ${p.is_in_stock?'selected':''}>Yes</option>
+                  <option value="" ${!p.is_in_stock?'selected':''}>No</option>
+                </select>
+              </div>
+              <div class="sup-field full">
+                <label>Notes</label>
+                <textarea name="notes">${opsEsc(p.notes||'')}</textarea>
+              </div>
+            </div>
+          </div>
+          <div class="sup-modal-foot">
+            <button type="button" class="ops-btn danger ghost" id="supProdEditDelete"
+                    style="margin-right:auto;">🗑️ Remove from catalog</button>
+            <button type="button" class="ops-btn ghost" data-close>Cancel</button>
+            <button type="submit" class="ops-btn primary" id="supProdEditSubmit">💾 Save changes</button>
+          </div>
+        </form>
+      </div>
+    `;
+    const back = mountModal(html);
+    back.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => {
+      closeModal();
+      openDetailModal(STATE.selectedId, 'catalog');
+    }));
+
+    // Delete option from inside the edit modal
+    back.querySelector('#supProdEditDelete').addEventListener('click', async () => {
+      if (!confirm(`Remove "${p.product_name}" (${p.sku}) from this supplier's catalog?`)) return;
+      const resp = await opsFetch(`/ops/api/supplier-product/${productId}/delete/`,
+        {method:'POST', body:{}});
+      if (!resp.ok){
+        opsToast(resp.data && resp.data.error || 'Could not remove', 'error');
+        return;
+      }
+      opsToast('Product removed from catalog', 'success');
+      closeModal();
+      await refreshDetail();
+      openDetailModal(STATE.selectedId, 'catalog');
+    });
+
+    const form = back.querySelector('#supProductEditForm');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const data = {};
+      new FormData(form).forEach((v, k) => { data[k] = v; });
+      data.is_preferred = !!data.is_preferred;
+      data.is_in_stock = !!data.is_in_stock;
+      data.unit_cost_usd = parseFloat(data.unit_cost_usd||'0') || 0;
+      data.shipping_unit_usd = parseFloat(data.shipping_unit_usd||'0') || 0;
+      data.moq = parseInt(data.moq||'1', 10) || 1;
+      data.lead_days = parseInt(data.lead_days||'10', 10) || 10;
+      if (data.suggested_tenant_price_usd === '')
+        delete data.suggested_tenant_price_usd;
+      else
+        data.suggested_tenant_price_usd = parseFloat(data.suggested_tenant_price_usd) || 0;
+
+      if (!(data.unit_cost_usd > 0)){
+        opsToast('Unit cost must be greater than 0.', 'error');
+        return;
+      }
+
+      const btn = form.querySelector('#supProdEditSubmit');
+      btn.disabled = true; btn.textContent = 'Saving…';
+      const resp = await opsFetch(`/ops/api/supplier-product/${productId}/update/`,
+        {method:'POST', body:data});
+      btn.disabled = false; btn.textContent = '💾 Save changes';
+      if (!resp.ok){
+        opsToast(resp.data && resp.data.error || 'Could not save changes', 'error');
+        return;
+      }
+      opsToast('Product updated', 'success');
+      closeModal();
+      await refreshDetail();
+      openDetailModal(STATE.selectedId, 'catalog');
+    });
+  }
+
+  // ── Performance tab ───────────────────────────────────────────────
+  function renderPerformance(d){
+    const s = d.supplier;
+    const tiles = [
+      ['Overall rating',   `★ ${(s.rating||0).toFixed(2)}`,        `${s.total_orders||0} lifetime orders`],
+      ['Quality',          (s.quality_score||0).toFixed(2),         'Product quality score'],
+      ['Communication',    (s.communication_score||0).toFixed(2),   'Response time & clarity'],
+      ['Delivery',         (s.delivery_score||0).toFixed(2),        'Timeliness'],
+      ['On-time %',        `${s.on_time_pct||0}%`,                  'Of last 100 orders'],
+      ['Defect %',         `${(s.defect_pct||0).toFixed(2)}%`,      'QC fail rate'],
+      ['Lead time',        `${s.default_lead_days||0} d`,           'Default'],
+      ['MOQ',              `${(s.moq||0).toLocaleString()}`,        'Per SKU'],
+    ];
+    return `
+      <div class="sup-perf-grid">
+        ${tiles.map(([l,v,sub]) => `
+          <div class="sup-perf">
+            <div class="lbl">${opsEsc(l)}</div>
+            <div class="v">${opsEsc(v)}</div>
+            <div class="sub">${opsEsc(sub)}</div>
+          </div>`).join('')}
+      </div>
+      <div style="margin-top:16px;font-size:11.5px;color:var(--ops-muted);font-weight:700;">
+        Score updates are managed via the supplier-update API; see the Overview tab.
+      </div>
+    `;
+  }
+
+  // ── Contacts tab ──────────────────────────────────────────────────
+  function renderContacts(d){
+    const s = d.supplier;
+    const primary = (s.contact_name || s.email)
+      ? `<div class="sup-contact-row">
+          <div class="av">${opsEsc((s.contact_name||'?').trim().slice(0,2).toUpperCase())}</div>
+          <div style="flex:1;min-width:0;">
+            <div class="nm">${opsEsc(s.contact_name||'(no name)')}</div>
+            <div class="role">${opsEsc(s.contact_role||'Primary contact')} · ${opsEsc(s.email||s.phone||'—')}</div>
+          </div>
+          <div class="primary-flag">★ Primary</div>
+         </div>`
+      : '';
+    const rest = (d.contacts || []).map(c => `
+        <div class="sup-contact-row">
+          <div class="av">${opsEsc((c.name||'?').trim().slice(0,2).toUpperCase())}</div>
+          <div style="flex:1;min-width:0;">
+            <div class="nm">${opsEsc(c.name||'(no name)')}</div>
+            <div class="role">${opsEsc(c.role||'')} · ${opsEsc(c.email||c.phone||'—')}</div>
+          </div>
+          ${c.is_primary ? '<div class="primary-flag">★ Primary</div>' : ''}
+        </div>
+    `).join('');
+    if (!primary && !rest){
+      return '<div class="sup-empty-inline"><div class="ic">👤</div>No contacts on file yet · use Overview tab to add a primary contact.</div>';
+    }
+    return `<div class="sup-contact-list">${primary}${rest}</div>`;
+  }
+
+  // ════════════════════════════════════════════════════════════════
+  // IMPORT FROM TENANT STORE  (3-step modal)
+  // ════════════════════════════════════════════════════════════════
+  const IMP = {
+    step: 1,        // 1 = pick store, 2 = pick products, 3 = configure
+    stores: [],
+    storeSearch: '',
+    selectedStore: null,
+    products: [],
+    productSearch: '',
+    onlyWithSku: false,
+    selected: new Set(),   // product_id keys
+    fetchError: '',
+    busy: false,
+  };
+
+  function impClose(){
+    const back = document.querySelector('.sup-imp-back');
+    if (back) back.remove();
+    // Reset state
+    IMP.step = 1; IMP.stores = []; IMP.storeSearch = '';
+    IMP.selectedStore = null; IMP.products = []; IMP.productSearch = '';
+    IMP.onlyWithSku = false; IMP.selected = new Set();
+    IMP.fetchError = ''; IMP.busy = false;
+  }
+
+  function impMount(){
+    const back = document.createElement('div');
+    back.className = 'sup-imp-back';
+    back.innerHTML = '<div class="sup-imp-modal" id="supImpModal"></div>';
+    back.addEventListener('click', (e) => {
+      if (e.target !== back) return;
+      if (IMP.selected && IMP.selected.size > 0){
+        if (!confirm(`Discard ${IMP.selected.size} selected product${IMP.selected.size===1?'':'s'} and close?`)) return;
+      }
+      impClose();
+    });
+    // ESC to close
+    function escHandler(e){
+      if (e.key === 'Escape'){
+        if (IMP.selected && IMP.selected.size > 0){
+          if (!confirm(`Discard ${IMP.selected.size} selected product${IMP.selected.size===1?'':'s'} and close?`)) return;
+        }
+        impClose();
+        document.removeEventListener('keydown', escHandler);
+      }
+    }
+    document.addEventListener('keydown', escHandler);
+    document.body.appendChild(back);
+    return back;
+  }
+
+  async function openImportModal(){
+    if (!STATE.detail || !STATE.detail.supplier) return;
+    impMount();
+    IMP.step = 1;
+    await impLoadStores();
+    impRender();
+  }
+
+  async function impLoadStores(){
+    IMP.busy = true;
+    impRender();
+    const url = '/ops/api/tenant-stores/'
+      + (IMP.storeSearch ? '?search=' + encodeURIComponent(IMP.storeSearch) : '');
+    const r = await opsFetch(url);
+    IMP.busy = false;
+    if (!r.ok){
+      IMP.stores = [];
+      IMP.fetchError = (r.data && r.data.error) || 'Could not load tenant stores.';
+    } else {
+      IMP.stores = r.data.stores || [];
+      IMP.fetchError = '';
+    }
+  }
+
+  async function impLoadProducts(store){
+    IMP.selectedStore = store;
+    IMP.step = 2;
+    IMP.products = [];
+    IMP.selected = new Set();
+    IMP.fetchError = '';
+    IMP.busy = true;
+    impRender();
+    const supId = STATE.detail.supplier.id;
+    const r = await opsFetch(
+      `/ops/api/tenant-store/${store.id}/products/?supplier_id=${supId}`
+    );
+    IMP.busy = false;
+    if (!r.ok){
+      IMP.products = [];
+      IMP.fetchError = (r.data && r.data.error) || 'Could not fetch products from this store.';
+    } else {
+      IMP.products = r.data.products || [];
+      // Capture demo-mode flag so step 2 can show an informational banner
+      IMP.isDemo = !!r.data.demo;
+      IMP.demoReason = r.data.demo_reason || '';
+      // Pre-select all that have a SKU and are NOT already in catalog
+      IMP.products.forEach(p => {
+        if (p.sku && !p.already_in_catalog){
+          IMP.selected.add(p.product_id);
+        }
+      });
+      IMP.fetchError = '';
+    }
+    impRender();
+  }
+
+  function impFilteredProducts(){
+    const q = (IMP.productSearch || '').trim().toLowerCase();
+    return IMP.products.filter(p => {
+      if (IMP.onlyWithSku && !p.sku) return false;
+      if (!q) return true;
+      const hay = (p.product_name + ' ' + (p.sku||'') + ' ' + (p.variants||[]).map(v => v.sku||'').join(' '))
+        .toLowerCase();
+      return hay.indexOf(q) !== -1;
+    });
+  }
+
+  function impRender(){
+    const root = document.getElementById('supImpModal');
+    if (!root) return;
+    if (IMP.step === 1) root.innerHTML = impRenderStep1();
+    else if (IMP.step === 2) root.innerHTML = impRenderStep2();
+    else root.innerHTML = impRenderStep3();
+    impBindCommon(root);
+    if (IMP.step === 1) impBindStep1(root);
+    else if (IMP.step === 2) impBindStep2(root);
+    else impBindStep3(root);
+  }
+
+  function impBindCommon(root){
+    root.querySelectorAll('[data-close]').forEach(b => {
+      b.addEventListener('click', () => {
+        if (IMP.selected && IMP.selected.size > 0){
+          if (!confirm(`Discard ${IMP.selected.size} selected product${IMP.selected.size===1?'':'s'} and close?`)) return;
+        }
+        impClose();
+      });
+    });
+    root.querySelectorAll('[data-step-back]').forEach(b => {
+      b.addEventListener('click', () => {
+        const target = parseInt(b.dataset.stepBack, 10) || 1;
+        IMP.step = target;
+        impRender();
+      });
+    });
+  }
+
+  // ── Step 1: pick a tenant store ────────────────────────────────
+  function impRenderStep1(){
+    const s = STATE.detail && STATE.detail.supplier;
+    const body = IMP.busy
+      ? '<div class="sup-imp-loading">Loading tenant stores…</div>'
+      : (IMP.fetchError
+          ? `<div class="sup-imp-err">${opsEsc(IMP.fetchError)}</div>`
+          : (IMP.stores.length === 0
+              ? `<div class="sup-imp-empty"><div class="ic">🛍️</div>
+                  ${IMP.storeSearch ? 'No stores match your search.' : 'No tenant stores have been connected yet.'}</div>`
+              : `<div class="sup-imp-grid">${IMP.stores.map(impStoreCard).join('')}</div>`));
+
+    return `
+      <div class="sup-imp-head">
+        <div class="ic">📥</div>
+        <div>
+          <div class="ttl">Import products from tenant store</div>
+          <div class="sub">Step 1 of 3 · Pick a connected store to import from</div>
+        </div>
+        <button class="x" data-close>×</button>
+      </div>
+      <div class="sup-imp-body">
+        <div class="sup-imp-search">
+          <input id="supImpStoreSearch" type="text" placeholder="Search by store, URL, owner email…"
+                 value="${opsEsc(IMP.storeSearch||'')}" autocomplete="off">
+        </div>
+        ${body}
+      </div>
+      <div class="sup-imp-foot">
+        <div class="sub">${IMP.stores.length} store${IMP.stores.length===1?'':'s'} · destination: <strong>${opsEsc(s ? s.name : '')}</strong></div>
+        <button class="ops-btn ghost" data-close>Cancel</button>
+      </div>
+    `;
+  }
+
+  function impStoreCard(s){
+    const pBadge = s.platform === 'shopify'
+      ? '<span class="pbadge shopify">🛍 Shopify</span>'
+      : (s.platform === 'woocommerce'
+          ? '<span class="pbadge woocommerce">🪵 WooCommerce</span>'
+          : `<span class="pbadge">${opsEsc(s.platform_label||s.platform)}</span>`);
+    const statusPill = s.is_active
+      ? '<span class="status active">Active</span>'
+      : '<span class="status inactive">Inactive</span>';
+    const ownerLine = (s.owner_full_name || s.owner_username || '—');
+    // No-credentials stores still work — backend serves demo data.
+    // We just show a small "Demo mode" pill instead of blocking the card.
+    const demoPill = !s.has_credentials
+      ? '<div class="warn" style="background:linear-gradient(135deg,#ede9fe,#ddd6fe);color:#5b21b6;border-color:rgba(91,33,182,.2);">📦 Demo mode · sample products for testing</div>'
+      : '';
+    return `
+      <div class="sup-imp-store" data-store-id="${s.id}" data-has-creds="${s.has_credentials?1:0}">
+        <div class="topline">${pBadge}${statusPill}</div>
+        <div class="nm">${opsEsc(s.name||'Untitled store')}</div>
+        <a class="url" href="${opsEsc(s.store_url||'#')}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${opsEsc(s.store_url||'')}</a>
+        <div class="owner">${opsEsc(ownerLine)}<span class="em">${opsEsc(s.owner_email||'')}</span></div>
+        ${demoPill}
+      </div>
+    `;
+  }
+
+  function impBindStep1(root){
+    const inp = root.querySelector('#supImpStoreSearch');
+    if (inp){
+      let t = null;
+      inp.addEventListener('input', () => {
+        IMP.storeSearch = inp.value || '';
+        clearTimeout(t);
+        t = setTimeout(async () => {
+          await impLoadStores();
+          impRender();
+          // Restore focus
+          const inp2 = document.getElementById('supImpStoreSearch');
+          if (inp2){ inp2.focus(); inp2.setSelectionRange(inp2.value.length, inp2.value.length); }
+        }, 240);
+      });
+    }
+    root.querySelectorAll('.sup-imp-store').forEach(card => {
+      card.addEventListener('click', async () => {
+        const sid = parseInt(card.dataset.storeId, 10);
+        if (!sid) return;
+        const store = IMP.stores.find(x => x.id === sid);
+        if (!store) return;
+        // Even when has_credentials is false, the backend serves a demo
+        // catalog so ops can test the import flow end-to-end.
+        await impLoadProducts(store);
+      });
+    });
+  }
+
+  // ── Step 2: browse + select products ───────────────────────────
+  function impRenderStep2(){
+    const s = IMP.selectedStore;
+    const pBadge = !s ? '' : (s.platform === 'shopify'
+      ? '<span class="pbadge shopify" style="padding:3px 8px;border-radius:999px;font-size:10px;font-weight:900;background:linear-gradient(135deg,#95bf47,#5e8e3e);color:#fff;">🛍 Shopify</span>'
+      : '<span class="pbadge woocommerce" style="padding:3px 8px;border-radius:999px;font-size:10px;font-weight:900;background:linear-gradient(135deg,#7f54b3,#574494);color:#fff;">🪵 WooCommerce</span>');
+
+    const list = IMP.busy
+      ? '<div class="sup-imp-loading">Fetching products from ' + opsEsc(s ? s.name : 'store') + '…</div>'
+      : (IMP.fetchError
+          ? `<div class="sup-imp-err">${opsEsc(IMP.fetchError)}
+              <div style="margin-top:10px;"><button class="ops-btn sm" id="supImpRetry">Retry</button></div></div>`
+          : (IMP.products.length === 0
+              ? '<div class="sup-imp-empty"><div class="ic">📦</div>This store has no products — nothing to import.</div>'
+              : impRenderProductList()));
+
+    const counter = `${IMP.selected.size} of ${IMP.products.length} selected`;
+    return `
+      <div class="sup-imp-head">
+        <button class="back" data-step-back="1" title="Back to store picker">←</button>
+        <div class="ic">📦</div>
+        <div>
+          <div class="ttl">${opsEsc(s ? s.name : 'Products')} ${pBadge}</div>
+          <div class="sub">Step 2 of 3 · ${IMP.products.length} product${IMP.products.length===1?'':'s'} · search by SKU or name</div>
+        </div>
+        <button class="x" data-close>×</button>
+      </div>
+      <div class="sup-imp-body">
+        ${IMP.isDemo ? `
+          <div style="margin-bottom:14px;padding:11px 14px;border-radius:12px;
+                      background:linear-gradient(135deg,rgba(168,85,247,.08),rgba(99,102,241,.08));
+                      border:1px solid rgba(91,33,182,.2);
+                      display:flex;align-items:center;gap:11px;font-size:12px;color:#5b21b6;font-weight:700;">
+            <span style="font-size:18px;">📦</span>
+            <div>
+              <div style="font-weight:900;color:#3b1f74;">Demo mode — sample products</div>
+              <div style="font-size:11.5px;color:#5b21b6;margin-top:2px;">${opsEsc(IMP.demoReason||'')}<br>Ye full import flow test karne ke liye hain. Real Shopify/WC connect karne ke baad live products dikhenge.</div>
+            </div>
+          </div>` : ''}
+        ${IMP.fetchError || IMP.busy || IMP.products.length === 0 ? '' : `
+          <div class="sup-imp-search">
+            <input id="supImpProdSearch" type="text" placeholder="Search by SKU, product name…"
+                   value="${opsEsc(IMP.productSearch||'')}" autocomplete="off">
+          </div>
+          <div class="sup-imp-qa">
+            <button class="ops-btn sm" id="supImpSelAll">Select all visible</button>
+            <button class="ops-btn sm ghost" id="supImpSelNone">Select none</button>
+            <label class="ops-btn sm ghost" style="cursor:pointer;display:inline-flex;gap:6px;align-items:center;">
+              <input type="checkbox" id="supImpOnlySku" ${IMP.onlyWithSku?'checked':''} style="margin:0;cursor:pointer;">
+              Only with SKU
+            </label>
+            <div class="count">${counter}</div>
+          </div>
+        `}
+        ${list}
+      </div>
+      <div class="sup-imp-foot">
+        <div class="sub">${counter}</div>
+        <div style="display:flex;gap:6px;">
+          <button class="ops-btn ghost" data-step-back="1">← Back</button>
+          <button class="ops-btn gold" id="supImpContinue" ${IMP.selected.size===0?'disabled':''}>
+            Continue →
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
+  function impRenderProductList(){
+    const filtered = impFilteredProducts();
+    if (filtered.length === 0){
+      return '<div class="sup-imp-empty"><div class="ic">🔍</div>No products match — try a different SKU or name.</div>';
+    }
+    return `<div class="sup-imp-prods">${filtered.map(impProductRow).join('')}</div>`;
+  }
+
+  function impProductRow(p){
+    const selected = IMP.selected.has(p.product_id);
+    const variants = p.variants || [];
+    const sizes  = [...new Set(variants.map(v => (v.size||'').trim()).filter(Boolean))];
+    const colors = [...new Set(variants.map(v => (v.color||'').trim()).filter(Boolean))];
+    const variantBits = [];
+    if (sizes.length)  variantBits.push(sizes.slice(0,3).join(' · ') + (sizes.length>3?` (+${sizes.length-3})`:''));
+    if (colors.length) variantBits.push(`${colors.length} color${colors.length===1?'':'s'}`);
+    if (!variantBits.length && variants.length > 1) variantBits.push(`${variants.length} variants`);
+    if (variants.length === 0) variantBits.push('No variants');
+
+    const skuHtml = p.sku
+      ? `<span class="sku">${opsEsc(p.sku)}</span>`
+      : '<span class="sku missing">⚠ No SKU — cannot auto-match</span>';
+    const price = p.price ? `<div class="price"><span class="ic">$</span>${opsEsc(Number(p.price).toFixed(2))}<div style="font-size:9.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ops-muted);">Sells at</div></div>` : '';
+    const alreadyBadge = p.already_in_catalog
+      ? '<span class="badge-already">Already in catalog</span>'
+      : '';
+    const disabled = p.already_in_catalog;
+    const thumb = p.image_url
+      ? `<img src="${opsEsc(p.image_url)}" alt=""
+             onclick="event.stopPropagation();opsOpenLightbox && opsOpenLightbox(this)"
+             data-name="${opsEsc(p.product_name||'')}"
+             data-sku="${opsEsc(p.sku||'')}"
+             data-variant="${opsEsc(variantBits.join(' · '))}">`
+      : '📦';
+    return `
+      <div class="sup-imp-prod ${selected?'selected':''} ${p.already_in_catalog?'in-catalog':''}"
+           data-pid="${opsEsc(p.product_id)}"
+           data-disabled="${disabled?1:0}">
+        <input type="checkbox" ${selected?'checked':''} ${disabled?'disabled':''} data-cb-pid="${opsEsc(p.product_id)}">
+        <div class="thumb">${thumb}</div>
+        <div class="info">
+          <div class="nm">${opsEsc(p.product_name||'(untitled product)')}</div>
+          <div class="meta">
+            ${skuHtml}
+            ${variantBits.map(b => `<span class="vchip">${opsEsc(b)}</span>`).join('')}
+            ${alreadyBadge}
+          </div>
+        </div>
+        ${price}
+      </div>
+    `;
+  }
+
+  function impBindStep2(root){
+    const retry = root.querySelector('#supImpRetry');
+    if (retry){
+      retry.addEventListener('click', async () => {
+        if (IMP.selectedStore) await impLoadProducts(IMP.selectedStore);
+      });
+    }
+    const search = root.querySelector('#supImpProdSearch');
+    if (search){
+      let t = null;
+      search.addEventListener('input', () => {
+        clearTimeout(t);
+        t = setTimeout(() => {
+          IMP.productSearch = search.value || '';
+          // Avoid re-render hurting focus: only re-render the list
+          const root2 = document.getElementById('supImpModal');
+          if (!root2) return;
+          // simple approach: re-render full step but preserve search box focus
+          impRender();
+          const s2 = document.getElementById('supImpProdSearch');
+          if (s2){ s2.focus(); s2.setSelectionRange(s2.value.length, s2.value.length); }
+        }, 160);
+      });
+    }
+    const selAll = root.querySelector('#supImpSelAll');
+    if (selAll){
+      selAll.addEventListener('click', () => {
+        impFilteredProducts().forEach(p => {
+          if (!p.already_in_catalog) IMP.selected.add(p.product_id);
+        });
+        impRender();
+      });
+    }
+    const selNone = root.querySelector('#supImpSelNone');
+    if (selNone){
+      selNone.addEventListener('click', () => {
+        IMP.selected = new Set();
+        impRender();
+      });
+    }
+    const onlySku = root.querySelector('#supImpOnlySku');
+    if (onlySku){
+      onlySku.addEventListener('change', () => {
+        IMP.onlyWithSku = onlySku.checked;
+        impRender();
+      });
+    }
+    // Row clicks toggle selection
+    root.querySelectorAll('.sup-imp-prod').forEach(row => {
+      row.addEventListener('click', (e) => {
+        if (e.target.closest('img')) return;        // image lightbox
+        if (row.dataset.disabled === '1') return;
+        const pid = row.dataset.pid;
+        const product = IMP.products.find(p => p.product_id === pid);
+        // No-SKU products require confirmation before selecting
+        if (product && !product.sku && !IMP.selected.has(pid)){
+          if (!confirm('This product has no SKU — it cannot auto-match future orders. Import anyway?')) return;
+        }
+        if (IMP.selected.has(pid)) IMP.selected.delete(pid);
+        else IMP.selected.add(pid);
+        impRender();
+      });
+    });
+    // Checkbox clicks (also toggle, but skip the row-click)
+    root.querySelectorAll('input[data-cb-pid]').forEach(cb => {
+      cb.addEventListener('click', (e) => { e.stopPropagation(); });
+      cb.addEventListener('change', () => {
+        const pid = cb.dataset.cbPid;
+        const product = IMP.products.find(p => p.product_id === pid);
+        if (product && !product.sku && cb.checked){
+          if (!confirm('This product has no SKU — it cannot auto-match future orders. Import anyway?')){
+            cb.checked = false; return;
+          }
+        }
+        if (cb.checked) IMP.selected.add(pid);
+        else IMP.selected.delete(pid);
+        impRender();
+      });
+    });
+    const cont = root.querySelector('#supImpContinue');
+    if (cont){
+      cont.addEventListener('click', () => {
+        if (IMP.selected.size === 0) return;
+        IMP.step = 3;
+        impRender();
+      });
+    }
+  }
+
+  // ── Step 3: configure + import ─────────────────────────────────
+  function impRenderStep3(){
+    const s = STATE.detail.supplier;
+    const selectedProducts = IMP.products.filter(p => IMP.selected.has(p.product_id));
+    const alreadySkipped = selectedProducts.filter(p => p.already_in_catalog).length;
+    const willImport = selectedProducts.length;
+
+    const preview = selectedProducts.map(p => `
+      <div class="sup-imp-prod selected" style="cursor:default;">
+        <div style="width:24px;text-align:center;color:var(--ops-gold);font-weight:900;">✓</div>
+        <div class="thumb">${p.image_url ? `<img src="${opsEsc(p.image_url)}" alt="">` : '📦'}</div>
+        <div class="info">
+          <div class="nm">${opsEsc(p.product_name||'')}</div>
+          <div class="meta">
+            <span class="sku">${opsEsc(p.sku||'(no SKU)')}</span>
+            ${(p.variants||[]).length ? `<span class="vchip">${(p.variants||[]).length} variant${(p.variants||[]).length===1?'':'s'}</span>` : ''}
+          </div>
+        </div>
+        <button class="ops-btn sm ghost" data-deselect-pid="${opsEsc(p.product_id)}" title="Remove from import">✕</button>
+      </div>
+    `).join('');
+
+    return `
+      <div class="sup-imp-head">
+        <button class="back" data-step-back="2" title="Back to product list">←</button>
+        <div class="ic">📋</div>
+        <div>
+          <div class="ttl">Importing ${willImport} product${willImport===1?'':'s'} to ${opsEsc(s.name)}</div>
+          <div class="sub">Step 3 of 3 · Review settings and confirm</div>
+        </div>
+        <button class="x" data-close>×</button>
+      </div>
+      <div class="sup-imp-body">
+        <div class="sup-imp-info">
+          Each product becomes a <strong>SupplierProduct</strong> entry in this supplier's catalog,
+          and each variant becomes a <strong>SupplierProductVariant</strong> row.
+          Unit cost defaults to <strong>$0</strong> — set the actual cost after import in the Catalog tab.
+        </div>
+
+        <div class="sup-imp-defaults">
+          <div class="sup-field">
+            <label>Lead time (days)</label>
+            <input id="supImpLeadDays" type="number" min="1" value="${s.default_lead_days||10}">
+          </div>
+          <div class="sup-field">
+            <label>MOQ (units)</label>
+            <input id="supImpMoq" type="number" min="1" value="${s.moq||1}">
+          </div>
+          <div class="sup-field full" style="grid-column:1 / -1;">
+            <label style="display:inline-flex;gap:8px;align-items:center;cursor:pointer;">
+              <input type="checkbox" id="supImpPreferred" checked style="margin:0;cursor:pointer;">
+              Mark as <strong style="margin-left:2px;">preferred</strong> supplier for these SKUs
+            </label>
+          </div>
+        </div>
+
+        ${alreadySkipped > 0
+          ? `<div class="sup-imp-skipnote">⚠ ${alreadySkipped} of the selected SKU${alreadySkipped===1?' is':'s are'} already in this supplier's catalog and will be skipped.</div>`
+          : ''}
+
+        <div style="margin-bottom:8px;font-size:11.5px;font-weight:800;color:var(--ops-text-2);text-transform:uppercase;letter-spacing:.07em;">
+          Products to import
+        </div>
+        <div class="sup-imp-prods">${preview}</div>
+      </div>
+      <div class="sup-imp-foot">
+        <div class="sub">${willImport} product${willImport===1?'':'s'} · destination: <strong>${opsEsc(s.name)}</strong></div>
+        <div style="display:flex;gap:6px;">
+          <button class="ops-btn ghost" data-step-back="2">← Back</button>
+          <button class="ops-btn gold" id="supImpRun" ${willImport===0?'disabled':''}>
+            Import ${willImport} product${willImport===1?'':'s'}
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
+  function impBindStep3(root){
+    root.querySelectorAll('[data-deselect-pid]').forEach(b => {
+      b.addEventListener('click', () => {
+        IMP.selected.delete(b.dataset.deselectPid);
+        if (IMP.selected.size === 0){
+          IMP.step = 2;
+        }
+        impRender();
+      });
+    });
+    const run = root.querySelector('#supImpRun');
+    if (run){
+      run.addEventListener('click', async () => {
+        await impRunImport();
+      });
+    }
+  }
+
+  async function impRunImport(){
+    const s = STATE.detail.supplier;
+    const leadDaysInp = document.getElementById('supImpLeadDays');
+    const moqInp = document.getElementById('supImpMoq');
+    const prefInp = document.getElementById('supImpPreferred');
+    const leadDays = parseInt(leadDaysInp ? leadDaysInp.value : '', 10) || (s.default_lead_days||10);
+    const moq = parseInt(moqInp ? moqInp.value : '', 10) || (s.moq||1);
+    const isPreferred = !!(prefInp && prefInp.checked);
+
+    const selectedProducts = IMP.products.filter(p => IMP.selected.has(p.product_id));
+    const payload = {
+      store_id: IMP.selectedStore ? IMP.selectedStore.id : null,
+      products: selectedProducts.map(p => {
+        const variants = (p.variants||[]).map(v => {
+          const parts = [];
+          if (v.size) parts.push(v.size);
+          if (v.color) parts.push(v.color);
+          const label = parts.join(' / ');
+          return {
+            sku:           v.sku || '',
+            variant:       label,
+            unit_cost_usd: 0,
+          };
+        }).filter(v => v.variant); // skip empty-label variants
+        return {
+          product_id:        p.product_id,
+          sku:               p.sku,
+          product_name:      p.product_name,
+          image_url:         p.image_url,
+          unit_cost_usd:     0,
+          shipping_unit_usd: 0,
+          lead_days:         leadDays,
+          moq:               moq,
+          is_preferred:      isPreferred,
+          variants:          variants,
+        };
+      }).filter(p => p.sku && p.product_name),
+    };
+
+    const run = document.getElementById('supImpRun');
+    if (run){ run.disabled = true; run.textContent = `Importing 0 / ${payload.products.length}…`; }
+
+    const resp = await opsFetch(
+      `/ops/api/supplier/${s.id}/import-products/`,
+      {method: 'POST', body: payload}
+    );
+
+    if (!resp.ok){
+      if (run){ run.disabled = false; run.textContent = `Import ${payload.products.length} product${payload.products.length===1?'':'s'}`; }
+      opsToast((resp.data && resp.data.error) || 'Import failed', 'error');
+      return;
+    }
+
+    const imported = resp.data.imported || 0;
+    const skipped = resp.data.skipped || 0;
+    let msg = `Imported ${imported} product${imported===1?'':'s'} to ${s.name}`;
+    if (skipped > 0) msg += ` · ${skipped} skipped (already in catalog)`;
+    opsToast(msg, 'success');
+
+    impClose();
+    // Refresh the supplier detail + re-open the catalog tab
+    await refreshDetail();
+    renderDetailModal({});
+    STATE.detailTab = 'catalog';
+    renderDetailBody();
+  }
+
+  // ── Expose loader to shell ────────────────────────────────────────
+  window.opsLoadSuppliers = async function(){
+    // Inject "+ New supplier" into the topbar actions area too
+    const acts = document.getElementById('opsSectionActions');
+    if (acts) acts.innerHTML = '';   // reset; toolbar already has it
+    await load();
+    // If something called us with a pending supplier to open
+    // (e.g. clicking a supplier name in the order queue), open it now.
+    if (window.__opsPendingSupplierOpen){
+      const id = Number(window.__opsPendingSupplierOpen);
+      window.__opsPendingSupplierOpen = null;
+      if (id) openDetailModal(id, 'overview');
+    }
+  };
+
+  // ── Public API: jump to + open a supplier from anywhere ──────────
+  window.opsOpenSupplierDetail = function(supplierId){
+    const id = Number(supplierId);
+    if (!id) return;
+    // If suppliers section is already loaded, just open the modal.
+    // Otherwise, set a pending flag and let the section loader pick it up.
+    if (typeof openDetailModal === 'function'
+        && document.getElementById('ops-section-suppliers')
+        && document.getElementById('ops-section-suppliers').classList.contains('active')){
+      openDetailModal(id, 'overview');
+      return;
+    }
+    window.__opsPendingSupplierOpen = id;
+    if (typeof opsSwitchView === 'function') opsSwitchView('suppliers');
+  };
+
+})();
+</script>

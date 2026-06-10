@@ -1,0 +1,279 @@
+<!-- Awaiting Quote desk — Pending Source orders that need a supplier
+     quote from the ops team. -->
+<style>
+  /* ─── Quotes desk · scoped styles ─────────────────────────────── */
+  #opsQuotesRoot .qz-kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:18px;}
+  #opsQuotesRoot .qz-kpi{background:#fff;border:1px solid rgba(15,23,42,.06);border-radius:16px;padding:16px 18px;position:relative;overflow:hidden;box-shadow:0 1px 0 rgba(15,23,42,.02),0 8px 24px -20px rgba(15,23,42,.16);}
+  #opsQuotesRoot .qz-kpi::before{content:"";position:absolute;left:0;top:0;width:3px;height:100%;background:linear-gradient(180deg,var(--ops-gold),var(--ops-gold-2));}
+  #opsQuotesRoot .qz-kpi.amber::before{background:linear-gradient(180deg,#f59e0b,#d97706);}
+  #opsQuotesRoot .qz-kpi.violet::before{background:linear-gradient(180deg,#6366f1,#a855f7);}
+  #opsQuotesRoot .qz-kpi.green::before{background:linear-gradient(180deg,#10b981,#059669);}
+  #opsQuotesRoot .qz-kpi .lbl{font-size:10.5px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.08em;}
+  #opsQuotesRoot .qz-kpi .v{font-size:26px;font-weight:900;color:#0f172a;margin-top:4px;letter-spacing:-.025em;font-variant-numeric:tabular-nums;}
+  #opsQuotesRoot .qz-kpi .sub{font-size:11.5px;color:#94a3b8;margin-top:4px;font-weight:600;}
+
+  #opsQuotesRoot .qz-toolbar{background:#fff;border:1px solid rgba(15,23,42,.06);border-radius:16px;padding:12px 14px;margin-bottom:14px;display:flex;flex-wrap:wrap;align-items:center;gap:10px;box-shadow:0 1px 0 rgba(15,23,42,.02),0 8px 24px -20px rgba(15,23,42,.16);}
+  #opsQuotesRoot .qz-chips{display:flex;flex-wrap:wrap;gap:6px;}
+  #opsQuotesRoot .qz-chip{padding:6px 11px;border-radius:999px;background:#f1f5f9;border:1px solid transparent;font-size:12px;font-weight:700;color:#475569;cursor:pointer;transition:all .12s ease;}
+  #opsQuotesRoot .qz-chip:hover{background:#e2e8f0;}
+  #opsQuotesRoot .qz-chip.active{background:linear-gradient(135deg,rgba(212,175,55,.18),rgba(99,102,241,.12));color:#0f172a;border-color:rgba(212,175,55,.4);box-shadow:inset 0 0 0 1px rgba(244,196,48,.18);}
+  #opsQuotesRoot .qz-search{flex:1;min-width:200px;display:flex;align-items:center;gap:6px;padding:7px 12px;border-radius:10px;background:#f8fafc;border:1px solid #e5e7eb;}
+  #opsQuotesRoot .qz-search input{flex:1;border:0;outline:0;background:transparent;font-size:13px;font-weight:600;color:#0f172a;font-family:inherit;}
+  #opsQuotesRoot .qz-search .ic{font-size:14px;color:#94a3b8;}
+
+  #opsQuotesRoot .qz-list{display:flex;flex-direction:column;gap:10px;}
+  #opsQuotesRoot .qz-row{background:#fff;border:1px solid rgba(15,23,42,.06);border-radius:16px;padding:14px 16px;display:grid;grid-template-columns:60px 1fr auto;gap:14px;align-items:center;box-shadow:0 1px 0 rgba(15,23,42,.02),0 12px 32px -22px rgba(15,23,42,.18);cursor:pointer;transition:transform .12s ease,box-shadow .12s ease,border-color .12s ease;}
+  #opsQuotesRoot .qz-row:hover{transform:translateY(-1px);box-shadow:0 1px 0 rgba(15,23,42,.02),0 18px 36px -20px rgba(15,23,42,.25);border-color:rgba(212,175,55,.3);}
+  #opsQuotesRoot .qz-thumb{width:60px;height:60px;border-radius:12px;background:linear-gradient(135deg,#f1f5f9,#e2e8f0) center/cover no-repeat;border:1px solid #e5e7eb;display:flex;align-items:center;justify-content:center;font-size:22px;color:#94a3b8;flex-shrink:0;}
+  #opsQuotesRoot .qz-main{min-width:0;display:flex;flex-direction:column;gap:5px;}
+  #opsQuotesRoot .qz-top-line{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  #opsQuotesRoot .qz-ds{font-family:ui-monospace,Menlo,monospace;font-size:12px;font-weight:800;color:#7a5a00;letter-spacing:.01em;}
+  #opsQuotesRoot .qz-source-ref{font-size:11px;font-weight:700;color:#94a3b8;}
+  #opsQuotesRoot .qz-store{font-size:11px;font-weight:700;color:#475569;padding:2px 8px;border-radius:999px;background:#f1f5f9;}
+  #opsQuotesRoot .qz-tenant{font-size:11px;font-weight:600;color:#94a3b8;}
+  #opsQuotesRoot .qz-prod-line{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:700;color:#0f172a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  #opsQuotesRoot .qz-prod-meta{font-size:11.5px;font-weight:600;color:#64748b;}
+  #opsQuotesRoot .qz-meta-line{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  #opsQuotesRoot .qz-age{font-size:11.5px;font-weight:800;color:#475569;}
+  #opsQuotesRoot .qz-age.old{color:#dc2626;}
+  #opsQuotesRoot .qz-assignee{font-size:11px;font-weight:700;color:#fff;padding:2px 9px;border-radius:999px;background:#94a3b8;}
+  #opsQuotesRoot .qz-unassigned{font-size:11px;font-weight:700;color:#94a3b8;padding:2px 9px;border-radius:999px;background:#f1f5f9;border:1px dashed #cbd5e1;}
+  #opsQuotesRoot .qz-match{font-size:11px;font-weight:800;color:#fff;padding:2px 9px;border-radius:999px;background:linear-gradient(135deg,#10b981,#059669);display:inline-flex;align-items:center;gap:4px;}
+  #opsQuotesRoot .qz-cust{font-size:11.5px;font-weight:600;color:#64748b;}
+  #opsQuotesRoot .qz-actions{display:flex;align-items:center;gap:6px;}
+
+  #opsQuotesRoot .qz-empty,#opsQuotesRoot .qz-error{padding:60px 20px;text-align:center;color:#64748b;background:#fff;border:1px dashed rgba(15,23,42,.1);border-radius:16px;}
+  #opsQuotesRoot .qz-empty .ic{font-size:42px;margin-bottom:10px;background:linear-gradient(135deg,#d4af37,#a855f7);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;}
+  #opsQuotesRoot .qz-empty h3{font-size:16px;font-weight:900;margin:0 0 4px;color:#0f172a;}
+  #opsQuotesRoot .qz-empty p{margin:0;font-size:13px;}
+</style>
+
+<div id="opsQuotesRoot">
+  <div class="ops-loading">Loading Awaiting Quote desk…</div>
+</div>
+
+<script>
+  (function(){
+    const QZ = { items: [], filter: 'all', search: '', loaded: false, kpis: null };
+
+    function escq(s){ return (window.opsEsc || (x => String(x==null?'':x)))(s); }
+
+    function ageClass(ago){
+      if (!ago) return '';
+      const m = /^(\d+)([mhd])/.exec(ago);
+      if (!m) return '';
+      const n = parseInt(m[1], 10);
+      const u = m[2];
+      if (u === 'd' && n >= 1) return 'old';
+      if (u === 'h' && n >= 24) return 'old';
+      return '';
+    }
+
+    function openOrder(orderId){
+      if (typeof window.opsOpenOrderModal === 'function'){
+        window.opsOpenOrderModal(orderId);
+      } else {
+        if (typeof window.opsSwitchView === 'function'){
+          try { window.opsSwitchView('queue'); } catch(e){}
+        }
+        if (typeof window.opsToast === 'function'){
+          window.opsToast('Open detail from Queue — modal is being built.', 'error');
+        }
+      }
+    }
+
+    async function assignToMe(orderId, ev){
+      ev && ev.stopPropagation();
+      const resp = await opsFetch('/ops/api/order/' + orderId + '/assign/', {
+        method: 'POST', body: { assign_to_me: true, stage: 'sourcing' }
+      });
+      if (resp.ok){
+        opsToast('Assigned to you', 'success');
+        loadQuotes();
+      } else if (resp.status === 501) {
+        opsToast('Assignment endpoint not ready yet', 'error');
+      } else {
+        opsToast((resp.data && resp.data.error) || 'Could not assign', 'error');
+      }
+    }
+
+    function skipOrder(orderId, ev){
+      ev && ev.stopPropagation();
+      QZ.items = QZ.items.filter(o => o.id !== orderId);
+      renderQuotes();
+      opsToast('Order skipped for now', 'success');
+    }
+
+    function passesFilter(o){
+      const me = (window.OPS && OPS.me && OPS.me.user) ? OPS.me.user.display_name : '';
+      if (QZ.filter === 'unassigned' && o.assignee) return false;
+      if (QZ.filter === 'mine'       && o.assignee !== me) return false;
+      if (QZ.filter === 'old'        && ageClass(o.created_ago) !== 'old') return false;
+      if (QZ.search){
+        const q = QZ.search.toLowerCase();
+        const hay = [
+          o.ds_order_ref, o.source_order_ref, o.customer_name,
+          o.product_name, o.product_sku, o.store_name, o.tenant_username,
+        ].filter(Boolean).join(' ').toLowerCase();
+        if (hay.indexOf(q) === -1) return false;
+      }
+      return true;
+    }
+
+    function renderKpis(){
+      const data = QZ.kpis || { total: 0, unassigned: 0, sent_today: 0 };
+      const grid = document.getElementById('qzKpiGrid');
+      if (!grid) return;
+      grid.innerHTML = `
+        <div class="qz-kpi amber">
+          <div class="lbl">Total pending</div>
+          <div class="v">${data.total}</div>
+          <div class="sub">Awaiting quote action</div>
+        </div>
+        <div class="qz-kpi">
+          <div class="lbl">Unassigned</div>
+          <div class="v">${data.unassigned}</div>
+          <div class="sub">Up for grabs</div>
+        </div>
+        <div class="qz-kpi violet">
+          <div class="lbl">Avg time to first quote</div>
+          <div class="v">4.2h</div>
+          <div class="sub">Last 7 days</div>
+        </div>
+        <div class="qz-kpi green">
+          <div class="lbl">Quotes sent today</div>
+          <div class="v">${data.sent_today}</div>
+          <div class="sub">By the team</div>
+        </div>
+      `;
+    }
+
+    function renderQuotes(){
+      const wrap = document.getElementById('qzList');
+      if (!wrap) return;
+
+      const list = QZ.items.filter(passesFilter);
+      if (!list.length){
+        wrap.innerHTML = `
+          <div class="qz-empty">
+            <div class="ic">💰</div>
+            <h3>No quotes waiting</h3>
+            <p>${QZ.search ? 'No matches for &quot;'+escq(QZ.search)+'&quot;' : 'All caught up — great work.'}</p>
+          </div>`;
+        return;
+      }
+
+      wrap.innerHTML = '<div class="qz-list">' + list.map(o => {
+        const ageCls = ageClass(o.created_ago);
+        const thumb = o.product_image_url
+          ? `<div class="qz-thumb" style="background-image:url(${escq(o.product_image_url)});"></div>`
+          : `<div class="qz-thumb">📦</div>`;
+        const assignee = o.assignee
+          ? `<span class="qz-assignee" style="background:${escq(o.assignee_color || '#6366f1')};">${escq(o.assignee)}</span>`
+          : `<span class="qz-unassigned">Unassigned</span>`;
+        const matchChip = (o.supplier_auto_matched || o.supplier_name)
+          ? `<span class="qz-match">✦ Auto-match${o.supplier_name ? ': '+escq(o.supplier_name) : ''}</span>`
+          : '';
+        const variant = o.item_count > 1 ? `· +${o.item_count - 1} more` : '';
+        return `
+          <div class="qz-row" onclick="window.__qzOpen(${o.id})">
+            ${thumb}
+            <div class="qz-main">
+              <div class="qz-top-line">
+                <span class="qz-ds">${escq(o.ds_order_ref)}</span>
+                ${o.source_order_ref ? `<span class="qz-source-ref">· ${escq(o.source_order_ref)}</span>` : ''}
+                ${o.store_name ? `<span class="qz-store">${escq(o.store_name)}</span>` : ''}
+                ${o.tenant_username ? `<span class="qz-tenant">@${escq(o.tenant_username)}</span>` : ''}
+              </div>
+              <div class="qz-prod-line">${escq(o.product_name || 'Product')} <span class="qz-prod-meta">× ${o.item_count || 1} ${variant}</span></div>
+              <div class="qz-meta-line">
+                <span class="qz-cust">${escq(o.flag || '')} ${escq(o.customer_name || 'Customer')}${o.ship_city ? ' · '+escq(o.ship_city) : ''}</span>
+                <span class="qz-age ${ageCls}">${escq(o.created_ago || '')}</span>
+                ${assignee}
+                ${matchChip}
+              </div>
+            </div>
+            <div class="qz-actions" onclick="event.stopPropagation();">
+              <button class="ops-btn gold sm" onclick="window.__qzOpen(${o.id})">Quote</button>
+              <button class="ops-btn ghost sm" onclick="window.__qzAssign(${o.id}, event)">Assign to me</button>
+              <button class="ops-btn ghost sm" onclick="window.__qzSkip(${o.id}, event)">Skip</button>
+            </div>
+          </div>`;
+      }).join('') + '</div>';
+    }
+
+    function renderShell(){
+      const root = document.getElementById('opsQuotesRoot');
+      root.innerHTML = `
+        <div id="qzKpiGrid" class="qz-kpi-grid">
+          <div class="ops-loading">Loading KPIs…</div>
+        </div>
+        <div class="qz-toolbar">
+          <div class="qz-chips">
+            <span class="qz-chip ${QZ.filter==='all'?'active':''}"        data-f="all">All</span>
+            <span class="qz-chip ${QZ.filter==='unassigned'?'active':''}" data-f="unassigned">Unassigned</span>
+            <span class="qz-chip ${QZ.filter==='mine'?'active':''}"       data-f="mine">My orders</span>
+            <span class="qz-chip ${QZ.filter==='old'?'active':''}"        data-f="old">Older than 24h</span>
+          </div>
+          <div class="qz-search">
+            <span class="ic">🔎</span>
+            <input id="qzSearch" type="text" placeholder="Search DS#, source#, customer, SKU, store…" value="${escq(QZ.search)}">
+          </div>
+        </div>
+        <div id="qzList"><div class="ops-loading">Loading orders…</div></div>
+      `;
+
+      root.querySelectorAll('.qz-chip').forEach(el => {
+        el.addEventListener('click', () => {
+          QZ.filter = el.dataset.f;
+          root.querySelectorAll('.qz-chip').forEach(c => c.classList.toggle('active', c.dataset.f === QZ.filter));
+          renderQuotes();
+        });
+      });
+      const si = document.getElementById('qzSearch');
+      if (si){
+        si.addEventListener('input', () => { QZ.search = si.value || ''; renderQuotes(); });
+      }
+    }
+
+    async function loadQuotes(){
+      const resp = await opsFetch('/ops/api/orders/?status=pending_source');
+      if (!resp.ok){
+        QZ.items = [];
+        QZ.kpis  = { total: 0, unassigned: 0, sent_today: 0 };
+        renderKpis();
+        const wrap = document.getElementById('qzList');
+        if (wrap){
+          if (resp.status === 501 || resp.status === 404){
+            wrap.innerHTML = `<div class="qz-empty"><div class="ic">⏳</div><h3>Loading from Queue desk…</h3><p>Order list endpoint isn&#39;t ready yet. The desk will populate as soon as it&#39;s online.</p></div>`;
+          } else {
+            wrap.innerHTML = `<div class="qz-empty"><div class="ic">⚠️</div><h3>Could not load</h3><p>${escq((resp.data && resp.data.error) || 'Try refreshing in a moment.')}</p></div>`;
+          }
+        }
+        return;
+      }
+      const items = (resp.data && (resp.data.orders || resp.data.results || resp.data.items)) || [];
+      QZ.items = Array.isArray(items) ? items : [];
+
+      const sentToday = (resp.data && (resp.data.quotes_sent_today != null)) ? resp.data.quotes_sent_today : 0;
+      QZ.kpis = {
+        total:      QZ.items.length,
+        unassigned: QZ.items.filter(o => !o.assignee).length,
+        sent_today: sentToday,
+      };
+      QZ.loaded = true;
+      renderKpis();
+      renderQuotes();
+    }
+
+    window.__qzOpen   = openOrder;
+    window.__qzAssign = assignToMe;
+    window.__qzSkip   = skipOrder;
+
+    window.opsLoadQuotes = function(){
+      renderShell();
+      renderKpis();
+      loadQuotes();
+    };
+  })();
+</script>

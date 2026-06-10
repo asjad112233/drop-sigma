@@ -1,0 +1,879 @@
+<!-- Order Queue section — full functional UI.
+     Toolbar: search, sort, status chips, assignee filter.
+     List: order cards with status pill, platform badge, customer, supplier,
+           assignee, prominent action button per status.
+     Click → opens the order detail modal (window.opsOpenOrderModal). -->
+
+<style>
+  /* All styles scoped under #opsQueueRoot so we don't bleed into other sections. */
+  #opsQueueRoot{font-size:13px;}
+  #opsQueueRoot .oq-toolbar{
+    background:#fff;border:1px solid rgba(15,23,42,.06);border-radius:16px;
+    padding:14px 16px;margin-bottom:14px;
+    box-shadow:0 1px 0 rgba(15,23,42,.02),0 12px 32px -22px rgba(15,23,42,.18);
+  }
+  #opsQueueRoot .oq-toolbar-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+  #opsQueueRoot .oq-toolbar-row + .oq-toolbar-row{margin-top:10px;}
+  #opsQueueRoot .oq-search{
+    flex:1;min-width:240px;display:flex;align-items:center;gap:8px;
+    background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;
+    padding:8px 12px;transition:border-color .15s,box-shadow .15s;
+  }
+  #opsQueueRoot .oq-search:focus-within{border-color:#a855f7;box-shadow:0 0 0 3px rgba(168,85,247,.12);}
+  #opsQueueRoot .oq-search .ic{color:#94a3b8;font-size:14px;}
+  #opsQueueRoot .oq-search input{
+    border:none;background:transparent;outline:none;flex:1;font-size:13px;
+    font-weight:600;color:#0f172a;
+  }
+  #opsQueueRoot .oq-select{
+    background:#fff;border:1px solid #e5e7eb;border-radius:10px;
+    padding:7px 12px;font-size:12.5px;font-weight:700;color:#334155;
+    cursor:pointer;outline:none;min-width:140px;
+  }
+  #opsQueueRoot .oq-select:focus{border-color:#a855f7;box-shadow:0 0 0 3px rgba(168,85,247,.12);}
+
+  /* Status chip strip */
+  #opsQueueRoot .oq-chips{display:flex;gap:6px;flex-wrap:wrap;}
+  #opsQueueRoot .oq-chip{
+    padding:6px 12px;border-radius:999px;border:1px solid #e5e7eb;
+    background:#fff;color:#475569;font-weight:700;font-size:11.5px;cursor:pointer;
+    display:inline-flex;align-items:center;gap:6px;transition:background .12s,color .12s,border-color .12s;
+  }
+  #opsQueueRoot .oq-chip:hover{background:#f1f5f9;}
+  #opsQueueRoot .oq-chip .ct{
+    background:#f1f5f9;color:#64748b;font-size:10.5px;font-weight:900;
+    padding:1px 7px;border-radius:999px;
+  }
+  #opsQueueRoot .oq-chip.active{
+    background:linear-gradient(135deg,#0f172a 0%,#1a1b35 100%);
+    color:#fff;border-color:transparent;
+    box-shadow:0 6px 16px -10px rgba(15,23,42,.6);
+  }
+  #opsQueueRoot .oq-chip.active .ct{background:rgba(244,196,48,.25);color:#f4c430;}
+
+  /* Order row card — two-tier (strip + body) to match the tenant-side
+     polished card aesthetic: cool slate-violet strip + dark slate border
+     + gold inset accent + body with vertical column dividers. */
+  #opsQueueRoot .oq-list{display:flex;flex-direction:column;gap:10px;}
+  #opsQueueRoot .oq-row{
+    display:flex;flex-direction:column;
+    background:#fff;border:1px solid rgba(15,23,42,.18);border-radius:14px;
+    overflow:hidden;cursor:pointer;
+    box-shadow:0 1px 0 rgba(15,23,42,.02);
+    transition:box-shadow .15s,transform .15s,border-color .15s;
+  }
+  #opsQueueRoot .oq-row:hover{
+    transform:translateY(-1px);border-color:rgba(15,23,42,.28);
+    box-shadow:0 14px 36px -22px rgba(15,23,42,.22),0 0 0 1px rgba(212,175,55,.18);
+  }
+  #opsQueueRoot .oq-row.is-checked{
+    border-color:#a855f7;box-shadow:0 0 0 1px #a855f7,0 12px 28px -20px rgba(168,85,247,.4);
+  }
+
+  /* TOP STRIP — order meta */
+  #opsQueueRoot .oq-strip{
+    display:flex;align-items:center;justify-content:flex-start;
+    gap:9px;flex-wrap:wrap;width:100%;box-sizing:border-box;
+    padding:9px 14px;
+    background:linear-gradient(180deg,#f5f7fc 0%,#eaeef7 100%);
+    border-bottom:1.5px solid rgba(15,23,42,.32);
+    box-shadow:inset 0 -3px 0 -1px rgba(212,175,55,.18),
+               inset 0 1px 0 rgba(255,255,255,.55);
+    font-size:11.5px;font-weight:600;color:#475569;
+    letter-spacing:.005em;
+  }
+  #opsQueueRoot .oq-check{width:15px;height:15px;cursor:pointer;accent-color:#d4af37;flex-shrink:0;}
+  #opsQueueRoot .oq-plat-badge{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:18px;height:18px;border-radius:5px;
+    font-size:11px;font-weight:900;line-height:1;flex-shrink:0;
+    font-family:"SF Pro Display","Inter",ui-sans-serif,system-ui,sans-serif;
+  }
+  #opsQueueRoot .oq-plat-badge.shopify{
+    background:linear-gradient(135deg,#95bf47,#5e8e3e);
+    box-shadow:0 1px 0 rgba(94,142,62,.18),inset 0 1px 0 rgba(255,255,255,.18);
+  }
+  #opsQueueRoot .oq-plat-badge.woocommerce{
+    background:linear-gradient(135deg,#9b6dc4,#7f54b3);color:#fff;
+    box-shadow:0 1px 0 rgba(127,84,179,.2),inset 0 1px 0 rgba(255,255,255,.18);
+  }
+  #opsQueueRoot .oq-plat-badge.other{background:#f1f5f9;color:#475569;border:1px solid #e5e7eb;}
+  #opsQueueRoot .oq-strip-ref{
+    font-family:ui-monospace,Menlo,monospace;font-size:12.5px;
+    font-weight:900;color:#1a1b35;letter-spacing:.01em;
+  }
+  #opsQueueRoot .oq-strip-src{
+    font-family:ui-monospace,Menlo,monospace;font-size:11px;
+    color:#475569;font-weight:700;
+  }
+  #opsQueueRoot .oq-strip-meta{
+    color:#475569;font-weight:600;
+    display:inline-flex;align-items:center;gap:4px;white-space:nowrap;
+  }
+  #opsQueueRoot .oq-strip-customer{color:#1a1b35;font-weight:800;}
+  #opsQueueRoot .oq-strip-sep{color:rgba(99,102,241,.32);font-weight:400;user-select:none;}
+  #opsQueueRoot .oq-strip-paid{
+    margin-left:auto;color:#475569;font-weight:600;white-space:nowrap;
+  }
+  /* Status pill — sized down to fit in the meta strip */
+  #opsQueueRoot .oq-strip-pill{
+    display:inline-flex;align-items:center;gap:5px;
+    padding:2px 9px;border-radius:999px;
+    font-size:9.5px;font-weight:900;letter-spacing:.07em;
+    text-transform:uppercase;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.5);
+  }
+  #opsQueueRoot .oq-pill-grp-pending_source{background:linear-gradient(135deg,#fef3c7,#fde68a);color:#92400e;}
+  #opsQueueRoot .oq-pill-grp-pending_payment{background:linear-gradient(135deg,#ddd6fe,#c4b5fd);color:#5b21b6;}
+  #opsQueueRoot .oq-pill-grp-processing{background:linear-gradient(135deg,#dbeafe,#93c5fd);color:#1e40af;}
+  #opsQueueRoot .oq-pill-grp-shipping{background:linear-gradient(135deg,#cffafe,#a5f3fc);color:#155e75;}
+  #opsQueueRoot .oq-pill-grp-delivered{background:linear-gradient(135deg,#d1fae5,#6ee7b7);color:#065f46;}
+  #opsQueueRoot .oq-pill-grp-cancel{background:linear-gradient(135deg,#fee2e2,#fecaca);color:#991b1b;}
+
+  /* Country flag (next to customer in strip) */
+  #opsQueueRoot .oq-flag{display:inline-block;font-size:14px;margin-left:2px;vertical-align:-1px;}
+
+  /* BODY — product · customer · supplier · assignee · actions */
+  #opsQueueRoot .oq-body{
+    display:flex;flex-wrap:nowrap;align-items:center;gap:12px;
+    width:100%;box-sizing:border-box;padding:12px 16px;
+  }
+  /* Vertical column dividers — applied to customer, supplier, price, assignee, actions */
+  #opsQueueRoot .oq-body > .oq-cust,
+  #opsQueueRoot .oq-body > .oq-supplier,
+  #opsQueueRoot .oq-body > .oq-price-col,
+  #opsQueueRoot .oq-body > .oq-assignee,
+  #opsQueueRoot .oq-body > .oq-actions{
+    align-self:stretch;
+    border-left:1px solid rgba(15,23,42,.1);
+    padding-left:14px;
+    display:flex;flex-direction:column;justify-content:center;
+  }
+  #opsQueueRoot .oq-body > .oq-actions{
+    flex-direction:row;align-items:center;gap:6px;flex-shrink:0;
+  }
+  #opsQueueRoot .oq-body > .oq-assignee{margin-left:auto;flex-shrink:0;}
+
+  /* Product cell */
+  #opsQueueRoot .oq-product{display:flex;gap:11px;align-items:center;min-width:0;max-width:280px;flex:0 1 auto;}
+  #opsQueueRoot .oq-product img{
+    width:48px;height:48px;border-radius:10px;background:#fafaf7;
+    object-fit:cover;flex-shrink:0;border:1px solid rgba(15,23,42,.04);
+  }
+  #opsQueueRoot .oq-product .ph{
+    width:48px;height:48px;border-radius:10px;
+    background:linear-gradient(135deg,#fafaf7,#f1f5f9);
+    display:flex;align-items:center;justify-content:center;color:#94a3b8;flex-shrink:0;font-size:22px;
+    border:1px solid rgba(15,23,42,.04);
+  }
+  #opsQueueRoot .oq-product .info{min-width:0;flex:1;}
+  #opsQueueRoot .oq-product .nm{
+    font-weight:800;color:#0f172a;font-size:13px;letter-spacing:-.005em;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  #opsQueueRoot .oq-product .more{
+    display:inline-flex;align-items:center;background:rgba(99,102,241,.08);color:#4338ca;
+    padding:2px 8px;border-radius:6px;font-size:10.5px;font-weight:800;
+    border:1px solid rgba(99,102,241,.2);margin-top:4px;
+  }
+  #opsQueueRoot .oq-product .meta{font-size:11px;color:#64748b;margin-top:4px;
+    font-family:ui-monospace,Menlo,monospace;font-weight:600;}
+
+  /* Customer cell */
+  #opsQueueRoot .oq-cust{min-width:0;}
+  #opsQueueRoot .oq-cust .phone{font-size:11.5px;color:#4338ca;font-weight:700;
+    font-variant-numeric:tabular-nums;}
+  #opsQueueRoot .oq-cust .email{font-size:11px;color:#475569;font-weight:600;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px;}
+  #opsQueueRoot .oq-cust .city{font-size:10.5px;color:#64748b;font-weight:500;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  #opsQueueRoot .oq-cust .tenant{font-size:10px;color:#94a3b8;font-weight:700;
+    text-transform:uppercase;letter-spacing:.05em;margin-top:1px;}
+
+  /* Supplier cell — clean text-only, name is clickable. */
+  #opsQueueRoot .oq-supplier{
+    font-size:12px;width:180px;flex-shrink:0;flex-grow:0;
+    display:flex;flex-direction:column;gap:3px;justify-content:center;
+  }
+  #opsQueueRoot .oq-supplier .lbl{
+    font-size:9px;font-weight:900;color:#94a3b8;
+    text-transform:uppercase;letter-spacing:.08em;margin-bottom:1px;
+  }
+  #opsQueueRoot .oq-supplier .name{
+    display:flex;align-items:center;gap:7px;font-weight:900;
+    font-size:13px;letter-spacing:-.005em;min-width:0;
+  }
+  #opsQueueRoot .oq-supplier .name .tx{
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1;
+    color:#4338ca;cursor:pointer;
+    border-bottom:1px dashed transparent;transition:border-color .15s,color .15s;
+  }
+  #opsQueueRoot .oq-supplier .name .tx:hover{
+    color:#5b21b6;border-bottom-color:rgba(91,33,182,.4);
+  }
+  #opsQueueRoot .oq-supplier .name .tx.unlinked{
+    color:#991b1b;cursor:default;
+  }
+  #opsQueueRoot .oq-supplier .name .tx.unlinked:hover{border-bottom-color:transparent;}
+  #opsQueueRoot .oq-supplier .name .tx.awaiting{
+    color:#92400e;cursor:default;
+  }
+  #opsQueueRoot .oq-supplier .name .tx.awaiting:hover{border-bottom-color:transparent;}
+  #opsQueueRoot .oq-supplier .auto{
+    background:linear-gradient(135deg,#d4af37,#f4c430);color:#3f2305;
+    font-size:8.5px;font-weight:900;padding:2px 6px;border-radius:999px;
+    letter-spacing:.06em;text-transform:uppercase;flex-shrink:0;
+    box-shadow:0 2px 6px -2px rgba(212,175,55,.5);
+  }
+  #opsQueueRoot .oq-supplier .meta{
+    font-size:10.5px;color:#64748b;font-weight:700;
+    display:flex;align-items:center;gap:5px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  #opsQueueRoot .oq-supplier .meta .sep{color:#cbd5e1;}
+
+  /* Price block — Tenant Sells + Product/Shipping/Total + Margin.
+     The tenant-sells line sits at the top in a soft green strip so the
+     ops team sees the tenant's customer-facing revenue at a glance.
+     Margin is computed client-side (sells − drop_sigma_total): green
+     if positive (tenant profits), red if negative. */
+  #opsQueueRoot .oq-price-col{min-width:158px;}
+  #opsQueueRoot .oq-row-price{
+    display:flex;flex-direction:column;gap:2px;
+    padding:6px 9px;border-radius:9px;
+    background:linear-gradient(135deg,rgba(212,175,55,.06),rgba(168,85,247,.04));
+    border:1px solid rgba(212,175,55,.18);
+    font-variant-numeric:tabular-nums;
+  }
+  #opsQueueRoot .oq-row-price .line{
+    display:flex;justify-content:space-between;gap:10px;
+    font-size:11px;color:#64748b;font-weight:600;
+  }
+  #opsQueueRoot .oq-row-price .line .v{font-weight:800;color:#0f172a;}
+  #opsQueueRoot .oq-row-price .line.sells{
+    padding:3px 7px;margin:-3px -3px 4px;border-radius:6px;
+    background:linear-gradient(135deg,#ecfdf5,#d1fae5);
+    border:1px solid rgba(16,185,129,.32);
+  }
+  #opsQueueRoot .oq-row-price .line.sells .l{
+    color:#065f46;font-weight:800;font-size:9.5px;
+    text-transform:uppercase;letter-spacing:.06em;
+  }
+  #opsQueueRoot .oq-row-price .line.sells .v{
+    color:#065f46;font-weight:900;font-size:12px;
+  }
+  #opsQueueRoot .oq-row-price .line.is-total{
+    margin-top:3px;padding-top:4px;
+    border-top:1px dashed rgba(212,175,55,.35);
+  }
+  #opsQueueRoot .oq-row-price .line.is-total .l{
+    font-weight:800;text-transform:uppercase;letter-spacing:.04em;font-size:9.5px;color:#7a5a00;
+  }
+  #opsQueueRoot .oq-row-price .line.is-total .v{
+    color:#7a5a00;font-weight:900;font-size:13px;
+  }
+  #opsQueueRoot .oq-row-price .line.margin{
+    margin-top:1px;font-size:10.5px;
+  }
+  #opsQueueRoot .oq-row-price .line.margin .l{
+    font-weight:700;font-size:9.5px;color:#64748b;
+    text-transform:uppercase;letter-spacing:.05em;
+  }
+  #opsQueueRoot .oq-row-price .line.margin .v{font-weight:900;font-size:11.5px;}
+  #opsQueueRoot .oq-row-price .line.margin.pos .v{color:#059669;}
+  #opsQueueRoot .oq-row-price .line.margin.neg .v{color:#dc2626;}
+  #opsQueueRoot .oq-price-pending{
+    font-size:11px;color:#94a3b8;font-weight:600;font-style:italic;
+    padding:5px 9px;background:#f8fafc;border:1px dashed #e5e7eb;border-radius:9px;
+    text-align:center;
+  }
+
+  /* Assignee cell — clean text-only, name is clickable. */
+  #opsQueueRoot .oq-assignee{
+    display:flex;flex-direction:column;justify-content:center;gap:2px;
+    width:160px;flex-shrink:0;flex-grow:0;
+  }
+  #opsQueueRoot .oq-assignee .lbl{
+    font-size:9px;font-weight:900;color:#94a3b8;
+    text-transform:uppercase;letter-spacing:.08em;margin-bottom:1px;
+  }
+  #opsQueueRoot .oq-assignee .nm{
+    font-size:13px;font-weight:900;color:#4338ca;letter-spacing:-.005em;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    cursor:pointer;border-bottom:1px dashed transparent;
+    transition:border-color .15s,color .15s;
+    display:inline-block;max-width:100%;
+  }
+  #opsQueueRoot .oq-assignee .nm:hover{
+    color:#5b21b6;border-bottom-color:rgba(91,33,182,.4);
+  }
+  #opsQueueRoot .oq-assignee .role{
+    font-size:10.5px;font-weight:700;color:#64748b;
+    text-transform:uppercase;letter-spacing:.05em;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  #opsQueueRoot .oq-assignee.unassigned .nm{
+    color:#94a3b8;font-style:italic;cursor:default;
+  }
+  #opsQueueRoot .oq-assignee.unassigned .nm:hover{border-bottom-color:transparent;}
+
+  /* Actions cell */
+  #opsQueueRoot .oq-actions .ops-btn{padding:7px 13px;font-size:11.5px;}
+
+  /* Empty + skeleton */
+  #opsQueueRoot .oq-empty{
+    background:#fff;border:1px solid rgba(15,23,42,.06);border-radius:18px;
+    padding:80px 28px;text-align:center;color:#64748b;
+  }
+  #opsQueueRoot .oq-empty .ic{
+    font-size:54px;margin-bottom:14px;
+    background:linear-gradient(135deg,#d4af37,#a855f7);
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  }
+  #opsQueueRoot .oq-empty h3{font-size:18px;font-weight:900;color:#0f172a;margin:0 0 6px;}
+  #opsQueueRoot .oq-empty p{margin:0;font-size:13px;}
+
+  #opsQueueRoot .oq-skel-row{
+    background:#fff;border:1px solid rgba(15,23,42,.06);border-radius:14px;
+    padding:14px;height:72px;
+    background-image:linear-gradient(90deg,#fff 0%,#f1f5f9 50%,#fff 100%);
+    background-size:200% 100%;animation:oqShimmer 1.4s ease infinite;
+    margin-bottom:8px;
+  }
+  @keyframes oqShimmer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
+
+  #opsQueueRoot .oq-bulk{
+    background:linear-gradient(135deg,#0f172a 0%,#1a1b35 100%);color:#fff;
+    border-radius:14px;padding:11px 16px;margin-bottom:12px;
+    display:flex;align-items:center;gap:14px;
+    box-shadow:0 14px 38px -22px rgba(15,23,42,.6);
+  }
+  #opsQueueRoot .oq-bulk .cnt{font-weight:900;font-size:14px;}
+  #opsQueueRoot .oq-bulk .sep{flex:1;}
+  #opsQueueRoot .oq-bulk .ops-btn{padding:6px 14px;font-size:12px;}
+
+  /* Compact responsive */
+  @media (max-width: 1280px){
+    #opsQueueRoot .oq-row{grid-template-columns:auto auto 1.2fr 1.6fr 1fr auto;}
+    #opsQueueRoot .oq-assignee{display:none;}
+  }
+  @media (max-width: 980px){
+    #opsQueueRoot .oq-row{grid-template-columns:auto 1.2fr 1.6fr auto;}
+    #opsQueueRoot .oq-status-col,#opsQueueRoot .oq-supplier{display:none;}
+  }
+</style>
+
+<div id="opsQueueRoot">
+  <div class="ops-loading">Loading Order Queue…</div>
+</div>
+
+<script>
+(function(){
+  /* ─── Module-level state ────────────────────────────────────────── */
+  const OQ = {
+    filters: {
+      status: 'all',
+      search: '',
+      sort: 'newest',
+      assigned: 'any',
+    },
+    orders: [],
+    selected: new Set(),
+    members: [],
+    suppliers: [],
+    rendering: false,
+    debounce: null,
+  };
+
+  const STATUS_CHIPS = [
+    {key:'all',             label:'All'},
+    {key:'pending_source',  label:'Pending Source'},
+    {key:'pending_payment', label:'Pending Payment'},
+    {key:'processing',      label:'Processing'},
+    {key:'shipping',        label:'Shipping'},
+    {key:'delivered',       label:'Delivered'},
+    {key:'cancel',          label:'Cancel'},
+  ];
+
+  const PLATFORM_BADGE = {
+    shopify:     {ic:'🛍️', label:'Shopify',     cls:'shopify'},
+    woocommerce: {ic:'W',  label:'WooCommerce', cls:'woocommerce'},
+    woo:         {ic:'W',  label:'WooCommerce', cls:'woocommerce'},
+  };
+
+  /* Short date formatter for the strip (e.g. "Jun 5, 2026 · 10:08 PM") */
+  function fmtShortDate(iso){
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    return d.toLocaleString('en-US', {
+      month:'short', day:'numeric', year:'numeric',
+      hour:'numeric', minute:'2-digit',
+    }).replace(',', '');
+  }
+
+  /* ─── Public entry point — called by the shell ──────────────────── */
+  window.opsLoadQueue = async function(){
+    if (!document.getElementById('opsQueueRoot')) return;
+    if (OQ.rendering) return;
+    OQ.rendering = true;
+    try {
+      renderShell();
+      await Promise.all([
+        loadOrders(),
+        loadMembersIfNeeded(),
+      ]);
+    } finally {
+      OQ.rendering = false;
+    }
+  };
+
+  /* ─── Side-loaders ──────────────────────────────────────────────── */
+  async function loadMembersIfNeeded(){
+    if (OQ.members.length) return;
+    const r = await opsFetch('/ops/api/team/');
+    if (r.ok && r.data && Array.isArray(r.data.members)) {
+      OQ.members = r.data.members;
+      const sel = document.getElementById('oqAssignedSel');
+      if (sel) populateAssignedSelect(sel);
+    }
+  }
+
+  function populateAssignedSelect(sel){
+    sel.innerHTML = '';
+    const opts = [
+      ['any',        'Anyone'],
+      ['unassigned', 'Unassigned'],
+      ['me',         'Assigned to me'],
+    ];
+    for (const m of OQ.members){
+      opts.push([String(m.id), m.display_name || m.username]);
+    }
+    sel.innerHTML = opts.map(([v,l]) =>
+      `<option value="${opsEsc(v)}" ${OQ.filters.assigned===v?'selected':''}>${opsEsc(l)}</option>`
+    ).join('');
+  }
+
+  async function loadOrders(){
+    const list = document.getElementById('oqList');
+    if (list) list.innerHTML =
+      Array.from({length:5}).map(() => '<div class="oq-skel-row"></div>').join('');
+
+    const qs = new URLSearchParams();
+    if (OQ.filters.status && OQ.filters.status !== 'all') qs.set('status', OQ.filters.status);
+    if (OQ.filters.search) qs.set('search', OQ.filters.search);
+    if (OQ.filters.sort)   qs.set('sort', OQ.filters.sort);
+    if (OQ.filters.assigned && OQ.filters.assigned !== 'any') qs.set('assigned', OQ.filters.assigned);
+
+    const r = await opsFetch('/ops/api/orders/?' + qs.toString());
+    if (!r.ok){
+      if (list) list.innerHTML = '<div class="oq-empty"><div class="ic">⚠️</div><h3>Could not load orders</h3><p>Check console for details.</p></div>';
+      return;
+    }
+    OQ.orders = (r.data && r.data.orders) || [];
+    renderChipsCounts();
+    renderList();
+  }
+
+  /* ─── Render: shell ─────────────────────────────────────────────── */
+  function renderShell(){
+    const root = document.getElementById('opsQueueRoot');
+    if (!root) return;
+    root.innerHTML = `
+      <div class="oq-toolbar">
+        <div class="oq-toolbar-row">
+          <div class="oq-search">
+            <span class="ic">🔎</span>
+            <input id="oqSearch" type="search" placeholder="Search by customer, store, DS#, SKU, email…" autocomplete="off">
+          </div>
+          <select id="oqSort" class="oq-select">
+            <option value="newest">Newest first</option>
+            <option value="oldest">Oldest first</option>
+            <option value="amount_desc">Highest amount</option>
+            <option value="amount_asc">Lowest amount</option>
+            <option value="customer">Customer A–Z</option>
+          </select>
+          <select id="oqAssignedSel" class="oq-select">
+            <option value="any">Anyone</option>
+            <option value="unassigned">Unassigned</option>
+            <option value="me">Assigned to me</option>
+          </select>
+          <button class="ops-btn ghost" id="oqRefresh" title="Refresh">↻</button>
+        </div>
+        <div class="oq-toolbar-row">
+          <div class="oq-chips" id="oqChips"></div>
+        </div>
+      </div>
+      <div id="oqBulkBar"></div>
+      <div class="oq-list" id="oqList"></div>
+    `;
+
+    // Status chips
+    const chips = document.getElementById('oqChips');
+    chips.innerHTML = STATUS_CHIPS.map(c => `
+      <button class="oq-chip ${c.key===OQ.filters.status?'active':''}" data-status="${c.key}">
+        <span>${opsEsc(c.label)}</span>
+        <span class="ct" id="oqCt-${c.key}">0</span>
+      </button>
+    `).join('');
+    chips.querySelectorAll('.oq-chip').forEach(el => {
+      el.addEventListener('click', () => {
+        OQ.filters.status = el.dataset.status;
+        chips.querySelectorAll('.oq-chip').forEach(c =>
+          c.classList.toggle('active', c.dataset.status === OQ.filters.status));
+        loadOrders();
+      });
+    });
+
+    // Search debounce
+    const inp = document.getElementById('oqSearch');
+    inp.value = OQ.filters.search;
+    inp.addEventListener('input', e => {
+      OQ.filters.search = e.target.value;
+      clearTimeout(OQ.debounce);
+      OQ.debounce = setTimeout(loadOrders, 350);
+    });
+
+    // Sort
+    const sort = document.getElementById('oqSort');
+    sort.value = OQ.filters.sort;
+    sort.addEventListener('change', e => {
+      OQ.filters.sort = e.target.value;
+      loadOrders();
+    });
+
+    // Assigned
+    const asg = document.getElementById('oqAssignedSel');
+    populateAssignedSelect(asg);
+    asg.addEventListener('change', e => {
+      OQ.filters.assigned = e.target.value;
+      loadOrders();
+    });
+
+    // Refresh
+    document.getElementById('oqRefresh').addEventListener('click', () => loadOrders());
+  }
+
+  /* ─── Render: status counts ─────────────────────────────────────── */
+  function renderChipsCounts(){
+    const counts = {all: OQ.orders.length};
+    for (const c of STATUS_CHIPS){ if (c.key !== 'all') counts[c.key] = 0; }
+    for (const o of OQ.orders) counts[o.sourcing_status] = (counts[o.sourcing_status] || 0) + 1;
+    for (const c of STATUS_CHIPS){
+      const el = document.getElementById('oqCt-' + c.key);
+      if (el) el.textContent = counts[c.key] || 0;
+    }
+  }
+
+  /* ─── Render: list of orders ────────────────────────────────────── */
+  function renderList(){
+    const list = document.getElementById('oqList');
+    if (!list) return;
+    if (!OQ.orders.length){
+      list.innerHTML = `
+        <div class="oq-empty">
+          <div class="ic">📭</div>
+          <h3>No orders match your filters</h3>
+          <p>Try clearing the search or selecting a different status chip.</p>
+        </div>`;
+      renderBulkBar();
+      return;
+    }
+    list.innerHTML = OQ.orders.map(renderRow).join('');
+    // wire row clicks (excluding inner controls and clickable cells)
+    list.querySelectorAll('.oq-row').forEach(row => {
+      row.addEventListener('click', (e) => {
+        if (e.target.closest('.oq-actions')
+            || e.target.closest('.oq-check')
+            || e.target.closest('.oq-supplier .tx')
+            || e.target.closest('.oq-assignee .nm')) return;
+        const id = Number(row.dataset.id);
+        if (id && window.opsOpenOrderModal) window.opsOpenOrderModal(id);
+      });
+    });
+
+    // Clickable supplier name → open supplier detail in Suppliers section
+    list.querySelectorAll('.oq-supplier .tx[data-supplier-id]').forEach(el => {
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const id = el.dataset.supplierId;
+        if (!id) return;
+        if (typeof window.opsOpenSupplierDetail === 'function'){
+          window.opsOpenSupplierDetail(id);
+        } else {
+          opsToast('Suppliers section not ready — try again.', 'error');
+        }
+      });
+    });
+
+    // Clickable assignee name → open team member detail in Team section
+    list.querySelectorAll('.oq-assignee:not(.unassigned) .nm').forEach(el => {
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const nm = el.dataset.assigneeName || '';
+        if (!nm) return;
+        if (typeof window.opsOpenTeamMember === 'function'){
+          window.opsOpenTeamMember({ name: nm });
+        } else {
+          opsToast('Team section not ready — try again.', 'error');
+        }
+      });
+    });
+    list.querySelectorAll('.oq-check').forEach(cb => {
+      cb.addEventListener('change', e => {
+        const id = Number(cb.dataset.id);
+        const row = cb.closest('.oq-row');
+        if (cb.checked) { OQ.selected.add(id); row.classList.add('is-checked'); }
+        else { OQ.selected.delete(id); row.classList.remove('is-checked'); }
+        renderBulkBar();
+      });
+    });
+    list.querySelectorAll('[data-action]').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        const id = Number(btn.dataset.id);
+        const act = btn.dataset.action;
+        handleRowAction(act, id);
+      });
+    });
+    renderBulkBar();
+  }
+
+  function renderRow(o){
+    const pf = PLATFORM_BADGE[(o.store_platform||'').toLowerCase()] || {ic:'🌐',label:'Other',cls:'other'};
+    const img = o.product_image_url
+      ? `<img src="${opsEsc(o.product_image_url)}" alt="" loading="lazy">`
+      : `<div class="ph">📦</div>`;
+    const supplierHtml = supplierColumn(o);
+    const actionsHtml  = actionsForStatus(o);
+    const checked = OQ.selected.has(o.id);
+
+    // Strip pieces
+    const createdShort = fmtShortDate(o.created_at_iso);
+    const paidShort    = o.paid_at_iso ? fmtShortDate(o.paid_at_iso) : '';
+    const tenantTag    = (o.store_name || o.tenant_username)
+      ? `<span class="oq-strip-sep">·</span><span class="oq-strip-meta">🏪 ${opsEsc(o.store_name || ('@'+o.tenant_username))}</span>`
+      : '';
+    const flagHtml = o.flag ? ` <span class="oq-flag" title="${opsEsc(o.ship_country)}">${opsEsc(o.flag)}</span>` : '';
+
+    // Body — product info
+    const moreItems = (o.item_count > 1)
+      ? `<div class="more">+${o.item_count - 1} more</div>` : '';
+
+    // Assignee chip
+    const assigneeBg = opsEsc(o.assignee_color || '#94a3b8');
+    const assigneeName = o.assignee || 'Unassigned';
+    const assigneeRole = o.assignee_role || '';
+    const assigneeCls  = o.assignee ? '' : 'unassigned';
+
+    return `
+      <div class="oq-row ${checked?'is-checked':''}" data-id="${o.id}">
+        <div class="oq-strip">
+          <input type="checkbox" class="oq-check" data-id="${o.id}" ${checked?'checked':''} onclick="event.stopPropagation()">
+          <span class="oq-plat-badge ${pf.cls}" title="Synced from ${opsEsc(pf.label)}">${pf.ic}</span>
+          <span class="oq-strip-ref" title="Drop Sigma order #">${opsEsc(o.ds_order_ref || ('DS-'+o.id))}</span>
+          <span class="oq-strip-sep">·</span>
+          <span class="oq-strip-src" title="Customer's order #">#${opsEsc(o.source_order_ref || '—')}</span>
+          <span class="oq-strip-sep">·</span>
+          <span class="oq-strip-pill oq-pill-grp-${opsEsc(o.sourcing_status)}">${opsEsc(o.sourcing_status_label)}</span>
+          ${tenantTag}
+          ${createdShort ? `<span class="oq-strip-sep">·</span><span class="oq-strip-meta">📅 Created ${opsEsc(createdShort)}</span>` : ''}
+          <span class="oq-strip-sep">·</span>
+          <span class="oq-strip-meta oq-strip-customer">👤 ${opsEsc(o.customer_name || '—')}${flagHtml}</span>
+          ${paidShort ? `<span class="oq-strip-paid">💳 Paid ${opsEsc(paidShort)}</span>` : ''}
+        </div>
+        <div class="oq-body">
+          <div class="oq-product">
+            ${img}
+            <div class="info">
+              <div class="nm">${opsEsc(o.product_name || '—')}</div>
+              ${moreItems}
+              <div class="meta">${o.product_sku ? opsEsc(o.product_sku) : '—'} · qty ${o.item_count > 1 ? (o.item_count + ' items') : '1'}</div>
+            </div>
+          </div>
+          <div class="oq-cust">
+            ${o.customer_phone ? `<div class="phone">📞 ${opsEsc(o.customer_phone)}</div>` : ''}
+            ${o.customer_email ? `<div class="email" title="${opsEsc(o.customer_email)}">📧 ${opsEsc(o.customer_email)}</div>` : ''}
+            <div class="city">${opsEsc([o.ship_city, o.ship_country].filter(Boolean).join(', ') || '—')}</div>
+            <div class="tenant">${opsEsc(o.created_ago || '')}</div>
+          </div>
+          <div class="oq-supplier">${supplierHtml}</div>
+          <div class="oq-price-col">${priceBlock(o)}</div>
+          <div class="oq-assignee ${assigneeCls}">
+            <div class="lbl">Assigned to</div>
+            <span class="nm" data-assignee-name="${opsEsc(assigneeName)}"
+                  title="${opsEsc(assigneeName)}${o.assignee?' — click to open team member':''}">${opsEsc(assigneeName)}</span>
+            ${assigneeRole ? `<div class="role">${opsEsc(assigneeRole)}</div>` : '<div class="role" style="color:#cbd5e1;">—</div>'}
+          </div>
+          <div class="oq-actions">${actionsHtml}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  function supplierInitials(name){
+    if (!name) return '?';
+    const p = String(name).trim().split(/\s+/);
+    return (((p[0]||'')[0]||'') + ((p[1]||'')[0]||'')).toUpperCase() || '?';
+  }
+
+  function supplierColumn(o){
+    // Every state uses the same 3-row vertical rhythm (label + name + meta).
+    if (o.supplier_name){
+      const auto = o.supplier_auto_matched
+        ? '<span class="auto" title="Auto-matched by SKU">⚡ Auto</span>' : '';
+      const metaParts = [];
+      if (o.supplier_flag || o.supplier_country){
+        metaParts.push(`${opsEsc(o.supplier_flag||'')} ${opsEsc(o.supplier_country||'')}`.trim());
+      }
+      if (o.sourcing_lead_days){
+        metaParts.push(`${o.sourcing_lead_days}d lead`);
+      }
+      const metaHtml = `<div class="meta">${
+        metaParts.length
+          ? metaParts.map((p,i)=>`<span>${p}</span>${i<metaParts.length-1?'<span class="sep">·</span>':''}`).join('')
+          : '<span style="color:#cbd5e1;">—</span>'
+      }</div>`;
+      const supId = o.supplier_id || '';
+      return `
+        <div class="lbl">Sourced via</div>
+        <div class="name">
+          <span class="tx" data-supplier-id="${opsEsc(supId)}" data-supplier-name="${opsEsc(o.supplier_name)}"
+                title="Click to open ${opsEsc(o.supplier_name)}">${opsEsc(o.supplier_name)}</span>
+          ${auto}
+        </div>
+        ${metaHtml}
+      `;
+    }
+    if (o.sourcing_status === 'pending_source'){
+      return `
+        <div class="lbl">Sourced via</div>
+        <div class="name">
+          <span class="tx awaiting">Awaiting source</span>
+        </div>
+        <div class="meta"><span style="color:#cbd5e1;">Pick supplier in Quote tab</span></div>
+      `;
+    }
+    return `
+      <div class="lbl">Sourced via</div>
+      <div class="name">
+        <span class="tx unlinked">Not linked</span>
+      </div>
+      <div class="meta"><span style="color:#cbd5e1;">Needs investigation</span></div>
+    `;
+  }
+
+  /* Price block — Tenant Sells (top) + Product/Shipping/Drop-Sigma Total
+     (middle) + Margin (bottom). Pending Source orders (no quote yet) only
+     show the tenant-sells line + an "Awaiting quote" placeholder. */
+  function priceBlock(o){
+    const sells = Number(o.merchant_total_usd) || 0;
+    const sellsLine = sells > 0
+      ? `<span class="line sells"><span class="l">Tenant Sells</span><span class="v">${opsUSD(sells)}</span></span>`
+      : '';
+
+    if (o.sourcing_status === 'pending_source' || !o.sourcing_total_usd){
+      // No quote yet → just the tenant-sells line above a soft placeholder
+      return `
+        <div class="oq-row-price">
+          ${sellsLine || ''}
+          <span class="line"><span class="l" style="font-style:italic;color:#94a3b8;">Awaiting Drop Sigma quote…</span></span>
+        </div>`;
+    }
+
+    const prod = o.sourcing_product_usd != null ? opsUSD(o.sourcing_product_usd) : '—';
+    const ship = o.sourcing_shipping_usd != null ? opsUSD(o.sourcing_shipping_usd) : '—';
+    const tot  = Number(o.sourcing_total_usd) || 0;
+
+    // Margin = what tenant sells for − what Drop Sigma charges them
+    let marginLine = '';
+    if (sells > 0){
+      const margin = sells - tot;
+      const cls = margin >= 0 ? 'pos' : 'neg';
+      const sign = margin >= 0 ? '+' : '−';
+      marginLine = `<span class="line margin ${cls}"><span class="l">Tenant Margin</span><span class="v">${sign}${opsUSD(Math.abs(margin))}</span></span>`;
+    }
+
+    return `
+      <div class="oq-row-price">
+        ${sellsLine}
+        <span class="line"><span class="l">Product</span><span class="v">${prod}</span></span>
+        <span class="line"><span class="l">Shipping</span><span class="v">${ship}</span></span>
+        <span class="line is-total"><span class="l">Drop Sigma</span><span class="v">${opsUSD(tot)}</span></span>
+        ${marginLine}
+      </div>`;
+  }
+
+  function assigneeColumn(o){
+    return o.assignee
+      ? `<div class="av" style="background:${opsEsc(o.assignee_color||'#6366f1')}">${initials(o.assignee)}</div>
+         <div class="nm">${opsEsc(o.assignee)}</div>`
+      : `<div class="av">?</div><div class="nm">Unassigned</div>`;
+  }
+
+  function actionsForStatus(o){
+    const open = `<button class="ops-btn ghost" data-action="open" data-id="${o.id}">Open</button>`;
+    switch (o.sourcing_status){
+      case 'pending_source':
+        return `<button class="ops-btn primary" data-action="quote" data-id="${o.id}">Quote</button>` + open;
+      case 'pending_payment':
+        return `<button class="ops-btn ghost" data-action="open" data-id="${o.id}">View quote</button>`;
+      case 'processing':
+        return `<button class="ops-btn gold" data-action="ship" data-id="${o.id}">Ship</button>` + open;
+      case 'shipping':
+        return `<button class="ops-btn success" data-action="deliver" data-id="${o.id}">Delivered</button>` + open;
+      case 'delivered':
+      case 'cancel':
+        return open;
+      default:
+        return open;
+    }
+  }
+
+  function handleRowAction(act, id){
+    if (!window.opsOpenOrderModal) return;
+    // All actions route through the modal, opened to the right tab.
+    const tabMap = {quote:'quote', ship:'shipping', deliver:'shipping', open:'overview'};
+    window.opsOpenOrderModal(id, tabMap[act] || 'overview');
+  }
+
+  function renderBulkBar(){
+    const wrap = document.getElementById('oqBulkBar');
+    if (!wrap) return;
+    if (!OQ.selected.size){ wrap.innerHTML = ''; return; }
+    wrap.innerHTML = `
+      <div class="oq-bulk">
+        <span class="cnt">${OQ.selected.size} selected</span>
+        <button class="ops-btn ghost" id="oqBulkClear" style="background:rgba(255,255,255,.1);color:#fff;border-color:rgba(255,255,255,.15);">Clear</button>
+        <span class="sep"></span>
+        <button class="ops-btn gold" id="oqBulkAssign">Bulk assign</button>
+      </div>`;
+    document.getElementById('oqBulkClear').addEventListener('click', () => {
+      OQ.selected.clear();
+      renderList();
+    });
+    document.getElementById('oqBulkAssign').addEventListener('click', async () => {
+      const ids = Array.from(OQ.selected);
+      if (!ids.length){ opsToast('Select at least one order.', 'error'); return; }
+      if (typeof window.opsBulkAssignDialog !== 'function'){
+        opsToast('Assign modal unavailable — refresh the page.', 'error'); return;
+      }
+      // Hand off to the polished modal — same widget the order detail uses.
+      // After the user submits, the modal calls our onDone callback to clear
+      // selection and reload the list.
+      window.opsBulkAssignDialog(ids, () => {
+        OQ.selected.clear();
+        loadOrders();
+      });
+    });
+  }
+
+  /* ─── Tiny helpers ──────────────────────────────────────────────── */
+  function initials(s){
+    s = (s||'').trim();
+    if (!s) return '?';
+    const parts = s.split(/\s+/).slice(0,2);
+    return parts.map(p => p[0] || '').join('').toUpperCase() || s.slice(0,2).toUpperCase();
+  }
+})();
+</script>
