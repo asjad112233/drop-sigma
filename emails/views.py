@@ -3215,11 +3215,23 @@ def _forbidden_response():
 
 @csrf_exempt
 @api_view(["GET", "POST"])
+@permission_classes([IsAuthenticated])
 def email_templates_api(request):
+    # SECURITY: this endpoint used to accept ?store_id=<anything> on GET
+    # without any auth or ownership check, so a logged-out (or any
+    # logged-in) actor could list every other tenant's template names,
+    # subjects, and bodies. Now: require auth on every method, and
+    # require the caller actually owns the store they're querying.
     if request.method == "GET":
         store_id = request.GET.get("store_id")
+        store = Store.objects.filter(id=store_id, user=_data_owner(request)).first() if store_id else None
+        if not store:
+            # Don't 404 — that would leak "this id exists, belongs to
+            # someone else" vs "this id doesn't exist". Return an empty
+            # list with success=True; UI handles "no templates" naturally.
+            return Response({'success': True, 'templates': [], 'count': 0})
         qs = EmailTemplate.objects.filter(
-            Q(store_id=store_id) | Q(is_global=True)
+            Q(store=store) | Q(is_global=True)
         ).distinct().order_by('-is_category_default', 'id')
         if request.GET.get("category"):
             qs = qs.filter(category=request.GET["category"])
@@ -3228,13 +3240,11 @@ def email_templates_api(request):
         return Response({'success': True, 'templates': [_template_to_dict(t) for t in qs], 'count': qs.count()})
 
     # POST: create. Require auth and verify the caller owns the target store.
-    if not request.user.is_authenticated:
-        return Response({'success': False, 'message': 'Login required.'}, status=401)
     store_id = request.data.get("store_id")
     store = Store.objects.filter(id=store_id, user=_data_owner(request)).first() if store_id else None
     if not store:
         return Response({'success': False, 'message': 'Store not found.'}, status=404)
-    if not (request.user.is_superuser or store.user_id == request.user.id):
+    if not (request.user.is_superuser or store.user_id == _data_owner(request).id):
         return _forbidden_response()
     # is_global ignored on create — only superadmin tooling may produce
     # cross-tenant templates, and there's no UI for that yet.
@@ -3249,9 +3259,19 @@ def email_templates_api(request):
 @permission_classes([IsAuthenticated])
 def email_template_detail_api(request, template_id):
     t = get_object_or_404(EmailTemplate, id=template_id)
+    # SECURITY: previously, GET returned the full template (subject,
+    # body, sender config) to any authenticated user — they could
+    # iterate template ids and read every other tenant's templates.
+    # Now: ownership-or-global gate applies to GET as well as
+    # mutating methods. Global seed templates remain readable to all
+    # authenticated tenants by design (they're the design library).
+    is_global = (t.store_id is None) and t.is_global
+    if not (is_global or _user_can_manage_template(request.user, t)):
+        return _forbidden_response()
     if request.method == "GET":
         return Response({'success': True, 'template': _template_to_dict(t, full=True)})
-    # PUT / DELETE — must own the template.
+    # PUT / DELETE — must own the template (global templates non-mutable
+    # by non-superusers; _user_can_manage_template already enforces).
     if not _user_can_manage_template(request.user, t):
         return _forbidden_response()
     if request.method == "PUT":
@@ -3362,8 +3382,12 @@ def reset_template_to_default_api(request, template_id):
 @permission_classes([IsAuthenticated])
 def template_sample_data_api(request):
     store_id = request.GET.get("store_id")
-    store = Store.objects.filter(id=store_id, user=_data_owner(request)).first()
-    ctx = build_template_context(store)
+    store = Store.objects.filter(id=store_id, user=_data_owner(request)).first() if store_id else None
+    # If the caller asks for a store they don't own, return the GENERIC
+    # sample context (no real order data). Returning success=True keeps
+    # the UI rendering normally — but the foreign store's customer
+    # names, addresses, and totals never leak into the response.
+    ctx = build_template_context(store) if store else build_template_context(None)
     return Response({'success': True, 'data': ctx})
 
 
@@ -3372,11 +3396,34 @@ def template_sample_data_api(request):
 @permission_classes([IsAuthenticated])
 def send_test_template_api(request, template_id):
     t = get_object_or_404(EmailTemplate, id=template_id)
+    # SECURITY: previously had NO ownership check. A logged-in attacker
+    # could pass any template id and trigger `send_email_with_store_account`
+    # using the victim store's connected Gmail OAuth account — sending
+    # an arbitrary "test" email FROM the victim's address TO an address
+    # of their choosing. That's both abuse (spam/phish from a real
+    # business inbox) and an exfiltration vector. Now: caller must
+    # actually own this template, OR (for global seed templates which
+    # don't have a store) must pass an explicit store_id they own and
+    # we send through THAT store's account instead of someone else's.
+    explicit_store_id = (request.data.get('store_id') or '').strip()
+    if t.store_id is None and t.is_global:
+        # Seed template — caller must specify their own store to send
+        # the test through.
+        if not explicit_store_id:
+            return Response({'success': False, 'message': 'store_id required for global template tests.'}, status=400)
+        target_store = Store.objects.filter(id=explicit_store_id, user=_data_owner(request)).first()
+        if not target_store:
+            return Response({'success': False, 'message': 'Store not found.'}, status=404)
+    else:
+        if not _user_can_manage_template(request.user, t):
+            return _forbidden_response()
+        target_store = t.store
+
     test_email = (request.data.get('test_email') or '').strip()
     if not test_email:
         return Response({'success': False, 'message': 'Test email required.'}, status=400)
 
-    ctx = build_template_context(t.store)
+    ctx = build_template_context(target_store)
 
     subject = render_template_content(t.subject, ctx) or t.name
     body = render_template_content(t.body_html, ctx)
@@ -3387,12 +3434,12 @@ def send_test_template_api(request, template_id):
 </body></html>"""
 
     try:
-        account = EmailAccount.objects.filter(store=t.store, is_active=True).first()
+        account = EmailAccount.objects.filter(store=target_store, is_active=True).first()
         if not account:
             return Response({'success': False, 'message': 'No active email account connected for this store.'}, status=400)
 
         send_email_with_store_account(
-            store=t.store,
+            store=target_store,
             recipient=test_email,
             subject=f'[TEST] {subject}',
             body=full_html,
@@ -4032,14 +4079,24 @@ def _active_categories_for_store(store_id):
 @permission_classes([IsAuthenticated])
 def auto_email_toggle_api(request):
     store_id = request.data.get("store_id") or request.GET.get("store_id")
-    account = EmailAccount.objects.filter(store_id=store_id).first()
+    # SECURITY: previously this looked up EmailAccount by raw store_id
+    # with NO ownership check, so a logged-in attacker could (a) toggle
+    # another tenant's Auto Email ON/OFF and (b) trigger
+    # _seed_shopify_templates on arbitrary stores. Now: require the
+    # caller actually own the store before we do anything.
+    store = Store.objects.filter(id=store_id, user=_data_owner(request)).first() if store_id else None
+    if not store:
+        return Response({'success': False, 'message': 'Store not found.'}, status=404)
+    # Active accounts only — picking a stale/disabled row would flip
+    # the wrong record and silently break the toggle.
+    account = EmailAccount.objects.filter(store=store, is_active=True).order_by("-id").first()
 
     if request.method == "GET":
         enabled = account.auto_email_enabled if account else False
         return Response({
             "success": True,
             "auto_email_enabled": enabled,
-            "active_categories": _active_categories_for_store(store_id),
+            "active_categories": _active_categories_for_store(store.id),
         })
 
     # POST — toggle
@@ -4050,8 +4107,8 @@ def auto_email_toggle_api(request):
 
     # Seed default templates the very first time Auto Email is turned ON
     # (works even without an email account connected)
-    if enabled and not EmailTemplate.objects.filter(store_id=store_id).exists():
-        _seed_shopify_templates(store_id)
+    if enabled and not EmailTemplate.objects.filter(store=store).exists():
+        _seed_shopify_templates(store.id)
 
     if not account:
         # No email account — templates seeded but auto-send can't be enabled
@@ -4059,7 +4116,7 @@ def auto_email_toggle_api(request):
             "success": False,
             "seeded": True,
             "message": "Templates created! Connect an email account to enable auto-sending.",
-            "active_categories": _active_categories_for_store(store_id),
+            "active_categories": _active_categories_for_store(store.id),
         }, status=400)
 
     account.auto_email_enabled = enabled
@@ -4072,7 +4129,7 @@ def auto_email_toggle_api(request):
     return Response({
         "success": True,
         "auto_email_enabled": account.auto_email_enabled,
-        "active_categories": _active_categories_for_store(store_id),
+        "active_categories": _active_categories_for_store(store.id),
     })
 
 
@@ -4105,12 +4162,25 @@ def send_auto_status_email(order, new_status):
         category = STATUS_TO_CATEGORY.get((new_status or "").lower().strip())
         if not category:
             return
+        # CORRECTNESS: tenants can have BOTH a per-store template marked
+        # as the category default AND inherit a global seed template
+        # marked the same. The old query collapsed them into one
+        # `.first()` with no ordering, so DB internals decided which
+        # one fired — and on Postgres that means the tenant could see
+        # two different emails get sent across status changes depending
+        # on what order rows hit the index. Now: per-store ALWAYS wins
+        # over global so the customisation a tenant explicitly made on
+        # their own template is what their customers actually receive.
         template = EmailTemplate.objects.filter(
+            store=order.store,
             is_category_default=True,
             status="active",
             category=category,
-        ).filter(
-            Q(store=order.store) | Q(is_global=True)
+        ).first() or EmailTemplate.objects.filter(
+            is_global=True,
+            is_category_default=True,
+            status="active",
+            category=category,
         ).first()
         if not template:
             return

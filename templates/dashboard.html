@@ -24441,6 +24441,13 @@ async function loadTemplates(){
   const loading = document.getElementById("tmListLoading");
   if(!grid) return;
   if(loading) loading.style.display="";
+  // RACE GUARD: user can switch the active store mid-fetch (the
+  // sidebar's project switcher fires loadTemplates again before the
+  // first response lands). Capture the store id we started with —
+  // when the await resolves we'll only apply results if we're still
+  // pointing at the same store. Otherwise a slow Store A response
+  // would overwrite Store B's templates/sample data in the UI.
+  const sidAtStart = selectedStoreId;
   try{
     // Fetch real last-order data for this store in parallel with templates list
     const [tmRes, sampleRes] = await Promise.all([
@@ -24449,11 +24456,15 @@ async function loadTemplates(){
     ]);
     const data = await tmRes.json();
     const sampleData = await sampleRes.json();
+    // Stale response — user switched stores while we were waiting.
+    // Bail out before touching any shared module state.
+    if(String(sidAtStart) !== String(selectedStoreId)) return;
     if(sampleData.success && sampleData.data) _tmSamples = sampleData.data;
     _tmTemplates = data.templates || [];
     tmUpdatePillCounts(_tmTemplates);
     tmFilterList();
   }catch(e){
+    if(String(sidAtStart) !== String(selectedStoreId)) return;
     if(grid) grid.innerHTML = '<div class="em-settings-empty">Failed to load templates.</div>';
   }
 }
@@ -24506,25 +24517,49 @@ const TM_CAT_LABELS = {order:"Order Confirmation",shipping:"Shipping",cancelled:
 
 // ─── Auto Email Setup ──────────────────────────────────────────────────────────
 
+// CORRECTNESS: must mirror backend `STATUS_TO_CATEGORY` in emails/views.py.
+// Old map labelled `refund` as "Completed" — but backend maps the
+// "completed" order status to the `delivered` template category, NOT
+// `refund`. Tenants saw a red "No active template" pill for Completed
+// even when they had a valid Delivered template, because the panel
+// was probing the wrong category. Now the panel reflects the real
+// categories the backend actually checks at status-change time.
 const _AE_CATS = [
-  {key:"order",     label:"Processing"},
-  {key:"shipping",  label:"Shipping"},
-  {key:"refund",    label:"Completed"},
-  {key:"failed",    label:"Failed"},
-  {key:"cancelled", label:"Cancelled"},
-  {key:"dispute",   label:"Dispute"},
+  {key:"order",      label:"Processing"},
+  {key:"shipping",   label:"Shipping"},
+  {key:"delivered",  label:"Completed"},   // backend "completed"  → "delivered"
+  {key:"failed",     label:"Failed"},
+  {key:"cancelled",  label:"Cancelled"},
+  {key:"refund",     label:"Refunded"},    // backend "refunded"   → "refund"
+  {key:"returned",   label:"Returned"},    // backend "returned"   → "returned"
+  {key:"dispute",    label:"Dispute"},
 ];
 
 let _autoEmailEnabled = false;
 
 async function loadAutoEmailState(){
+  // RACE GUARD + state reset (same reason as loadTemplates): without
+  // this, switching stores while a fetch was in flight would leave
+  // the toggle showing the OLD store's ON/OFF state for the NEW
+  // store, and silent error-swallow could leave the previous store's
+  // active-category dots painted on the new store's panel.
+  const sidAtStart = selectedStoreId;
   try{
     const r = await fetch(`/emails/api/auto-email/?store_id=${selectedStoreId}`);
     const d = await r.json();
-    _autoEmailEnabled = d.auto_email_enabled || false;
+    if(String(sidAtStart) !== String(selectedStoreId)) return;
+    _autoEmailEnabled = !!d.auto_email_enabled;
     _renderAutoEmailToggle(_autoEmailEnabled);
-    if(_autoEmailEnabled) _renderAutoEmailPanel(d.active_categories || []);
-  }catch(_){}
+    _renderAutoEmailPanel(d.active_categories || []);
+  }catch(_){
+    if(String(sidAtStart) !== String(selectedStoreId)) return;
+    // On failure leave the toggle in a safe OFF state instead of
+    // whatever the previous store rendered. The user can re-toggle
+    // once the API recovers.
+    _autoEmailEnabled = false;
+    _renderAutoEmailToggle(false);
+    _renderAutoEmailPanel([]);
+  }
 }
 
 function _renderAutoEmailToggle(on){
@@ -24673,6 +24708,16 @@ function tmRenderCards(list){
       const iframe = document.createElement('iframe');
       iframe.scrolling = 'no';
       iframe.tabIndex = -1;
+      // DEFENSE-IN-DEPTH: sandbox without `allow-scripts` ensures any
+      // unescaped customer-supplied content in the rendered template
+      // (e.g. a malicious product name in the items list) can't run JS
+      // inside the iframe and reach the parent dashboard. We keep
+      // `allow-same-origin` because the post-load handler needs to
+      // read `iframe.contentDocument.scrollHeight` to compute the
+      // scaling factor — without same-origin that access throws and
+      // every thumbnail renders at the default 1800px placeholder
+      // height (looks "very big"). Scripts stay blocked either way.
+      iframe.setAttribute('sandbox', 'allow-same-origin');
       iframe.style.cssText = 'width:600px;height:1800px;border:none;pointer-events:none;transform-origin:top left;display:block;position:absolute;top:0;left:0;';
       slot.style.position = 'relative';
       iframe.srcdoc = '<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{box-sizing:border-box;}body{margin:0;padding:0;}</style></head><body style="margin:0;padding:0;">' + rendered + '</body></html>';
