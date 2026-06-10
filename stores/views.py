@@ -1054,7 +1054,7 @@ def _diagnose_webhook(store, request):
             r = woo_session().get(
                 f"{store.store_url.rstrip('/')}/wp-json/wc/v3/webhooks",
                 auth=(store.api_key, store.api_secret),
-                params={"per_page": 100}, timeout=10, verify=False,
+                params={"per_page": 100}, timeout=10,
             )
             if not r.ok:
                 return {"ok": False, "platform": "woocommerce",

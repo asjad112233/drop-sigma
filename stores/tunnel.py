@@ -185,7 +185,7 @@ def _update_woocommerce_webhooks(tunnel_url):
                 resp = _wc_sess.get(
                     f"{store.store_url}/wp-json/wc/v3/webhooks",
                     auth=(store.api_key, store.api_secret),
-                    timeout=10, verify=False,
+                    timeout=10,
                 )
                 if resp.ok:
                     for wh in resp.json():
@@ -194,7 +194,7 @@ def _update_woocommerce_webhooks(tunnel_url):
                                 f"{store.store_url}/wp-json/wc/v3/webhooks/{wh['id']}",
                                 auth=(store.api_key, store.api_secret),
                                 json={"delivery_url": new_url},
-                                timeout=10, verify=False,
+                                timeout=10,
                             )
             except Exception:
                 pass

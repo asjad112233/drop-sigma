@@ -863,7 +863,12 @@ def setup_woocommerce_webhook(store, delivery_url):
     #    repair stale delivery URLs.
     existing_by_topic = {}  # topic -> {"id", "delivery_url"}
     try:
-        existing = sess.get(base, auth=auth, params={"per_page": 100}, timeout=15, verify=False)
+        # NOTE: do NOT pass verify=False — urllib3 2.x + cloudscraper 1.2.71
+        # raise `ValueError: Cannot set verify_mode to CERT_NONE when
+        # check_hostname is enabled` because cloudscraper's SSL adapter
+        # toggles those flags in the wrong order. All real WC stores
+        # have valid certs, so verification is the right default anyway.
+        existing = sess.get(base, auth=auth, params={"per_page": 100}, timeout=15)
         if existing.ok:
             for wh in existing.json():
                 if isinstance(wh, dict) and wh.get("topic"):
@@ -907,7 +912,6 @@ def setup_woocommerce_webhook(store, delivery_url):
                     auth=auth,
                     json={"delivery_url": delivery_url, "status": "active"},
                     timeout=15,
-                    verify=False,
                 )
                 if r.ok:
                     result["registered"].append(topic)
@@ -933,7 +937,7 @@ def setup_woocommerce_webhook(store, delivery_url):
             "status": "active",
         }
         try:
-            r = sess.post(base, auth=auth, json=payload, timeout=15, verify=False)
+            r = sess.post(base, auth=auth, json=payload, timeout=15)
             if r.ok:
                 wh_id = r.json().get("id")
                 result["registered"].append(topic)
