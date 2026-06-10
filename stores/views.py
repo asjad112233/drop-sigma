@@ -1515,3 +1515,46 @@ def delete_store_api(request, store_id):
         # Echo what we received so the UI can verify the round-trip.
         "_debug_received_flag":     raw,
     })
+
+
+# ✏️ RENAME STORE — lets a tenant change the display name of one of
+# their own stores. Only `name` is mutable here; store_url / api_key
+# / api_secret are deliberately NOT writable through this endpoint
+# because changing them is a "reconnect store" flow with its own
+# webhook/auth side effects (and would silently break a working
+# integration). Tenants who need to swap creds delete + re-add.
+@api_view(["PATCH", "POST"])
+@permission_classes([AllowAny])
+def update_store_api(request, store_id):
+    if not request.user.is_authenticated:
+        return Response({"success": False, "message": "Authentication required"}, status=401)
+    # Per-user scope: tenants can only rename their own stores. A
+    # superuser editing someone else's store belongs in /superadmin/,
+    # not the regular dashboard — same rule as delete_store_api.
+    store = get_object_or_404(Store, id=store_id, user=request.user)
+
+    raw_name = (request.data.get("name") if hasattr(request, "data") and request.data else None)
+    if raw_name is None:
+        raw_name = request.POST.get("name") or ""
+    new_name = (raw_name or "").strip()
+
+    if not new_name:
+        return Response({
+            "success": False,
+            "message": "Store name cannot be empty.",
+        }, status=400)
+    # Hard cap matches Store.name max_length; defends against absurd
+    # values that would break the UI grid.
+    if len(new_name) > 255:
+        return Response({
+            "success": False,
+            "message": "Store name is too long (max 255 characters).",
+        }, status=400)
+
+    store.name = new_name
+    store.save(update_fields=["name"])
+
+    return Response({
+        "success": True,
+        "store":   StoreSerializer(store).data,
+    })

@@ -6,6 +6,7 @@ urlpatterns = [
 
     path("api/", views.stores_list_api, name="stores_list_api"),
     path("api/create/", views.create_store_api, name="create_store_api"),
+    path("api/update/<int:store_id>/", views.update_store_api, name="update_store_api"),
     path("api/delete/<int:store_id>/", views.delete_store_api, name="delete_store_api"),
 
     # ✅ AUTO CONNECT FLOW
