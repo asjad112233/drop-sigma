@@ -112,29 +112,34 @@ def _is_waf_handshake_error(exc) -> bool:
 
 
 def _looks_like_challenge_response(response) -> bool:
-    """True if the response body is a WAF challenge page (Sucuri
-    sgcaptcha, Cloudflare 'Just a moment', etc.) rather than a real
-    WC API response. Used to detect WAFs that return a 2xx STATUS
-    code with an HTML challenge body — these would otherwise slip
-    past the SSL-error-based escalation in _SmartWooSession._call.
+    """True if the response body is a WAF challenge / IP-block page
+    rather than a real WC API response. Triggers tier escalation in
+    _SmartWooSession._call.
 
-    Inspects status code + Content-Type + body text. Returns True
-    only when we're confident this is a challenge — false negative
-    is safer than false positive (false positive would re-route a
-    real WC response through unnecessary retry tiers)."""
+    Cases this catches:
+      • 2xx/3xx with HTML body containing a captcha (Sucuri sgcaptcha,
+        Cloudflare "Just a moment") — WAF returned its challenge with
+        a success-shaped status code.
+      • 403/406/429/444 with HTML body containing a WAF banner
+        (Kinsta nginx "<title>403 - Forbidden" page, Sucuri block,
+        Cloudflare block, etc.) — IP-reputation block at the edge.
+      • 4xx with JSON body → treated as REAL merchant response
+        (genuine auth error or WC validation error) and passes through.
+
+    Conservative on JSON: any application/json response, including
+    4xx ones from WC like `{"code":"woocommerce_rest_cannot_view"...}`,
+    is trusted as a real API response."""
     try:
         status = getattr(response, "status_code", 0)
-        # Only flag 2xx/3xx — 4xx/5xx are real merchant responses,
-        # let them through to existing error handlers.
-        if status >= 400:
-            return False
         ctype = (response.headers.get("Content-Type") or "").lower()
     except Exception:
         return False
-    # JSON Content-Type → trust it, no further check needed.
+    # JSON Content-Type → trust it, no further escalation. This is
+    # critical for letting genuine 401/403 WC errors propagate so
+    # callers can show "invalid credentials" instead of looping.
     if "application/json" in ctype or "text/json" in ctype:
         return False
-    # HTML Content-Type with body signatures of common WAF challenges.
+    # Read body once for the markers below.
     try:
         body = (response.text or "")[:4000].lower()
     except Exception:
@@ -142,15 +147,21 @@ def _looks_like_challenge_response(response) -> bool:
     if not body:
         return False
     challenge_markers = (
-        "sgcaptcha",                # Sucuri Generic Captcha
+        "sgcaptcha",                  # Sucuri Generic Captcha
         "/.well-known/sgcaptcha",
-        "just a moment",            # Cloudflare interstitial
+        "just a moment",              # Cloudflare interstitial
         "cf-challenge",
         "cf_chl_",
-        "checking your browser",    # Cloudflare / others
+        "checking your browser",      # Cloudflare / others
         "ddos protection by",
-        "<title>403 - forbidden",   # Kinsta nginx page
         "enable javascript",
+        # WAF block pages — these come back as HTTP 403 / 406 / etc
+        # at the EDGE before reaching WordPress, so the body is a
+        # generic forbidden page with no WP content.
+        "<title>403 - forbidden",     # Kinsta nginx firewall page
+        "<title>access denied",       # Sucuri / generic
+        "blocked by",                 # Wordfence / Sucuri banners
+        "your ip has been temporarily blocked",
     )
     return any(m in body for m in challenge_markers)
 
