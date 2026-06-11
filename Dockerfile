@@ -15,14 +15,16 @@ WORKDIR /app
 
 COPY requirements.txt .
 # Resilient pip install — Railway's build host has hit transient PyPI
-# connection drops that exhaust pip's default 5 retries with 15 s
-# timeouts, failing the whole build. Bump both, and pin the official
-# PyPI index URL explicitly so we don't depend on any environment
-# default that may have been swapped in.
+# connection drops that exhausted pip's default 5 retries with 15 s
+# timeouts, failing the build with a misleading "no matching
+# distribution" error. Bump retries modestly and use a 45 s socket
+# timeout (long enough to ride out a brief drop, short enough that
+# the WORST-case total per-package wait stays under ~7 min even if
+# every retry exhausts). Pin the official pypi.org index URL.
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir \
-        --retries 10 \
-        --timeout 120 \
+        --retries 8 \
+        --timeout 45 \
         --index-url https://pypi.org/simple \
         -r requirements.txt
 
