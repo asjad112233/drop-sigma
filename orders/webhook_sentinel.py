@@ -496,13 +496,27 @@ def _refresh_tracking_events_pass() -> None:
             Order.objects
             .exclude(tracking_number__isnull=True)
             .exclude(tracking_number__exact="")
-            .filter(delivered_at__isnull=True)
             .filter(store__is_active=True)
             .exclude(store__user__isnull=True)
             .filter(
-                # Either we've never refreshed, or we're due based on the
-                # per-attempt cadence (regular cadence until we've burnt
-                # the attempts budget, then back off).
+                # We want to refresh:
+                #  (a) every undelivered order — normal happy path.
+                #  (b) orders whose delivered_at is set but we've NEVER
+                #      pulled carrier events. The old over-eager substring
+                #      check in fetch_live_tracking_api ("deliver" in text)
+                #      wrongly stamped delivered_at on lots of in-flight
+                #      parcels; the first pull will either confirm the
+                #      delivery from the carrier feed or auto-clear the
+                #      stale stamp (refresh_order_tracking_events handles
+                #      both). After that one chance, delivered orders
+                #      drop out of eligibility (case (a) excludes them).
+                Q(delivered_at__isnull=True)
+                | Q(delivered_at__isnull=False,
+                    tracking_events_updated_at__isnull=True)
+            )
+            .filter(
+                # Cadence: never refreshed → go; under-budget + due → go;
+                # over-budget + on-backoff → go.
                 Q(tracking_events_updated_at__isnull=True)
                 | Q(tracking_events_attempts__lt=_TRACKING_EVENTS_MAX_ATTEMPTS,
                     tracking_events_updated_at__lt=fresh_cutoff)
