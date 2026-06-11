@@ -211,11 +211,19 @@ _STAGE_OFFSETS_H = {
 def _synthesised_active_stage(order) -> str:
     """Best-effort stage classification when we have no carrier events.
 
-    Critical: we only return ``destination`` when there's HARD evidence
-    (an actual delivered_at or fulfillment_status=='delivered'). For
-    every "completed" / "fulfilled" / "shipped" we treat the shipment
-    as still in transit, because seller-side completion does NOT mean
-    the parcel reached the customer.
+    Hardening: we only return ``destination`` when fulfillment_status
+    is unambiguously delivered — NOT when delivered_at alone is set.
+
+    Why: the old over-eager substring check in
+    fetch_live_tracking_api ("deliver" in scraped_text) silently
+    stamped delivered_at on lots of in-flight parcels (it matched
+    "estimated delivery", "delivery details", "out for delivery",
+    etc.). Trusting delivered_at alone would inherit that bug
+    forever on every page render. Requiring the status string to
+    also say "delivered" downgrades stale stamps to in_transit on
+    display, even though we don't clear the DB column (we leave
+    the carrier-events refresh path to do that, when a real feed
+    contradicts it).
     """
     status = (
         (getattr(order, "fulfillment_status", "") or "")
@@ -226,24 +234,22 @@ def _synthesised_active_stage(order) -> str:
     if status in ("failed", "cancelled", "canceled", "voided"):
         return "failed"
 
-    # HARD-evidence delivered
-    if getattr(order, "delivered_at", None):
-        return "destination"
+    # HARD-evidence delivered — status MUST say delivered. A stale
+    # delivered_at without a matching status is treated as in_transit.
     if status in ("delivered",):
         return "destination"
 
     has_tracking = bool((getattr(order, "tracking_number", "") or "").strip())
 
     # Anything else with a tracking number is at-best in_transit. We
-    # do NOT trust "completed"/"fulfilled" to mean delivered.
+    # do NOT trust "completed"/"fulfilled" to mean delivered, because
+    # WooCommerce flips fulfillment_status='completed' the moment the
+    # seller ships, NOT when the parcel actually arrives.
     if has_tracking:
         if status in ("shipped", "in_transit", "in transit"):
             return "in_transit"
         if status in ("on-hold", "on hold"):
             return "origin_hub"
-        # Tracking number exists but status is processing/pending/
-        # completed/fulfilled → treat as in_transit (cautious choice:
-        # the parcel is somewhere between origin pickup and final mile).
         return "in_transit"
 
     if status == "processing":
