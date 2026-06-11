@@ -845,8 +845,19 @@ def fetch_live_tracking_api(request, order_id):
     status = scrape_tracking_status(order.tracking_url, tracking_number=order.tracking_number or "")
 
     if status:
-        status_low = status.lower()
-        is_delivered = "deliver" in status_low or "complet" in status_low
+        # Use the SAME classifier the public tracking page uses
+        # (orders.carrier_tracking.classify_event_to_stage). It requires
+        # hard evidence — "delivered to recipient", "package delivered",
+        # "signed by", etc. — before returning "destination". The old
+        # substring check ("deliver" in text) wrongly fired on every
+        # Yuntrack page that mentioned "estimated delivery", "delivery
+        # details", "out for delivery", etc., which silently stamped
+        # delivered_at on parcels that were still mid-flight. That bug
+        # is what was making track.dropsigma.com show "Delivered" for
+        # orders the carrier still had in transit.
+        from .carrier_tracking import classify_event_to_stage
+        is_delivered = classify_event_to_stage(status) == "destination"
+
         update_fields = ["live_tracking_status"]
         order.live_tracking_status = status
         if is_delivered and not order.delivered_at:

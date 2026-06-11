@@ -315,11 +315,20 @@ def refresh_order_tracking_events(order) -> bool:
     if not classified:
         return False
 
-    # Detect delivery and stamp delivered_at so the rest of the
-    # platform (founder notifications, dashboards) stays in sync.
+    # Detect delivery from the LATEST event (not just any event in
+    # the feed — a journey can briefly mention "out for delivery" and
+    # then show a delivery exception that requires re-attempt; the
+    # truth is whatever the carrier currently reports).
+    latest = classified[-1] if classified else None
+    is_actually_delivered = bool(latest and latest.get("stage") == "destination")
+
+    # The carrier-confirmed delivery timestamp comes from the LATEST
+    # destination-class event (oldest-first list → walk back).
     delivered_at = None
-    for ev in classified:
-        if ev["stage"] == "destination":
+    if is_actually_delivered:
+        for ev in reversed(classified):
+            if ev["stage"] != "destination":
+                continue
             iso = ev.get("ts")
             if iso:
                 try:
@@ -330,11 +339,29 @@ def refresh_order_tracking_events(order) -> bool:
 
     order.tracking_events = classified
     order.tracking_events_updated_at = datetime.now(tz=timezone.utc)
-    update_fields = ["tracking_events", "tracking_events_updated_at"]
+    # Reset attempt counter on a successful pull so we go back to the
+    # tight cadence.
+    order.tracking_events_attempts = 0
+    update_fields = [
+        "tracking_events", "tracking_events_updated_at",
+        "tracking_events_attempts",
+    ]
 
     if delivered_at and not getattr(order, "delivered_at", None):
         order.delivered_at = delivered_at
         update_fields.append("delivered_at")
+    elif (not is_actually_delivered) and getattr(order, "delivered_at", None):
+        # Auto-heal: the order has a stale delivered_at (probably from
+        # the old over-eager "deliver" substring check in
+        # fetch_live_tracking_api), but the live carrier feed says the
+        # parcel is NOT delivered. Trust the carrier.
+        order.delivered_at = None
+        update_fields.append("delivered_at")
+        logger.info(
+            "carrier-tracking: cleared stale delivered_at on order %s — "
+            "live carrier feed reports stage=%s, not destination",
+            order.id, latest.get("stage") if latest else "unknown",
+        )
 
     order.save(update_fields=update_fields)
     return True
