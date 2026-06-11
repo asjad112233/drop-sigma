@@ -129,16 +129,25 @@ _SENTINEL_DISABLED = (
 # the carrier says Departed origin" mismatch.
 #
 # Cadence:
-#   - Fresh pull every _TRACKING_EVENTS_REFRESH_SECONDS per order (default 5m).
+#   - Fresh pull every _TRACKING_EVENTS_REFRESH_SECONDS per order (default 8m).
 #   - After _TRACKING_EVENTS_MAX_ATTEMPTS failed pulls (no events ever
 #     returned), back off to once per hour — many tracking numbers simply
 #     aren't on a carrier our pullers know about (yet).
-#   - At most _TRACKING_EVENTS_PER_PASS orders per sweep so we never burst
-#     the upstream carrier API.
-_TRACKING_EVENTS_REFRESH_SECONDS = 300
+#   - Capped at _TRACKING_EVENTS_PER_PASS orders per sweep. Each Yuntrack
+#     pull spawns a headless Chromium (Aliyun WAF blocks the direct JSON
+#     endpoint, so we must render the page in a real browser). Chromium
+#     is HEAVY — RAM-wise + wall-clock — so the per-pass cap stays small.
+#   - One pass at a time process-wide via _TRACKING_EVENTS_RUNNING lock,
+#     so a slow Yuntrack page can't pile up overlapping passes.
+_TRACKING_EVENTS_REFRESH_SECONDS = 480
 _TRACKING_EVENTS_BACKOFF_SECONDS = 3600
 _TRACKING_EVENTS_MAX_ATTEMPTS    = 20
-_TRACKING_EVENTS_PER_PASS        = 50
+_TRACKING_EVENTS_PER_PASS        = 8
+
+# Single-flight guard for the refresh pass. Acquired non-blocking — if a
+# previous pass is still chewing through Chromium launches, this sweep's
+# refresh is skipped (the next sweep will catch up).
+_TRACKING_EVENTS_RUNNING = threading.Lock()
 
 
 # ─── In-process state ──────────────────────────────────────────────────────
@@ -474,6 +483,26 @@ def _sweep_once() -> None:
 def _refresh_tracking_events_pass() -> None:
     """Pull carrier events for up to _TRACKING_EVENTS_PER_PASS orders that
     are due for a refresh.
+
+    Single-flight: skipped entirely if a previous pass is still running
+    (Playwright/Chromium passes can take longer than the sweep interval).
+    """
+    if not _TRACKING_EVENTS_RUNNING.acquire(blocking=False):
+        log.info(
+            "tracking-events refresh: previous pass still running, skipping"
+        )
+        return
+
+    try:
+        _refresh_tracking_events_pass_inner()
+    finally:
+        _TRACKING_EVENTS_RUNNING.release()
+
+
+def _refresh_tracking_events_pass_inner() -> None:
+    """The actual eligibility query + per-order pull. Wrapped by
+    _refresh_tracking_events_pass() so the single-flight lock always
+    releases even on exception.
 
     Eligibility (cheapest filters first):
       - Order has tracking_number.
