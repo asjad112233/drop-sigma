@@ -716,8 +716,15 @@ def _set_order_created_at(order_obj, dt):
     order_obj.created_at = dt
 
 
-def process_woocommerce_order(store, item):
-    """Parse one WooCommerce order dict and upsert into DB. Returns (order, created)."""
+def process_woocommerce_order(store, item, is_realtime=False):
+    """Parse one WooCommerce order dict and upsert into DB. Returns (order, created).
+
+    ``is_realtime`` should be True ONLY when this call is triggered by a
+    single live webhook delivery (the `/orders/webhook/woocommerce/<id>/`
+    view). Bulk sync paths (``sync_woocommerce_orders``, freshness pulls,
+    initial backfill) leave it False so the founder notification email
+    only fires for genuine one-off new orders, never for a 100-order
+    onboarding import."""
     billing = item.get("billing", {})
     line_items = item.get("line_items", [])
     product_id = str(line_items[0].get("product_id")) if line_items else None
@@ -778,6 +785,15 @@ def process_woocommerce_order(store, item):
     elif old_status is not None and new_status.lower() != old_status.lower():
         # Status changed on WooCommerce side — fire auto email
         _fire_auto_email(order_obj, new_status)
+
+    # Founder / platform-owner notification (only on real-time deliveries
+    # — bulk syncs and freshness pulls leave is_realtime=False so the
+    # inbox doesn't get carpet-bombed during a 100-order import).
+    try:
+        from emails.founder_notify import maybe_notify_founder
+        maybe_notify_founder(order_obj, store, is_realtime=is_realtime)
+    except Exception:
+        pass  # fail-silent — never break order sync over a notification
 
     return order_obj, created
 
@@ -1127,8 +1143,12 @@ def shopify_request(store, method, url, **kwargs):
     return resp
 
 
-def process_shopify_order(store, item):
-    """Parse one Shopify order dict and upsert into DB. Returns (order, created)."""
+def process_shopify_order(store, item, is_realtime=False):
+    """Parse one Shopify order dict and upsert into DB. Returns (order, created).
+
+    ``is_realtime`` — same contract as ``process_woocommerce_order``:
+    True only for live webhook deliveries, False for bulk sync paths.
+    Drives whether the founder notification email fires."""
     billing = item.get("billing_address") or {}
     line_items = item.get("line_items", [])
     product_id = str(line_items[0].get("product_id")) if line_items else None
@@ -1176,6 +1196,14 @@ def process_shopify_order(store, item):
         _notify_admin_new_order(order_obj)
         if order_obj.assigned_vendor_id:
             _notify_vendor_assigned(order_obj)
+
+    # Founder / platform-owner notification — see comment in
+    # process_woocommerce_order for the is_realtime contract.
+    try:
+        from emails.founder_notify import maybe_notify_founder
+        maybe_notify_founder(order_obj, store, is_realtime=is_realtime)
+    except Exception:
+        pass
 
     return order_obj, created
 

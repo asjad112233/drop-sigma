@@ -1192,7 +1192,9 @@ def shopify_webhook(request, store_id):
     if not isinstance(data, dict) or "id" not in data:
         return JsonResponse({"success": False, "message": "Invalid payload"}, status=400)
 
-    _, created = process_shopify_order(store, data)
+    # is_realtime=True — single live webhook delivery, founder
+    # notification fires (real-time path only).
+    _, created = process_shopify_order(store, data, is_realtime=True)
 
     # Tell the sentinel real-time sync is alive for this store. Lets the
     # sweeper deprioritise stores that are clearly working.
@@ -1459,7 +1461,9 @@ def woocommerce_webhook(request, store_id):
     if not isinstance(data, dict) or "id" not in data:
         return JsonResponse({"success": False, "message": "Invalid payload"}, status=400)
 
-    _, created = process_woocommerce_order(store, data)
+    # is_realtime=True — single live webhook delivery, founder
+    # notification fires (real-time path only).
+    _, created = process_woocommerce_order(store, data, is_realtime=True)
 
     # Tell the sentinel real-time sync is alive for this store. Lets the
     # sweeper deprioritise stores that are clearly working.

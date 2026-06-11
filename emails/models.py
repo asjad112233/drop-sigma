@@ -678,3 +678,31 @@ class EmailThreadActivity(models.Model):
 
     def __str__(self):
         return f"{self.event} @ {self.contact} ({self.created_at:%Y-%m-%d %H:%M})"
+
+
+# ─── Founder / platform-owner notifications dedup ─────────────────────────
+# One row per (order, kind) so a sync rerun or a webhook redelivery can never
+# double-send. Tiny model, hot-path query: a single index lookup on
+# (order_id, kind) before each potential send.
+class FounderNotificationLog(models.Model):
+    KIND_CHOICES = [
+        ("new_order", "New order"),
+        ("failed",    "Failed order"),
+    ]
+    order_id = models.IntegerField(db_index=True)
+    kind = models.CharField(max_length=16, choices=KIND_CHOICES)
+    sent_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        # Atomic guarantee: even if two webhook redeliveries race, only one
+        # INSERT wins; the second raises IntegrityError which the caller
+        # silently swallows (same desired outcome — one email per order).
+        constraints = [
+            models.UniqueConstraint(
+                fields=["order_id", "kind"],
+                name="uniq_founder_notif_per_order_kind",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["order_id", "kind"]),
+        ]
