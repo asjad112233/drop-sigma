@@ -103,27 +103,46 @@ def _classify_order_kind(order, store) -> str | None:
     Shopify financial_status: pending, authorized, partially_paid, paid,
                               refunded, voided, partially_refunded.
     Shopify fulfillment_status (separate axis): null, partial, fulfilled.
+
+    DELIBERATELY EXCLUDED FROM "new_order":
+      - WC ``pending``      → payment not received yet. WC fires this
+                              webhook on cart-submit BEFORE the gateway
+                              confirms the charge. Notifying here would
+                              show "PENDING" in the email even though
+                              the same order is "Processing" in the
+                              merchant's WC dashboard moments later
+                              (and the user's screenshot proved the
+                              confusion). Wait for the upgrade webhook.
+      - Shopify ``pending`` / ``authorized``  — same reasoning: payment
+                              is in transit, not confirmed. The "paid"
+                              webhook follows seconds later.
+
+    What we DO trigger "new_order" on:
+      - ``processing`` (WC: payment received, prepping shipment)
+      - ``on-hold``    (WC: COD/check — confirmed but waiting)
+      - ``paid``       (Shopify: payment captured)
+      - ``partially_paid`` (Shopify: partial capture — still real money)
     """
     status = (
         (getattr(order, "fulfillment_status", None) or "")
         or (getattr(order, "payment_status", None) or "")
     ).strip().lower()
 
-    if not status:
-        return "new_order"  # default to "new order"
-
     # Failed bucket
     failed_keywords = ("failed", "voided", "cancelled", "canceled")
     if status in failed_keywords:
         return "failed"
 
-    # New-order bucket (anything that's a fresh incoming order)
-    ok_keywords = ("processing", "pending", "on-hold", "on hold",
-                   "paid", "authorized", "partially_paid", "partially paid")
+    # Confirmed-new-order bucket — payment received OR confirmed-pending
+    # (COD). NB: pending / authorized excluded — see docstring above.
+    ok_keywords = ("processing", "on-hold", "on hold",
+                   "paid", "partially_paid", "partially paid")
     if status in ok_keywords:
         return "new_order"
 
-    # Skip terminal states we don't care about (completed, refunded, etc).
+    # Skip everything else (empty, completed, refunded, pending,
+    # authorized, etc). Empty defaults to "skip" so a half-built order
+    # doesn't get notified.
     return None
 
 
