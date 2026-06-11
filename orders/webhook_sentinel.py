@@ -530,18 +530,19 @@ def _refresh_tracking_events_pass_inner() -> None:
             .filter(
                 # We want to refresh:
                 #  (a) every undelivered order — normal happy path.
-                #  (b) orders whose delivered_at is set but we've NEVER
-                #      pulled carrier events. The old over-eager substring
-                #      check in fetch_live_tracking_api ("deliver" in text)
-                #      wrongly stamped delivered_at on lots of in-flight
-                #      parcels; the first pull will either confirm the
-                #      delivery from the carrier feed or auto-clear the
-                #      stale stamp (refresh_order_tracking_events handles
-                #      both). After that one chance, delivered orders
-                #      drop out of eligibility (case (a) excludes them).
+                #  (b) any order where we have NOT yet conclusively
+                #      identified the carrier (tracking_carrier IS
+                #      NULL or empty). The old over-eager substring
+                #      check in fetch_live_tracking_api wrongly stamped
+                #      delivered_at on many in-flight parcels; until a
+                #      successful carrier pull confirms or contradicts
+                #      that stamp, we keep polling. Once the Playwright
+                #      pull succeeds it sets tracking_carrier; from then
+                #      on a (b)-only order drops out (only (a) keeps it
+                #      eligible).
                 Q(delivered_at__isnull=True)
-                | Q(delivered_at__isnull=False,
-                    tracking_events_updated_at__isnull=True)
+                | Q(tracking_carrier__isnull=True)
+                | Q(tracking_carrier__exact="")
             )
             .filter(
                 # Cadence: never refreshed → go; under-budget + due → go;
