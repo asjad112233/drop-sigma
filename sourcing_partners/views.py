@@ -30,6 +30,7 @@ from .models import (
     TenantWallet, WalletTransaction,
 )
 from orders.models import Order
+from orders.tracking_link import build_ds_tracking_link
 
 
 # ─── Serializers ────────────────────────────────────────────────────────────
@@ -1976,7 +1977,12 @@ def _order_row_json(o, *, include_address=False):
         "lead_days":          o.sourcing_lead_days,
         "eta":                eta,
         "tracking_number":    o.tracking_number or "",
-        "tracking_url":       o.tracking_url or "",
+        # The link the tenant (and via shipping-notification email,
+        # their customer) opens is ALWAYS Drop Sigma's branded tracking
+        # page. We never leak the raw carrier URL outside of the
+        # vendor-submission / admin-debug paths. See
+        # orders/tracking_link.py for the contract.
+        "tracking_url":       build_ds_tracking_link(o),
         "tracking_company":   o.tracking_company or "",
         "is_shipping_editable": o.is_shipping_editable,
         "created_at_iso":     _iso(o.created_at),

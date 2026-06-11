@@ -23141,9 +23141,17 @@ const COURIER_TRACK_URLS = {
   "Leopards":       "https://t.17track.net/en#nums={number}",
 };
 function buildTrackUrl(company, number, storedUrl){
-  const tpl = company && COURIER_TRACK_URLS[company];
-  if(tpl && number) return tpl.replace('{number}', encodeURIComponent(number));
-  return storedUrl || '';
+  // Customer-facing tracking link — always route through Drop Sigma's
+  // own tracking page so the carrier (Yuntrack / YunExpress / DHL / …)
+  // stays invisible to the buyer. The page at track.dropsigma.com
+  // mirrors the carrier's flow but with our brand on top — the same
+  // link is also baked into shipping-notification emails (see
+  // orders/tracking_link.py). The legacy ``company``/``storedUrl``
+  // arguments are kept for backwards compatibility with existing
+  // call sites but are no longer consulted.
+  const tn = (number || '').toString().trim();
+  if(!tn) return '';
+  return `https://track.dropsigma.com/${encodeURIComponent(tn)}/`;
 }
 function courierLogoHtml(name){
   if(!name || !name.trim()) return '';
@@ -32431,7 +32439,8 @@ async function loadTrackingQueue(status){
         <button class="btn green" style="font-size:11px;padding:6px 10px;" onclick="approveTracking(${s.id})">Approve</button>
         <button class="btn red" style="font-size:11px;padding:6px 10px;margin-top:4px;" onclick="promptRejectTracking(${s.id})">Reject</button>
       `:`<span class="sub">${s.status==="approved"?"✓ Approved":"✗ Rejected"}</span>`;
-      const trackLink=s.tracking_url?`<a href="${escapeHtml(s.tracking_url)}" target="_blank" style="color:#2563eb;font-size:11px;">Track ↗</a>`:"";
+      const _trkUrl = buildTrackUrl(s.courier_name, s.tracking_number, s.tracking_url);
+      const trackLink = _trkUrl ? `<a href="${escapeHtml(_trkUrl)}" target="_blank" style="color:#2563eb;font-size:11px;">Track ↗</a>` : "";
       return `<tr>
         <td><b>#${escapeHtml(s.order_number)}</b><br><span class="sub">${escapeHtml(date)}</span></td>
         <td>${escapeHtml(s.customer_name||"-")}</td>
@@ -32549,8 +32558,9 @@ async function tqLoadTable(){
     }
     tbody.innerHTML = subs.map(s=>{
       const date = s.submitted_at ? new Date(s.submitted_at).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"}) : "—";
-      const trackLink = s.tracking_url
-        ? `<a href="${escapeHtml(s.tracking_url)}" target="_blank" class="tq-track-link">Track ↗</a>`
+      const _trkUrl = buildTrackUrl(s.courier_name, s.tracking_number, s.tracking_url);
+      const trackLink = _trkUrl
+        ? `<a href="${escapeHtml(_trkUrl)}" target="_blank" class="tq-track-link">Track ↗</a>`
         : "";
       const vendorInitial = (s.vendor_name||"V").charAt(0).toUpperCase();
       const statusPill = `<span class="tq-status-pill ${escapeHtml(s.status||"")}"><span class="tq-dot"></span>${escapeHtml(s.status||"—")}${s.is_auto_approved?` <span style="font-size:9px;font-weight:900;background:#ede9fe;color:#6d28d9;border-radius:99px;padding:1px 5px;margin-left:2px;">⚡Auto</span>`:"" }</span>`;
@@ -39005,8 +39015,9 @@ function spvRenderOrderRow(o){
   if (isPayable){
     actions = `<button class="sp-btn gold sm" onclick="event.stopPropagation();spvOpenPayConfirm([${o.id}])">💳 Pay Now</button>`;
   } else if (grp === 'shipping'){
-    const trkBtn = o.tracking_url
-      ? `<a class="sp-btn ghost sm" href="${spvEsc(o.tracking_url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Track ↗</a>`
+    const _spTrkUrl = buildTrackUrl(o.tracking_company, o.tracking_number, o.tracking_url);
+    const trkBtn = _spTrkUrl
+      ? `<a class="sp-btn ghost sm" href="${spvEsc(_spTrkUrl)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Track ↗</a>`
       : '';
     actions = trackingInfo + trkBtn;
   } else if (grp === 'delivered'){
@@ -39547,7 +39558,7 @@ async function spvOpenOrderModal(orderId, opts){
             ? `<div style="font-size:11.5px;color:#64748b;font-family:ui-monospace,Menlo,monospace;">${spvEsc(o.tracking_number)}</div>`
             : `<div style="font-size:11px;color:#94a3b8;font-weight:700;margin-top:1px;">Will ship via this carrier — tracking number added when dispatched</div>`}
         </div>
-        ${o.tracking_url ? `<a class="sp-btn primary sm" href="${spvEsc(o.tracking_url)}" target="_blank" rel="noopener">Track ↗</a>` : ''}
+        ${(()=>{const u=buildTrackUrl(o.tracking_company,o.tracking_number,o.tracking_url);return u?`<a class="sp-btn primary sm" href="${spvEsc(u)}" target="_blank" rel="noopener">Track ↗</a>`:'';})()}
       </div>` : ''}`;
 
   // Footer: when items are staged for deletion → Cancel + Update.

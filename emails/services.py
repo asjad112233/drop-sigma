@@ -2289,6 +2289,41 @@ def _build_items_html(line_items, currency='USD'):
     return '\n'.join(rows)
 
 
+# ── Customer-safe carrier name ──────────────────────────────────────
+# The default shipping-notification templates print "Carrier: {{carrier}}"
+# next to the tracking number. Brand discipline: the buyer never sees
+# the cross-border carrier (Yuntrack, YunExpress, 4PX, …) or the
+# domestic last-mile partner (Intelcom, Dragonfly, …) the seller routed
+# through — they only know Drop Sigma. _CARRIER_BRAND_BLACKLIST lists
+# any name that triggers replacement; everything else is passed through
+# unchanged (a legitimate "DHL Express" / "FedEx" stays as-is when the
+# tenant wants their customers to know).
+_CARRIER_BRAND_BLACKLIST = {
+    "yuntrack", "yun track", "yun express", "yunexpress", "yunexp",
+    "4px", "4 px", "4-px",
+    "china post", "chinapost", "ems china",
+    "sf express", "sfexpress", "shunfeng",
+    "yt express", "yt-express", "yto express",
+    "cainiao", "alibaba",
+    "winit", "ws express",
+    "intelcom", "dragonfly",
+}
+
+
+def _customer_safe_carrier(name: str) -> str:
+    """Return the carrier name safe to print in a customer email.
+    Falls back to "Drop Sigma Express" when the underlying carrier is
+    one of the cross-border / supplier-revealing brands we never want
+    surfaced to the buyer."""
+    if not name:
+        return ""
+    low = name.lower().strip()
+    for brand in _CARRIER_BRAND_BLACKLIST:
+        if brand in low:
+            return "Drop Sigma Express"
+    return name
+
+
 def build_template_context(store, order=None):
     """Return a render context for a store. Pass `order` to use that specific order's data."""
     from urllib.parse import urlparse
@@ -2396,13 +2431,14 @@ def build_template_context(store, order=None):
     cust_email = order.customer_email or bill.get('email') or ctx['customer_email']
     cust_phone = order.customer_phone or bill.get('phone') or ship.get('phone') or ctx['customer_phone']
 
-    # Tracking info — latest approved, or latest pending if none approved
+    # Tracking info — latest approved, or latest pending if none approved.
+    # Tracking_number is the only piece the customer sees on the live email;
+    # tracking_company stays as metadata for templates that want to display
+    # the carrier (most don't).
     tracking_number = order.tracking_number or ''
     tracking_company = order.tracking_company or ''
-    tracking_link = order.tracking_url or ''
     try:
         from vendors.models import VendorTrackingSubmission
-        from orders.services import COURIER_URL_TEMPLATES
         sub = (
             VendorTrackingSubmission.objects.filter(order=order, status='approved').order_by('-submitted_at').first()
             or VendorTrackingSubmission.objects.filter(order=order).order_by('-submitted_at').first()
@@ -2410,19 +2446,22 @@ def build_template_context(store, order=None):
         if sub:
             tracking_number = sub.tracking_number or tracking_number
             tracking_company = sub.courier_name or tracking_company
-            # Always build proper URL for known couriers
-            if sub.courier_name:
-                tmpl = COURIER_URL_TEMPLATES.get(sub.courier_name.lower())
-                tracking_link = tmpl.format(num=sub.tracking_number) if tmpl else (sub.tracking_url or tracking_link)
-            else:
-                tracking_link = sub.tracking_url or tracking_link
     except Exception:
         pass
+
+    # Customer-facing tracking link — ALWAYS the Drop Sigma tracking page.
+    # Carriers (Yuntrack, DHL, …) are intentionally invisible to the buyer.
+    # See orders/tracking_link.py for the contract.
+    from orders.tracking_link import build_ds_tracking_link_from_number
+    tracking_link = build_ds_tracking_link_from_number(tracking_number)
 
     # No real tracking data — use sample values so the preview section is visible
     if not tracking_number and not tracking_link:
         tracking_number = ctx.get('tracking_number', 'TRK-1234567890')
         tracking_company = ctx.get('tracking_company', 'DHL Express')
+        # Sample link points to the live tracking surface so previews look
+        # real; the seller can verify the page renders before sending.
+        tracking_link = build_ds_tracking_link_from_number(tracking_number)
 
     ctx.update({
         'customer_name': order.customer_name or ctx['customer_name'],
@@ -2447,6 +2486,17 @@ def build_template_context(store, order=None):
         'payment_status': pay_status,
         'tracking_number': tracking_number,
         'tracking_company': tracking_company,
+        # The default email templates use the {{carrier}} placeholder
+        # to display "Carrier: X" in the shipping notification. To stop
+        # carrier-brand leaks (Yuntrack / YunExpress / etc) reaching the
+        # customer, we map carrier names that match our internal brand
+        # blacklist to "Drop Sigma Express". Any legitimate retail
+        # carrier (DHL / FedEx / UPS / USPS / Royal Mail / …) the
+        # tenant DOES want to show would also get caught by this — but
+        # that's intentional: the seller's brand owns the post-purchase
+        # experience and the customer just opens the tracking link to
+        # see the actual status.
+        'carrier': _customer_safe_carrier(tracking_company),
         'tracking_link': tracking_link,
         'tracking_url': tracking_link,  # alias — templates may use either name
         # Only set when there's no link — used in templates to show ID-only block

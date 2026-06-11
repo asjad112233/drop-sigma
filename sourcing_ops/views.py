@@ -15,6 +15,7 @@ from django.shortcuts import render
 from django.utils import timezone
 from django.views.decorators.http import require_GET
 
+from orders.tracking_link import build_ds_tracking_link
 from .permissions import ops_required, is_ops_user
 from .models import (
     Supplier, OpsTeamMember, OpsActivity, OrderOpsState,
@@ -347,7 +348,12 @@ def serialize_order_brief(o):
         "paid_at_iso":     _iso(o.sourcing_paid_at),
         "tracking_number": o.tracking_number or "",
         "tracking_company": o.tracking_company or "",
-        "tracking_url":    o.tracking_url or "",
+        # tracking_url shown to ops staff is the Drop Sigma branded
+        # tracking page — never the raw carrier URL. See
+        # orders/tracking_link.py for the contract: a single
+        # tracking_number flips the link instantly, and the ops staff
+        # see exactly the same surface the customer sees.
+        "tracking_url":    build_ds_tracking_link(o),
     }
 
 
