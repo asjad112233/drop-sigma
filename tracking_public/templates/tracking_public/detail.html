@@ -28,6 +28,17 @@
     background:linear-gradient(135deg,#1a1a1a,#0f172a);
     display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:16px;letter-spacing:.5px;
     box-shadow:0 10px 28px rgba(15,23,42,.20);flex-shrink:0;
+    overflow:hidden;position:relative;
+  }
+  .brand-mark-img{
+    width:100%;height:100%;object-fit:cover;display:block;background:#fff;
+  }
+  /* When the <img> fails to load we hide it via JS (display:none) and
+     the underlying initials are revealed. The fallback span sits
+     below the img in the DOM and is hidden by default; JS toggles it. */
+  .brand-mark-initials{
+    position:absolute;inset:0;display:none;align-items:center;justify-content:center;
+    color:#fff;font-weight:900;font-size:16px;letter-spacing:.5px;
   }
   .brand-name{font-size:16px;font-weight:900;color:#0f172a;letter-spacing:-.2px;}
   .brand-sub{font-size:10.5px;color:#94a3b8;margin-top:3px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;}
@@ -257,7 +268,35 @@
 
   <!-- TOP BAR — tenant brand only, no links -->
   <div class="topbar fade-up d-1">
-    <div class="brand-mark">{{ brand.mark }}</div>
+    <div class="brand-mark">
+      {% if brand.logo_url %}
+        {# Render the seller's own favicon/logo, the same way the
+           Stores dashboard card does. Three-tier fallback chain:
+             1. Clearbit logo (best quality, transparent crop)
+             2. Google favicon service (covers anything Clearbit misses)
+             3. Two-letter initials (when both lookups 404)
+           The img keeps an onerror handler instead of nested <picture>
+           sources so the chain works without modern-browser feature
+           support — every page hit is a customer who might be on an
+           older browser or low-bandwidth network. #}
+        <img class="brand-mark-img"
+             src="{{ brand.logo_url }}"
+             alt="{{ brand.name }}"
+             onerror="
+               if(this.dataset.fallback!=='1' && '{{ brand.logo_fallback_url|escapejs }}'){
+                 this.dataset.fallback='1';
+                 this.src='{{ brand.logo_fallback_url|escapejs }}';
+               } else {
+                 this.style.display='none';
+                 var el=this.nextElementSibling;
+                 if(el) el.style.display='flex';
+               }
+             ">
+        <span class="brand-mark-initials">{{ brand.mark }}</span>
+      {% else %}
+        {{ brand.mark }}
+      {% endif %}
+    </div>
     <div>
       <div class="brand-name">{{ brand.name }}</div>
       <div class="brand-sub">{{ brand.sub }}</div>

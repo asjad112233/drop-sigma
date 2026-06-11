@@ -516,13 +516,53 @@ def tenant_brand_mark(store_name: str) -> str:
     return store_name.strip()[:2].upper()
 
 
-def build_brand_payload(store) -> dict:
+def _store_domain(store) -> str:
+    """Extract bare hostname from store.store_url ("https://breathedivinity.fr/"
+    → "breathedivinity.fr"). Returns "" if URL is missing/malformed."""
     if not store:
-        return {"name": "Drop Sigma", "sub": "Shipment tracking", "mark": "DS"}
+        return ""
+    url = (getattr(store, "store_url", "") or "").strip()
+    if not url:
+        return ""
+    # Strip scheme + trailing path/query
+    import re as _re
+    host = _re.sub(r"^https?://", "", url, flags=_re.IGNORECASE)
+    host = host.split("/")[0].split("?")[0].split("#")[0].strip().lower()
+    # Drop leading "www." to keep the favicon services happy
+    if host.startswith("www."):
+        host = host[4:]
+    return host
+
+
+def build_brand_payload(store) -> dict:
+    """Tenant-branded chrome for the detail page. Includes a
+    ``logo_url`` (Clearbit's logo service for the seller's domain)
+    and a ``logo_fallback_url`` (Google's favicon service) so the
+    public tracking page can render the seller's ACTUAL brand mark
+    instead of a generic two-letter initial. The 2-letter mark stays
+    as the last-resort fallback when both lookups 404."""
+    if not store:
+        return {
+            "name": "Drop Sigma",
+            "sub":  "Shipment tracking",
+            "mark": "DS",
+            "domain": "",
+            "logo_url": "",
+            "logo_fallback_url": "",
+        }
+    domain = _store_domain(store)
+    logo_primary  = f"https://logo.clearbit.com/{domain}" if domain else ""
+    logo_fallback = (
+        f"https://www.google.com/s2/favicons?domain={domain}&sz=128"
+        if domain else ""
+    )
     return {
-        "name": store.name or "Shipment tracking",
-        "sub":  "Shipment tracking · Express",
-        "mark": tenant_brand_mark(store.name or ""),
+        "name":               store.name or "Shipment tracking",
+        "sub":                "Shipment tracking · Express",
+        "mark":               tenant_brand_mark(store.name or ""),
+        "domain":             domain,
+        "logo_url":           logo_primary,
+        "logo_fallback_url":  logo_fallback,
     }
 
 
