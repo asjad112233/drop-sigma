@@ -325,8 +325,10 @@
     </div>
     <div class="timeline">
       {% if carrier_events %}
-        {# Real carrier events — sanitised, newest first. Each row is one
-           actual milestone the carrier reported. #}
+        {% comment %}
+          Real carrier events — sanitised, newest first. Each row is
+          one actual milestone the carrier reported.
+        {% endcomment %}
         {% for e in carrier_events %}
         <div class="step {% if forloop.first %}active{% else %}done{% endif %}">
           <div class="step-dot">{% if forloop.first %}✈{% else %}✓{% endif %}</div>
@@ -343,8 +345,10 @@
         </div>
         {% endfor %}
       {% else %}
-        {# No carrier feed yet — fall back to the per-stage synthesised
-           rows so the page still has structure for very new orders. #}
+        {% comment %}
+          No carrier feed yet — fall back to the per-stage synthesised
+          rows so the page still has structure for very new orders.
+        {% endcomment %}
         {% for s in journey_stages %}
         <div class="step {{ s.status }}">
           <div class="step-dot">{% if s.status == 'done' %}✓{% else %}✈{% endif %}</div>
