@@ -876,6 +876,34 @@ def setup_woocommerce_webhook(store, delivery_url):
     sess = woo_session()
     result = {"ok": False, "registered": [], "errors": [], "webhook_ids": {}}
 
+    # Header-Auth-stripping hosts (notably Sucuri-protected stores) send
+    # back a 401 on every endpoint that requires permissions even when
+    # the API key is fine, because they strip the `Authorization` header
+    # in transit. WC's officially-supported alternative is to pass the
+    # keys in the query string. These helpers transparently retry every
+    # webhook setup call that way on 401, so BD.ca-class stores work
+    # via the same code path as Trapstar / BD UK.
+    def _qs_params(extra=None):
+        d = dict(extra or {})
+        d["consumer_key"] = store.api_key
+        d["consumer_secret"] = store.api_secret
+        return d
+    def _wh_get(url, params=None, timeout=15):
+        r = sess.get(url, auth=auth, params=params or {}, timeout=timeout)
+        if r.status_code == 401 and "application/json" in (r.headers.get("Content-Type") or "").lower():
+            r = sess.get(url, params=_qs_params(params), timeout=timeout)
+        return r
+    def _wh_post(url, json=None, timeout=15):
+        r = sess.post(url, auth=auth, json=json, timeout=timeout)
+        if r.status_code == 401 and "application/json" in (r.headers.get("Content-Type") or "").lower():
+            r = sess.post(url, params=_qs_params(), json=json, timeout=timeout)
+        return r
+    def _wh_put(url, json=None, timeout=15):
+        r = sess.put(url, auth=auth, json=json, timeout=timeout)
+        if r.status_code == 401 and "application/json" in (r.headers.get("Content-Type") or "").lower():
+            r = sess.put(url, params=_qs_params(), json=json, timeout=timeout)
+        return r
+
     # 1. Snapshot existing webhooks so we don't duplicate and so we can
     #    repair stale delivery URLs.
     existing_by_topic = {}  # topic -> {"id", "delivery_url"}
@@ -885,7 +913,7 @@ def setup_woocommerce_webhook(store, delivery_url):
         # check_hostname is enabled` because cloudscraper's SSL adapter
         # toggles those flags in the wrong order. All real WC stores
         # have valid certs, so verification is the right default anyway.
-        existing = sess.get(base, auth=auth, params={"per_page": 100}, timeout=15)
+        existing = _wh_get(base, params={"per_page": 100}, timeout=15)
         if existing.ok:
             for wh in existing.json():
                 if isinstance(wh, dict) and wh.get("topic"):
@@ -924,9 +952,8 @@ def setup_woocommerce_webhook(store, delivery_url):
         # Case B: stale URL → PUT-update so we don't pile up duplicate webhooks.
         if existing and existing["id"]:
             try:
-                r = sess.put(
+                r = _wh_put(
                     f"{base}/{existing['id']}",
-                    auth=auth,
                     json={"delivery_url": delivery_url, "status": "active"},
                     timeout=15,
                 )
@@ -954,7 +981,7 @@ def setup_woocommerce_webhook(store, delivery_url):
             "status": "active",
         }
         try:
-            r = sess.post(base, auth=auth, json=payload, timeout=15)
+            r = _wh_post(base, json=payload, timeout=15)
             if r.ok:
                 wh_id = r.json().get("id")
                 result["registered"].append(topic)
@@ -1292,6 +1319,46 @@ def sync_shopify_orders(store, after=None):
     return count
 
 
+def _wc_get_with_auth_fallback(sess, url, store, params=None, timeout=30):
+    """GET a WC API URL trying TWO auth methods in order:
+
+      1. HTTP Basic-Auth header (``Authorization: Basic …``) — the
+         method WC documents and the one almost every host accepts.
+      2. Query-string keys (``?consumer_key=…&consumer_secret=…``) —
+         WC's officially-supported alternative. Required for stores
+         whose WAF / reverse proxy STRIPS the Authorization header.
+         Sucuri does this on many plans, which is why BD.ca and
+         similar Sucuri-protected sites returned 401 to the orders /
+         webhooks endpoints even with perfectly valid Read-Write keys.
+
+    We try Basic first because it leaves keys out of access logs.
+    If the response is exactly 401 with a JSON body (real WC auth
+    error, not a WAF block), we retry with query-string auth. Any
+    other status code is returned unchanged.
+
+    Returns the final ``requests.Response`` object. Caller decides
+    whether to call .raise_for_status().
+    """
+    params = dict(params or {})
+    r = sess.get(url, auth=(store.api_key, store.api_secret), params=params, timeout=timeout)
+    if r.status_code != 401:
+        return r
+    # 401 — check if it's a real WC JSON auth error vs a WAF page.
+    ctype = (r.headers.get("Content-Type") or "").lower()
+    is_json = "application/json" in ctype or "text/json" in ctype
+    if not is_json:
+        # WAF block, not auth — let the caller surface it.
+        return r
+    # Real 401 from WC. Retry with query-string auth — this transparently
+    # bypasses Sucuri / similar proxies that strip the Authorization
+    # header. Same store, same keys, same code path — no per-store
+    # special-casing.
+    qs_params = dict(params)
+    qs_params["consumer_key"] = store.api_key
+    qs_params["consumer_secret"] = store.api_secret
+    return sess.get(url, params=qs_params, timeout=timeout)
+
+
 def sync_woocommerce_orders(store, after=None):
     """Fetch orders from WooCommerce API and sync. after=ISO datetime string for incremental sync."""
     url = f"{store.store_url.rstrip('/')}/wp-json/wc/v3/orders"
@@ -1299,7 +1366,7 @@ def sync_woocommerce_orders(store, after=None):
     if after:
         params["after"] = after
 
-    response = woo_session().get(url, auth=(store.api_key, store.api_secret), params=params, timeout=30)
+    response = _wc_get_with_auth_fallback(woo_session(), url, store, params=params, timeout=30)
     response.raise_for_status()
 
     count = 0
