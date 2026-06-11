@@ -1454,13 +1454,24 @@ def woocommerce_webhook(request, store_id):
 
     import json, logging as _log
     _hooklog = _log.getLogger("orders.wc_webhook")
+
+    # ── WC ping test handling ────────────────────────────────────────
+    # When a webhook is first created/saved in WC admin, WC sends an
+    # empty form-urlencoded POST with just `webhook_id=N` to verify
+    # the URL is alive. If we return 4xx, WC marks the webhook as
+    # "failing" and eventually disables it. Accept these pings with
+    # HTTP 200 so the webhook stays Active.
+    ctype = request.META.get("CONTENT_TYPE", "")
+    if "application/x-www-form-urlencoded" in ctype and body.startswith(b"webhook_id="):
+        _hooklog.info("WC webhook for store %s: ping accepted (%r)", store_id, body[:60])
+        return JsonResponse({"success": True, "ping": True}, status=200)
+
     try:
         data = json.loads(body)
     except Exception as e:
         _hooklog.warning("WC webhook for store %s: JSON parse failed (%d bytes, ctype=%r): %s · body[:200]=%r",
                          store_id, len(body or b""),
-                         request.META.get("CONTENT_TYPE", ""),
-                         e, (body or b"")[:200])
+                         ctype, e, (body or b"")[:200])
         return JsonResponse({"success": False, "message": "Invalid JSON"}, status=400)
 
     if not isinstance(data, dict) or "id" not in data:

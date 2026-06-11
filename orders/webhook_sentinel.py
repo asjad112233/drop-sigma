@@ -103,9 +103,14 @@ _HEAL_CATCHUP_HOURS = 1
 #     pull the last _FRESHNESS_PULL_HOURS of orders.
 #   - Throttle per-store to one pull every _FRESHNESS_PULL_INTERVAL so
 #     we never hammer a slow merchant store.
-_STALE_DELIVERY_SECONDS = 300         # 5 min without a webhook = pull defensively
+# Reduced from 300s (5 min) so the founder notification email lands
+# within ~1 min of an order even when the real-time webhook drops
+# the delivery (or hasn't been registered yet on a freshly-connected
+# store). 60 s × 6 active stores × WC-API call ≈ 6 calls/min — well
+# below any merchant rate-limit and a noticeable UX improvement.
+_STALE_DELIVERY_SECONDS = 60          # 1 min without a webhook = pull defensively
 _FRESHNESS_PULL_HOURS = 2             # how far back to look on each pull
-_FRESHNESS_PULL_INTERVAL = 300        # min seconds between pulls per store
+_FRESHNESS_PULL_INTERVAL = 60         # min seconds between pulls per store
 
 # Safety: don't fire more than this many concurrent verifications. WC stores
 # behind shared hosting throttle aggressively if we hit /wp-json with bursts.
