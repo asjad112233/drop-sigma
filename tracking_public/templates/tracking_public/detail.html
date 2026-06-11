@@ -30,12 +30,17 @@
     box-shadow:0 10px 28px rgba(15,23,42,.20);flex-shrink:0;
     overflow:hidden;position:relative;
   }
+  /* When the seller has a usable favicon we render it ON TOP of the
+     gradient with a white plate so the icon shows clean. The plate is
+     46×46 to match the container, with object-fit:contain so the
+     favicon is never cropped (covers e.g. wide wordmarks too). When
+     the <img> can't load and the fallback chain runs out, JS hides
+     the img and the underlying gradient + initials shine through. */
   .brand-mark-img{
-    width:100%;height:100%;object-fit:cover;display:block;background:#fff;
+    position:absolute;inset:0;width:100%;height:100%;
+    object-fit:contain;display:block;background:#fff;
+    padding:6px;box-sizing:border-box;border-radius:13px;
   }
-  /* When the <img> fails to load we hide it via JS (display:none) and
-     the underlying initials are revealed. The fallback span sits
-     below the img in the DOM and is hidden by default; JS toggles it. */
   .brand-mark-initials{
     position:absolute;inset:0;display:none;align-items:center;justify-content:center;
     color:#fff;font-weight:900;font-size:16px;letter-spacing:.5px;

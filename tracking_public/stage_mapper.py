@@ -551,11 +551,23 @@ def build_brand_payload(store) -> dict:
             "logo_fallback_url": "",
         }
     domain = _store_domain(store)
-    logo_primary  = f"https://logo.clearbit.com/{domain}" if domain else ""
-    logo_fallback = (
+    # Three-tier favicon source chain, ordered by reliability+quality:
+    #   1. Google's favicon service at sz=128 — proven reliable; returns
+    #      the seller's ACTUAL favicon (e.g. breathedivinity.fr's sunflower)
+    #      via a 301 → t2.gstatic.com. Used to live behind Clearbit but
+    #      Clearbit's logo API shut down in late 2024 — every fetch now
+    #      returns a wordmark placeholder, which is what showed up
+    #      stretched across the .brand-mark box.
+    #   2. The site's own /favicon.ico — often a higher-resolution PNG
+    #      than Google's cached version (most WordPress sites serve a
+    #      192×192 site-icon from cropped-Logo.png). Best quality when
+    #      the host actually returns an image (not an HTML 404).
+    #   3. Two-letter initials in a styled square (template last-resort).
+    logo_primary  = (
         f"https://www.google.com/s2/favicons?domain={domain}&sz=128"
         if domain else ""
     )
+    logo_fallback = f"https://{domain}/favicon.ico" if domain else ""
     return {
         "name":               store.name or "Shipment tracking",
         "sub":                "Shipment tracking · Express",
