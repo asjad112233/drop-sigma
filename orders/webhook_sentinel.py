@@ -122,6 +122,24 @@ _SENTINEL_DISABLED = (
     or os.getenv("PYTEST_CURRENT_TEST")
 )
 
+# ── Carrier-event refresh (feeds track.dropsigma.com) ──────────────────────
+# For every undelivered order with a tracking number we periodically pull
+# the carrier's actual event list. The result is what the public tracking
+# page renders — so this loop is what stops the "we say Delivered while
+# the carrier says Departed origin" mismatch.
+#
+# Cadence:
+#   - Fresh pull every _TRACKING_EVENTS_REFRESH_SECONDS per order (default 5m).
+#   - After _TRACKING_EVENTS_MAX_ATTEMPTS failed pulls (no events ever
+#     returned), back off to once per hour — many tracking numbers simply
+#     aren't on a carrier our pullers know about (yet).
+#   - At most _TRACKING_EVENTS_PER_PASS orders per sweep so we never burst
+#     the upstream carrier API.
+_TRACKING_EVENTS_REFRESH_SECONDS = 300
+_TRACKING_EVENTS_BACKOFF_SECONDS = 3600
+_TRACKING_EVENTS_MAX_ATTEMPTS    = 20
+_TRACKING_EVENTS_PER_PASS        = 50
+
 
 # ─── In-process state ──────────────────────────────────────────────────────
 # All access guarded by _STATE_LOCK so concurrent gunicorn workers' threads
@@ -438,6 +456,92 @@ def _sweep_once() -> None:
         "webhook sentinel sweep: %d healthy/healed · %d failed · %d cached-skip · "
         "%d freshness-pulls · %d total",
         healed, failed, skipped, pulls_kicked, len(stores),
+    )
+
+    # Carrier-event refresh — feeds track.dropsigma.com with the actual
+    # journey instead of the synthesised 6-stage progression. Off-thread
+    # so a slow carrier API never delays the rest of the sweep.
+    try:
+        threading.Thread(
+            target=_refresh_tracking_events_pass,
+            name="tracking-events-refresh",
+            daemon=True,
+        ).start()
+    except Exception as e:
+        log.exception("tracking-events refresh: kickoff failed: %s", e)
+
+
+def _refresh_tracking_events_pass() -> None:
+    """Pull carrier events for up to _TRACKING_EVENTS_PER_PASS orders that
+    are due for a refresh.
+
+    Eligibility (cheapest filters first):
+      - Order has tracking_number.
+      - Order is not yet delivered (delivered_at IS NULL).
+      - Store is active and owned by a real tenant.
+      - Either never refreshed, or last refresh was longer than the
+        cadence ago (cadence = backoff once we've burnt the attempts
+        budget without ever getting events).
+    """
+    from django.db.models import Q
+    from orders.models import Order
+    from orders.carrier_tracking import refresh_order_tracking_events
+
+    now = datetime.now(_tz.utc)
+    fresh_cutoff   = now - timedelta(seconds=_TRACKING_EVENTS_REFRESH_SECONDS)
+    backoff_cutoff = now - timedelta(seconds=_TRACKING_EVENTS_BACKOFF_SECONDS)
+
+    try:
+        qs = (
+            Order.objects
+            .exclude(tracking_number__isnull=True)
+            .exclude(tracking_number__exact="")
+            .filter(delivered_at__isnull=True)
+            .filter(store__is_active=True)
+            .exclude(store__user__isnull=True)
+            .filter(
+                # Either we've never refreshed, or we're due based on the
+                # per-attempt cadence (regular cadence until we've burnt
+                # the attempts budget, then back off).
+                Q(tracking_events_updated_at__isnull=True)
+                | Q(tracking_events_attempts__lt=_TRACKING_EVENTS_MAX_ATTEMPTS,
+                    tracking_events_updated_at__lt=fresh_cutoff)
+                | Q(tracking_events_attempts__gte=_TRACKING_EVENTS_MAX_ATTEMPTS,
+                    tracking_events_updated_at__lt=backoff_cutoff)
+            )
+            .order_by("tracking_events_updated_at", "-created_at")
+            [:_TRACKING_EVENTS_PER_PASS]
+        )
+        candidates = list(qs)
+    except Exception as e:
+        log.exception("tracking-events refresh: query failed: %s", e)
+        return
+
+    if not candidates:
+        return
+
+    ok = 0
+    for order in candidates:
+        try:
+            had_events = refresh_order_tracking_events(order)
+            if had_events:
+                ok += 1
+            else:
+                # Bump the attempt counter so an un-poll-able number
+                # eventually moves to the slow backoff.
+                Order.objects.filter(pk=order.pk).update(
+                    tracking_events_attempts=(order.tracking_events_attempts or 0) + 1,
+                    tracking_events_updated_at=now,
+                )
+        except Exception as e:
+            log.warning(
+                "tracking-events refresh: order %s (tracking %s) crashed: %s",
+                order.id, order.tracking_number, e,
+            )
+
+    log.info(
+        "tracking-events refresh: pulled %d/%d candidate order(s) with carrier events",
+        ok, len(candidates),
     )
 
 

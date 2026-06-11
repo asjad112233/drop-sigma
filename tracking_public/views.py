@@ -99,13 +99,22 @@ def tracking_detail(request, tracking_id: str):
     # or hand-off references.
     display_tracking = norm
 
-    # Filter the stages we render in the timeline card — only stages
-    # up to (and including) the active one. The 6-stage stepper at
-    # the top renders ALL of them with their progress states.
-    journey_stages = [
-        s for s in stages_payload["stages"]
-        if s["status"] in ("done", "active")
-    ]
+    # ── SHIPMENT EVENTS list ─────────────────────────────────────────
+    # When the carrier puller has populated tracking_events, that's
+    # what we render — real sentences with real timestamps (already
+    # sanitised by stage_mapper). Otherwise fall back to the per-stage
+    # synthesised rows (so the page still feels populated for very new
+    # orders, before the first carrier pull lands).
+    if stages_payload.get("events"):
+        # Real carrier events — newest first for the UI.
+        events_for_ui = list(reversed(stages_payload["events"]))
+        journey_stages = []
+    else:
+        events_for_ui = []
+        journey_stages = [
+            s for s in stages_payload["stages"]
+            if s["status"] in ("done", "active")
+        ]
 
     ctx = {
         "page_title": f"Shipment {display_tracking}",
@@ -115,6 +124,8 @@ def tracking_detail(request, tracking_id: str):
         "active_index":   stages_payload["active_index"],
         "active_key":     stages_payload["active_key"],
         "journey_stages": journey_stages,
+        "carrier_events": events_for_ui,
+        "events_source":  stages_payload.get("events_source", "synthesised"),
         "is_delivered":   stages_payload["is_delivered"],
         "is_failed":      stages_payload["is_failed"],
         "headline":       stages_payload["headline"],

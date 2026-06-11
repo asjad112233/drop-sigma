@@ -68,6 +68,23 @@ class Order(models.Model):
     raw_data = models.JSONField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    # ── Real carrier event history ──────────────────────────────────
+    # Populated by the carrier-tracking puller (orders/carrier_tracking.py).
+    # Each element shape:
+    #   {
+    #     "ts":   "2026-06-10T14:05:00+00:00",   # ISO 8601 UTC
+    #     "raw":  "International flight has departed",
+    #     "stage": "in_transit"                  # one of stage_mapper.STAGE_DEFS keys, or ""
+    #   }
+    # The public tracking page (track.dropsigma.com) prefers this over
+    # the synthesised 6-stage progression — so the customer sees the
+    # carrier's actual journey, not a generic timeline. Sanitisation
+    # (carrier-name + origin-city stripping) happens at RENDER time,
+    # never at write time, so we never lose source fidelity for debug.
+    tracking_events             = models.JSONField(blank=True, null=True, default=list)
+    tracking_events_updated_at  = models.DateTimeField(blank=True, null=True)
+    tracking_events_attempts    = models.PositiveIntegerField(default=0)
+
     def __str__(self):
         return self.external_order_id
 

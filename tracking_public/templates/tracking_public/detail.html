@@ -324,23 +324,45 @@
       <div class="card-tag">● Live</div>
     </div>
     <div class="timeline">
-      {% for s in journey_stages %}
-      <div class="step {{ s.status }}">
-        <div class="step-dot">{% if s.status == 'done' %}✓{% else %}✈{% endif %}</div>
-        <div>
-          <div class="step-title">{{ s.label }}
-            <span class="step-loc-code">{{ s.code }}</span>
+      {% if carrier_events %}
+        {# Real carrier events — sanitised, newest first. Each row is one
+           actual milestone the carrier reported. #}
+        {% for e in carrier_events %}
+        <div class="step {% if forloop.first %}active{% else %}done{% endif %}">
+          <div class="step-dot">{% if forloop.first %}✈{% else %}✓{% endif %}</div>
+          <div>
+            <div class="step-title">{{ e.text }}
+              {% if e.stage_label %}<span class="step-loc-code">{{ e.stage_label }}</span>{% endif %}
+            </div>
           </div>
-          <div class="step-desc">{{ s.desc }}</div>
+          <div class="step-time">
+            {% if forloop.first %}<span class="now-pulse"></span>{{ e.ts_full }}
+            {% else %}{{ e.ts_full }}
+            {% endif %}
+          </div>
         </div>
-        <div class="step-time">
-          {% if s.status == 'active' %}<span class="now-pulse"></span>Now
-          {% elif s.ts_full %}{{ s.ts_full }}
-          {% else %}—
-          {% endif %}
+        {% endfor %}
+      {% else %}
+        {# No carrier feed yet — fall back to the per-stage synthesised
+           rows so the page still has structure for very new orders. #}
+        {% for s in journey_stages %}
+        <div class="step {{ s.status }}">
+          <div class="step-dot">{% if s.status == 'done' %}✓{% else %}✈{% endif %}</div>
+          <div>
+            <div class="step-title">{{ s.label }}
+              <span class="step-loc-code">{{ s.code }}</span>
+            </div>
+            <div class="step-desc">{{ s.desc }}</div>
+          </div>
+          <div class="step-time">
+            {% if s.status == 'active' %}<span class="now-pulse"></span>Now
+            {% elif s.ts_full %}{{ s.ts_full }}
+            {% else %}—
+            {% endif %}
+          </div>
         </div>
-      </div>
-      {% endfor %}
+        {% endfor %}
+      {% endif %}
     </div>
     {% if not is_delivered %}
     <div class="next-up">
