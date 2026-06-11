@@ -272,8 +272,22 @@ def _detect_carrier(tracking_number: str, tracking_url: str = "") -> str:
     return ""
 
 
+def fetch_yuntrack_events_via_browser(tracking_number: str) -> dict:
+    """Playwright-rendered fallback for Yuntrack. Returns the same
+    contract as fetch_yuntrack_events() plus an ``active_stage``
+    field for the YunExpress 5-stage stepper.
+
+    Used as the PRIMARY puller for Yuntrack because the direct JSON
+    endpoint at services.yuntrack.com/Track/Query is currently behind
+    an Aliyun WAF that returns HTTP 405 to every direct call we make,
+    while the browser-rendered tracking page works fine.
+    """
+    from .yuntrack_scraper import scrape_yuntrack  # heavy import (Playwright)
+    return scrape_yuntrack(tracking_number)
+
+
 _CARRIER_REGISTRY: dict[str, Callable[[str], list[dict]]] = {
-    "yuntrack": fetch_yuntrack_events,
+    "yuntrack": fetch_yuntrack_events,  # cheap JSON path (currently WAF-blocked)
 }
 
 
@@ -293,11 +307,23 @@ def refresh_order_tracking_events(order) -> bool:
     if not carrier:
         return False
 
-    puller = _CARRIER_REGISTRY.get(carrier)
-    if not puller:
-        return False
+    carrier_active_stage = ""
 
-    raw_events = puller(tn)
+    if carrier == "yuntrack":
+        # Yuntrack: try the cheap JSON puller first, then fall back to
+        # the Playwright-rendered scraper (which costs a Chromium
+        # process but bypasses the Aliyun WAF).
+        raw_events = fetch_yuntrack_events(tn)
+        if not raw_events:
+            scrape = fetch_yuntrack_events_via_browser(tn)
+            raw_events = scrape.get("events") or []
+            carrier_active_stage = scrape.get("active_stage") or ""
+    else:
+        puller = _CARRIER_REGISTRY.get(carrier)
+        if not puller:
+            return False
+        raw_events = puller(tn)
+
     if not raw_events:
         return False
 
@@ -314,6 +340,16 @@ def refresh_order_tracking_events(order) -> bool:
 
     if not classified:
         return False
+
+    # If the scraper didn't return an explicit active stage, derive
+    # one from the latest event's classification using the carrier's
+    # own keyword map.
+    if carrier == "yuntrack" and not carrier_active_stage:
+        try:
+            from .yuntrack_scraper import _active_stage_from_events
+            carrier_active_stage = _active_stage_from_events(classified)
+        except Exception:
+            carrier_active_stage = ""
 
     # Detect delivery from the LATEST event (not just any event in
     # the feed — a journey can briefly mention "out for delivery" and
@@ -342,9 +378,12 @@ def refresh_order_tracking_events(order) -> bool:
     # Reset attempt counter on a successful pull so we go back to the
     # tight cadence.
     order.tracking_events_attempts = 0
+    order.tracking_carrier = carrier
+    order.tracking_carrier_stage = carrier_active_stage or ""
     update_fields = [
         "tracking_events", "tracking_events_updated_at",
         "tracking_events_attempts",
+        "tracking_carrier", "tracking_carrier_stage",
     ]
 
     if delivered_at and not getattr(order, "delivered_at", None):

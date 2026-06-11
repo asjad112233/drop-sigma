@@ -116,11 +116,16 @@ def tracking_detail(request, tracking_id: str):
             if s["status"] in ("done", "active")
         ]
 
+    stage_count = len(stages_payload["stages"])
+
     ctx = {
         "page_title": f"Shipment {display_tracking}",
         "brand": brand,
         "tracking_id": display_tracking,
         "stepper_stages": stages_payload["stages"],
+        "stage_count":    stage_count,
+        "stage_count_minus_one": max(stage_count - 1, 1),
+        "template_key":   stages_payload.get("template", "generic"),
         "active_index":   stages_payload["active_index"],
         "active_key":     stages_payload["active_key"],
         "journey_stages": journey_stages,

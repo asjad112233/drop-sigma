@@ -1,83 +1,94 @@
-"""Carrier-aware 6-stage shipment timeline builder.
+"""Per-carrier 7-stage / fallback-6-stage shipment timeline builder.
 
-The single source of truth for what a customer sees on
-``track.dropsigma.com``. Two modes:
+Single source of truth for what a customer sees on
+``track.dropsigma.com``. Two paths:
 
-1. **Real carrier events** (preferred). When ``order.tracking_events``
-   is populated by the carrier puller (see ``orders/carrier_tracking.py``),
-   we derive the active stage from the LATEST classified event, the
-   per-stage timestamps from the EARLIEST event mapped to each stage,
-   and the shipment-events list from the full sanitised event feed.
+  **Carrier-aware (preferred)** — When the order has a recognised
+  carrier (``order.tracking_carrier``) we render its OWN stepper
+  flow, pre-pended with the two Drop Sigma platform stages we
+  uniquely know about. For Yuntrack/YunExpress that's:
 
-2. **Synthesised fallback** (used until first carrier pull lands).
-   When no events are available, we infer a conservative stage from
-   the order's lifecycle status. We deliberately do NOT advance to
-   ``destination`` here without a hard ``delivered_at`` — the worst-
-   case mode is "the page is a little behind reality", not "the page
-   claims delivered when the parcel is still in flight".
+      Order placed  →  Shipment created           (platform stages)
+                    →  Pickup
+                    →  Departed from origin       (the active flow
+                    →  Arrived at destination      shown to the user
+                    →  Local carrier on the way    mirrors what the
+                    →  Delivered                   carrier reports)
+
+  The active stage and per-stage timestamps come from real carrier
+  events sanitised before render.
+
+  **Generic 6-stage fallback** — When the carrier is unknown OR
+  ``tracking_events`` is empty (very new order, no scrape yet).
+  Synthesises a conservative progression from order lifecycle so the
+  page still has structure. NEVER advances to ``destination`` without
+  hard fulfillment_status=='delivered'.
 
 In every case:
-  - Stage LABELS are fixed (Order placed / In production / Shipment
-    created / Origin hub / In transit / Destination).
-  - Carrier names, origin cities, hand-off partners are stripped
-    by ``_sanitize_text`` before any string reaches the customer.
+  - Carrier brand names ("yuntrack", "dhl", "intelcom|dragonfly", …)
+    are wiped from any rendered text.
+  - Origin cities/countries are redacted to neutral phrasing.
 """
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
-# Fixed customer-facing copy. NEVER include carrier names, cities, or
-# country names of the origin here.
-STAGE_DEFS = [
-    {
-        "key":   "order_placed",
-        "code":  "ORDER",
-        "label": "Order placed",
-        "desc":  "Payment authorised. Order received and queued for fulfilment.",
-    },
-    {
-        "key":   "in_production",
-        "code":  "PROD",
-        "label": "In production",
-        "desc":  "Your items were prepared and quality-checked by our fulfilment team.",
-    },
-    {
-        "key":   "shipment_created",
-        "code":  "CREATED",
-        "label": "Shipment created",
-        "desc":  "Air waybill issued. Parcel manifested for express freight routing.",
-    },
-    {
-        "key":   "origin_hub",
-        "code":  "ORG",
-        "label": "Origin hub",
-        "desc":  "Collected and scanned into the origin sortation centre, then loaded onto the outbound flight.",
-    },
-    {
-        "key":   "in_transit",
-        "code":  "TRANSIT",
-        "label": "In transit",
-        "desc":  "Your shipment is in flight on a scheduled long-haul route to the destination country.",
-    },
-    {
-        "key":   "destination",
-        "code":  "DELIVERED",
-        "label": "Destination",
-        "desc":  "Your shipment has reached the delivery destination.",
-    },
+
+# ── Stage definitions ───────────────────────────────────────────────
+# Generic 6-stage flow (fallback when we don't know the carrier).
+GENERIC_STAGE_DEFS = [
+    {"key": "order_placed",     "code": "ORDER",     "label": "Order placed",
+     "desc": "Payment authorised. Order received and queued for fulfilment."},
+    {"key": "in_production",    "code": "PROD",      "label": "In production",
+     "desc": "Your items were prepared and quality-checked by our fulfilment team."},
+    {"key": "shipment_created", "code": "CREATED",   "label": "Shipment created",
+     "desc": "Air waybill issued. Parcel manifested for express freight routing."},
+    {"key": "origin_hub",       "code": "ORG",       "label": "Origin hub",
+     "desc": "Collected and scanned into the origin sortation centre, then loaded onto the outbound flight."},
+    {"key": "in_transit",       "code": "TRANSIT",   "label": "In transit",
+     "desc": "Your shipment is in flight on a scheduled long-haul route to the destination country."},
+    {"key": "destination",      "code": "DELIVERED", "label": "Destination",
+     "desc": "Your shipment has reached the delivery destination."},
 ]
 
-STAGE_ORDER = [s["key"] for s in STAGE_DEFS]
+# Yuntrack-mirror 7-stage flow: 2 platform stages + YunExpress's 5.
+YUNTRACK_STAGE_DEFS = [
+    {"key": "order_placed",        "code": "ORDER",   "label": "Order placed",
+     "desc": "Payment authorised. Order received and queued for fulfilment.",
+     "source": "platform"},
+    {"key": "shipment_created",    "code": "CREATED", "label": "Shipment created",
+     "desc": "Air waybill issued. Parcel manifested for express freight routing.",
+     "source": "platform"},
+    {"key": "pickup",              "code": "PICKUP",  "label": "Pickup",
+     "desc": "Shipment information received and collected at the origin facility.",
+     "source": "carrier"},
+    {"key": "departed_origin",     "code": "ORG",     "label": "Departed from origin",
+     "desc": "Parcel has left the origin facility on its outbound flight.",
+     "source": "carrier"},
+    {"key": "arrived_destination", "code": "DEST",    "label": "Arrived at destination",
+     "desc": "Parcel has arrived in the destination country and is being processed for delivery.",
+     "source": "carrier"},
+    {"key": "local_carrier",       "code": "LOCAL",   "label": "Local carrier on the way",
+     "desc": "Out for delivery with the local courier on the final leg.",
+     "source": "carrier"},
+    {"key": "delivered",           "code": "DELIVERED","label": "Delivered",
+     "desc": "Your shipment has reached the delivery destination.",
+     "source": "carrier"},
+]
+
+# Back-compat alias: existing callers still import STAGE_DEFS.
+STAGE_DEFS = GENERIC_STAGE_DEFS
+
+
+def _template_for_carrier(carrier: str) -> tuple[list[dict], str]:
+    """Returns (stage_defs, template_key). Template key is used by the
+    template to choose icons / styling."""
+    if carrier == "yuntrack":
+        return YUNTRACK_STAGE_DEFS, "yuntrack"
+    return GENERIC_STAGE_DEFS, "generic"
 
 
 # ── Anti-leak sanitiser ──────────────────────────────────────────────
-# Any free-text field that has touched a third-party carrier feed gets
-# run through this. Two layers:
-#   - whole-string wipe (replace match with empty) for words we never
-#     want anywhere on the page (carrier brand names);
-#   - token-level redaction (replace match with a neutral word) for
-#     things the sentence might still read sensibly without (city
-#     names → "the origin facility").
 _CARRIER_NAMES_WIPE = (
     "yuntrack", "yun track", "yun express", "yunexpress", "yunexp",
     "4px", "4 px", "4-px",
@@ -107,19 +118,11 @@ _ORIGIN_LOCATIONS_REDACT = (
 
 
 def _sanitize_text(s: str) -> str:
-    """Defence-in-depth scrubber. Removes carrier brand names entirely
-    and rewrites origin city/country mentions into neutral phrasing.
-    Returns "" only if the string is empty after scrubbing AND
-    became empty (so the caller can fall back to fixed copy)."""
     if not s:
         return ""
     text = s
 
-    # Carrier names → wipe (case-insensitive). We walk the longest
-    # tokens first so "yun express" is wiped as a phrase before "yun"
-    # could partial-match anything.
     for name in sorted(_CARRIER_NAMES_WIPE, key=len, reverse=True):
-        # Use a generous match: word-boundary-ish but case-insensitive
         idx = 0
         low_name = name.lower()
         while True:
@@ -129,7 +132,6 @@ def _sanitize_text(s: str) -> str:
                 break
             text = text[:pos] + text[pos + len(name):]
             idx = pos
-    # Origin locations → redact to neutral
     for loc in sorted(_ORIGIN_LOCATIONS_REDACT, key=len, reverse=True):
         idx = 0
         low_loc = loc.lower()
@@ -141,15 +143,9 @@ def _sanitize_text(s: str) -> str:
             text = text[:pos] + "the origin facility" + text[pos + len(loc):]
             idx = pos + len("the origin facility")
 
-    # Collapse double-spaces, stray ", , ", trailing "," etc that
-    # appear after wipes.
     text = " ".join(text.split())
     text = text.replace(" ,", ",").replace(", ,", ",").replace(" .", ".")
 
-    # Collapse repeated neutral-redactions: "the origin facility, the
-    # origin facility" → "the origin facility". After two distinct
-    # location words both redact to the same neutral phrase, the
-    # sentence reads cleanly without an artefact.
     import re as _re
     text = _re.sub(
         r"\bthe origin facility(?:[\s,/|·\-:;]+the origin facility)+",
@@ -157,7 +153,6 @@ def _sanitize_text(s: str) -> str:
         text,
         flags=_re.IGNORECASE,
     )
-    # Strip orphan separators left after wipes (e.g. "Last Mile: |").
     text = _re.sub(r"[|/·]{1,}\s*$", "", text)
     text = _re.sub(r"\s*[|/·]\s*[|/·]\s*", " ", text)
     text = _re.sub(r":\s*$", "", text)
@@ -194,57 +189,216 @@ def _ago_label(dt: datetime) -> str:
     return f"Updated {secs // 86400} d ago"
 
 
-# ── Synthesised fallback (no carrier events yet) ────────────────────
-# Offsets, in hours, from order.created_at to each stage's start.
-# These are conservative — when there's NO real data, we'd rather
-# under-show than over-claim.
-_STAGE_OFFSETS_H = {
+# ── Yuntrack-mirror builder ─────────────────────────────────────────
+def _earliest_event_ts(events: list, *predicates) -> datetime | None:
+    """Earliest event whose raw text matches any of the keyword
+    predicates (case-insensitive)."""
+    for ev in events:
+        raw = (ev.get("raw") or "").lower()
+        for needles in predicates:
+            for needle in needles:
+                if needle in raw:
+                    ts = _parse_iso(ev.get("ts") or "")
+                    if ts:
+                        return ts
+    return None
+
+
+def _build_yuntrack_stages(order) -> dict:
+    """Render the 7-stage Yuntrack-mirror timeline for an order with a
+    populated tracking_events list and tracking_carrier='yuntrack'."""
+    events_raw = getattr(order, "tracking_events", None) or []
+    carrier_stage = (getattr(order, "tracking_carrier_stage", "") or "").strip()
+    stage_defs, template_key = YUNTRACK_STAGE_DEFS, "yuntrack"
+    stage_keys = [s["key"] for s in stage_defs]
+
+    # ── Sanitised, sorted UI events ──────────────────────────────
+    ui_events = []
+    for ev in events_raw:
+        if not isinstance(ev, dict):
+            continue
+        raw = (ev.get("raw") or "").strip()
+        ts = _parse_iso(ev.get("ts") or "")
+        if not raw or not ts:
+            continue
+        clean = _sanitize_text(raw)
+        ui_events.append({"ts": ts, "raw": raw, "clean": clean or raw})
+    ui_events.sort(key=lambda e: e["ts"])
+
+    # ── Determine active stage ───────────────────────────────────
+    active_key = carrier_stage if carrier_stage in stage_keys else ""
+    if not active_key:
+        # Fall back: derive from latest event using the YunExpress
+        # classifier (kept off the hot path import to avoid pulling
+        # Playwright machinery just to render).
+        try:
+            from orders.yuntrack_scraper import classify_yunexpress_stage
+            latest_classified = ""
+            for ev in reversed(events_raw):
+                c = classify_yunexpress_stage((ev.get("raw") or ""))
+                if c:
+                    latest_classified = c
+                    break
+            if latest_classified in stage_keys:
+                active_key = latest_classified
+        except Exception:
+            pass
+    if not active_key:
+        # Last resort: shipment_created (we at least know we have a
+        # tracking number).
+        active_key = "shipment_created"
+
+    active_idx = stage_keys.index(active_key)
+    last_event_ts = ui_events[-1]["ts"] if ui_events else None
+
+    # ── Per-stage timestamps ──────────────────────────────────────
+    # Platform stages: we know created_at + ~24h offset for the
+    # shipment_created step (a reasonable bound), plus we never advance
+    # past it from synthesis here — the carrier stages take over.
+    created_at = getattr(order, "created_at", None)
+
+    # Per-carrier-stage timestamps from real events.
+    pickup_ts            = _earliest_event_ts(events_raw, (
+        "shipment information received", "information received",
+        "picked up", "collected", "shipment created",
+        "label created", "accepted by carrier",
+    ))
+    departed_origin_ts   = _earliest_event_ts(events_raw, (
+        "departed from origin", "departed origin",
+        "departed from sort facility", "international flight has departed",
+        "flight has departed", "arrived at origin facility",
+        "country of origin commences customs",
+        "arrived at the origin international airport",
+        "loaded onto flight",
+    ))
+    arrived_dest_ts      = _earliest_event_ts(events_raw, (
+        "arrived at destination", "destination customs",
+        "destination facility", "arrived in country",
+        "released by customs", "cleared destination",
+    ))
+    local_carrier_ts     = _earliest_event_ts(events_raw, (
+        "out for delivery", "loaded for delivery",
+        "transferred to local carrier", "last mile",
+        "last-mile", "with delivery driver",
+    ))
+    delivered_ts         = _earliest_event_ts(events_raw, (
+        "delivered to recipient", "successfully delivered",
+        "package delivered", "delivery completed",
+        "signed by", "signed for",
+    ))
+    stage_ts = {
+        "order_placed":        created_at,
+        "shipment_created":    created_at + timedelta(hours=12) if created_at else None,
+        "pickup":              pickup_ts,
+        "departed_origin":     departed_origin_ts,
+        "arrived_destination": arrived_dest_ts,
+        "local_carrier":       local_carrier_ts,
+        "delivered":           delivered_ts,
+    }
+    # Carrier-stage timestamp fallback: if a stage in the past has no
+    # direct evidence, use the earliest event whose classified stage
+    # is THAT one, else leave blank (honest).
+
+    # ── Build stepper rows ───────────────────────────────────────
+    out_stages = []
+    for idx, sdef in enumerate(stage_defs):
+        if idx < active_idx:
+            status = "done"
+        elif idx == active_idx:
+            status = "active"
+        else:
+            status = "pending"
+        ts = stage_ts.get(sdef["key"])
+        out_stages.append({
+            "key":     sdef["key"],
+            "code":    sdef["code"],
+            "label":   sdef["label"],
+            "desc":    sdef["desc"],
+            "status":  status,
+            "ts_iso":   ts.isoformat() if ts else "",
+            "ts_short": ts.strftime("%d %b") if ts else "",
+            "ts_full":  ts.strftime("%d %b · %H:%M UTC") if ts else "",
+        })
+
+    # ── Headline + events payload ────────────────────────────────
+    headline = ""
+    headline_sub = ""
+    if ui_events:
+        latest = ui_events[-1]
+        headline = latest["clean"]
+        # Match against the active stage's description as subline.
+        for sdef in stage_defs:
+            if sdef["key"] == active_key:
+                headline_sub = sdef["desc"]
+                break
+    else:
+        for sdef in stage_defs:
+            if sdef["key"] == active_key:
+                headline = sdef["label"]
+                headline_sub = sdef["desc"]
+                break
+
+    updated_label = (
+        _ago_label(last_event_ts) if last_event_ts else "Live tracking"
+    )
+
+    events_payload = [
+        {
+            "ts_iso":      ev["ts"].isoformat(),
+            "ts_full":     ev["ts"].strftime("%d %b · %H:%M UTC"),
+            "ts_short":    ev["ts"].strftime("%d %b"),
+            "text":        ev["clean"],
+            "stage":       "",   # not needed for Yuntrack-mirror render
+            "stage_label": "",
+        }
+        for ev in ui_events
+    ]
+
+    return {
+        "stages":         out_stages,
+        "active_key":     active_key,
+        "active_index":   active_idx,
+        "is_failed":      False,
+        "is_delivered":   active_key == "delivered",
+        "headline":       headline,
+        "headline_sub":   headline_sub,
+        "updated_label":  updated_label,
+        "events":         events_payload,
+        "events_source":  "carrier",
+        "template":       template_key,
+    }
+
+
+# ── Generic 6-stage synthesised fallback ────────────────────────────
+_GENERIC_STAGE_OFFSETS_H = {
     "order_placed":     0,
     "in_production":    8,
     "shipment_created": 24,
     "origin_hub":       40,
     "in_transit":       56,
-    # destination is NEVER synthesised — only set from delivered_at.
 }
 
 
 def _synthesised_active_stage(order) -> str:
-    """Best-effort stage classification when we have no carrier events.
+    """Conservative classification for orders with no carrier events.
 
-    Hardening: we only return ``destination`` when fulfillment_status
-    is unambiguously delivered — NOT when delivered_at alone is set.
-
-    Why: the old over-eager substring check in
-    fetch_live_tracking_api ("deliver" in scraped_text) silently
-    stamped delivered_at on lots of in-flight parcels (it matched
-    "estimated delivery", "delivery details", "out for delivery",
-    etc.). Trusting delivered_at alone would inherit that bug
-    forever on every page render. Requiring the status string to
-    also say "delivered" downgrades stale stamps to in_transit on
-    display, even though we don't clear the DB column (we leave
-    the carrier-events refresh path to do that, when a real feed
-    contradicts it).
+    Critical: requires fulfillment_status to explicitly say 'delivered'
+    to advance to destination. A stale delivered_at without matching
+    status is treated as in_transit — defends against the old over-
+    eager 'deliver' substring check that wrongly stamped delivered_at
+    on many in-flight parcels.
     """
     status = (
         (getattr(order, "fulfillment_status", "") or "")
         or (getattr(order, "payment_status", "") or "")
     ).strip().lower()
 
-    # Failed / cancelled
     if status in ("failed", "cancelled", "canceled", "voided"):
         return "failed"
-
-    # HARD-evidence delivered — status MUST say delivered. A stale
-    # delivered_at without a matching status is treated as in_transit.
     if status in ("delivered",):
         return "destination"
 
     has_tracking = bool((getattr(order, "tracking_number", "") or "").strip())
-
-    # Anything else with a tracking number is at-best in_transit. We
-    # do NOT trust "completed"/"fulfilled" to mean delivered, because
-    # WooCommerce flips fulfillment_status='completed' the moment the
-    # seller ships, NOT when the parcel actually arrives.
     if has_tracking:
         if status in ("shipped", "in_transit", "in transit"):
             return "in_transit"
@@ -258,214 +412,71 @@ def _synthesised_active_stage(order) -> str:
 
 
 def _synthesised_stage_timestamp(order, stage_key: str, active_key: str) -> datetime | None:
-    """Synthesise a timestamp for a completed stage from order
-    lifecycle. Active stage / future stages → None."""
-    if STAGE_ORDER.index(stage_key) > STAGE_ORDER.index(active_key):
+    stage_order = [s["key"] for s in GENERIC_STAGE_DEFS]
+    if stage_order.index(stage_key) > stage_order.index(active_key):
         return None
     if stage_key == active_key:
-        return None  # renders as "Now"
+        return None
     if stage_key == "destination":
         return getattr(order, "delivered_at", None)
     created = getattr(order, "created_at", None)
     if not created:
         return None
-    offset_h = _STAGE_OFFSETS_H.get(stage_key, 0)
+    offset_h = _GENERIC_STAGE_OFFSETS_H.get(stage_key, 0)
     ts = created + timedelta(hours=offset_h)
     now = _utcnow()
     return ts if ts <= now else now
 
 
-# ── Real-events path ────────────────────────────────────────────────
-def _events_to_stage_state(order) -> dict | None:
-    """Derive (active_key, per-stage timestamps, sanitised events
-    list) from order.tracking_events. Returns None when the field is
-    empty so the caller falls back to the synthesised path.
-
-    Active stage rule: the LATEST event's classified stage. Stages
-    earlier in STAGE_ORDER are implicitly done — even if no event
-    explicitly hit them, conceptually they must have happened (a
-    parcel that's "in transit" obviously had a "shipment created"
-    moment we just didn't get told about).
-    """
-    events = getattr(order, "tracking_events", None) or []
-    if not events:
-        return None
-
-    earliest_at_stage: dict[str, datetime] = {}
-    latest_ts: datetime | None = None
-    latest_stage: str | None = None
-
-    # Build sanitised, sorted (oldest-first) event list for the UI.
-    ui_events = []
-    for ev in events:
-        if not isinstance(ev, dict):
-            continue
-        raw = (ev.get("raw") or "").strip()
-        stage = ev.get("stage") or ""
-        ts = _parse_iso(ev.get("ts") or "")
-        if not raw or not ts:
-            continue
-
-        clean = _sanitize_text(raw)
-        if not clean:
-            # If the event reduced to nothing after sanitising, fall
-            # back to the stage's fixed description so the customer
-            # still sees a sensible line on the timeline.
-            clean = _stage_desc_for(stage) or ""
-
-        ui_events.append({
-            "ts":     ts,
-            "raw":    raw,           # debug only — never rendered
-            "clean":  clean,
-            "stage":  stage,
-        })
-
-        if stage in STAGE_ORDER:
-            if stage not in earliest_at_stage or ts < earliest_at_stage[stage]:
-                earliest_at_stage[stage] = ts
-            if latest_ts is None or ts > latest_ts:
-                latest_ts = ts
-                latest_stage = stage
-
-    if not latest_stage:
-        # We had events but couldn't classify any of them. Don't
-        # fall back to synthesis (events exist, just unfamiliar
-        # verbiage) — pin to in_transit with the last raw line.
-        latest_stage = "in_transit"
-
-    # Sort UI events oldest-first.
-    ui_events.sort(key=lambda e: e["ts"])
-
-    return {
-        "active_key":         latest_stage,
-        "earliest_at_stage":  earliest_at_stage,
-        "ui_events":          ui_events,
-        "last_event_ts":      latest_ts,
-    }
-
-
-def _stage_desc_for(key: str) -> str:
-    for s in STAGE_DEFS:
-        if s["key"] == key:
-            return s["desc"]
-    return ""
-
-
-# ── Public entry point ──────────────────────────────────────────────
-def build_stages(order) -> dict:
-    """Build the full 6-stage timeline for an Order.
-
-    Returns a dict ready for the template:
-
-        {
-          "stages":       [{key, label, code, desc, status, ts_iso, ts_short, ts_full}, …],
-          "active_key":   "in_transit",
-          "active_index": 4,
-          "is_failed":    False,
-          "is_delivered": False,
-          "headline":     "International flight has departed",
-          "headline_sub": "Scheduled long-haul route. Next update on arrival …",
-          "updated_label": "Updated 2 h ago",
-          "events":       [{ts_iso, ts_full, text, stage}, …]   # carrier events list
-          "events_source": "carrier"  |  "synthesised",
-        }
-    """
-    # Try real events first.
-    realtime = _events_to_stage_state(order)
+def _build_generic_stages(order) -> dict:
+    """Generic 6-stage synthesised renderer — fallback when no carrier
+    feed available."""
+    active_key = _synthesised_active_stage(order)
     is_failed = False
+    if active_key == "failed":
+        is_failed = True
+        active_key = "shipment_created" if (order.tracking_number or "") else "in_production"
 
-    if realtime:
-        active_key = realtime["active_key"]
-        stage_ts   = realtime["earliest_at_stage"]
-        ui_events  = realtime["ui_events"]
-        last_event_ts = realtime["last_event_ts"]
-        events_source = "carrier"
-    else:
-        # Synthesised path.
-        active_key = _synthesised_active_stage(order)
-        if active_key == "failed":
-            is_failed = True
-            active_key = "shipment_created" if (order.tracking_number or "") else "in_production"
-        stage_ts = {}
-        ui_events = []
-        last_event_ts = None
-        events_source = "synthesised"
-
-    if active_key not in STAGE_ORDER:
+    stage_keys = [s["key"] for s in GENERIC_STAGE_DEFS]
+    if active_key not in stage_keys:
         active_key = "order_placed"
-    active_idx = STAGE_ORDER.index(active_key)
+    active_idx = stage_keys.index(active_key)
 
-    # ── Build per-stage rows for the stepper ──────────────────────
     out_stages = []
-    for idx, sdef in enumerate(STAGE_DEFS):
+    for idx, sdef in enumerate(GENERIC_STAGE_DEFS):
         if idx < active_idx:
             status = "done"
         elif idx == active_idx:
             status = "active"
         else:
             status = "pending"
-
-        # Pick a timestamp: real-events first, synthesised fallback ONLY
-        # when no carrier feed is available. With a live carrier feed, a
-        # missing earlier-stage timestamp is honest — we mark the stage
-        # done (it must have happened) but show no date, rather than
-        # making one up from order.created_at + offset.
-        ts = stage_ts.get(sdef["key"])
-        if not ts and idx < active_idx and events_source == "synthesised":
-            ts = _synthesised_stage_timestamp(order, sdef["key"], active_key)
-
+        ts = _synthesised_stage_timestamp(order, sdef["key"], active_key) if idx < active_idx else None
         out_stages.append({
-            "key":   sdef["key"],
-            "code":  sdef["code"],
-            "label": sdef["label"],
-            "desc":  sdef["desc"],
-            "status": status,
+            "key":     sdef["key"],
+            "code":    sdef["code"],
+            "label":   sdef["label"],
+            "desc":    sdef["desc"],
+            "status":  status,
             "ts_iso":   ts.isoformat() if ts else "",
             "ts_short": ts.strftime("%d %b") if ts else "",
             "ts_full":  ts.strftime("%d %b · %H:%M UTC") if ts else "",
         })
 
-    # ── Headline ──────────────────────────────────────────────────
-    if events_source == "carrier" and ui_events:
-        latest = ui_events[-1]
-        headline = latest["clean"] or _stage_desc_for(active_key)
-        headline_sub = _stage_desc_for(active_key)
-    else:
-        fallback_map = {
-            "order_placed":     ("Order received", "Your order is queued for fulfilment."),
-            "in_production":    ("Order in production", "Our fulfilment team is preparing and quality-checking your items."),
-            "shipment_created": ("Shipment created", "Air waybill issued. Your parcel is ready to leave the facility."),
-            "origin_hub":       ("At origin hub", "Your parcel has been processed and loaded for outbound flight."),
-            "in_transit":       ("In international transit", "Scheduled long-haul route. Next update on arrival at destination country."),
-            "destination":      ("Delivered", "Your shipment has reached its destination."),
-        }
-        headline, headline_sub = fallback_map.get(active_key, ("In transit", ""))
+    fallback_map = {
+        "order_placed":     ("Order received", "Your order is queued for fulfilment."),
+        "in_production":    ("Order in production", "Our fulfilment team is preparing and quality-checking your items."),
+        "shipment_created": ("Shipment created", "Air waybill issued. Your parcel is ready to leave the facility."),
+        "origin_hub":       ("At origin hub", "Your parcel has been processed and loaded for outbound flight."),
+        "in_transit":       ("In international transit", "Scheduled long-haul route. Next update on arrival at destination country."),
+        "destination":      ("Delivered", "Your shipment has reached its destination."),
+    }
+    headline, headline_sub = fallback_map.get(active_key, ("In transit", ""))
 
-    # ── Updated label ─────────────────────────────────────────────
-    if last_event_ts:
-        updated_label = _ago_label(last_event_ts)
-    else:
-        last_done_ts = None
-        for s in out_stages:
-            if s["status"] == "done" and s["ts_iso"]:
-                last_done_ts = _parse_iso(s["ts_iso"]) or last_done_ts
-        if last_done_ts:
-            updated_label = _ago_label(last_done_ts)
-        else:
-            updated_label = "Live tracking"
-
-    # ── Sanitised, render-ready carrier events list ───────────────
-    events_payload = [
-        {
-            "ts_iso":  ev["ts"].isoformat(),
-            "ts_full": ev["ts"].strftime("%d %b · %H:%M UTC"),
-            "ts_short": ev["ts"].strftime("%d %b"),
-            "text":    ev["clean"],
-            "stage":   ev["stage"],
-            "stage_label": next((s["label"] for s in STAGE_DEFS if s["key"] == ev["stage"]), ""),
-        }
-        for ev in ui_events
-    ]
+    last_done_ts = None
+    for s in out_stages:
+        if s["status"] == "done" and s["ts_iso"]:
+            last_done_ts = _parse_iso(s["ts_iso"]) or last_done_ts
+    updated_label = _ago_label(last_done_ts) if last_done_ts else "Live tracking"
 
     return {
         "stages":         out_stages,
@@ -476,15 +487,27 @@ def build_stages(order) -> dict:
         "headline":       headline,
         "headline_sub":   headline_sub,
         "updated_label":  updated_label,
-        "events":         events_payload,
-        "events_source":  events_source,
+        "events":         [],
+        "events_source":  "synthesised",
+        "template":       "generic",
     }
+
+
+# ── Public entry point ──────────────────────────────────────────────
+def build_stages(order) -> dict:
+    """Build the timeline for an Order. Picks per-carrier template
+    when applicable, generic fallback otherwise."""
+    carrier = (getattr(order, "tracking_carrier", "") or "").strip().lower()
+    events  = getattr(order, "tracking_events", None) or []
+
+    if carrier == "yuntrack" and events:
+        return _build_yuntrack_stages(order)
+
+    return _build_generic_stages(order)
 
 
 # ── Tenant branding helpers ─────────────────────────────────────────
 def tenant_brand_mark(store_name: str) -> str:
-    """Two-letter mark for the brand circle. Falls back to first 2
-    chars of the store name."""
     if not store_name:
         return "DS"
     parts = [p for p in store_name.strip().split() if p]
@@ -494,18 +517,8 @@ def tenant_brand_mark(store_name: str) -> str:
 
 
 def build_brand_payload(store) -> dict:
-    """Tenant-branded chrome for the detail page. The customer ONLY
-    sees the seller's brand at the top (mark + name) — no contact
-    links, no support email, no store URL. That's deliberate so the
-    page can never be used to bounce the customer back to the seller's
-    direct site (which sometimes reveals the supplier behind the scenes)
-    or to leak any tenant PII."""
     if not store:
-        return {
-            "name": "Drop Sigma",
-            "sub":  "Shipment tracking",
-            "mark": "DS",
-        }
+        return {"name": "Drop Sigma", "sub": "Shipment tracking", "mark": "DS"}
     return {
         "name": store.name or "Shipment tracking",
         "sub":  "Shipment tracking · Express",
@@ -515,8 +528,6 @@ def build_brand_payload(store) -> dict:
 
 # ── Public-friendly tracking number normalisation ──────────────────
 def normalize_tracking_input(raw: str) -> str:
-    """Tracking numbers are mostly case-insensitive and may be pasted
-    with surrounding whitespace, soft hyphens, or zero-width spaces."""
     if not raw:
         return ""
     s = raw.strip()

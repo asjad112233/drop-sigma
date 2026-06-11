@@ -85,6 +85,19 @@ class Order(models.Model):
     tracking_events_updated_at  = models.DateTimeField(blank=True, null=True)
     tracking_events_attempts    = models.PositiveIntegerField(default=0)
 
+    # Identifies which carrier owns this shipment ("yuntrack", "ups", …)
+    # so the public tracking page can render the carrier's own stepper
+    # flow rather than forcing every shipment into a single 6-stage
+    # template. Set when refresh_order_tracking_events() identifies
+    # the carrier via tracking-number prefix or URL.
+    tracking_carrier        = models.CharField(max_length=40, blank=True, null=True)
+    # The carrier-side ACTIVE stage key for the stepper. Domain depends
+    # on which carrier owns this shipment — e.g. for tracking_carrier
+    # = "yuntrack" this is one of: pickup / departed_origin /
+    # arrived_destination / local_carrier / delivered. Mirrors what
+    # the carrier's own tracking page is currently highlighting.
+    tracking_carrier_stage  = models.CharField(max_length=40, blank=True, null=True)
+
     def __str__(self):
         return self.external_order_id
 

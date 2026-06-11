@@ -57,9 +57,9 @@
   .ship-num{font-size:26px;font-weight:900;color:#0f172a;letter-spacing:-.5px;font-family:'SF Mono','JetBrains Mono',Menlo,monospace;word-break:break-all;}
   .ship-num-sub{font-size:12.5px;color:#64748b;font-weight:700;margin-top:6px;}
 
-  /* 6-stage stepper */
+  /* Variable-length stepper (6 generic / 7 Yuntrack-mirror) */
   .stepper-wrap{margin-top:34px;padding:8px 0 0;}
-  .stepper{position:relative;display:grid;grid-template-columns:repeat(6,1fr);gap:0;}
+  .stepper{position:relative;display:grid;grid-template-columns:repeat(var(--stage-count,6),1fr);gap:0;}
   .stepper::before{content:"";position:absolute;top:33px;left:calc(100%/12);right:calc(100%/12);height:4px;background:#eef2f7;border-radius:99px;z-index:0;}
   .stepper::after{
     content:"";position:absolute;top:33px;left:calc(100%/12);height:4px;width:0;border-radius:99px;z-index:0;
@@ -249,10 +249,11 @@
 </head>
 <body>
 <div class="wrap"
-     style="--fill-w: calc((100%/6)*{{ active_index }} + (100%/12));
-            --fill-h: calc((100% - 16px) * {{ active_index }} / 5 + 8px);
-            --pulse-from: calc((100%/6)*{{ active_index }} - 10px);
-            --pulse-to: calc((100%/6)*{{ active_index }} + (100%/12));">
+     style="--stage-count: {{ stage_count }};
+            --fill-w: calc((100%/{{ stage_count }})*{{ active_index }} + (100%/{{ stage_count|add:stage_count }}));
+            --fill-h: calc((100% - 16px) * {{ active_index }} / {{ stage_count_minus_one }} + 8px);
+            --pulse-from: calc((100%/{{ stage_count }})*{{ active_index }} - 10px);
+            --pulse-to: calc((100%/{{ stage_count }})*{{ active_index }} + (100%/{{ stage_count|add:stage_count }}));">
 
   <!-- TOP BAR — tenant brand only, no links -->
   <div class="topbar fade-up d-1">
@@ -286,12 +287,25 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20h20"/><path d="M4 20V9l5 3V9l5 3V9l5 3v8"/><line x1="7" y1="15" x2="7" y2="15.5"/><line x1="12" y1="15" x2="12" y2="15.5"/><line x1="17" y1="15" x2="17" y2="15.5"/></svg>
             {% elif s.key == 'shipment_created' %}
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-2-5H5L3 8m18 0v11a2 2 0 01-2 2H5a2 2 0 01-2-2V8m18 0H3"/><line x1="10" y1="13" x2="14" y2="13"/></svg>
-            {% elif s.key == 'origin_hub' %}
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V7l9-4 9 4v14"/><rect x="9" y="12" width="6" height="9"/><line x1="3" y1="21" x2="21" y2="21"/></svg>
+            {% elif s.key == 'origin_hub' or s.key == 'pickup' %}
+              {# Pickup / origin sortation centre — box being loaded #}
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+            {% elif s.key == 'departed_origin' %}
+              {# Departed from origin — outbound plane #}
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg>
             {% elif s.key == 'in_transit' %}
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg>
-            {% else %}
+            {% elif s.key == 'arrived_destination' %}
+              {# Arrived at destination — destination flag / map pin #}
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            {% elif s.key == 'local_carrier' %}
+              {# Local courier — delivery van #}
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+            {% elif s.key == 'delivered' or s.key == 'destination' %}
+              {# Delivered — house / done check #}
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            {% else %}
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/></svg>
             {% endif %}
           </div>
           <div class="stage-label">{{ s.label }}</div>
