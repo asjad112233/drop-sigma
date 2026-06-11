@@ -423,11 +423,21 @@ def _render_html(kind: str, c: dict) -> str:
 <center style="width:100%;background:#f1f5f9;padding:32px 16px;">
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="640" style="width:100%;max-width:640px;background:#ffffff;border-radius:18px;box-shadow:0 20px 50px rgba(15,23,42,0.08);overflow:hidden;">
 
-  <tr><td style="background:{header_grad};padding:28px 32px;color:#fff;">
+  <tr><td style="background:{header_grad};padding:24px 32px;color:#fff;">
     <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+      <td width="56" style="vertical-align:middle;padding-right:14px;">
+        <!-- Drop Sigma icon — served from /static/branding/icon.png on
+             dropsigma.com so every email client (including Gmail mobile)
+             can fetch it without needing inline base64. White rounded
+             frame so the icon reads clearly against any header gradient
+             variant (purple for new orders, red/orange for failed). -->
+        <div style="width:48px;height:48px;border-radius:12px;background:rgba(255,255,255,.92);box-shadow:0 4px 14px rgba(15,23,42,.28);padding:6px;box-sizing:border-box;text-align:center;">
+          <img src="https://dropsigma.com/static/branding/icon.png" alt="Drop Sigma" width="36" height="36" style="display:block;width:36px;height:36px;border-radius:8px;margin:0 auto;">
+        </div>
+      </td>
       <td style="vertical-align:middle;">
-        <div style="font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;opacity:.85;">DROP SIGMA · ADMIN</div>
-        <div style="font-size:22px;font-weight:900;margin-top:6px;letter-spacing:-.3px;">{section_label}</div>
+        <div style="font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;opacity:.85;">DROP SIGMA · ADMIN</div>
+        <div style="font-size:22px;font-weight:900;margin-top:4px;letter-spacing:-.3px;">{section_label}</div>
       </td>
       <td style="vertical-align:middle;text-align:right;white-space:nowrap;">
         <div style="display:inline-block;background:rgba(255,255,255,.18);border-radius:99px;padding:6px 14px;font-size:11.5px;font-weight:700;border:1px solid rgba(255,255,255,.28);">⚡ Live sync</div>

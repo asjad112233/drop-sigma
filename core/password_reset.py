@@ -94,8 +94,11 @@ def _build_reset_email(name, reset_url):
 <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
   <tr><td align="center" style="padding-bottom:32px;">
     <table cellpadding="0" cellspacing="0"><tr>
-      <td style="background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:14px;width:44px;height:44px;text-align:center;vertical-align:middle;">
-        <span style="color:#fff;font-weight:900;font-size:17px;letter-spacing:-.5px;">DS</span>
+      <td style="background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:14px;width:44px;height:44px;text-align:center;vertical-align:middle;padding:5px;">
+        <!-- Drop Sigma icon, served from /static/branding/icon.png so
+             every mail client (incl. Gmail mobile) renders the brand
+             mark instead of a "DS" text fallback. -->
+        <img src="https://dropsigma.com/static/branding/icon.png" alt="DS" width="34" height="34" style="display:block;width:34px;height:34px;border-radius:9px;margin:0 auto;">
       </td>
       <td style="padding-left:12px;text-align:left;">
         <div style="font-size:19px;font-weight:900;color:#0f172a;letter-spacing:-.4px;">Drop Sigma</div>
