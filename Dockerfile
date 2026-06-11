@@ -14,7 +14,17 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Resilient pip install — Railway's build host has hit transient PyPI
+# connection drops that exhaust pip's default 5 retries with 15 s
+# timeouts, failing the whole build. Bump both, and pin the official
+# PyPI index URL explicitly so we don't depend on any environment
+# default that may have been swapped in.
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir \
+        --retries 10 \
+        --timeout 120 \
+        --index-url https://pypi.org/simple \
+        -r requirements.txt
 
 # Install playwright and point it to system chromium
 RUN playwright install chromium || true
