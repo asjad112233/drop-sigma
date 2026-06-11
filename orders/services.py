@@ -1333,9 +1333,13 @@ def sync_shopify_orders(store, after=None):
     response = requests.get(url, headers=headers, auth=auth, params=params, timeout=30)
     response.raise_for_status()
 
+    orders = response.json().get("orders", [])
+    # Same smart-realtime gate as the WC sync — see comment in
+    # sync_woocommerce_orders for the rationale.
+    treat_as_realtime = len(orders) <= 2
     count = 0
-    for item in response.json().get("orders", []):
-        _, created = process_shopify_order(store, item)
+    for item in orders:
+        _, created = process_shopify_order(store, item, is_realtime=treat_as_realtime)
         if created:
             count += 1
 
@@ -1397,9 +1401,18 @@ def sync_woocommerce_orders(store, after=None):
     response = _wc_get_with_auth_fallback(woo_session(), url, store, params=params, timeout=30)
     response.raise_for_status()
 
+    items = response.json()
+    # Smart realtime detection: a freshness-pull / webhook safety-net
+    # typically returns 1–2 just-arrived orders, while a manual "Sync
+    # Orders" range or initial onboarding returns dozens. We treat the
+    # 1–2 case as functionally real-time so the founder notification
+    # still fires even when WC's HMAC-signed webhook fails to deliver
+    # (the sentinel covers exactly this gap, and that single new order
+    # is genuinely a new event the founder should hear about).
+    treat_as_realtime = len(items) <= 2
     count = 0
-    for item in response.json():
-        _, created = process_woocommerce_order(store, item)
+    for item in items:
+        _, created = process_woocommerce_order(store, item, is_realtime=treat_as_realtime)
         if created:
             count += 1
 

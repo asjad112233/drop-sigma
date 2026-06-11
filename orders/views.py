@@ -1452,13 +1452,21 @@ def woocommerce_webhook(request, store_id):
         if not hmac.compare_digest(sig_header, expected):
             return JsonResponse({"success": False, "message": "Invalid signature"}, status=401)
 
-    import json
+    import json, logging as _log
+    _hooklog = _log.getLogger("orders.wc_webhook")
     try:
         data = json.loads(body)
-    except Exception:
+    except Exception as e:
+        _hooklog.warning("WC webhook for store %s: JSON parse failed (%d bytes, ctype=%r): %s · body[:200]=%r",
+                         store_id, len(body or b""),
+                         request.META.get("CONTENT_TYPE", ""),
+                         e, (body or b"")[:200])
         return JsonResponse({"success": False, "message": "Invalid JSON"}, status=400)
 
     if not isinstance(data, dict) or "id" not in data:
+        _hooklog.warning("WC webhook for store %s: payload missing 'id' or not dict · type=%s keys=%r",
+                         store_id, type(data).__name__,
+                         list(data.keys()) if isinstance(data, dict) else None)
         return JsonResponse({"success": False, "message": "Invalid payload"}, status=400)
 
     # is_realtime=True — single live webhook delivery, founder
