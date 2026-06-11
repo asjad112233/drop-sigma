@@ -126,6 +126,18 @@ def api_mark_read(request, pk):
 @login_required(login_url="/login/")
 @require_POST
 def api_mark_all_read(request):
+    """Mark notifications as read in bulk.
+
+    Optional JSON body filters (any combination):
+        {"audience": "admin|vendor|employee"}
+        {"category": "chat|order|email|...|system|ai"}
+
+    With no filter, every unread notification for the user is marked read.
+    Used by:
+      • the bell's "Mark all as read" button (no filter)
+      • the SP chat panel when the user enters the chat (`category=chat`)
+        so the bell badge drops the moment the chat is acknowledged.
+    """
     body = {}
     try:
         body = json.loads(request.body or b"{}")
@@ -134,6 +146,8 @@ def api_mark_all_read(request):
     qs = Notification.objects.filter(recipient=request.user, is_read=False)
     if body.get("audience"):
         qs = qs.filter(audience=body["audience"])
+    if body.get("category"):
+        qs = qs.filter(category=body["category"])
     updated = qs.update(is_read=True, read_at=timezone.now())
     return JsonResponse({"success": True, "marked_read": updated})
 

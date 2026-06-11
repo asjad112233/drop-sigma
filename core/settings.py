@@ -86,6 +86,8 @@ INSTALLED_APPS = [
     'superadmin',
     'notifications',
     'rma',
+    'sourcing_partners',
+    'sourcing_ops',
     'tracking_public',
 ]
 

@@ -98,6 +98,68 @@ class Order(models.Model):
     # the carrier's own tracking page is currently highlighting.
     tracking_carrier_stage  = models.CharField(max_length=40, blank=True, null=True)
 
+    # ===== DROP SIGMA SOURCING LIFECYCLE =====
+    # Independent of payment_status/fulfillment_status (which reflect what
+    # the END CUSTOMER did on the merchant store). These fields track the
+    # tenant ↔ Drop Sigma sourcing flow.
+    SOURCING_STATUS_CHOICES = [
+        ("pending_source",  "Pending Source"),
+        ("pending_payment", "Pending Payment"),
+        ("processing",      "Processing"),
+        ("shipping",        "Shipping"),
+        ("delivered",       "Delivered"),
+        ("cancel",          "Cancelled"),
+    ]
+    sourcing_status = models.CharField(
+        max_length=20, choices=SOURCING_STATUS_CHOICES,
+        default="pending_source", db_index=True,
+    )
+    sourcing_total_usd = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text="Drop Sigma's quoted total for the tenant — wallet charge amount.",
+    )
+    # Breakdown shown to tenant once the order leaves Pending Source. The
+    # sum (product + shipping) should equal sourcing_total_usd; the team UI
+    # is responsible for keeping these in sync at quote time.
+    sourcing_product_usd = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text="Product cost portion of the sourcing quote.",
+    )
+    sourcing_shipping_usd = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text="Shipping cost portion of the sourcing quote.",
+    )
+    sourcing_quoted_at = models.DateTimeField(null=True, blank=True)
+    sourcing_paid_at = models.DateTimeField(null=True, blank=True)
+    sourcing_shipped_at = models.DateTimeField(null=True, blank=True)
+    sourcing_delivered_at = models.DateTimeField(null=True, blank=True)
+    sourcing_cancelled_at = models.DateTimeField(null=True, blank=True)
+    sourcing_lead_days = models.PositiveIntegerField(null=True, blank=True)
+    sourcing_partner = models.ForeignKey(
+        "sourcing_partners.SourcingPartner",
+        on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="synced_orders",
+        help_text="Internal routing — never surfaced to the tenant.",
+    )
+    sourcing_locked_price = models.ForeignKey(
+        "sourcing_partners.LockedPrice",
+        on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="used_in_orders",
+    )
+    # Tenant-editable shipping override — once we lock for procurement we
+    # persist any edits the tenant made before paying. Until that lock, the
+    # UI uses raw_data's address.
+    shipping_override = models.JSONField(null=True, blank=True)
+
+    @property
+    def is_shipping_editable(self):
+        return self.sourcing_status in ("pending_source", "pending_payment")
+
+    @property
+    def ds_order_ref(self):
+        """Tenant-facing Drop Sigma order number, e.g. DS-001234."""
+        return f"DS-{self.id:06d}"
+
     def __str__(self):
         return self.external_order_id
 

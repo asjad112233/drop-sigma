@@ -1,0 +1,385 @@
+<!-- ════════════════════════════════════════════════════════════════
+     SETTINGS section — personal profile + workspace info
+═══════════════════════════════════════════════════════════════════ -->
+<div id="opsSettingsRoot" data-ready="0">
+  <div class="ops-loading">Loading settings…</div>
+</div>
+
+<style>
+  #opsSettingsRoot .st-wrap{
+    display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:16px;
+  }
+  @media (max-width: 1100px){ #opsSettingsRoot .st-wrap{grid-template-columns:1fr;} }
+
+  #opsSettingsRoot .st-card{
+    background:#fff;border:1px solid var(--ops-border);border-radius:18px;
+    padding:0;margin-bottom:14px;overflow:hidden;
+    box-shadow:0 1px 0 rgba(15,23,42,.02),0 12px 32px -22px rgba(15,23,42,.18);
+  }
+  #opsSettingsRoot .st-card-head{
+    padding:14px 18px;border-bottom:1px solid var(--ops-border);
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    background:linear-gradient(135deg,rgba(99,102,241,.04),rgba(212,175,55,.03));
+  }
+  #opsSettingsRoot .st-card-title{font-size:14px;font-weight:900;color:var(--ops-text);letter-spacing:-.01em;}
+  #opsSettingsRoot .st-card-sub{font-size:11px;font-weight:600;color:var(--ops-text-2);margin-top:2px;}
+  #opsSettingsRoot .st-card-body{padding:18px 20px;}
+
+  /* ───── Profile ───── */
+  #opsSettingsRoot .st-profile-top{
+    display:flex;align-items:center;gap:14px;
+    padding-bottom:14px;margin-bottom:14px;
+    border-bottom:1px dashed rgba(15,23,42,.08);
+  }
+  #opsSettingsRoot .st-profile-av{
+    width:74px;height:74px;border-radius:18px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:34px;color:#fff;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.25),0 10px 26px -10px rgba(15,23,42,.4);
+  }
+  #opsSettingsRoot .st-profile-name{font-size:18px;font-weight:900;color:var(--ops-text);letter-spacing:-.015em;}
+  #opsSettingsRoot .st-profile-meta{font-size:12px;color:var(--ops-text-2);font-weight:600;margin-top:2px;}
+  #opsSettingsRoot .st-role-pill{
+    display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;
+    background:var(--ops-violet);color:#fff;font-size:10.5px;font-weight:800;
+    margin-top:6px;letter-spacing:.02em;
+  }
+
+  #opsSettingsRoot .st-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  #opsSettingsRoot .st-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+  #opsSettingsRoot .st-field{display:flex;flex-direction:column;gap:5px;}
+  #opsSettingsRoot .st-field.full{grid-column:1/-1;}
+  #opsSettingsRoot .st-field label{
+    font-size:10.5px;font-weight:800;color:var(--ops-text-2);
+    text-transform:uppercase;letter-spacing:.06em;
+  }
+  #opsSettingsRoot .st-field input,
+  #opsSettingsRoot .st-field select{
+    width:100%;padding:9px 11px;border-radius:10px;border:1px solid #e5e7eb;
+    font-size:13px;font-weight:600;color:var(--ops-text);background:#fff;
+    transition:border-color .12s,box-shadow .12s;font-family:inherit;
+  }
+  #opsSettingsRoot .st-field input:focus,
+  #opsSettingsRoot .st-field select:focus{
+    outline:none;border-color:var(--ops-violet);
+    box-shadow:0 0 0 3px rgba(99,102,241,.16);
+  }
+  #opsSettingsRoot .st-field input[type=color]{height:38px;padding:3px;cursor:pointer;}
+
+  #opsSettingsRoot .st-actions{
+    display:flex;align-items:center;justify-content:flex-end;gap:8px;
+    padding-top:14px;margin-top:14px;
+    border-top:1px dashed rgba(15,23,42,.08);
+  }
+  #opsSettingsRoot .st-actions .msg{
+    margin-right:auto;font-size:12px;font-weight:700;color:var(--ops-text-2);
+  }
+  #opsSettingsRoot .st-actions .msg.error{color:var(--ops-red);}
+  #opsSettingsRoot .st-actions .msg.success{color:var(--ops-green);}
+
+  /* ───── About panel ───── */
+  #opsSettingsRoot .st-about{display:flex;flex-direction:column;gap:6px;}
+  #opsSettingsRoot .st-about-row{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:9px 0;border-bottom:1px dashed rgba(15,23,42,.06);
+    font-size:12.5px;
+  }
+  #opsSettingsRoot .st-about-row:last-child{border-bottom:none;}
+  #opsSettingsRoot .st-about-row .k{font-weight:700;color:var(--ops-text-2);}
+  #opsSettingsRoot .st-about-row .v{
+    font-weight:900;color:var(--ops-text);
+    font-variant-numeric:tabular-nums;letter-spacing:-.01em;
+  }
+  #opsSettingsRoot .st-about-row .v.pill{
+    padding:3px 9px;border-radius:999px;font-size:10.5px;letter-spacing:.04em;
+    background:linear-gradient(135deg,#d4af37,#a855f7);color:#fff;
+  }
+  #opsSettingsRoot .st-quick{display:flex;flex-direction:column;gap:8px;}
+  #opsSettingsRoot .st-quick a, #opsSettingsRoot .st-quick button{
+    display:flex;align-items:center;gap:10px;
+    padding:11px 14px;border-radius:12px;
+    font-weight:800;font-size:13px;border:1px solid #e5e7eb;background:#fff;
+    color:var(--ops-text);cursor:pointer;text-decoration:none;
+    transition:all .12s ease;
+  }
+  #opsSettingsRoot .st-quick a:hover, #opsSettingsRoot .st-quick button:hover{
+    background:#f8fafc;border-color:#cbd5e1;transform:translateY(-1px);
+  }
+  #opsSettingsRoot .st-quick .ic{
+    width:30px;height:30px;border-radius:9px;
+    display:flex;align-items:center;justify-content:center;font-size:14px;
+    background:linear-gradient(135deg,rgba(99,102,241,.14),rgba(168,85,247,.14));
+    color:var(--ops-violet);
+  }
+  #opsSettingsRoot .st-quick .l{flex:1;min-width:0;}
+  #opsSettingsRoot .st-quick .l .nm{font-size:13px;font-weight:900;color:var(--ops-text);}
+  #opsSettingsRoot .st-quick .l .sub{font-size:11px;color:var(--ops-text-2);font-weight:600;margin-top:1px;}
+  #opsSettingsRoot .st-quick .arr{font-size:14px;color:var(--ops-muted);}
+
+  #opsSettingsRoot .st-logout{
+    border-color:rgba(239,68,68,.25)!important;color:var(--ops-red)!important;
+  }
+  #opsSettingsRoot .st-logout .ic{
+    background:rgba(239,68,68,.1)!important;color:var(--ops-red)!important;
+  }
+  #opsSettingsRoot .st-logout .l .nm{color:var(--ops-red)!important;}
+
+  #opsSettingsRoot .st-no-profile{
+    text-align:center;padding:60px 20px;color:#64748b;
+  }
+  #opsSettingsRoot .st-no-profile .ic{font-size:42px;margin-bottom:10px;}
+</style>
+
+<script>
+  (function(){
+    const SS = { me: null, overview: null };
+
+    window.opsLoadSettings = async function(){
+      const root = document.getElementById('opsSettingsRoot');
+      root.innerHTML = '<div class="ops-loading">Loading settings…</div>';
+
+      // Refresh /api/me/ and /api/overview/ so counts are current
+      const [meR, ovR] = await Promise.all([
+        opsFetch('/ops/api/me/'),
+        opsFetch('/ops/api/overview/'),
+      ]);
+      SS.me       = meR.ok ? meR.data : (window.OPS && window.OPS.me) || null;
+      SS.overview = ovR.ok ? ovR.data : (window.OPS && window.OPS.overview) || null;
+
+      // Stash on shared OPS state so other sections can reuse
+      if (window.OPS){
+        if (SS.me)       window.OPS.me = SS.me;
+        if (SS.overview) window.OPS.overview = SS.overview;
+      }
+
+      ssRender();
+      ssRenderActions();
+      root.dataset.ready = '1';
+    };
+
+    function ssRenderActions(){
+      const a = document.getElementById('opsSectionActions');
+      if (!a) return;
+      a.innerHTML = `
+        <a class="ops-btn ghost" href="/dashboard/">↩ Tenant view</a>
+        <a class="ops-btn" href="/logout/" style="color:#ef4444;border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.06);">⎋ Log out</a>
+      `;
+    }
+
+    function ssRender(){
+      const root = document.getElementById('opsSettingsRoot');
+      const profile = SS.me && SS.me.profile;
+      const user    = SS.me && SS.me.user;
+
+      const buildDate = new Date().toISOString().slice(0,10);
+      const counts = SS.overview ? SS.overview.counts || {} : {};
+      const activeOrders = (counts.pending_source||0) + (counts.pending_payment||0)
+                        + (counts.processing||0) + (counts.shipping||0);
+      const teamCount = SS.overview ? (SS.overview.team_total || 0) : '—';
+      const supplierCount = SS.overview ? (SS.overview.suppliers_active || 0) : '—';
+
+      const aboutHtml = `
+        <div class="st-card">
+          <div class="st-card-head">
+            <div>
+              <div class="st-card-title">About Drop Sigma Ops</div>
+              <div class="st-card-sub">Internal portal — for the Drop Sigma sourcing team only.</div>
+            </div>
+          </div>
+          <div class="st-card-body">
+            <div class="st-about">
+              <div class="st-about-row"><span class="k">Version</span><span class="v pill">v1.0 · Internal Beta</span></div>
+              <div class="st-about-row"><span class="k">Build date</span><span class="v">${opsEsc(buildDate)}</span></div>
+              <div class="st-about-row"><span class="k">Team members</span><span class="v">${teamCount}</span></div>
+              <div class="st-about-row"><span class="k">Active suppliers</span><span class="v">${supplierCount}</span></div>
+              <div class="st-about-row"><span class="k">Active orders</span><span class="v">${activeOrders}</span></div>
+              <div class="st-about-row"><span class="k">Logged in as</span><span class="v">${user ? '@'+opsEsc(user.username) : '—'}</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="st-card">
+          <div class="st-card-head">
+            <div>
+              <div class="st-card-title">Quick actions</div>
+              <div class="st-card-sub">Switch contexts or end your session.</div>
+            </div>
+          </div>
+          <div class="st-card-body">
+            <div class="st-quick">
+              <a href="/dashboard/">
+                <span class="ic">↩</span>
+                <span class="l"><div class="nm">Switch to tenant view</div><div class="sub">Open your merchant workspace</div></span>
+                <span class="arr">→</span>
+              </a>
+              <a href="/ops/" onclick="event.preventDefault();window.opsSwitchView&&window.opsSwitchView('overview');">
+                <span class="ic">📊</span>
+                <span class="l"><div class="nm">Operations dashboard</div><div class="sub">Real-time KPIs and activity</div></span>
+                <span class="arr">→</span>
+              </a>
+              <a href="/logout/" class="st-logout">
+                <span class="ic">⎋</span>
+                <span class="l"><div class="nm">Log out</div><div class="sub">Ends this session everywhere</div></span>
+                <span class="arr">→</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      `;
+
+      if (!profile){
+        root.innerHTML = `
+          <div class="st-wrap">
+            <div>
+              <div class="st-card">
+                <div class="st-card-body">
+                  <div class="st-no-profile">
+                    <div class="ic">⚙️</div>
+                    <h3 style="margin:0 0 6px;font-weight:900;color:#0f172a;">No specialist profile yet</h3>
+                    <p style="margin:0 0 14px;font-size:13px;color:#64748b;">
+                      You're signed in as <b>@${opsEsc(user ? user.username : '')}</b> but don't have an OpsTeamMember row.
+                      A manager can create one in the Team section.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div>${aboutHtml}</div>
+          </div>`;
+        return;
+      }
+
+      const langStr = (profile.languages || []).join(', ');
+
+      const formHtml = `
+        <div class="st-card">
+          <div class="st-card-head">
+            <div>
+              <div class="st-card-title">Your specialist profile</div>
+              <div class="st-card-sub">How teammates see you across the ops portal.</div>
+            </div>
+          </div>
+          <div class="st-card-body">
+            <div class="st-profile-top">
+              <div class="st-profile-av" id="ssAvPreview"
+                   style="background:${opsEsc(profile.avatar_color || '#6366f1')};">
+                ${opsEsc(profile.avatar_emoji || '👤')}
+              </div>
+              <div style="min-width:0;flex:1;">
+                <div class="st-profile-name" id="ssNamePreview">${opsEsc(profile.display_name)}</div>
+                <div class="st-profile-meta">@${opsEsc(profile.username)} · ${opsEsc(profile.email || 'no email')}</div>
+                ${profile.role ? `<span class="st-role-pill" style="background:${opsEsc(profile.role_color || '#6366f1')};">${opsEsc(profile.role)}</span>` : ''}
+                ${profile.is_manager ? '<span style="margin-left:8px;font-size:11px;font-weight:800;color:#d4af37;">★ Manager</span>' : ''}
+              </div>
+            </div>
+
+            <div class="st-grid">
+              <div class="st-field full"><label>Display name</label>
+                <input id="ssDisplay" type="text" value="${opsEsc(profile.display_name)}">
+              </div>
+              <div class="st-field"><label>Title</label>
+                <input id="ssTitle" type="text" value="${opsEsc(profile.title)}">
+              </div>
+              <div class="st-field"><label>Status</label>
+                <select id="ssStatus">
+                  ${['active','away','offline','inactive'].map(s => `
+                    <option value="${s}" ${profile.status===s?'selected':''}>${({active:'Active',away:'Away',offline:'Offline',inactive:'Inactive'})[s]}</option>
+                  `).join('')}
+                </select>
+              </div>
+              <div class="st-field"><label>Timezone</label>
+                <select id="ssTz">${ssTzOptions(profile.timezone)}</select>
+              </div>
+              <div class="st-field"><label>Languages (comma-separated)</label>
+                <input id="ssLangs" type="text" value="${opsEsc(langStr)}">
+              </div>
+              <div class="st-grid-3" style="grid-column:1/-1;">
+                <div class="st-field"><label>Avatar emoji</label>
+                  <input id="ssEmoji" type="text" maxlength="2" value="${opsEsc(profile.avatar_emoji || '👤')}">
+                </div>
+                <div class="st-field"><label>Avatar color</label>
+                  <input id="ssColor" type="color" value="${opsEsc(profile.avatar_color || '#6366f1')}">
+                </div>
+                <div class="st-field"><label>Email</label>
+                  <input id="ssEmail" type="email" value="${opsEsc(profile.email)}">
+                </div>
+              </div>
+            </div>
+
+            <div class="st-actions">
+              <div class="msg" id="ssMsg"></div>
+              <button class="ops-btn ghost" id="ssReset">Reset</button>
+              <button class="ops-btn primary" id="ssSave">Save changes</button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      root.innerHTML = `
+        <div class="st-wrap">
+          <div>${formHtml}</div>
+          <div>${aboutHtml}</div>
+        </div>`;
+
+      // Live preview of avatar / display name
+      const emojiEl = root.querySelector('#ssEmoji');
+      const colorEl = root.querySelector('#ssColor');
+      const nameEl  = root.querySelector('#ssDisplay');
+      const avEl    = root.querySelector('#ssAvPreview');
+      const npEl    = root.querySelector('#ssNamePreview');
+      emojiEl.addEventListener('input', () => { avEl.textContent = emojiEl.value || '👤'; });
+      colorEl.addEventListener('input', () => { avEl.style.background = colorEl.value; });
+      nameEl.addEventListener('input', () => { npEl.textContent = nameEl.value || profile.display_name; });
+
+      root.querySelector('#ssReset').onclick = () => ssRender();
+
+      root.querySelector('#ssSave').onclick = async () => {
+        const msg = root.querySelector('#ssMsg');
+        msg.className = 'msg'; msg.textContent = '';
+        const payload = {
+          display_name: nameEl.value.trim(),
+          title:        root.querySelector('#ssTitle').value.trim(),
+          status:       root.querySelector('#ssStatus').value,
+          timezone:     root.querySelector('#ssTz').value,
+          avatar_emoji: emojiEl.value.trim() || '👤',
+          avatar_color: colorEl.value,
+          email:        root.querySelector('#ssEmail').value.trim(),
+          languages:    root.querySelector('#ssLangs').value,
+        };
+        const btn = root.querySelector('#ssSave');
+        btn.disabled = true; btn.textContent = 'Saving…';
+        const r = await opsFetch(`/ops/api/team/${profile.id}/update/`, { method:'POST', body: payload });
+        btn.disabled = false; btn.textContent = 'Save changes';
+        if (r.ok){
+          msg.className = 'msg success'; msg.textContent = 'Profile updated.';
+          opsToast('Settings saved', 'success');
+          // Refresh me + rail
+          const meR = await opsFetch('/ops/api/me/');
+          if (meR.ok){
+            SS.me = meR.data;
+            if (window.OPS) window.OPS.me = meR.data;
+            const u = meR.data.user || {};
+            const nm = document.getElementById('opsUserName');
+            const rl = document.getElementById('opsUserRole');
+            const av = document.getElementById('opsUserAv');
+            if (nm) nm.textContent = u.display_name || u.username || '';
+            if (rl) rl.textContent = meR.data.profile && meR.data.profile.role ? meR.data.profile.role : 'Operations';
+            if (av) av.textContent = (u.display_name || '?').split(' ').slice(0,2).map(s => s[0] || '').join('').toUpperCase() || 'Σ';
+          }
+        } else {
+          msg.className = 'msg error'; msg.textContent = (r.data && r.data.error) || 'Could not save changes.';
+        }
+      };
+    }
+
+    function ssTzOptions(current){
+      const tzs = [
+        'Asia/Karachi','Asia/Shanghai','Asia/Hong_Kong','Asia/Tokyo','Asia/Dubai',
+        'Asia/Kolkata','Asia/Singapore','Europe/London','Europe/Berlin',
+        'America/New_York','America/Los_Angeles','UTC',
+      ];
+      if (current && !tzs.includes(current)) tzs.unshift(current);
+      return tzs.map(z => `<option value="${z}" ${z===current?'selected':''}>${z}</option>`).join('');
+    }
+  })();
+</script>

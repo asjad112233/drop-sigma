@@ -1,0 +1,907 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Drop Sigma · Supplier Pricing Form (Preview)</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root{
+    --gold:#d4af37; --gold-2:#f4c430; --gold-dark:#7a5a00;
+    --violet:#6366f1; --violet-2:#a855f7; --violet-dark:#5b21b6;
+    --ink:#0f172a; --slate:#475569; --slate-2:#64748b; --muted:#94a3b8;
+    --border:rgba(15,23,42,.08); --bg:#f6f8fc;
+    --green:#10b981; --green-d:#065f46;
+    --red:#ef4444; --red-d:#991b1b;
+    --amber:#f59e0b; --amber-d:#92400e;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    background:var(--bg);color:var(--ink);font-size:14px;-webkit-font-smoothing:antialiased;
+    background:
+      radial-gradient(circle at 12% 8%, rgba(212,175,55,.07), transparent 38%),
+      radial-gradient(circle at 88% 12%, rgba(168,85,247,.06), transparent 40%),
+      #f6f8fc;
+    min-height:100vh;
+  }
+
+  /* ── Page shell ─────────────────────────────────────── */
+  .page{max-width:880px;margin:0 auto;padding:28px 22px 60px 22px;}
+
+  /* ── Top brand bar ──────────────────────────────────── */
+  .brand-bar{
+    display:flex;align-items:center;justify-content:space-between;
+    margin-bottom:24px;
+  }
+  .brand-bar .logo{
+    display:flex;align-items:center;gap:11px;
+    font-weight:900;color:var(--ink);font-size:16px;letter-spacing:-.01em;
+  }
+  .brand-bar .logo .mark{
+    width:38px;height:38px;border-radius:11px;
+    background:linear-gradient(135deg,var(--gold-2),var(--violet-2));
+    display:inline-flex;align-items:center;justify-content:center;
+    color:#0f172a;font-weight:900;font-size:14px;
+    box-shadow:0 8px 22px -8px rgba(244,196,48,.55);
+  }
+  .brand-bar .logo span.sub{
+    display:block;font-size:11px;color:var(--muted);font-weight:600;margin-top:1px;letter-spacing:0;
+  }
+  .brand-bar .secure{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:6px 12px;background:#fff;border:1px solid var(--border);border-radius:10px;
+    font-size:11px;font-weight:800;color:var(--slate);
+  }
+  .brand-bar .secure .dot{width:7px;height:7px;border-radius:50%;background:var(--green);
+    box-shadow:0 0 0 3px rgba(16,185,129,.25);}
+
+  /* ── Hero card (greeting) ───────────────────────────── */
+  .hero{
+    position:relative;overflow:hidden;
+    background:linear-gradient(135deg,var(--gold-2) 0%,var(--violet-2) 100%);
+    border-radius:20px;padding:28px 30px;color:#fff;margin-bottom:18px;
+    box-shadow:0 20px 50px -20px rgba(168,85,247,.4), 0 10px 30px -15px rgba(244,196,48,.3);
+  }
+  .hero::before{
+    content:"";position:absolute;top:-40px;right:-40px;width:200px;height:200px;
+    border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.18) 0%,transparent 70%);
+  }
+  .hero::after{
+    content:"";position:absolute;bottom:-60px;left:-20px;width:180px;height:180px;
+    border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.12) 0%,transparent 70%);
+  }
+  .hero .eyebrow{
+    font-size:11px;font-weight:900;letter-spacing:.18em;text-transform:uppercase;
+    opacity:.85;margin-bottom:8px;display:flex;align-items:center;gap:8px;
+  }
+  .hero .eyebrow::before{
+    content:"";width:24px;height:2px;background:rgba(255,255,255,.5);border-radius:2px;
+  }
+  .hero h1{
+    margin:0 0 6px 0;font-size:26px;font-weight:900;letter-spacing:-.015em;line-height:1.2;
+    position:relative;z-index:1;
+  }
+  .hero .lede{
+    font-size:14px;font-weight:600;line-height:1.55;opacity:.96;max-width:580px;
+    position:relative;z-index:1;
+  }
+  .hero .meta{
+    margin-top:14px;display:flex;flex-wrap:wrap;gap:8px;position:relative;z-index:1;
+  }
+  .hero .meta .chip{
+    display:inline-flex;align-items:center;gap:5px;
+    background:rgba(255,255,255,.18);backdrop-filter:blur(8px);
+    border:1px solid rgba(255,255,255,.25);
+    padding:6px 12px;border-radius:999px;font-size:11.5px;font-weight:800;
+  }
+
+  /* ── Bulk CSV workflow card ─────────────────────────── */
+  .bulk-card{
+    background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);
+    border-radius:16px;padding:0;margin-bottom:18px;
+    border:1px solid rgba(255,255,255,.08);
+    overflow:hidden;
+    box-shadow:0 18px 40px -20px rgba(15,23,42,.4);
+    position:relative;
+  }
+  .bulk-card::before{
+    content:"";position:absolute;top:0;left:0;right:0;height:1px;
+    background:linear-gradient(90deg,transparent,rgba(212,175,55,.45),transparent);
+  }
+  .bulk-card-head{
+    padding:16px 22px 14px 22px;
+    border-bottom:1px solid rgba(255,255,255,.06);
+    display:flex;align-items:center;gap:12px;
+  }
+  .bulk-card-head .ic{
+    width:36px;height:36px;border-radius:9px;flex-shrink:0;
+    background:linear-gradient(135deg,#f4c430,#d4af37);color:#0f172a;
+    display:inline-flex;align-items:center;justify-content:center;font-size:16px;
+  }
+  .bulk-card-head .tl{
+    font-weight:900;font-size:14px;color:#fff;letter-spacing:-.005em;
+  }
+  .bulk-card-head .sb{
+    font-size:11.5px;color:#94a3b8;font-weight:600;margin-top:2px;
+  }
+  .bulk-card-head .badge{
+    margin-left:auto;font-size:10px;font-weight:900;
+    background:rgba(244,196,48,.15);color:#f4c430;
+    padding:4px 9px;border-radius:6px;
+    text-transform:uppercase;letter-spacing:.08em;
+    border:1px solid rgba(244,196,48,.2);
+  }
+  .bulk-card-body{
+    padding:18px 22px 20px 22px;
+    display:grid;grid-template-columns:1fr 1fr;gap:12px;
+  }
+  .bulk-action{
+    background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:12px;padding:16px;
+    transition:all .15s;
+  }
+  .bulk-action:hover{
+    background:rgba(255,255,255,.07);
+    border-color:rgba(244,196,48,.3);
+  }
+  .bulk-action .step{
+    display:inline-flex;align-items:center;gap:5px;
+    font-size:10px;font-weight:900;color:#f4c430;
+    text-transform:uppercase;letter-spacing:.1em;margin-bottom:9px;
+  }
+  .bulk-action .step .n{
+    width:18px;height:18px;border-radius:50%;
+    background:#f4c430;color:#0f172a;
+    display:inline-flex;align-items:center;justify-content:center;
+    font-size:10px;font-weight:900;
+  }
+  .bulk-action .title{
+    font-size:13.5px;font-weight:900;color:#fff;
+    margin-bottom:4px;letter-spacing:-.005em;
+  }
+  .bulk-action .desc{
+    font-size:11.5px;color:#94a3b8;font-weight:600;line-height:1.5;
+    margin-bottom:12px;
+  }
+  .bulk-action button{
+    width:100%;border:none;cursor:pointer;
+    padding:10px 14px;border-radius:9px;font-weight:800;font-size:12.5px;
+    font-family:inherit;letter-spacing:.01em;
+    display:inline-flex;align-items:center;justify-content:center;gap:6px;
+    transition:transform .12s;
+  }
+  .bulk-action button:hover{transform:translateY(-1px);}
+  .bulk-action.download button{
+    background:linear-gradient(135deg,#f4c430,#d4af37);color:#0f172a;
+    box-shadow:0 6px 16px -6px rgba(244,196,48,.5),inset 0 1px 0 rgba(255,255,255,.5);
+  }
+  .bulk-action.upload button{
+    background:linear-gradient(135deg,#6366f1,#a855f7);color:#fff;
+    box-shadow:0 6px 16px -6px rgba(168,85,247,.5),inset 0 1px 0 rgba(255,255,255,.3);
+  }
+  .bulk-card-foot{
+    padding:11px 22px;
+    background:rgba(0,0,0,.2);
+    border-top:1px solid rgba(255,255,255,.06);
+    font-size:11px;color:#94a3b8;font-weight:600;text-align:center;
+  }
+  .bulk-card-foot b{color:#cbd5e1;font-weight:800;}
+  .bulk-card-foot .sep{margin:0 8px;opacity:.4;}
+
+  /* CSV format preview (small) */
+  .csv-preview{
+    margin-top:14px;background:rgba(0,0,0,.25);
+    border:1px solid rgba(255,255,255,.06);border-radius:10px;
+    padding:10px 12px;overflow-x:auto;
+  }
+  .csv-preview .hdr{
+    font-size:10px;font-weight:900;color:#f4c430;
+    text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;
+  }
+  .csv-preview table{
+    width:100%;border-collapse:collapse;font-size:10.5px;
+    color:#cbd5e1;font-family:ui-monospace,Menlo,monospace;
+  }
+  .csv-preview th{
+    text-align:left;padding:4px 8px;color:#94a3b8;font-weight:700;
+    border-bottom:1px solid rgba(255,255,255,.08);
+    text-transform:uppercase;letter-spacing:.05em;font-size:9.5px;
+  }
+  .csv-preview td{padding:4px 8px;color:#cbd5e1;font-weight:600;}
+  .csv-preview td.editable{color:#f4c430;font-weight:800;}
+  .csv-preview tr:not(:last-child) td{border-bottom:1px dashed rgba(255,255,255,.04);}
+
+  @media (max-width:680px){
+    .bulk-card-body{grid-template-columns:1fr;}
+  }
+
+  /* ── Ops message card (optional note from buyer) ────── */
+  .note-card{
+    background:#fff8e1;
+    border:1px solid rgba(212,175,55,.3);border-left:4px solid var(--gold);
+    border-radius:14px;padding:14px 18px;margin-bottom:18px;
+    display:flex;gap:12px;align-items:flex-start;
+  }
+  .note-card .ic{font-size:18px;flex-shrink:0;line-height:1.2;}
+  .note-card .body{flex:1;}
+  .note-card .body .lbl{
+    font-size:10.5px;font-weight:900;color:var(--gold-dark);
+    text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px;
+  }
+  .note-card .body .msg{
+    font-size:13px;font-weight:600;color:#5a4500;line-height:1.5;
+  }
+
+  /* ── Section header ─────────────────────────────────── */
+  .section-h{
+    display:flex;align-items:center;gap:10px;
+    margin:24px 0 12px 0;
+  }
+  .section-h .num{
+    width:28px;height:28px;border-radius:50%;flex-shrink:0;
+    background:linear-gradient(135deg,var(--gold),var(--violet-2));
+    color:#fff;font-weight:900;font-size:12px;
+    display:inline-flex;align-items:center;justify-content:center;
+    box-shadow:0 6px 16px -6px rgba(168,85,247,.5);
+  }
+  .section-h .tl{font-weight:900;font-size:15px;color:var(--ink);letter-spacing:-.005em;}
+  .section-h .ct{
+    font-size:10.5px;font-weight:800;color:var(--muted);
+    padding:2px 8px;background:#f1f5f9;border-radius:7px;
+  }
+  .section-h .hint{
+    margin-left:auto;font-size:11.5px;color:var(--slate-2);font-weight:600;
+  }
+
+  /* ── Product card ───────────────────────────────────── */
+  .prod{
+    background:#fff;border:1px solid var(--border);border-radius:16px;
+    margin-bottom:12px;overflow:hidden;
+    box-shadow:0 1px 0 rgba(255,255,255,.7) inset, 0 14px 30px -24px rgba(15,23,42,.2);
+    transition:box-shadow .15s;
+  }
+  .prod:hover{box-shadow:0 1px 0 rgba(255,255,255,.7) inset, 0 18px 40px -22px rgba(15,23,42,.28);}
+  .prod-head{
+    display:flex;align-items:center;gap:14px;padding:14px 18px;
+    background:linear-gradient(180deg,#fafbfd 0%,#ffffff 100%);
+    border-bottom:1px solid var(--border);
+  }
+  .prod-head .thumb{
+    width:54px;height:54px;border-radius:11px;flex-shrink:0;
+    background:linear-gradient(135deg,#e2e8f0,#cbd5e1);
+    overflow:hidden;display:inline-flex;align-items:center;justify-content:center;
+    color:var(--muted);font-size:22px;
+    border:1px solid var(--border);
+  }
+  .prod-head .thumb img{width:100%;height:100%;object-fit:cover;}
+  .prod-head .info{flex:1;min-width:0;}
+  .prod-head .sku{
+    font-family:ui-monospace,Menlo,monospace;font-size:11px;
+    color:var(--violet-dark);font-weight:800;letter-spacing:.02em;
+  }
+  .prod-head .nm{font-size:14px;font-weight:900;color:var(--ink);margin-top:2px;letter-spacing:-.005em;}
+  .prod-head .var{font-size:11.5px;color:var(--slate-2);font-weight:600;margin-top:1px;}
+  .prod-head .stk{
+    display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:800;
+    padding:5px 9px;border-radius:7px;
+    background:linear-gradient(135deg,#d1fae5,#a7f3d0);color:var(--green-d);
+    border:1px solid rgba(6,95,70,.15);
+  }
+  .prod-head .stk.warn{
+    background:linear-gradient(135deg,#fef3c7,#fde68a);color:var(--amber-d);
+    border-color:rgba(180,83,9,.2);
+  }
+  .prod-body{padding:16px 18px;}
+
+  /* ── Form fields ────────────────────────────────────── */
+  .grid{display:grid;gap:10px;grid-template-columns:repeat(4, 1fr);}
+  .field{display:flex;flex-direction:column;gap:4px;}
+  .field.full{grid-column:1 / -1;}
+  .field label{
+    font-size:10px;font-weight:900;color:var(--muted);
+    text-transform:uppercase;letter-spacing:.07em;
+  }
+  .field label .req{color:var(--red);}
+  .field input, .field textarea, .field select{
+    border:1px solid #e2e8f0;border-radius:9px;
+    padding:9px 11px;font-size:13px;font-weight:700;color:var(--ink);
+    background:#fff;outline:none;font-family:inherit;
+    transition:border-color .15s,box-shadow .15s;
+  }
+  .field input:focus, .field textarea:focus, .field select:focus{
+    border-color:var(--violet-2);box-shadow:0 0 0 3px rgba(168,85,247,.12);
+  }
+  .field.cur input{
+    background:linear-gradient(135deg,#fffaf0 0%,#fff6e3 100%);
+    border-color:rgba(212,175,55,.35);
+    font-variant-numeric:tabular-nums;
+  }
+  .field .hint{font-size:10.5px;color:var(--muted);font-weight:600;margin-top:2px;}
+  .field .was{font-size:10.5px;color:var(--slate-2);font-weight:700;margin-top:2px;}
+  .field .was b{color:var(--ink);font-weight:900;}
+
+  /* ── Variant editor ─────────────────────────────────── */
+  .var-toggle{
+    margin-top:14px;display:flex;align-items:center;gap:8px;cursor:pointer;
+    padding:9px 12px;background:#f8fafc;border:1px solid var(--border);border-radius:10px;
+    font-size:11.5px;font-weight:800;color:var(--slate);
+    transition:background .15s;
+  }
+  .var-toggle:hover{background:#f1f5f9;}
+  .var-toggle .arrow{transition:transform .2s;}
+  .var-toggle.open .arrow{transform:rotate(90deg);}
+  .var-list{
+    margin-top:8px;padding:12px;border:1px solid var(--border);border-radius:10px;
+    background:#fafbfd;
+  }
+  .var-row{
+    display:grid;grid-template-columns:1.4fr 1fr 110px 90px;gap:8px;align-items:center;
+    padding:8px 0;border-bottom:1px dashed rgba(15,23,42,.06);
+  }
+  .var-row:last-child{border-bottom:none;}
+  .var-row .lbl{font-size:12px;font-weight:800;color:var(--ink);}
+  .var-row .sku{font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:var(--violet-dark);font-weight:700;}
+  .var-row input{
+    border:1px solid #e2e8f0;border-radius:7px;padding:6px 9px;
+    font-size:12px;font-weight:700;color:var(--ink);background:#fff;outline:none;
+    text-align:right;font-variant-numeric:tabular-nums;
+  }
+  .var-row input:focus{border-color:var(--violet-2);box-shadow:0 0 0 2px rgba(168,85,247,.12);}
+  .var-row .toggle{
+    display:flex;gap:4px;
+  }
+  .var-row .toggle .pill{
+    flex:1;padding:5px;font-size:10px;font-weight:800;text-align:center;
+    border:1px solid #e2e8f0;border-radius:6px;background:#fff;color:var(--slate);
+    cursor:pointer;
+  }
+  .var-row .toggle .pill.on{background:linear-gradient(135deg,var(--green),#059669);color:#fff;border-color:transparent;}
+  .var-row .toggle .pill.off{background:#fef2f2;color:var(--red-d);border-color:rgba(220,38,38,.2);}
+
+  /* ── Toggle row (in stock yes/no) ───────────────────── */
+  .toggle-row{
+    margin-top:10px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  }
+  .toggle-row .lbl{font-size:11px;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;}
+  .yesno{display:inline-flex;gap:4px;background:#f1f5f9;padding:3px;border-radius:9px;}
+  .yesno button{
+    border:none;background:transparent;padding:6px 14px;font-size:11.5px;font-weight:800;
+    cursor:pointer;border-radius:7px;color:var(--slate);
+  }
+  .yesno button.on.yes{background:#fff;color:var(--green-d);box-shadow:0 1px 4px rgba(15,23,42,.08);}
+  .yesno button.on.no{background:#fff;color:var(--red-d);box-shadow:0 1px 4px rgba(15,23,42,.08);}
+
+  /* ── Add-new-product section ────────────────────────── */
+  .add-new{
+    background:linear-gradient(135deg,rgba(99,102,241,.05),rgba(168,85,247,.04));
+    border:2px dashed rgba(168,85,247,.3);border-radius:14px;
+    padding:18px;text-align:center;margin-top:14px;
+  }
+  .add-new h3{
+    font-size:14px;font-weight:900;color:var(--ink);margin:0 0 4px 0;letter-spacing:-.005em;
+  }
+  .add-new p{font-size:12px;color:var(--slate-2);font-weight:600;margin:0 0 12px 0;}
+  .add-new button{
+    background:linear-gradient(135deg,var(--violet),var(--violet-2));color:#fff;
+    border:none;padding:9px 18px;border-radius:10px;font-weight:800;font-size:12.5px;
+    cursor:pointer;
+    box-shadow:0 8px 20px -8px rgba(168,85,247,.5);
+  }
+  .add-new button:hover{transform:translateY(-1px);}
+
+  /* ── Submitter info card ────────────────────────────── */
+  .submitter{
+    background:#fff;border:1px solid var(--border);border-radius:14px;
+    padding:16px 18px;margin-top:18px;
+    box-shadow:0 1px 0 rgba(255,255,255,.7) inset, 0 14px 30px -24px rgba(15,23,42,.2);
+  }
+  .submitter .grid{grid-template-columns:repeat(2, 1fr);}
+
+  /* ── Submit action bar (sticky bottom) ──────────────── */
+  .action-bar{
+    margin-top:24px;padding:18px 22px;
+    background:linear-gradient(180deg,#0f172a 0%,#1e293b 100%);
+    border-radius:16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+    box-shadow:0 18px 40px -16px rgba(15,23,42,.5);
+  }
+  .action-bar .summary{flex:1;min-width:0;color:#cbd5e1;font-size:12.5px;font-weight:700;line-height:1.5;}
+  .action-bar .summary b{color:#f4c430;font-weight:900;}
+  .action-bar button{
+    padding:13px 26px;border:none;cursor:pointer;
+    border-radius:12px;font-weight:900;font-size:14px;letter-spacing:.01em;
+    color:#0f172a;
+    background:linear-gradient(135deg,var(--gold-2),var(--gold));
+    box-shadow:0 10px 26px -8px rgba(244,196,48,.6), inset 0 1px 0 rgba(255,255,255,.6);
+  }
+  .action-bar button:hover{transform:translateY(-1px);}
+
+  /* ── Footer ─────────────────────────────────────────── */
+  .footer{
+    margin-top:30px;padding-top:24px;border-top:1px solid var(--border);
+    display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;
+    font-size:11px;color:var(--muted);font-weight:600;
+  }
+  .footer a{color:var(--violet-dark);font-weight:800;text-decoration:none;}
+  .footer .link-meta{
+    font-family:ui-monospace,Menlo,monospace;font-size:10px;color:var(--muted);
+    background:#f1f5f9;padding:4px 8px;border-radius:6px;
+  }
+
+  /* ── Preview banner (only shown in this preview page) ─ */
+  .preview-banner{
+    position:sticky;top:0;z-index:50;
+    background:linear-gradient(135deg,#0f172a,#1e293b);color:#f4c430;
+    padding:9px 16px;font-size:11.5px;font-weight:800;letter-spacing:.02em;
+    text-align:center;
+    box-shadow:0 4px 12px -4px rgba(0,0,0,.3);
+  }
+  .preview-banner b{color:#fff;}
+  .preview-banner .link{font-family:ui-monospace,Menlo,monospace;color:#cbd5e1;font-weight:700;}
+
+  /* ── Responsive ─────────────────────────────────────── */
+  @media (max-width:680px){
+    .page{padding:18px 14px 50px 14px;}
+    .grid{grid-template-columns:1fr 1fr;}
+    .var-row{grid-template-columns:1fr 90px;}
+    .var-row .sku, .var-row .toggle{display:none;}
+    .hero{padding:22px 22px;}
+    .hero h1{font-size:21px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="preview-banner">
+  🎨 <b>DESIGN PREVIEW</b> · Yeh wo page hai jo supplier dekhega jab unko link share karoge
+  · <span class="link">dropsigma.com/supplier/a7k9x2m4n8q3...</span>
+</div>
+
+<div class="page">
+
+  <!-- ─── Brand bar ───────────────────────────────────────── -->
+  <div class="brand-bar">
+    <div class="logo">
+      <span class="mark">DS</span>
+      <div>Drop Sigma<span class="sub">Supplier Pricing Portal</span></div>
+    </div>
+    <div class="secure">
+      <span class="dot"></span> Secure · expires Jul 12, 2026
+    </div>
+  </div>
+
+  <!-- ─── Hero greeting ──────────────────────────────────── -->
+  <div class="hero">
+    <div class="eyebrow">Pricing form · Jun 12, 2026</div>
+    <h1>Hi Xiamen Home &amp; Decor 👋</h1>
+    <div class="lede">
+      Please confirm or update your current pricing for the 8 products below.
+      Your prices auto-fill into Drop Sigma's order workspace, so accurate numbers
+      mean faster quotes &amp; faster payment.
+    </div>
+    <div class="meta">
+      <span class="chip">📦 8 products</span>
+      <span class="chip">🇨🇳 Xiamen, China</span>
+      <span class="chip">★ 4.6 rating</span>
+      <span class="chip">⏱ Avg lead 9d</span>
+    </div>
+  </div>
+
+  <!-- ─── Optional note from ops ─────────────────────────── -->
+  <div class="note-card">
+    <span class="ic">💬</span>
+    <div class="body">
+      <div class="lbl">Note from Asjad · Drop Sigma Ops</div>
+      <div class="msg">Hi! Quick quarterly price refresh — please update unit costs reflecting any FX or material changes. If a product is no longer available, just mark it out of stock. We pay weekly via T/T as usual. Thanks!</div>
+    </div>
+  </div>
+
+  <!-- ─── Bulk CSV update (alternative to manual form) ────── -->
+  <div class="bulk-card">
+    <div class="bulk-card-head">
+      <span class="ic">📊</span>
+      <div>
+        <div class="tl">Got many products? Use the bulk spreadsheet method</div>
+        <div class="sb">Download all your products as Excel/CSV, edit prices in any spreadsheet app, upload back — done in 2 minutes</div>
+      </div>
+      <span class="badge">Recommended for 20+ products</span>
+    </div>
+    <div class="bulk-card-body">
+      <div class="bulk-action download">
+        <div class="step"><span class="n">1</span> Download</div>
+        <div class="title">📥 Download CSV file</div>
+        <div class="desc">All 8 products + 62 variants pre-filled with current prices. Open in Excel, Google Sheets, or Numbers.</div>
+        <button>📥 Download supplier-prices.csv</button>
+      </div>
+      <div class="bulk-action upload">
+        <div class="step"><span class="n">2</span> Upload back</div>
+        <div class="title">📤 Upload filled CSV</div>
+        <div class="desc">Once you've updated prices in your spreadsheet, drag the file here. We'll auto-update everything.</div>
+        <button>📤 Upload filled CSV</button>
+      </div>
+    </div>
+
+    <!-- CSV format preview -->
+    <div style="padding:0 22px 16px 22px;">
+      <div class="csv-preview">
+        <div class="hdr">📋 What the CSV looks like</div>
+        <table>
+          <thead>
+            <tr>
+              <th>SKU</th>
+              <th>Product</th>
+              <th>Variant</th>
+              <th>Current $</th>
+              <th>New Price $</th>
+              <th>Available?</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>BAG-TOT-201-N</td>
+              <td>Canvas Tote</td>
+              <td>Natural</td>
+              <td>5.80</td>
+              <td class="editable">6.40</td>
+              <td class="editable">Yes</td>
+            </tr>
+            <tr>
+              <td>BAG-TOT-201-B</td>
+              <td>Canvas Tote</td>
+              <td>Black</td>
+              <td>5.80</td>
+              <td class="editable">6.40</td>
+              <td class="editable">Yes</td>
+            </tr>
+            <tr>
+              <td>ACC-SUN-601</td>
+              <td>Aviator Sunglasses</td>
+              <td>—</td>
+              <td>13.20</td>
+              <td class="editable">14.50</td>
+              <td class="editable">Yes</td>
+            </tr>
+            <tr style="opacity:.6;">
+              <td colspan="6" style="text-align:center;font-style:italic;font-weight:500;">… and 59 more rows pre-filled with your products</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="bulk-card-foot">
+      <b>How it works:</b> Download → Edit only the orange columns in Excel/Sheets → Upload
+      <span class="sep">·</span>
+      Or just use the form below 👇
+    </div>
+  </div>
+
+  <!-- ─── Section: Update existing products ──────────────── -->
+  <div class="section-h">
+    <span class="num">1</span>
+    <span class="tl">Or update prices one-by-one below</span>
+    <span class="ct">8 products</span>
+    <span class="hint">Pre-filled with last known values · update anything that changed</span>
+  </div>
+
+  <!-- Product 1 — multi-variant -->
+  <div class="prod">
+    <div class="prod-head">
+      <div class="thumb"><img src="https://picsum.photos/seed/canvas-tote/120/120" alt=""></div>
+      <div class="info">
+        <div class="sku">BAG-TOT-201</div>
+        <div class="nm">Minimalist Canvas Tote Bag</div>
+        <div class="var">4 colors · 1 size</div>
+      </div>
+      <span class="stk">● In stock</span>
+    </div>
+    <div class="prod-body">
+      <div class="grid">
+        <div class="field cur">
+          <label>Unit cost (USD) <span class="req">*</span></label>
+          <input type="number" step="0.01" value="6.40">
+          <div class="was">Was <b>$5.80</b></div>
+        </div>
+        <div class="field">
+          <label>Shipping unit (USD)</label>
+          <input type="number" step="0.01" value="1.20">
+        </div>
+        <div class="field">
+          <label>MOQ</label>
+          <input type="number" min="1" value="100">
+        </div>
+        <div class="field">
+          <label>Lead days</label>
+          <input type="number" min="1" value="9">
+        </div>
+      </div>
+
+      <div class="var-toggle open">
+        <span class="arrow">▶</span>
+        <span>4 variants · click to edit per-color pricing</span>
+      </div>
+      <div class="var-list">
+        <div class="var-row">
+          <div>
+            <div class="lbl">Natural</div>
+            <div class="sku">BAG-TOT-201-N</div>
+          </div>
+          <input type="number" step="0.01" value="6.40">
+          <input type="number" min="0" value="200" placeholder="stock">
+          <div class="toggle">
+            <span class="pill on">In stock</span>
+          </div>
+        </div>
+        <div class="var-row">
+          <div>
+            <div class="lbl">Black</div>
+            <div class="sku">BAG-TOT-201-B</div>
+          </div>
+          <input type="number" step="0.01" value="6.40">
+          <input type="number" min="0" value="180" placeholder="stock">
+          <div class="toggle">
+            <span class="pill on">In stock</span>
+          </div>
+        </div>
+        <div class="var-row">
+          <div>
+            <div class="lbl">Olive</div>
+            <div class="sku">BAG-TOT-201-O</div>
+          </div>
+          <input type="number" step="0.01" value="6.70">
+          <input type="number" min="0" value="95" placeholder="stock">
+          <div class="toggle">
+            <span class="pill on">In stock</span>
+          </div>
+        </div>
+        <div class="var-row">
+          <div>
+            <div class="lbl">Rust</div>
+            <div class="sku">BAG-TOT-201-R</div>
+          </div>
+          <input type="number" step="0.01" value="6.70">
+          <input type="number" min="0" value="0" placeholder="stock">
+          <div class="toggle">
+            <span class="pill off">Sold out</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="toggle-row">
+        <span class="lbl">Overall stock</span>
+        <div class="yesno">
+          <button class="on yes">✓ Available</button>
+          <button>Out of stock</button>
+        </div>
+        <span class="lbl" style="margin-left:auto;">Preferred for this SKU</span>
+        <div class="yesno">
+          <button class="on yes">★ Yes</button>
+          <button>No</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Product 2 — sunglasses, 3 variants -->
+  <div class="prod">
+    <div class="prod-head">
+      <div class="thumb"><img src="https://picsum.photos/seed/sunglasses/120/120" alt=""></div>
+      <div class="info">
+        <div class="sku">ACC-SUN-601</div>
+        <div class="nm">Aviator Sunglasses</div>
+        <div class="var">3 frame colors</div>
+      </div>
+      <span class="stk">● In stock</span>
+    </div>
+    <div class="prod-body">
+      <div class="grid">
+        <div class="field cur">
+          <label>Unit cost (USD) <span class="req">*</span></label>
+          <input type="number" step="0.01" value="14.50">
+          <div class="was">Was <b>$13.20</b></div>
+        </div>
+        <div class="field">
+          <label>Shipping unit (USD)</label>
+          <input type="number" step="0.01" value="2.20">
+        </div>
+        <div class="field">
+          <label>MOQ</label>
+          <input type="number" min="1" value="50">
+        </div>
+        <div class="field">
+          <label>Lead days</label>
+          <input type="number" min="1" value="10">
+        </div>
+      </div>
+      <div class="var-toggle">
+        <span class="arrow">▶</span>
+        <span>3 variants · click to edit per-color pricing</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Product 3 — ceramic coffee, 2 sizes -->
+  <div class="prod">
+    <div class="prod-head">
+      <div class="thumb"><img src="https://picsum.photos/seed/ceramic-coffee/120/120" alt=""></div>
+      <div class="info">
+        <div class="sku">HOM-CFE-301</div>
+        <div class="nm">Ceramic Pour-Over Coffee Set</div>
+        <div class="var">2 sizes · 4-cup / 8-cup</div>
+      </div>
+      <span class="stk warn">⚠ Limited stock</span>
+    </div>
+    <div class="prod-body">
+      <div class="grid">
+        <div class="field cur">
+          <label>Unit cost (USD) <span class="req">*</span></label>
+          <input type="number" step="0.01" value="11.20">
+          <div class="was">Was <b>$11.20</b> (no change)</div>
+        </div>
+        <div class="field">
+          <label>Shipping unit (USD)</label>
+          <input type="number" step="0.01" value="2.85">
+        </div>
+        <div class="field">
+          <label>MOQ</label>
+          <input type="number" min="1" value="200">
+        </div>
+        <div class="field">
+          <label>Lead days</label>
+          <input type="number" min="1" value="12">
+        </div>
+      </div>
+      <div class="var-toggle">
+        <span class="arrow">▶</span>
+        <span>2 variants · click to edit per-size pricing</span>
+      </div>
+      <div class="toggle-row">
+        <span class="lbl">Overall stock</span>
+        <div class="yesno">
+          <button class="on yes">✓ Available</button>
+          <button>Out of stock</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Product 4 — t-shirt, 25 variants (collapsed) -->
+  <div class="prod">
+    <div class="prod-head">
+      <div class="thumb"><img src="https://picsum.photos/seed/cotton-tee/120/120" alt=""></div>
+      <div class="info">
+        <div class="sku">APP-TEE-002</div>
+        <div class="nm">Organic Cotton T-Shirt</div>
+        <div class="var">5 colors × 5 sizes · 25 variants</div>
+      </div>
+      <span class="stk">● In stock</span>
+    </div>
+    <div class="prod-body">
+      <div class="grid">
+        <div class="field cur">
+          <label>Unit cost (USD) <span class="req">*</span></label>
+          <input type="number" step="0.01" value="4.20">
+          <div class="was">Was <b>$3.90</b></div>
+        </div>
+        <div class="field">
+          <label>Shipping unit (USD)</label>
+          <input type="number" step="0.01" value="0.85">
+        </div>
+        <div class="field">
+          <label>MOQ</label>
+          <input type="number" min="1" value="500">
+        </div>
+        <div class="field">
+          <label>Lead days</label>
+          <input type="number" min="1" value="9">
+        </div>
+      </div>
+      <div class="field full" style="margin-top:10px;">
+        <label>Notes (any minimum, FX, material change, etc.)</label>
+        <textarea placeholder="Optional message about this product...">Cotton prices up 8% this quarter — adjusted unit cost slightly. Bulk orders >2000 still at $3.90.</textarea>
+      </div>
+      <div class="var-toggle">
+        <span class="arrow">▶</span>
+        <span>25 variants · click to expand &amp; edit each</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Product 5 — earbuds, marked out of stock -->
+  <div class="prod">
+    <div class="prod-head">
+      <div class="thumb"><img src="https://picsum.photos/seed/earbuds/120/120" alt=""></div>
+      <div class="info">
+        <div class="sku">ELC-EBD-401</div>
+        <div class="nm">Wireless Noise-Cancelling Earbuds</div>
+        <div class="var">3 colors</div>
+      </div>
+      <span class="stk warn" style="background:linear-gradient(135deg,#fee2e2,#fecaca);color:#991b1b;border-color:rgba(153,27,27,.2);">● Out of stock</span>
+    </div>
+    <div class="prod-body">
+      <div class="grid">
+        <div class="field">
+          <label>Unit cost (USD)</label>
+          <input type="number" step="0.01" value="32.00" disabled style="opacity:.5;">
+        </div>
+        <div class="field">
+          <label>Shipping unit (USD)</label>
+          <input type="number" step="0.01" value="3.20" disabled style="opacity:.5;">
+        </div>
+        <div class="field">
+          <label>MOQ</label>
+          <input type="number" min="1" value="100" disabled style="opacity:.5;">
+        </div>
+        <div class="field">
+          <label>Lead days</label>
+          <input type="number" min="1" value="15" disabled style="opacity:.5;">
+        </div>
+      </div>
+      <div class="field full" style="margin-top:10px;">
+        <label>Reason / restock ETA</label>
+        <textarea placeholder="Optional note...">Chipset supplier ran out — expect 4-6 weeks before restock. Will inform Drop Sigma when production resumes.</textarea>
+      </div>
+      <div class="toggle-row">
+        <span class="lbl">Overall stock</span>
+        <div class="yesno">
+          <button>✓ Available</button>
+          <button class="on no">⏳ Out of stock</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Section 2: Add new products ────────────────────── -->
+  <div class="section-h">
+    <span class="num">2</span>
+    <span class="tl">Add new products</span>
+    <span class="hint">Optional · any new SKUs you'd like us to source from you</span>
+  </div>
+
+  <div class="add-new">
+    <h3>➕ Got a new product for Drop Sigma?</h3>
+    <p>Add SKU, name, variants, cost — we'll review and add it to your catalog.</p>
+    <button>+ Add new product</button>
+  </div>
+
+  <!-- ─── Section 3: Submitter info ──────────────────────── -->
+  <div class="section-h">
+    <span class="num">3</span>
+    <span class="tl">Your details</span>
+    <span class="hint">So we know who submitted this update</span>
+  </div>
+
+  <div class="submitter">
+    <div class="grid">
+      <div class="field">
+        <label>Your name <span class="req">*</span></label>
+        <input type="text" placeholder="e.g. Mr. Chen Wei" value="Mr. Chen Wei">
+      </div>
+      <div class="field">
+        <label>Your role</label>
+        <input type="text" placeholder="e.g. Sales Manager" value="Sales Manager">
+      </div>
+      <div class="field full">
+        <label>Any final note for Drop Sigma?</label>
+        <textarea placeholder="Optional — anything we should know?">All prices effective from Jul 1, 2026. Happy to discuss volume discounts on the cotton tees.</textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Submit action ──────────────────────────────────── -->
+  <div class="action-bar">
+    <div class="summary">
+      Submitting will update <b>8 products</b> across your Drop Sigma catalog.<br>
+      Drop Sigma's ops team will see your changes instantly &amp; reach out if anything looks unusual.
+    </div>
+    <button>✅ Submit pricing update</button>
+  </div>
+
+  <!-- ─── Footer ─────────────────────────────────────────── -->
+  <div class="footer">
+    <div>Powered by <a href="#">Drop Sigma</a> · Secure supplier pricing portal</div>
+    <span class="link-meta">link: a7k9x2m4n8q3...</span>
+  </div>
+</div>
+
+</body>
+</html>

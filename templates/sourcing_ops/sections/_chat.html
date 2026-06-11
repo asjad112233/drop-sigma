@@ -1,0 +1,1244 @@
+<!-- Tenant Chat Inbox — ops-side reply console.
+
+     Drop Sigma's specialist team replies here to tenant messages that
+     come in from the tenant's Sourcing Partners chat. Tenant sees ONE
+     unified "Drop Sigma Sourcing" persona; internally we still know who
+     replied (via OpsActivity audit). -->
+
+<style>
+  #opsChatRoot{font-size:13px;}
+  #opsChatRoot .cx-grid{
+    display:grid;grid-template-columns:340px 1fr;gap:14px;
+    height:calc(100vh - 160px);min-height:560px;
+  }
+
+  /* Inbox list */
+  #opsChatRoot .cx-list{
+    background:#fff;border:1px solid rgba(15,23,42,.06);border-radius:16px;
+    display:flex;flex-direction:column;overflow:hidden;
+    box-shadow:0 1px 0 rgba(15,23,42,.02),0 12px 32px -22px rgba(15,23,42,.18);
+  }
+  #opsChatRoot .cx-list-head{
+    padding:12px 14px;border-bottom:1px solid rgba(15,23,42,.06);
+    display:flex;align-items:center;gap:8px;background:linear-gradient(180deg,#fafafd,#f3f4fa);
+  }
+  #opsChatRoot .cx-search{
+    flex:1;display:flex;align-items:center;gap:7px;background:#fff;
+    border:1px solid #e5e7eb;border-radius:9px;padding:6px 10px;
+  }
+  #opsChatRoot .cx-search input{border:none;background:transparent;outline:none;flex:1;font-size:12.5px;font-weight:600;color:#0f172a;}
+  #opsChatRoot .cx-toggle{
+    display:inline-flex;align-items:center;gap:5px;padding:6px 10px;border-radius:9px;
+    border:1px solid #e5e7eb;background:#fff;cursor:pointer;font-size:11.5px;font-weight:800;color:#475569;
+  }
+  #opsChatRoot .cx-toggle.active{
+    background:linear-gradient(135deg,#0f172a,#1a1b35);color:#f4c430;border-color:transparent;
+  }
+  #opsChatRoot .cx-scroll{flex:1;overflow-y:auto;}
+  #opsChatRoot .cx-conv{
+    display:flex;align-items:center;gap:10px;padding:11px 14px;cursor:pointer;
+    border-bottom:1px solid rgba(15,23,42,.05);transition:background .12s;
+  }
+  #opsChatRoot .cx-conv:hover{background:#fafaf7;}
+  #opsChatRoot .cx-conv.active{background:linear-gradient(90deg,rgba(212,175,55,.08),rgba(168,85,247,.04));border-left:3px solid #d4af37;padding-left:11px;}
+  #opsChatRoot .cx-conv .av{
+    width:36px;height:36px;border-radius:10px;color:#fff;font-weight:900;font-size:14px;
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  }
+  #opsChatRoot .cx-conv .info{flex:1;min-width:0;}
+  #opsChatRoot .cx-conv .top{display:flex;align-items:center;gap:6px;}
+  #opsChatRoot .cx-conv .tnm{font-size:12.5px;font-weight:800;color:#0f172a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;}
+  /* Inline location flag — appears before the tenant name. Slightly
+     muted vs the name itself so it reads as metadata. */
+  #opsChatRoot .cx-conv .cx-conv-flag{display:inline-block;margin-right:5px;font-size:13px;line-height:1;vertical-align:-1px;}
+  #opsChatRoot .cx-conv .ago{font-size:10.5px;color:#94a3b8;font-weight:700;}
+  #opsChatRoot .cx-conv .pnm{font-size:10.5px;color:#7a5a00;font-weight:700;letter-spacing:.02em;margin-top:1px;}
+  #opsChatRoot .cx-conv .preview{font-size:11.5px;color:#64748b;font-weight:600;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  #opsChatRoot .cx-conv .preview.in::before{content:"You: ";color:#94a3b8;}
+  #opsChatRoot .cx-conv .badge{
+    background:#ef4444;color:#fff;font-size:10px;font-weight:900;
+    min-width:20px;height:20px;padding:0 6px;border-radius:999px;
+    display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;
+  }
+
+  /* Thread pane */
+  #opsChatRoot .cx-thread{
+    background:#fff;border:1px solid rgba(15,23,42,.06);border-radius:16px;
+    display:flex;flex-direction:column;overflow:hidden;
+    box-shadow:0 1px 0 rgba(15,23,42,.02),0 12px 32px -22px rgba(15,23,42,.18);
+  }
+  #opsChatRoot .cx-thread-head{
+    padding:14px 18px;border-bottom:1px solid rgba(15,23,42,.06);
+    background:linear-gradient(180deg,#fafafd,#f3f4fa);
+    display:flex;align-items:center;gap:12px;
+    box-shadow:inset 0 -2px 0 rgba(212,175,55,.16);
+  }
+  #opsChatRoot .cx-thread-head .av{
+    width:42px;height:42px;border-radius:11px;color:#fff;font-weight:900;font-size:18px;
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  }
+  #opsChatRoot .cx-thread-head .info{flex:1;min-width:0;}
+  #opsChatRoot .cx-thread-head .nm{font-size:14px;font-weight:900;color:#0f172a;letter-spacing:-.01em;}
+  #opsChatRoot .cx-thread-head .sub{font-size:11px;color:#64748b;font-weight:600;margin-top:1px;}
+  #opsChatRoot .cx-thread-head .pn{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;background:linear-gradient(135deg,#fef7e0,#fef3c7);color:#7a5a00;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.06em;border:1px solid rgba(212,175,55,.28);}
+
+  /* Header identity row — tenant name + inline location chip.
+     The chip is a quiet outline pill so the name stays the dominant
+     element; flag emoji is the visual anchor on the left. */
+  #opsChatRoot .cx-thread-head .nm-row{
+    display:flex;align-items:center;gap:9px;flex-wrap:wrap;min-width:0;
+  }
+  #opsChatRoot .cx-thread-head .cx-thread-loc{
+    display:inline-flex;align-items:center;gap:5px;
+    padding:1px 9px;border-radius:999px;
+    background:#f8fafc;border:1px solid rgba(15,23,42,.08);
+    font-size:11px;font-weight:700;color:#475569;line-height:1.7;
+    max-width:240px;
+  }
+  #opsChatRoot .cx-thread-head .cx-thread-loc .flag{font-size:13px;line-height:1;}
+  #opsChatRoot .cx-thread-head .cx-thread-loc .txt{
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#0f172a;font-weight:800;
+  }
+
+  #opsChatRoot .cx-msgs{
+    flex:1;overflow-y:auto;padding:18px 20px;
+    background:
+      radial-gradient(800px 400px at 100% 0%, rgba(168,85,247,.04), transparent 60%),
+      radial-gradient(800px 400px at 0% 100%, rgba(212,175,55,.04), transparent 60%),
+      #fafaf7;
+  }
+  #opsChatRoot .cx-msg{display:flex;margin:7px 0;}
+  #opsChatRoot .cx-msg.tenant{justify-content:flex-start;}
+  #opsChatRoot .cx-msg.ops{justify-content:flex-end;}
+  #opsChatRoot .cx-bubble{
+    max-width:70%;padding:10px 14px;border-radius:14px;font-size:13px;line-height:1.5;
+    box-shadow:0 4px 12px -8px rgba(15,23,42,.18);
+  }
+  /* Message body text — Times New Roman, slightly larger to compensate
+     for TNR's smaller x-height vs the UI sans default. */
+  #opsChatRoot .cx-bubble > div:not(.ts):not(.cx-chip){
+    font-family:"Times New Roman",Times,serif;
+    font-size:15px;line-height:1.4;
+  }
+  #opsChatRoot .cx-msg.tenant .cx-bubble{
+    background:#fff;color:#000;border:1px solid rgba(15,23,42,.07);
+    border-bottom-left-radius:4px;
+  }
+  #opsChatRoot .cx-msg.ops .cx-bubble{
+    background:linear-gradient(135deg,#d9fdd3 0%,#c1eeb6 100%);
+    color:#000;
+    border:1px solid rgba(8,108,87,.12);
+    border-bottom-right-radius:4px;
+  }
+  #opsChatRoot .cx-msg .ts{font-size:10px;opacity:.7;margin-top:3px;font-weight:600;}
+  #opsChatRoot .cx-msg.ops .ts{color:rgba(5,70,64,.6);}
+
+  /* ── Attachments inside bubbles (WhatsApp-style) ───────────────── */
+  #opsChatRoot .cx-att-img{
+    display:block;max-width:280px;max-height:280px;
+    width:auto;height:auto;border-radius:10px;
+    cursor:zoom-in;background:#f1f5f9;
+    border:1px solid rgba(15,23,42,.05);
+    margin-top:6px;
+  }
+  #opsChatRoot .cx-att-file{
+    display:inline-flex;align-items:center;gap:6px;
+    margin-top:6px;padding:7px 11px;border-radius:9px;
+    background:rgba(255,255,255,.5);color:inherit;
+    font-size:12px;font-weight:700;text-decoration:none;
+    border:1px solid rgba(15,23,42,.1);
+  }
+  #opsChatRoot .cx-msg.tenant .cx-att-file{background:#f8fafc;color:#0f172a;}
+  #opsChatRoot .cx-msg.ops .cx-att-file{background:rgba(255,255,255,.55);color:#054640;border-color:rgba(8,108,87,.2);}
+
+  /* ── Compose attach preview thumbnails ──────────────────────── */
+  #opsChatRoot .cx-att-preview{
+    display:none;flex-wrap:wrap;gap:8px;
+    padding:10px 14px;background:#fafbfd;
+    border-top:1px solid rgba(15,23,42,.06);
+  }
+  #opsChatRoot .cx-att-preview.has{display:flex;}
+  #opsChatRoot .cx-att-thumb{
+    position:relative;width:64px;height:64px;border-radius:9px;
+    overflow:hidden;border:1px solid rgba(15,23,42,.08);background:#f1f5f9;
+  }
+  #opsChatRoot .cx-att-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+  #opsChatRoot .cx-att-thumb .x{
+    position:absolute;top:-5px;right:-5px;width:18px;height:18px;
+    border:none;border-radius:50%;background:#0f172a;color:#fff;
+    font-size:11px;font-weight:900;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;line-height:1;
+    box-shadow:0 2px 5px rgba(0,0,0,.3);
+  }
+  #opsChatRoot .cx-att-thumb .sz{
+    position:absolute;bottom:2px;left:2px;
+    font-size:8.5px;font-weight:800;color:#fff;
+    background:rgba(0,0,0,.6);padding:1px 4px;border-radius:3px;
+  }
+  #opsChatRoot .cx-att-chip{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:6px 10px;border-radius:9px;background:#f1f5f9;
+    border:1px solid rgba(15,23,42,.08);
+    font-size:11.5px;font-weight:700;color:#475569;
+  }
+  #opsChatRoot .cx-att-chip .x{
+    cursor:pointer;color:#ef4444;font-weight:900;font-size:14px;line-height:1;
+  }
+
+  /* ── Composer attach buttons ──────────────────────────────── */
+  #opsChatRoot .cx-attach-btn{
+    width:36px;height:36px;border:1px solid rgba(15,23,42,.1);
+    background:#fff;border-radius:9px;cursor:pointer;
+    display:inline-flex;align-items:center;justify-content:center;
+    font-size:15px;color:#64748b;flex-shrink:0;
+    transition:all .12s;
+  }
+  #opsChatRoot .cx-attach-btn:hover{
+    border-color:#a855f7;color:#a855f7;background:#faf7ff;
+  }
+
+  #opsChatRoot .cx-day-sep{text-align:center;margin:18px 0 12px;}
+  #opsChatRoot .cx-day-sep span{display:inline-block;padding:3px 12px;border-radius:999px;background:rgba(15,23,42,.06);color:#64748b;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;}
+
+  #opsChatRoot .cx-composer{
+    padding:12px 16px;border-top:1px solid rgba(15,23,42,.06);background:#fff;
+    display:flex;gap:10px;align-items:flex-end;
+  }
+  #opsChatRoot .cx-composer textarea{
+    flex:1;border:1px solid rgba(15,23,42,.1);border-radius:11px;
+    padding:10px 12px;font-family:inherit;font-size:13px;resize:none;
+    max-height:140px;outline:none;line-height:1.45;
+  }
+  #opsChatRoot .cx-composer textarea:focus{border-color:#a855f7;box-shadow:0 0 0 3px rgba(168,85,247,.12);}
+  #opsChatRoot .cx-send{
+    padding:10px 18px;border:none;border-radius:11px;
+    background:linear-gradient(135deg,#d4af37,#b8860b);color:#fff;font-weight:900;
+    cursor:pointer;font-size:13px;letter-spacing:.005em;
+    box-shadow:0 6px 18px rgba(212,175,55,.36),inset 0 1px 0 rgba(255,235,170,.5);
+  }
+  #opsChatRoot .cx-send:hover:not(:disabled){transform:translateY(-1px);}
+  #opsChatRoot .cx-send:disabled{opacity:.5;cursor:not-allowed;}
+
+  #opsChatRoot .cx-empty{
+    flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;color:#64748b;padding:40px 20px;
+  }
+  #opsChatRoot .cx-empty .ic{font-size:56px;margin-bottom:14px;background:linear-gradient(135deg,#d4af37,#a855f7);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;}
+  #opsChatRoot .cx-empty h3{margin:0 0 6px;font-size:17px;font-weight:900;color:#0f172a;letter-spacing:-.01em;}
+  #opsChatRoot .cx-empty p{margin:0;font-size:13px;}
+
+  /* ── Smart-link chips (mirror tenant `.spv-chip` styling) ───────────
+     The chat body uses Times New Roman; chips override to sans-serif
+     so they read as interactive buttons, not embedded prose. */
+  #opsChatRoot .cx-chip{
+    display:inline-flex;align-items:center;
+    padding:1px 8px;border-radius:7px;
+    font-family:"Inter",ui-sans-serif,system-ui,sans-serif;
+    font-weight:800;font-size:12px;letter-spacing:.005em;
+    text-decoration:none;cursor:pointer;
+    transition:filter .12s, transform .12s;
+    line-height:1.5;vertical-align:baseline;white-space:nowrap;
+  }
+  #opsChatRoot .cx-chip:hover{filter:brightness(1.08);transform:translateY(-1px);text-decoration:none;}
+  #opsChatRoot .cx-chip-order{background:rgba(99,102,241,.14);color:#4338ca;border:1px solid rgba(99,102,241,.28);}
+  #opsChatRoot .cx-chip-sku  {background:rgba(212,175,55,.18);color:#7a5a00;border:1px solid rgba(212,175,55,.38);}
+  #opsChatRoot .cx-chip-email{background:rgba(16,185,129,.14);color:#065f46;border:1px solid rgba(16,185,129,.32);}
+
+  /* Smart-link picker modal — shown when a chip resolves to multiple orders */
+  .cx-picker-backdrop{
+    position:fixed;inset:0;background:rgba(15,23,42,.55);backdrop-filter:blur(4px);
+    z-index:9998;display:flex;align-items:center;justify-content:center;padding:24px;
+  }
+  .cx-picker-card{
+    width:520px;max-width:100%;max-height:80vh;background:#fff;border-radius:18px;
+    overflow:hidden;display:flex;flex-direction:column;
+    box-shadow:0 20px 50px -12px rgba(15,23,42,.4);
+  }
+  .cx-picker-head{
+    padding:16px 20px;background:linear-gradient(135deg,#6366f1,#a855f7);color:#fff;
+    display:flex;align-items:center;justify-content:space-between;
+  }
+  .cx-picker-body{padding:14px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;background:#fafaf7;}
+  .cx-picker-row{
+    width:100%;display:flex;align-items:center;gap:14px;
+    padding:14px 16px;border:1px solid rgba(15,23,42,.06);border-radius:13px;
+    background:#fff;cursor:pointer;text-align:left;transition:.12s;font-family:inherit;
+  }
+  .cx-picker-row:hover{background:#fafaf7;border-color:#d4af37;}
+  .cx-picker-toast{
+    position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+    background:#0f172a;color:#fff;padding:9px 16px;border-radius:999px;
+    font-size:12px;font-weight:700;z-index:99999;
+    box-shadow:0 10px 24px -10px rgba(15,23,42,.5);
+  }
+
+  /* ── Read-only order detail modal (mirrors tenant SP modal) ──────── */
+  .cx-od-card{
+    width:640px;max-width:100%;max-height:88vh;background:#fff;border-radius:18px;
+    overflow:hidden;display:flex;flex-direction:column;
+    box-shadow:0 20px 50px -12px rgba(15,23,42,.4);
+  }
+  .cx-od-head{
+    padding:18px 24px;background:linear-gradient(135deg,#6366f1 0%,#8b5cf6 50%,#a855f7 100%);color:#fff;
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+  }
+  .cx-od-title{font-size:16px;font-weight:900;letter-spacing:-.015em;flex:1;min-width:0;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .cx-od-close{
+    width:32px;height:32px;border:none;border-radius:9px;
+    background:rgba(255,255,255,.22);color:#fff;cursor:pointer;
+    font-size:18px;font-weight:900;flex-shrink:0;
+  }
+  .cx-od-body{padding:18px 24px;overflow-y:auto;background:#fff;flex:1;}
+  .cx-od-ref-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .cx-od-ds-ref{
+    padding:3px 9px;border-radius:7px;background:#f1f5f9;
+    color:#000;font-weight:900;font-size:12px;
+    font-family:ui-monospace,Menlo,monospace;letter-spacing:.02em;
+  }
+  .cx-od-src-ref{font-size:11.5px;color:#64748b;font-weight:700;font-family:ui-monospace,Menlo,monospace;}
+  .cx-od-status{
+    display:inline-flex;align-items:center;gap:5px;padding:3px 11px;border-radius:999px;
+    font-size:10.5px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;
+  }
+  .cx-od-status-pending_source  {background:#fef3c7;color:#92400e;}
+  .cx-od-status-pending_payment {background:#fed7aa;color:#9a3412;}
+  .cx-od-status-processing      {background:#e0e7ff;color:#3730a3;}
+  .cx-od-status-shipping        {background:#dbeafe;color:#1e40af;}
+  .cx-od-status-delivered       {background:#d1fae5;color:#065f46;}
+  .cx-od-status-cancel          {background:#fee2e2;color:#991b1b;}
+  .cx-od-h4{font-size:11px;font-weight:900;color:#94a3b8;text-transform:uppercase;
+    letter-spacing:.08em;margin:18px 0 9px;}
+  .cx-od-invoice,.cx-od-shipping{
+    border:1px solid rgba(15,23,42,.07);border-radius:12px;background:#fafaf7;padding:14px 16px;
+  }
+  .cx-od-items{display:flex;flex-direction:column;gap:11px;}
+  .cx-od-item{display:flex;align-items:center;gap:12px;padding:9px 0;
+    border-bottom:1px dashed rgba(15,23,42,.07);}
+  .cx-od-item:last-child{border-bottom:none;}
+  .cx-od-item-img{
+    width:48px;height:48px;border-radius:9px;background:#f1f5f9;
+    display:flex;align-items:center;justify-content:center;font-size:18px;
+    flex-shrink:0;overflow:hidden;border:1px solid rgba(15,23,42,.06);
+  }
+  .cx-od-item-img img{width:100%;height:100%;object-fit:cover;display:block;}
+  .cx-od-item-info{flex:1;min-width:0;}
+  .cx-od-item-name{font-size:13px;font-weight:800;color:#000;line-height:1.3;}
+  .cx-od-item-variant{
+    display:inline-block;margin-top:3px;padding:2px 8px;border-radius:6px;
+    background:rgba(212,175,55,.18);color:#7a5a00;font-size:10.5px;font-weight:800;
+  }
+  .cx-od-item-sku{font-size:10.5px;color:#94a3b8;font-weight:700;margin-top:3px;
+    font-family:ui-monospace,Menlo,monospace;letter-spacing:.02em;}
+  .cx-od-item-qty{font-size:12px;font-weight:800;color:#475569;}
+  .cx-od-item-price{text-align:right;flex-shrink:0;min-width:84px;}
+  .cx-od-item-price .line-total{font-size:14px;font-weight:900;color:#000;font-variant-numeric:tabular-nums;}
+  .cx-od-item-price .unit-price{font-size:10.5px;color:#94a3b8;font-weight:700;margin-top:2px;font-variant-numeric:tabular-nums;}
+  .cx-od-summary{margin-top:12px;padding-top:11px;border-top:1px dashed rgba(15,23,42,.12);
+    display:flex;flex-direction:column;gap:6px;}
+  .cx-od-summary-row{display:flex;justify-content:space-between;align-items:center;
+    font-size:12.5px;color:#64748b;}
+  .cx-od-summary-row .lbl{font-weight:700;}
+  .cx-od-summary-row .v{font-weight:800;color:#000;font-variant-numeric:tabular-nums;}
+  .cx-od-summary-row.is-grand{padding-top:7px;border-top:1px dashed rgba(15,23,42,.18);margin-top:4px;}
+  .cx-od-summary-row.is-grand .lbl{font-size:11.5px;font-weight:900;color:#94a3b8;
+    text-transform:uppercase;letter-spacing:.06em;}
+  .cx-od-summary-row.is-grand .v{font-size:18px;font-weight:900;color:#7a5a00;}
+  .cx-od-pending{
+    display:flex;align-items:center;gap:11px;padding:12px 14px;
+    background:linear-gradient(135deg,#fef7e0,#fef3c7);
+    border:1px solid rgba(212,175,55,.32);border-radius:10px;margin-top:10px;
+  }
+  .cx-od-shipping-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px 16px;}
+  .cx-od-k{font-size:10px;font-weight:900;color:#94a3b8;text-transform:uppercase;
+    letter-spacing:.08em;margin-bottom:4px;}
+  .cx-od-v{font-size:13px;color:#000;font-weight:700;line-height:1.45;}
+  .cx-od-track-btn{
+    padding:7px 13px;border-radius:9px;background:linear-gradient(135deg,#6366f1,#a855f7);
+    color:#fff;text-decoration:none;font-weight:800;font-size:11.5px;flex-shrink:0;
+  }
+  .cx-od-foot{padding:12px 24px;background:#fafaf7;border-top:1px solid rgba(15,23,42,.06);
+    display:flex;justify-content:flex-end;gap:8px;}
+  .cx-od-btn-close{
+    padding:8px 18px;border:1px solid rgba(15,23,42,.12);border-radius:10px;
+    background:#fff;color:#000;font-weight:800;font-size:12.5px;cursor:pointer;
+    font-family:inherit;
+  }
+  .cx-od-btn-close:hover{background:#f1f5f9;}
+</style>
+
+<div id="opsChatRoot">
+  <div class="cx-grid">
+    <!-- LEFT: conversation list -->
+    <div class="cx-list">
+      <div class="cx-list-head">
+        <div class="cx-search">
+          <span style="color:#94a3b8;">🔍</span>
+          <input type="search" id="cxSearch" placeholder="Search tenant or store…" oninput="opsChat._onSearch(this.value)">
+        </div>
+        <button class="cx-toggle" id="cxUnreadToggle" onclick="opsChat._toggleUnread()" title="Unread only">●</button>
+      </div>
+      <div class="cx-scroll" id="cxList">
+        <div class="ops-loading">Loading conversations…</div>
+      </div>
+    </div>
+
+    <!-- RIGHT: thread + composer -->
+    <div class="cx-thread" id="cxThread">
+      <div class="cx-empty">
+        <div class="ic">💬</div>
+        <h3>Pick a conversation</h3>
+        <p>Select a tenant on the left to see their messages and reply.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const state = {
+    convs: [], filtered: [], q: '',
+    unreadOnly: false, activeId: null, msgs: [],
+    // Tenant-isolation whitelist: smart-link chips only render for
+    // tokens the server has confirmed belong to the conversation's
+    // TENANT (not the ops user). Foreign tokens stay plain text.
+    validTokens: new Set(),
+  };
+
+  function mergeValidTokens(arr){
+    if (!arr || !Array.isArray(arr)) return;
+    for (const t of arr) state.validTokens.add(t);
+  }
+
+  /* ─── Scroll the messages pane to the latest bubble ─────────────────
+     A plain `scrollTop = scrollHeight` races with images loading inside
+     the bubbles — images load AFTER the scroll, so the bubble grows
+     and the user lands above the latest content. Here we:
+       1. Scroll immediately so the user sees something happen now.
+       2. Scroll again on next paint so we use the layout the browser
+          settled on after our innerHTML write.
+       3. Hook every still-loading image and re-scroll on its `load` /
+          `error` event so the final landing point is the true bottom.
+       4. Hook `naturalHeight===0` images (rare cache miss case) too. */
+  function scrollMsgsToBottom(el){
+    el = el || document.getElementById('cxMsgs');
+    if (!el) return;
+    const jump = () => { el.scrollTop = el.scrollHeight; };
+    jump();
+    requestAnimationFrame(jump);
+    const imgs = el.querySelectorAll('img');
+    imgs.forEach(img => {
+      if (img.complete && img.naturalHeight !== 0) return;
+      const onResolve = () => {
+        img.removeEventListener('load',  onResolve);
+        img.removeEventListener('error', onResolve);
+        jump();
+      };
+      img.addEventListener('load',  onResolve);
+      img.addEventListener('error', onResolve);
+    });
+  }
+
+  // `reopen` controls whether an already-open thread is re-fetched after
+  // the inbox list refreshes. It MUST be false when load() is itself called
+  // from inside openThread() (the post-send / post-open count refresh),
+  // otherwise load → openThread → load recurses forever and the thread pane
+  // flickers on "Loading conversation…" endlessly.
+  async function load(reopen = true){
+    const qs = state.unreadOnly ? '?unread=1' : '';
+    const r = await opsFetch('/ops/api/chats/' + qs);
+    if (!r.ok){
+      document.getElementById('cxList').innerHTML =
+        '<div class="ops-empty"><h3>Could not load</h3><p>Try again in a moment.</p></div>';
+      return;
+    }
+    state.convs = r.data.conversations || [];
+    applyFilter();
+
+    // If the user previously had a thread open and is returning to the
+    // Tenant Chat section (e.g. switched away to Queue/Procurement and
+    // came back), re-open it so they see any new messages AND land at
+    // the bottom — never stuck on a stale scroll position.
+    // `openThread` is async; we await it so the inbox-list `active`
+    // highlight + the thread pane stay in sync.
+    if (reopen && state.activeId){
+      await openThread(state.activeId);
+    }
+  }
+
+  function applyFilter(){
+    const q = state.q.toLowerCase();
+    state.filtered = q
+      ? state.convs.filter(c =>
+          (c.tenant_name||'').toLowerCase().includes(q) ||
+          (c.tenant_username||'').toLowerCase().includes(q) ||
+          (c.tenant_email||'').toLowerCase().includes(q) ||
+          (c.partner_name||'').toLowerCase().includes(q) ||
+          (c.last_preview||'').toLowerCase().includes(q))
+      : state.convs.slice();
+    renderList();
+  }
+
+  function renderList(){
+    const wrap = document.getElementById('cxList');
+    if (!state.filtered.length){
+      wrap.innerHTML = '<div class="ops-empty" style="padding:40px 20px;"><div class="ic">📭</div><h3>'+(state.unreadOnly?'No unread chats':'No conversations yet')+'</h3><p>'+(state.unreadOnly?'You\'re all caught up.':'Tenant chats will show here.')+'</p></div>';
+      return;
+    }
+    wrap.innerHTML = state.filtered.map(c => {
+      const initials = ((c.tenant_name||c.tenant_username||'?').split(' ').slice(0,2).map(s=>s[0]||'').join('') || '?').toUpperCase();
+      const bg = `linear-gradient(135deg, ${c.partner_gradient_from||'#6366f1'}, ${c.partner_gradient_to||'#a855f7'})`;
+      // Inline location flag — sits next to the tenant name in the
+      // list so ops can scan countries at a glance. Tooltip carries
+      // the full "City, Country · last seen" detail for hover.
+      // Suppressed for local/dev IPs (same reason as the thread head
+      // chip — "Local network" is meaningless to ops users).
+      const loc  = c.tenant_location;
+      const showFlag = !!(loc && !loc.is_local && loc.flag);
+      const flagTitle = showFlag
+        ? `${[loc.city, loc.country].filter(Boolean).join(', ')}${loc.last_seen_ago ? ' · ' + loc.last_seen_ago : ''}`
+        : '';
+      const flagHtml = showFlag
+        ? `<span class="cx-conv-flag" title="${opsEsc(flagTitle)}">${opsEsc(loc.flag)}</span>`
+        : '';
+      return `
+        <div class="cx-conv ${c.id===state.activeId?'active':''}" onclick="opsChat._openThread(${c.id})">
+          <div class="av" style="background:${bg};">${opsEsc(c.partner_emoji || initials)}</div>
+          <div class="info">
+            <div class="top">
+              <div class="tnm">${flagHtml}${opsEsc(c.tenant_name)}</div>
+              <span class="ago">${opsEsc(c.last_ago)}</span>
+            </div>
+            <div class="pnm">↔ ${opsEsc(c.partner_name)}</div>
+            <div class="preview ${c.last_direction==='in'?'in':''}">${opsEsc(c.last_preview || '(no messages)')}</div>
+          </div>
+          ${c.tenant_unread > 0 ? `<div class="badge">${c.tenant_unread}</div>` : ''}
+        </div>`;
+    }).join('');
+  }
+
+  async function openThread(convId){
+    state.activeId = convId;
+    // Fresh thread = fresh whitelist. The new conversation's server
+    // response is the only source of truth for which tokens belong to
+    // its tenant — don't carry over a stale set from the previous one.
+    state.validTokens = new Set();
+    renderList();
+    const pane = document.getElementById('cxThread');
+    pane.innerHTML = '<div class="ops-loading">Loading conversation…</div>';
+
+    const r = await opsFetch(`/ops/api/chat/${convId}/messages/`);
+    if (!r.ok){
+      pane.innerHTML = '<div class="cx-empty"><div class="ic">⚠️</div><h3>Couldn\'t load thread</h3></div>';
+      return;
+    }
+    const conv = r.data.conversation;
+    state.msgs = r.data.messages || [];
+    // Merge BEFORE renderThread → renderMsg sees the whitelist on first
+    // paint, so foreign tokens never flash as clickable.
+    mergeValidTokens(r.data.valid_tokens);
+    renderThread(conv);
+
+    // The fetch already marked tenant-side messages read; refresh inbox
+    // counts so the unread badge updates. Pass reopen=false so this does
+    // NOT re-enter openThread (which would loop forever and flicker the
+    // pane on "Loading conversation…").
+    load(false);
+  }
+
+  // Reset per-thread upload tray when switching threads
+  state.pendingFiles = state.pendingFiles || [];
+
+  function renderAttachments(atts){
+    if (!atts || !atts.length) return '';
+    return atts.map(a => {
+      if (a.kind === 'image' && a.url){
+        return `<img class="cx-att-img" src="${opsEsc(a.url)}" loading="lazy"
+                     onclick="opsChat._lightbox('${opsEsc(a.url)}')" alt="">`;
+      }
+      if (a.kind === 'link' && a.url){
+        return `<a class="cx-att-file" href="${opsEsc(a.url)}" target="_blank" rel="noopener">🔗 ${opsEsc(a.url)}</a>`;
+      }
+      if (a.kind === 'file' && a.url){
+        return `<a class="cx-att-file" href="${opsEsc(a.url)}" target="_blank" rel="noopener" download>📎 ${opsEsc(a.filename || 'file')}</a>`;
+      }
+      return '';
+    }).join('');
+  }
+
+  /* ── Smart-link patterns (mirror tenant SPV_RX_* regexes) ──────────
+     Order refs are matched FIRST so DS-DEMO-1061 isn't mis-grabbed by
+     the broader SKU pattern. Email's `@` makes it unambiguous; SKU is
+     the loosest pattern, so it runs last. */
+  const CX_RX_ORDER = /(#?DS-(?:DEMO-)?\d{2,8}|#\d{4,12})\b/g;
+  const CX_RX_EMAIL = /\b([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})\b/g;
+  const CX_RX_SKU   = /\b([A-Z][A-Z0-9]{1,5}(?:-[A-Z0-9]{1,8}){1,4})\b/g;
+  const CX_RX_URL   = /(https?:\/\/[^\s<]+)/g;
+
+  function _cxChip(type, token, label){
+    // Use <span> not <a> — anchors without href have flaky click
+    // behaviour in some browsers and can be intercepted by parent
+    // styled containers. span with role=button + tabindex is reliable
+    // and the document-level click delegation handles it.
+    const safeToken = String(token).replace(/"/g,'&quot;');
+    return `<span class="cx-chip cx-chip-${type}" data-cx-link="1" data-cx-type="${type}" data-cx-token="${safeToken}" role="button" tabindex="0">${label}</span>`;
+  }
+  function _cxIsValidToken(type, token){
+    // Tenant-isolation whitelist. Server validates every chip
+    // candidate against the CONVERSATION TENANT scope. Foreign
+    // tokens render as plain text, never as a clickable button.
+    if (!state.validTokens || state.validTokens.size === 0) return false;
+    return state.validTokens.has(type + ':' + token);
+  }
+
+  function opsLinkify(html){
+    // Single-pass scan with sorted, non-overlapping matches.
+    // Walk the body once, emit plain text for non-match segments and
+    // chip HTML inside matches. No fragile sentinel strings.
+    if (!html) return '';
+    const matches = [];
+    const passes = [
+      ['order', CX_RX_ORDER],
+      ['email', CX_RX_EMAIL],
+      ['sku',   CX_RX_SKU],
+      ['url',   CX_RX_URL],
+    ];
+    let mm;
+    for (const [kind, rx] of passes){
+      rx.lastIndex = 0;
+      while ((mm = rx.exec(html)) !== null){
+        const start = mm.index;
+        const end   = start + mm[0].length;
+        let overlaps = false;
+        for (const o of matches){
+          if (!(end <= o.start || start >= o.end)){ overlaps = true; break; }
+        }
+        if (overlaps) continue;
+        matches.push({ kind, label: mm[0], start, end });
+      }
+    }
+    matches.sort((a, b) => a.start - b.start);
+    let out = '';
+    let cursor = 0;
+    for (const m of matches){
+      if (m.start > cursor) out += html.slice(cursor, m.start);
+      if (m.kind === 'url'){
+        out += `<a href="${m.label}" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;">${m.label}</a>`;
+      } else if (_cxIsValidToken(m.kind, m.label)){
+        const tok = m.kind === 'order' ? m.label.replace(/^#/, '') : m.label;
+        out += _cxChip(m.kind, tok, m.label);
+      } else {
+        out += m.label;
+      }
+      cursor = m.end;
+    }
+    if (cursor < html.length) out += html.slice(cursor);
+    return out;
+  }
+
+  function renderMsg(m){
+    // 1) opsEsc() makes the body HTML-safe.
+    // 2) opsLinkify() then wraps detected entities in chip spans — the
+    //    inserted markup is the only HTML in the final string.
+    // 3) Newlines are converted to <br> last so they survive linkification.
+    const safeBody = m.body ? opsEsc(m.body) : '';
+    const body     = safeBody ? opsLinkify(safeBody).replace(/\n/g, '<br>') : '';
+    const atts = renderAttachments(m.attachments);
+    // WhatsApp-style: attachments FIRST (image dominates), then text caption,
+    // then timestamp. The body adds a small top margin only when an
+    // attachment sits above it so the spacing reads as "caption under image".
+    const bodyHtml = body ? `<div${atts ? ' style="margin-top:6px;"' : ''}>${body}</div>` : '';
+    return `
+      <div class="cx-msg ${m.side}">
+        <div class="cx-bubble">
+          ${atts}
+          ${bodyHtml}
+          <div class="ts">${opsEsc(m.created_ago || 'Just now')}</div>
+        </div>
+      </div>`;
+  }
+
+  /* ── Smart-link click handler & picker modal ──────────────────────
+     Resolves the chip's token via /ops/api/chat/<conv_id>/lookup/ —
+     conversation-scoped so ops see exactly what the tenant would see.
+     Single match → opens the existing global `opsOpenOrderModal`.
+     Multiple   → shows a picker; clicking a row opens that order. */
+  function _cxToast(msg, isErr){
+    const t = document.createElement('div');
+    t.className = 'cx-picker-toast';
+    if (isErr) t.style.background = '#b91c1c';
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 2400);
+    return t;
+  }
+
+  async function _cxResolveLink(type, token){
+    if (!state.activeId){
+      _cxToast('Open a conversation first.', true);
+      return;
+    }
+    const loading = _cxToast(`Looking up "${token}"…`);
+    try {
+      const r = await opsFetch(
+        `/ops/api/chat/${state.activeId}/lookup/`
+        + `?type=${encodeURIComponent(type)}&token=${encodeURIComponent(token)}`
+      );
+      loading.remove();
+      if (!r.ok || !r.data){ _cxToast(`Couldn't resolve "${token}".`, true); return; }
+      const data = r.data;
+      if (data.kind === 'none'){ _cxToast(`No matching ${type} for "${token}".`, true); return; }
+      if (data.kind === 'single'){
+        _cxShowOrderDetail(data.orders[0].id);
+        return;
+      }
+      _cxShowPicker(data);
+    } catch(err){
+      loading.remove();
+      _cxToast(`Lookup failed: ${err && err.message || 'network'}`, true);
+    }
+  }
+
+  function _cxShowPicker(data){
+    let bd = document.getElementById('cxPickerBackdrop');
+    if (bd) bd.remove();
+    bd = document.createElement('div');
+    bd.id = 'cxPickerBackdrop';
+    bd.className = 'cx-picker-backdrop';
+    bd.addEventListener('click', (e) => { if (e.target === bd) bd.remove(); });
+
+    const title = (data.query.type === 'email')
+      ? `Orders from ${opsEsc(data.query.token)}`
+      : (data.query.type === 'sku')
+        ? `Orders with SKU ${opsEsc(data.query.token)}`
+        : `Orders matching "${opsEsc(data.query.token)}"`;
+
+    const rows = data.orders.map(o => `
+      <button type="button" class="cx-picker-row" data-cx-pick="${o.id}">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13.5px;font-weight:900;color:#0f172a;letter-spacing:-.01em;">${opsEsc(o.ds_ref)} · #${opsEsc(o.external_id)}</div>
+          <div style="font-size:11.5px;color:#64748b;font-weight:600;margin-top:3px;">${opsEsc(o.customer_name || o.customer_email || '—')} · ${opsEsc(o.store_name || '')}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0;">
+          <div style="font-size:14px;font-weight:900;color:#0f172a;">${opsEsc(o.currency)} ${(o.total||0).toFixed(2)}</div>
+          <div style="font-size:10px;font-weight:800;color:#a855f7;text-transform:uppercase;letter-spacing:.06em;margin-top:2px;">${opsEsc(o.status_label || o.sourcing_status)}</div>
+        </div>
+      </button>
+    `).join('');
+
+    bd.innerHTML = `
+      <div class="cx-picker-card">
+        <div class="cx-picker-head">
+          <div>
+            <div style="font-size:15px;font-weight:900;letter-spacing:-.01em;">${title}</div>
+            <div style="font-size:11.5px;opacity:.85;font-weight:600;margin-top:2px;">${data.orders.length} order${data.orders.length===1?'':'s'} found</div>
+          </div>
+          <button type="button" id="cxPickerClose"
+                  style="width:30px;height:30px;border:none;border-radius:8px;background:rgba(255,255,255,.2);color:#fff;cursor:pointer;font-size:16px;font-weight:900;">×</button>
+        </div>
+        <div class="cx-picker-body">${rows}</div>
+      </div>`;
+    document.body.appendChild(bd);
+
+    bd.querySelector('#cxPickerClose').addEventListener('click', () => bd.remove());
+    bd.querySelectorAll('[data-cx-pick]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = parseInt(btn.getAttribute('data-cx-pick'), 10);
+        bd.remove();
+        if (id) _cxShowOrderDetail(id);
+      });
+    });
+  }
+
+  /* ── Read-only mirror of the tenant SP order modal ────────────────
+     Hits the conv-scoped endpoint, then renders the same Drop Sigma
+     quote / shipping / tracking layout the tenant sees on their side.
+     No edit / pay / delete controls — ops uses the back-office page
+     for state changes. This view is purely "show me what the tenant
+     sees" so the chat conversation can reference the same screen. */
+  function _cxFmtUSD(n){
+    const v = Number(n) || 0;
+    return '$' + v.toFixed(2);
+  }
+  function _cxFlag(code){
+    // Compact subset — falls back to globe if we don't know the country.
+    const map = {US:'🇺🇸',IN:'🇮🇳',GB:'🇬🇧',CA:'🇨🇦',AU:'🇦🇺',DE:'🇩🇪',
+                 FR:'🇫🇷',ES:'🇪🇸',IT:'🇮🇹',CN:'🇨🇳',JP:'🇯🇵',BR:'🇧🇷',
+                 MX:'🇲🇽',NL:'🇳🇱',SE:'🇸🇪',AE:'🇦🇪',SA:'🇸🇦',PK:'🇵🇰'};
+    const k = String(code || '').toUpperCase().slice(0, 2);
+    return map[k] || '🌐';
+  }
+
+  async function _cxShowOrderDetail(orderId){
+    if (!state.activeId) return;
+    const loading = _cxToast('Loading order…');
+    let order;
+    try {
+      const r = await opsFetch(`/ops/api/chat/${state.activeId}/order/${orderId}/`);
+      loading.remove();
+      if (!r.ok || !r.data || !r.data.order){
+        _cxToast('Could not load order details.', true);
+        return;
+      }
+      order = r.data.order;
+    } catch(err){
+      loading.remove();
+      _cxToast(`Load failed: ${err && err.message || 'network'}`, true);
+      return;
+    }
+
+    // ── Render — mirrors templates/dashboard.html::spvOpenOrderModal
+    const o      = order;
+    const grp    = o.sourcing_status || 'pending_source';
+    const STATUS = {
+      pending_source:  'Pending Source',
+      pending_payment: 'Pending Payment',
+      processing:      'Processing',
+      shipping:        'Shipping',
+      delivered:       'Delivered',
+      cancel:          'Cancelled',
+    };
+    const grpLabel = STATUS[grp] || grp;
+    const addr   = o.shipping_address || {};
+    const items  = o.items || [];
+    const flag   = _cxFlag(o.ship_country || addr.country);
+
+    // Per-item allocation of the product quote, same algorithm as tenant.
+    const itemLineTotals = items.map(it => (Number(it.price) || 0) * (Number(it.quantity) || 1));
+    const merchantSum    = itemLineTotals.reduce((s, n) => s + n, 0);
+    const productQuote   = Number(o.sourcing_product_usd) || 0;
+    let allocated = items.map((_, i) => {
+      if (!o.has_quote) return null;
+      if (merchantSum > 0) return (itemLineTotals[i] / merchantSum) * productQuote;
+      return items.length ? productQuote / items.length : 0;
+    });
+    if (o.has_quote && allocated.length){
+      const rounded = allocated.map(v => Math.round(v * 100) / 100);
+      const diff    = Math.round((productQuote - rounded.reduce((s,n)=>s+n,0)) * 100) / 100;
+      rounded[rounded.length - 1] = Math.round((rounded[rounded.length - 1] + diff) * 100) / 100;
+      allocated = rounded;
+    }
+
+    const itemsHtml = items.map((it, i) => {
+      const qty       = Number(it.quantity) || 1;
+      const linePrice = allocated[i];
+      const unitPrice = (linePrice != null && qty > 0) ? linePrice / qty : null;
+      return `
+        <div class="cx-od-item">
+          <div class="cx-od-item-img">${it.image ? `<img src="${opsEsc(it.image)}" alt="">` : '📦'}</div>
+          <div class="cx-od-item-info">
+            <div class="cx-od-item-name">${opsEsc(it.product_name || '—')}</div>
+            ${it.variant ? `<div class="cx-od-item-variant">${opsEsc(it.variant)}</div>` : ''}
+            <div class="cx-od-item-sku">${opsEsc(it.sku || '—')}</div>
+          </div>
+          <div class="cx-od-item-qty">×${qty}</div>
+          <div class="cx-od-item-price">
+            ${linePrice != null
+              ? `<div class="line-total">${_cxFmtUSD(linePrice)}</div>
+                 ${qty > 1 && unitPrice != null ? `<div class="unit-price">${_cxFmtUSD(unitPrice)} ea.</div>` : ''}`
+              : '<div class="line-total" style="color:#94a3b8;font-weight:600;">—</div>'}
+          </div>
+        </div>`;
+    }).join('');
+
+    const addrLines = [addr.line1, addr.line2,
+      [addr.city, addr.state, addr.postal_code].filter(Boolean).join(', '),
+      addr.country].filter(Boolean);
+
+    const trackingHtml = (o.tracking_company || o.tracking_number || o.tracking_url) ? `
+      <h4 class="cx-od-h4">${o.tracking_number ? 'Tracking' : 'Shipping carrier'}</h4>
+      <div class="cx-od-shipping" style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:18px;">🚚</span>
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:800;color:#000;">${opsEsc(o.tracking_company || 'In transit')}</div>
+          ${o.tracking_number
+            ? `<div style="font-size:11.5px;color:#64748b;font-family:ui-monospace,Menlo,monospace;">${opsEsc(o.tracking_number)}</div>`
+            : `<div style="font-size:11px;color:#94a3b8;font-weight:700;margin-top:1px;">Carrier confirmed — tracking number added when dispatched</div>`}
+        </div>
+        ${o.tracking_url ? `<a class="cx-od-track-btn" href="${opsEsc(o.tracking_url)}" target="_blank" rel="noopener">Track ↗</a>` : ''}
+      </div>` : '';
+
+    // Title format matches the tenant modal (screenshot 2): "DS-XXXXXX · Product name"
+    const title = `${o.ds_order_ref || ''} · ${o.product_name || ''}`;
+
+    let bd = document.getElementById('cxOrderDetailBackdrop');
+    if (bd) bd.remove();
+    bd = document.createElement('div');
+    bd.id = 'cxOrderDetailBackdrop';
+    bd.className = 'cx-picker-backdrop';  // reuse backdrop style
+    bd.addEventListener('click', (e) => { if (e.target === bd) bd.remove(); });
+
+    bd.innerHTML = `
+      <div class="cx-od-card">
+        <div class="cx-od-head">
+          <div class="cx-od-title">${opsEsc(title)}</div>
+          <button type="button" class="cx-od-close" id="cxOdClose">×</button>
+        </div>
+        <div class="cx-od-body">
+          <div class="cx-od-ref-row">
+            <span class="cx-od-ds-ref">${opsEsc(o.ds_order_ref || '')}</span>
+            <span class="cx-od-src-ref">#${opsEsc(o.source_order_ref || o.external_order_id || '')}</span>
+          </div>
+          <div style="margin-top:8px;">
+            <span class="cx-od-status cx-od-status-${grp}">● ${opsEsc(grpLabel)}</span>
+          </div>
+
+          <h4 class="cx-od-h4">Drop Sigma quote · ${items.length} item${items.length===1?'':'s'}</h4>
+          <div class="cx-od-invoice">
+            <div class="cx-od-items">${itemsHtml}</div>
+            ${o.has_quote ? `
+              <div class="cx-od-summary">
+                <div class="cx-od-summary-row">
+                  <span class="lbl">Items subtotal</span>
+                  <span class="v">${_cxFmtUSD(o.sourcing_product_usd)}</span>
+                </div>
+                <div class="cx-od-summary-row">
+                  <span class="lbl">Shipping &amp; handling</span>
+                  <span class="v">${_cxFmtUSD(o.sourcing_shipping_usd)}</span>
+                </div>
+                <div class="cx-od-summary-row is-grand">
+                  <span class="lbl">${grp==='pending_payment'?'Total to pay':grp==='cancel'?'Quoted total':'Total paid'}</span>
+                  <span class="v">${_cxFmtUSD(o.sourcing_total_usd)}</span>
+                </div>
+              </div>` : `
+              <div class="cx-od-pending">
+                <span style="font-size:20px;">✦</span>
+                <div>
+                  <div style="font-weight:800;color:#7a5a00;font-size:13px;">Specialists are sourcing this order</div>
+                  <div style="font-size:11.5px;color:#7a5a00;opacity:.85;margin-top:3px;">Per-item product cost and shipping will appear here once a quote is set.</div>
+                </div>
+              </div>`}
+          </div>
+
+          <h4 class="cx-od-h4">Shipping</h4>
+          <div class="cx-od-shipping">
+            <div class="cx-od-shipping-grid">
+              <div>
+                <div class="cx-od-k">Recipient</div>
+                <div class="cx-od-v">${flag} ${opsEsc(addr.name || o.customer_name || '—')}</div>
+              </div>
+              <div>
+                <div class="cx-od-k">Mobile</div>
+                <div class="cx-od-v">${opsEsc(addr.phone || o.customer_phone || '—')}</div>
+              </div>
+              <div style="grid-column:1/-1;">
+                <div class="cx-od-k">Address</div>
+                <div class="cx-od-v">${addrLines.length ? opsEsc(addrLines.join(' · ')) : '<span style="color:#94a3b8;">No address on file</span>'}</div>
+              </div>
+              ${o.customer_email ? `
+              <div style="grid-column:1/-1;">
+                <div class="cx-od-k">Email</div>
+                <div class="cx-od-v">${opsEsc(o.customer_email)}</div>
+              </div>` : ''}
+            </div>
+            <div style="font-size:11px;color:#94a3b8;margin-top:8px;">🔒 Read-only view — same as the tenant sees</div>
+          </div>
+
+          ${trackingHtml}
+        </div>
+        <div class="cx-od-foot">
+          <button type="button" class="cx-od-btn-close" id="cxOdFootClose">Close</button>
+        </div>
+      </div>`;
+    document.body.appendChild(bd);
+    bd.querySelector('#cxOdClose').addEventListener('click', () => bd.remove());
+    bd.querySelector('#cxOdFootClose').addEventListener('click', () => bd.remove());
+  }
+
+  // Event delegation — single listener catches every chip in the thread.
+  document.addEventListener('click', function(e){
+    const chip = e.target.closest && e.target.closest('[data-cx-link="1"]');
+    if (!chip) return;
+    // Only handle chips inside the ops chat panel — never interfere
+    // with chips that might live in tenant-side previews / etc.
+    if (!chip.closest('#opsChatRoot')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    _cxResolveLink(chip.dataset.cxType, chip.dataset.cxToken);
+  }, true);
+
+  function renderThread(conv){
+    const pane = document.getElementById('cxThread');
+    const bg = `linear-gradient(135deg, ${conv.partner_gradient_from||'#6366f1'}, ${conv.partner_gradient_to||'#a855f7'})`;
+    state.pendingFiles = [];
+    // IP-derived location chip — sits INLINE next to the tenant name so
+    // the identity reads as one line: "Admin  🇮🇳 Mumbai, India".
+    // Suppressed entirely when:
+    //   • no UserIPLog has been recorded yet, OR
+    //   • the only recorded IP is local/dev (127.0.0.1 etc.) — the
+    //     "Local network" label is meaningless to ops users and would
+    //     confuse them in dev. In production every login has a real IP.
+    const loc = conv.tenant_location;
+    const showLoc = !!(loc && !loc.is_local && (loc.country || loc.city));
+    const locTitle = showLoc
+      ? `${[loc.city, loc.country].filter(Boolean).join(', ')}${loc.last_seen_ago ? ' · last login ' + loc.last_seen_ago : ''}`
+      : '';
+    const locChip = showLoc ? `
+      <span class="cx-thread-loc" title="${opsEsc(locTitle)}">
+        <span class="flag">${opsEsc(loc.flag || '🌐')}</span>
+        <span class="txt">${opsEsc([loc.city, loc.country].filter(Boolean).join(', '))}</span>
+      </span>` : '';
+
+    pane.innerHTML = `
+      <div class="cx-thread-head">
+        <div class="av" style="background:${bg};">${opsEsc(conv.partner_emoji || 'Σ')}</div>
+        <div class="info">
+          <div class="nm-row">
+            <div class="nm">${opsEsc(conv.tenant_name)}</div>
+            ${locChip}
+          </div>
+          <div class="sub">${opsEsc(conv.tenant_email || conv.tenant_username)}</div>
+        </div>
+        <span class="pn">↔ ${opsEsc(conv.partner_name)}</span>
+      </div>
+      <div class="cx-msgs" id="cxMsgs"></div>
+      <div class="cx-att-preview" id="cxAttPrev"></div>
+      <div class="cx-composer">
+        <button class="cx-attach-btn" onclick="document.getElementById('cxImgIn').click()" title="Attach image">🖼️</button>
+        <button class="cx-attach-btn" onclick="document.getElementById('cxFileIn').click()" title="Attach file">📎</button>
+        <input type="file" id="cxImgIn" accept="image/*" multiple style="display:none;" onchange="opsChat._onFiles(this,'image')">
+        <input type="file" id="cxFileIn" multiple style="display:none;" onchange="opsChat._onFiles(this,'file')">
+        <textarea id="cxInput" rows="1" placeholder="Reply as Drop Sigma… (⌘V/Ctrl+V to paste image)"
+                  oninput="opsChat._auto(this);"
+                  onkeydown="opsChat._key(event)"
+                  onpaste="opsChat._onPaste(event)"
+                  ondrop="opsChat._onDrop(event)"
+                  ondragover="event.preventDefault();event.dataTransfer.dropEffect='copy';"></textarea>
+        <button class="cx-send" id="cxSend" onclick="opsChat._send()" disabled>Send</button>
+      </div>`;
+
+    const msgsEl = document.getElementById('cxMsgs');
+    if (!state.msgs.length){
+      msgsEl.innerHTML = '<div class="cx-empty" style="padding:60px 20px;"><div class="ic">✨</div><h3>Start the conversation</h3><p>Send the first reply to begin.</p></div>';
+    } else {
+      let lastDay = null;
+      msgsEl.innerHTML = state.msgs.map(m => {
+        const d = new Date(m.created_iso).toDateString();
+        let sep = '';
+        if (d !== lastDay){
+          lastDay = d;
+          sep = `<div class="cx-day-sep"><span>${opsEsc(d)}</span></div>`;
+        }
+        return sep + renderMsg(m);
+      }).join('');
+    }
+    // Robust scroll-to-bottom — handles the image-load race so the
+    // newest message is always anchored in view, not the spot where
+    // images-not-yet-loaded made the pane look shorter.
+    scrollMsgsToBottom(msgsEl);
+
+    const inp = document.getElementById('cxInput');
+    if (inp) inp.focus();
+  }
+
+  function renderAttPreview(){
+    const wrap = document.getElementById('cxAttPrev');
+    if (!wrap) return;
+    if (!state.pendingFiles.length){
+      wrap.classList.remove('has');
+      wrap.innerHTML = '';
+      return;
+    }
+    wrap.classList.add('has');
+    wrap.innerHTML = state.pendingFiles.map(p => {
+      if (p.kind === 'image'){
+        if (!p._previewUrl){
+          try { p._previewUrl = URL.createObjectURL(p.file); } catch(_){ p._previewUrl = ''; }
+        }
+        const sz = (p.file.size/1024 >= 1024)
+          ? (p.file.size/1024/1024).toFixed(1)+'MB'
+          : Math.round(p.file.size/1024)+'KB';
+        return `<div class="cx-att-thumb">
+          <img src="${opsEsc(p._previewUrl)}" alt="">
+          <button class="x" onclick="opsChat._removeAtt('${p.id}')" title="Remove">×</button>
+          <div class="sz">${sz}</div>
+        </div>`;
+      }
+      return `<span class="cx-att-chip">📎 ${opsEsc(p.file.name)} <span class="x" onclick="opsChat._removeAtt('${p.id}')">×</span></span>`;
+    }).join('');
+  }
+
+  function updateSendBtn(){
+    const inp = document.getElementById('cxInput');
+    const btn = document.getElementById('cxSend');
+    if (!btn) return;
+    const hasText = (inp && inp.value.trim().length > 0);
+    const hasAtt = state.pendingFiles.length > 0;
+    btn.disabled = !(hasText || hasAtt);
+  }
+
+  async function send(){
+    if (!state.activeId) return;
+    const inp = document.getElementById('cxInput');
+    const body = (inp?.value || '').trim();
+    if (!body && !state.pendingFiles.length) return;
+
+    const btn = document.getElementById('cxSend');
+    btn.disabled = true; btn.textContent = 'Sending…';
+
+    // Build FormData so we can include images + files alongside text
+    const fd = new FormData();
+    fd.append('body', body);
+    for (const p of state.pendingFiles){
+      fd.append(p.kind === 'image' ? 'images' : 'files', p.file);
+    }
+
+    // Use raw fetch (opsFetch JSON-stringifies; FormData needs native multipart)
+    let r;
+    try {
+      const resp = await fetch(`/ops/api/chat/${state.activeId}/send/`, {
+        method:'POST',
+        body: fd,
+        headers: { 'X-CSRFToken': getCookie('csrftoken') || '' },
+        credentials: 'same-origin',
+      });
+      const data = await resp.json().catch(() => ({}));
+      r = { ok: resp.ok && data.ok, data, status: resp.status };
+    } catch(err){
+      r = { ok:false, data:{ error: String(err) } };
+    }
+
+    btn.disabled = false; btn.textContent = 'Send';
+    if (!r.ok){ opsToast(r.data?.error || 'Send failed', 'error'); return; }
+
+    // Clear input + clear pending attachments + revoke object URLs to free memory
+    inp.value = '';
+    inp.style.height = 'auto';
+    for (const p of state.pendingFiles){
+      if (p._previewUrl){ try { URL.revokeObjectURL(p._previewUrl); } catch(_){} }
+    }
+    state.pendingFiles = [];
+    renderAttPreview();
+    updateSendBtn();
+
+    // Merge the per-message whitelist returned by the send endpoint so
+    // any new chip candidates in the body get validated before the
+    // bubble renders.
+    mergeValidTokens(r.data.valid_tokens);
+    // Append new message + refresh list preview
+    state.msgs.push(r.data.message);
+    const conv = state.convs.find(x => x.id === state.activeId);
+    if (conv){
+      const previewText = r.data.message.body
+        || (r.data.message.attachments?.some(a => a.kind==='image') ? '📷 Image' : '📎 Attachment');
+      conv.last_preview = previewText.slice(0,160);
+      conv.last_direction = 'in';
+      conv.last_ago = 'Just now';
+    }
+    renderList();
+    // re-render the new bubble inline (no full thread re-render)
+    const msgsEl = document.getElementById('cxMsgs');
+    if (msgsEl){
+      msgsEl.insertAdjacentHTML('beforeend', renderMsg(r.data.message));
+      scrollMsgsToBottom(msgsEl);
+    }
+  }
+
+  // CSRF cookie helper
+  function getCookie(name){
+    const match = document.cookie.match(new RegExp('(^|;\\s*)(' + name + ')=([^;]*)'));
+    return match ? decodeURIComponent(match[3]) : '';
+  }
+
+  // ── Attachment intake helpers ────────────────────────────────
+  function addPendingFile(file, kindHint){
+    const kind = kindHint
+      || (file.type && file.type.startsWith('image/') ? 'image' : 'file');
+    state.pendingFiles.push({
+      id: Math.random().toString(36).slice(2,9),
+      kind, file,
+    });
+    renderAttPreview();
+    updateSendBtn();
+  }
+
+  function showLightbox(url){
+    let lb = document.getElementById('opsChatLightbox');
+    if (!lb){
+      lb = document.createElement('div');
+      lb.id = 'opsChatLightbox';
+      lb.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(8,9,18,.92);display:flex;align-items:center;justify-content:center;padding:32px;cursor:zoom-out;backdrop-filter:blur(8px);';
+      lb.innerHTML = `
+        <button type="button" style="position:absolute;top:18px;right:22px;width:38px;height:38px;border-radius:50%;background:#fff;border:none;cursor:pointer;font-size:20px;font-weight:900;color:#0f172a;box-shadow:0 6px 18px rgba(0,0,0,.4);">×</button>
+        <img id="opsChatLightboxImg" src="" style="max-width:92vw;max-height:88vh;border-radius:14px;box-shadow:0 30px 80px -20px rgba(0,0,0,.7);background:#fff;">`;
+      lb.addEventListener('click', (e) => {
+        if (e.target.tagName !== 'IMG') lb.remove();
+      });
+      document.body.appendChild(lb);
+      document.addEventListener('keydown', function esc(e){
+        if (e.key === 'Escape'){
+          const x = document.getElementById('opsChatLightbox');
+          if (x) x.remove();
+          document.removeEventListener('keydown', esc);
+        }
+      });
+    }
+    document.getElementById('opsChatLightboxImg').src = url;
+  }
+
+  // Public, addressable from inline handlers
+  window.opsChat = {
+    _onSearch(v){ state.q = v; applyFilter(); },
+    _toggleUnread(){
+      state.unreadOnly = !state.unreadOnly;
+      document.getElementById('cxUnreadToggle').classList.toggle('active', state.unreadOnly);
+      load();
+    },
+    _openThread: openThread,
+    _send: send,
+    _auto(el){
+      el.style.height = 'auto';
+      el.style.height = Math.min(140, el.scrollHeight) + 'px';
+      updateSendBtn();
+    },
+    _key(e){
+      if (e.key === 'Enter' && !e.shiftKey){
+        e.preventDefault();
+        send();
+      }
+    },
+    _onFiles(input, kind){
+      for (const f of input.files){ addPendingFile(f, kind); }
+      input.value = '';
+    },
+    _onPaste(event){
+      const cd = event.clipboardData || window.clipboardData;
+      if (!cd) return;
+      let picked = false;
+      for (const item of cd.items || []){
+        if (item.kind === 'file' && item.type.startsWith('image/')){
+          const file = item.getAsFile();
+          if (file){
+            const ts = new Date().toISOString().replace(/[:.]/g,'-').slice(0,19);
+            const ext = (file.name && file.name.includes('.')) ? file.name.split('.').pop() : 'png';
+            const named = new File([file], `pasted-${ts}.${ext}`, {type: file.type});
+            addPendingFile(named, 'image');
+            picked = true;
+          }
+        }
+      }
+      if (picked) event.preventDefault();
+    },
+    _onDrop(event){
+      event.preventDefault();
+      const files = (event.dataTransfer && event.dataTransfer.files) ? Array.from(event.dataTransfer.files) : [];
+      for (const f of files){
+        addPendingFile(f, f.type.startsWith('image/') ? 'image' : 'file');
+      }
+    },
+    _removeAtt(id){
+      const idx = state.pendingFiles.findIndex(p => p.id === id);
+      if (idx >= 0){
+        const p = state.pendingFiles[idx];
+        if (p._previewUrl){ try { URL.revokeObjectURL(p._previewUrl); } catch(_){} }
+        state.pendingFiles.splice(idx, 1);
+        renderAttPreview();
+        updateSendBtn();
+      }
+    },
+    _lightbox: showLightbox,
+  };
+
+  window.opsLoadChat = load;
+})();
+</script>
