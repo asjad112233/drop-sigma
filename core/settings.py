@@ -86,6 +86,7 @@ INSTALLED_APPS = [
     'superadmin',
     'notifications',
     'rma',
+    'tracking_public',
 ]
 
 ASGI_APPLICATION = 'core.asgi.application'
@@ -101,6 +102,10 @@ MIDDLEWARE = [
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
+    # Host-based dispatcher for track.dropsigma.com — must come AFTER
+    # CommonMiddleware (host header normalised) and BEFORE CSRF /
+    # auth (tracking pages are public, no session needed).
+    'tracking_public.middleware.TrackingHostMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'superadmin.middleware.ImpersonationMiddleware',

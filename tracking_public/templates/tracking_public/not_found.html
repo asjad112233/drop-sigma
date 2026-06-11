@@ -1,0 +1,164 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>Not associated · Drop Sigma</title>
+<meta name="robots" content="noindex,nofollow">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
+  body{
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    background:
+      radial-gradient(900px 500px at 50% -180px, rgba(239,68,68,.10), transparent 60%),
+      radial-gradient(900px 500px at 90% 110%, rgba(99,102,241,.10), transparent 60%),
+      linear-gradient(180deg,#fafbff 0%,#f3f4f9 100%);
+    color:#0f172a;-webkit-font-smoothing:antialiased;
+    min-height:100vh;display:flex;flex-direction:column;overflow-x:hidden;
+  }
+  a{color:inherit;text-decoration:none;}
+  .fade-up{opacity:0;transform:translateY(14px);animation:fadeUp .7s cubic-bezier(.2,.7,.3,1) forwards;}
+  @keyframes fadeUp{to{opacity:1;transform:translateY(0);}}
+  .d-1{animation-delay:.05s;} .d-2{animation-delay:.15s;} .d-3{animation-delay:.25s;} .d-4{animation-delay:.40s;}
+
+  .brand-bar{max-width:1180px;margin:0 auto;padding:22px 28px;width:100%;display:flex;align-items:center;gap:11px;}
+  .ds-mark{
+    width:42px;height:42px;border-radius:13px;
+    background:linear-gradient(135deg,#6366f1 0%,#a855f7 60%,#06b6d4 100%);
+    display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:15px;letter-spacing:-.5px;
+    box-shadow:0 10px 26px rgba(99,102,241,.32);
+  }
+  .ds-name{font-size:16px;font-weight:900;color:#0f172a;letter-spacing:-.3px;line-height:1;}
+  .ds-sub{font-size:10.5px;color:#94a3b8;margin-top:3px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;}
+
+  .center{flex:1;display:flex;align-items:center;justify-content:center;padding:32px 22px 60px;}
+  .inner{max-width:560px;width:100%;text-align:center;}
+
+  .icon-wrap{
+    width:90px;height:90px;border-radius:50%;margin:0 auto 24px;
+    background:linear-gradient(135deg,#fef2f2,#fee2e2);
+    display:flex;align-items:center;justify-content:center;font-size:38px;color:#b91c1c;
+    box-shadow:0 20px 50px rgba(239,68,68,.16);
+    animation:wiggle 4s ease-in-out infinite;
+  }
+  @keyframes wiggle{0%,100%{transform:rotate(-3deg);}50%{transform:rotate(3deg);}}
+
+  .h1{font-size:30px;font-weight:900;line-height:1.2;letter-spacing:-.9px;margin-bottom:14px;}
+  .lead{font-size:14.5px;line-height:1.65;color:#475569;font-weight:500;max-width:480px;margin:0 auto 26px;}
+
+  .id-box{
+    background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:16px 18px;
+    margin:0 auto 26px;max-width:440px;text-align:left;
+    box-shadow:0 8px 22px rgba(15,23,42,.06);
+  }
+  .id-label{font-size:10.5px;font-weight:800;color:#94a3b8;letter-spacing:.14em;text-transform:uppercase;margin-bottom:6px;}
+  .id-value{
+    font-size:15px;font-weight:800;color:#0f172a;letter-spacing:.02em;
+    font-family:'SF Mono','JetBrains Mono',Menlo,monospace;word-break:break-all;
+  }
+
+  .reasons{
+    background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:22px;
+    text-align:left;margin:0 auto;max-width:520px;
+    box-shadow:0 10px 26px rgba(15,23,42,.05);
+  }
+  .reasons-h{font-size:11px;font-weight:800;color:#94a3b8;letter-spacing:.14em;text-transform:uppercase;margin-bottom:14px;}
+  .reason{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid #f1f5f9;}
+  .reason:last-child{border-bottom:none;}
+  .r-ico{
+    width:30px;height:30px;border-radius:9px;background:#eef2ff;color:#4338ca;
+    display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;
+  }
+  .r-text{font-size:13px;color:#475569;font-weight:600;line-height:1.5;}
+  .r-text b{color:#0f172a;font-weight:800;}
+
+  .actions{margin-top:28px;display:flex;justify-content:center;gap:10px;flex-wrap:wrap;}
+  .btn{
+    display:inline-flex;align-items:center;gap:8px;padding:12px 22px;border-radius:12px;
+    font-size:13px;font-weight:800;letter-spacing:.02em;cursor:pointer;border:none;
+    transition:.18s;text-decoration:none;
+  }
+  .btn-primary{
+    background:linear-gradient(135deg,#6366f1 0%,#a855f7 100%);color:#fff;
+    box-shadow:0 10px 24px rgba(99,102,241,.32);
+  }
+  .btn-primary:hover{transform:translateY(-1px);box-shadow:0 14px 30px rgba(99,102,241,.40);}
+  .btn-ghost{background:#fff;color:#475569;border:1px solid #e2e8f0;}
+  .btn-ghost:hover{background:#f1f5f9;}
+
+  .footer{margin-top:60px;padding:24px 22px;text-align:center;border-top:1px solid #eef2f7;background:rgba(255,255,255,.6);}
+  .footer-text{font-size:11.5px;color:#94a3b8;font-weight:600;line-height:1.7;}
+  .footer-brand{display:inline-flex;align-items:center;gap:7px;margin-top:8px;font-size:11px;color:#64748b;font-weight:800;letter-spacing:.04em;}
+  .footer-mark{
+    width:18px;height:18px;border-radius:5px;background:linear-gradient(135deg,#6366f1,#a855f7,#06b6d4);
+    display:flex;align-items:center;justify-content:center;color:#fff;font-size:9px;font-weight:900;letter-spacing:-.3px;
+  }
+
+  @media(max-width:560px){
+    .brand-bar{padding:18px 18px;}
+    .h1{font-size:24px;letter-spacing:-.6px;}
+    .lead{font-size:13.5px;}
+    .icon-wrap{width:74px;height:74px;font-size:32px;}
+    .reasons{padding:18px;}
+    .actions{flex-direction:column;}
+    .btn{width:100%;justify-content:center;}
+  }
+</style>
+</head>
+<body>
+
+  <header class="brand-bar fade-up d-1">
+    <a class="ds-mark" href="/">DS</a>
+    <div>
+      <div class="ds-name">Drop Sigma</div>
+      <div class="ds-sub">Shipment tracking</div>
+    </div>
+  </header>
+
+  <main class="center">
+    <div class="inner">
+      <div class="icon-wrap fade-up d-2">🔍</div>
+
+      <h1 class="h1 fade-up d-2">We couldn't find that tracking number</h1>
+      <p class="lead fade-up d-2">The number you entered isn't associated with any seller on the Drop Sigma platform — so we can't show its shipment status here.</p>
+
+      {% if tracking_id %}
+      <div class="id-box fade-up d-3">
+        <div class="id-label">You entered</div>
+        <div class="id-value">{{ tracking_id }}</div>
+      </div>
+      {% endif %}
+
+      <div class="reasons fade-up d-3">
+        <div class="reasons-h">A few common reasons</div>
+        <div class="reason">
+          <div class="r-ico">✏️</div>
+          <div class="r-text"><b>Typo or extra characters.</b> Tracking numbers can be long — double-check you copied the whole thing without spaces.</div>
+        </div>
+        <div class="reason">
+          <div class="r-ico">🛒</div>
+          <div class="r-text"><b>Order with a different seller.</b> This tracking page only shows shipments from sellers on the Drop Sigma platform. If you bought elsewhere, use that seller's tracking page instead.</div>
+        </div>
+        <div class="reason">
+          <div class="r-ico">⏳</div>
+          <div class="r-text"><b>Just-placed order.</b> If you ordered within the last few hours, the tracking number may not be active yet. Try again in a little while.</div>
+        </div>
+      </div>
+
+      <div class="actions fade-up d-4">
+        <a href="/" class="btn btn-primary">← Try another tracking number</a>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-text">© Drop Sigma · The logistics intelligence layer</div>
+    <div class="footer-brand">
+      <span class="footer-mark">DS</span>
+      <span>track.dropsigma.com</span>
+    </div>
+  </footer>
+
+</body>
+</html>

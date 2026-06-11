@@ -76,6 +76,10 @@ urlpatterns = [
     # Apps
     path("stores/", include("stores.urls")),
     path("orders/", include("orders.urls")),
+    # Public tracking. Production traffic on track.dropsigma.com is
+    # host-routed by TrackingHostMiddleware; this /track/ mount is the
+    # fallback for direct testing on dropsigma.com/track/<id>/.
+    path("track/", include("tracking_public.urls")),
     path("teamapp/", include("teamapp.urls")),
     path("emails/", include("emails.urls")),
     path("vendors/api/", include("vendors.urls")),
