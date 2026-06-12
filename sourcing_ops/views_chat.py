@@ -278,13 +278,16 @@ def api_chat_send(request, conv_id):
             filename=f.name[:240], filesize_bytes=f.size, mime_type=mime,
         )
 
-    # Bump conversation metadata
+    # Bump conversation metadata + clear OPS-side typing stamp (they
+    # just sent — they're no longer mid-keystroke; the tenant indicator
+    # should drop immediately on next poll).
     preview = text or ("📷 Image" if image_files else ("📎 Attachment" if other_files else ""))
     c.last_message_at = m.created_at
     c.last_message_preview = preview[:200]
     c.unread_count_for_tenant += 1
+    c.typing_partner_at = None
     c.save(update_fields=["last_message_at", "last_message_preview",
-                          "unread_count_for_tenant"])
+                          "unread_count_for_tenant", "typing_partner_at"])
 
     # Validate any chip candidates in the body against the tenant's data
     # so the optimistic render uses the same whitelist as a polled message.
@@ -293,6 +296,113 @@ def api_chat_send(request, conv_id):
         "ok": True,
         "message": _msg_to_dict(m),
         "valid_tokens": _validate_message_tokens([m.body], c.tenant),
+    })
+
+
+# ─── Lightweight thread poll for live updates ───────────────────────────
+# The tenant side already had this; OPS only loaded the full thread on
+# view-switch / manual refresh / post-send, which meant new tenant
+# messages didn't surface until the OPS user did something. Same
+# contract as /sourcing-partners/api/conv/<id>/poll/: messages newer
+# than ?after=<id>, plus presence so the OPS user sees "tenant is
+# typing…" the moment they start composing.
+@ops_required
+@require_GET
+def api_chat_poll(request, conv_id):
+    try:
+        c = (_conv_qs_for(request.user).get(pk=conv_id))
+    except PartnerConversation.DoesNotExist:
+        return JsonResponse({"ok": False, "error": "Conversation not found."}, status=404)
+
+    raw_after = request.GET.get("after") or request.GET.get("after_id") or 0
+    try:
+        after_id = int(raw_after)
+    except (TypeError, ValueError):
+        after_id = 0
+
+    new_msgs = list(
+        c.messages.filter(id__gt=after_id).prefetch_related("attachments"))
+    # The OPS user is actively watching this thread → mark tenant-sent
+    # messages read + reset the OPS unread badge so the chat sidebar
+    # pill drops live.
+    if new_msgs:
+        c.messages.filter(
+            id__gt=after_id, direction="out", is_read=False,
+        ).update(is_read=True)
+    if c.unread_count_for_partner:
+        PartnerConversation.objects.filter(pk=c.pk).update(
+            unread_count_for_partner=0)
+
+    from sourcing_partners.views import _validate_message_tokens
+    return JsonResponse({
+        "ok": True,
+        "messages": [_msg_to_dict(m) for m in new_msgs],
+        "valid_tokens": _validate_message_tokens(
+            [m.body for m in new_msgs], c.tenant),
+        "presence": {
+            "tenant_typing":  c.is_tenant_typing,
+            "partner_typing": c.is_partner_typing,
+        },
+    })
+
+
+# ─── OPS-side typing-presence ping ─────────────────────────────────────
+# POST /ops/api/chat/<conv_id>/typing/
+# Hit every ~3s by the OPS chat composer while the operator is
+# typing. The tenant's poll then reads ``is_partner_typing`` to render
+# the "Drop Sigma Sourcing is typing…" pill.
+@ops_required
+@require_POST
+def api_chat_typing(request, conv_id):
+    try:
+        c = (_conv_qs_for(request.user).get(pk=conv_id))
+    except PartnerConversation.DoesNotExist:
+        return JsonResponse({"ok": False, "error": "Conversation not found."}, status=404)
+    from django.utils import timezone
+    PartnerConversation.objects.filter(pk=c.pk).update(
+        typing_partner_at=timezone.now())
+    return JsonResponse({"ok": True})
+
+
+# ─── OPS unread summary (sidebar live badge + new-msg popup) ────────────
+# GET /ops/api/chat/unread-summary/
+# Same role on the OPS side as api_conv_unread_summary on the tenant
+# side. Drives the live sidebar chat-chip count + the OPS toast that
+# fires when a tenant message arrives while the operator isn't inside
+# the chat view.
+@ops_required
+@require_GET
+def api_chat_unread_summary(request):
+    from .scoping import conversation_qs_visible_to
+    qs = conversation_qs_visible_to(
+        request.user,
+        PartnerConversation.objects.select_related("tenant", "partner"),
+    ).filter(is_archived=False, unread_count_for_partner__gt=0
+    ).order_by("-last_message_at")
+
+    total_unread = 0
+    latest = None
+    for c in qs:
+        total_unread += int(c.unread_count_for_partner or 0)
+        if latest is None:
+            m = (c.messages
+                 .filter(direction="out", is_read=False)
+                 .order_by("-created_at").first())
+            tenant_label = (
+                c.tenant.get_full_name() or c.tenant.username
+                if c.tenant_id else "Tenant"
+            )
+            latest = {
+                "conversation_id": c.pk,
+                "tenant_label":    tenant_label,
+                "body":            (m.body if m else c.last_message_preview)
+                                   or "📎 New attachment",
+                "created_at_iso":  _iso(m.created_at if m else c.last_message_at),
+            }
+    return JsonResponse({
+        "ok": True,
+        "total_unread": total_unread,
+        "latest": latest,
     })
 
 

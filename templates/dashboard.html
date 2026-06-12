@@ -5562,6 +5562,18 @@ document.addEventListener("DOMContentLoaded", () => {
       Sourcing Partners
       <span id="spNavBadge" style="display:none;position:absolute;top:8px;right:8px;background:#ef4444;color:#fff;font-size:9px;font-weight:900;border-radius:999px;padding:1px 5px;min-width:16px;text-align:center;line-height:1.4;"></span>
     </button>
+    <script>
+      // Live unread chat-badge poll + side popup boot. Runs at page
+      // load so the badge surfaces messages even before the user has
+      // entered the Sourcing Partners section once. The poller itself
+      // (spvStartSidebarBadgePoll, defined further down) is idempotent
+      // — spvInitWorkspace also calls it when SP boots.
+      document.addEventListener('DOMContentLoaded', function(){
+        if (typeof spvStartSidebarBadgePoll === 'function'){
+          try { spvStartSidebarBadgePoll(); } catch(_){}
+        }
+      });
+    </script>
 
     <div class="sb-divider"></div>
 
@@ -11410,6 +11422,93 @@ document.addEventListener("DOMContentLoaded", () => {
         #sourcingPartnersSection .sp-tab-body.no-pad{padding:0;}
         #sourcingPartnersSection .sp-loading{
           padding:80px 20px;text-align:center;color:#94a3b8;font-size:14px;
+        }
+
+        /* Typing-indicator pill — sits below the message list, above the
+           composer. Soft slate background + three pulsing dots matching
+           the rest of the SP loader vocabulary. */
+        #sourcingPartnersSection .spv-typing-row{
+          padding:6px 4px 0;display:flex;justify-content:flex-start;
+        }
+        #sourcingPartnersSection .spv-typing-pill{
+          display:inline-flex;align-items:center;gap:10px;
+          padding:6px 12px;border-radius:999px;
+          background:#f1f5f9;color:#475569;
+          font-size:12px;font-weight:700;
+          border:1px solid rgba(15,23,42,.06);
+        }
+        #sourcingPartnersSection .spv-typing-dots{
+          display:inline-flex;gap:3px;align-items:center;
+        }
+        #sourcingPartnersSection .spv-typing-dots span{
+          width:5px;height:5px;border-radius:50%;background:#94a3b8;
+          animation:spvTypingDot 1.2s ease-in-out infinite;
+        }
+        #sourcingPartnersSection .spv-typing-dots span:nth-child(2){animation-delay:.18s;}
+        #sourcingPartnersSection .spv-typing-dots span:nth-child(3){animation-delay:.36s;}
+        @keyframes spvTypingDot{
+          0%,100%{transform:translateY(0);opacity:.45;}
+          50%    {transform:translateY(-3px);opacity:1;}
+        }
+
+        /* Side chat popup — fires globally (not just inside SP section)
+           when a new partner message arrives while the user is elsewhere.
+           Bottom-right toast that slides in from the right, gold border,
+           click anywhere to open the chat. */
+        #spvChatPopupHost{
+          position:fixed;right:18px;bottom:18px;z-index:2147483400;
+          display:flex;flex-direction:column;gap:10px;align-items:flex-end;
+          pointer-events:none;
+        }
+        .spv-chat-popup{
+          pointer-events:auto;cursor:pointer;
+          width:340px;max-width:calc(100vw - 36px);
+          padding:14px 16px 12px;border-radius:14px;
+          background:linear-gradient(180deg,#fff 0%,#fefbf3 100%);
+          border:1px solid #fcd34d;
+          box-shadow:0 18px 42px rgba(2,6,23,.18),
+                     0 0 0 1px rgba(212,175,55,.18);
+          font-family:"Inter",ui-sans-serif,system-ui,sans-serif;
+          color:#0f172a;
+          transform:translateX(120%);opacity:0;
+          transition:transform .35s cubic-bezier(.2,.7,.2,1.05), opacity .25s ease;
+        }
+        .spv-chat-popup.in{transform:translateX(0);opacity:1;}
+        .spv-chat-popup:hover{transform:translateX(0) translateY(-2px);}
+        .spv-chat-popup-head{
+          display:flex;align-items:center;gap:8px;
+          font-size:12.5px;font-weight:800;color:#0f172a;
+        }
+        .spv-chat-popup-dot{
+          width:8px;height:8px;border-radius:50%;
+          background:#10b981;
+          box-shadow:0 0 0 3px rgba(16,185,129,.22);
+          animation:spvPopupPing 1.4s ease-in-out infinite;
+        }
+        @keyframes spvPopupPing{
+          0%,100%{box-shadow:0 0 0 3px rgba(16,185,129,.22);}
+          50%    {box-shadow:0 0 0 7px rgba(16,185,129,.05);}
+        }
+        .spv-chat-popup-x{
+          margin-left:auto;background:transparent;border:0;
+          color:#94a3b8;font-size:18px;line-height:1;cursor:pointer;
+          padding:0 4px;border-radius:6px;
+        }
+        .spv-chat-popup-x:hover{background:#f1f5f9;color:#0f172a;}
+        .spv-chat-popup-body{
+          margin-top:6px;font-size:12.5px;font-weight:600;color:#334155;
+          line-height:1.45;white-space:pre-wrap;
+          word-break:break-word;
+        }
+        .spv-chat-popup-foot{
+          margin-top:8px;padding-top:8px;
+          border-top:1px dashed rgba(15,23,42,.08);
+          font-size:10.5px;font-weight:800;color:#7a5a00;
+          letter-spacing:.06em;text-transform:uppercase;
+        }
+        @media (prefers-reduced-motion: reduce){
+          .spv-chat-popup{transition:opacity .15s ease;}
+          .spv-chat-popup-dot{animation:none;}
         }
 
         /* Chat smart-link chips — pills inline with chat text. One colour
@@ -38288,6 +38387,10 @@ function spvDeskTag(row){ return ''; }
 
 /* ── Init + brand head ─────────────────────────────────────────────── */
 async function spvInitWorkspace(){
+  // Side-popup + sidebar live badge run independently of which view
+  // the user is on inside SP. The poll is idempotent — re-entering
+  // sourcingPartners just resets the timer.
+  try { spvStartSidebarBadgePoll(); } catch(_){}
   await spvLoadOverviewData();
   // Deep-link support: Stripe top-up redirects back with ?view=wallet&topup=…
   const _p = new URLSearchParams(window.location.search);
@@ -38585,11 +38688,17 @@ async function spvOpenChatThread(partnerId){
         </div>
       </div>
       <div id="spvChatMsgs" style="flex:1;overflow-y:auto;padding:8px;background:#fff;border:1px solid rgba(15,23,42,.06);border-radius:14px;"></div>
+      <div id="spvChatTyping" class="spv-typing-row" style="display:none;">
+        <div class="spv-typing-pill">
+          <span class="spv-typing-dots"><span></span><span></span><span></span></span>
+          Drop Sigma Sourcing is typing…
+        </div>
+      </div>
       <div style="margin-top:10px;background:#fff;border:1px solid rgba(15,23,42,.06);border-radius:14px;padding:10px;">
         <div id="spvChatAttPrev" style="display:none;gap:6px;flex-wrap:wrap;margin-bottom:8px;"></div>
         <div style="display:flex;gap:8px;align-items:flex-end;">
           <textarea id="spvChatInput" placeholder="${spvEsc(placeholder)}"
-            oninput="spvChatAutoSize(this);spvChatUpdateSend();"
+            oninput="spvChatAutoSize(this);spvChatUpdateSend();spvNotifyTyping();"
             onpaste="spvChatOnPaste(event)"
             ondrop="spvChatOnDrop(event)" ondragover="event.preventDefault();event.dataTransfer.dropEffect='copy';"
             title="Paste images (⌘V/Ctrl+V) or drop files here"
@@ -39033,6 +39142,14 @@ async function spvChatSend(){
   for (const f of SPV.chatPending.files) fd.append(f.kind === 'image' ? 'images' : 'files', f.file);
   const {ok, data} = await spvFetch(`/sourcing-partners/api/conv/${SPV.activeConvId}/send/`, {method:'POST', body: fd});
   if (!ok){ spvToast(data?.error || 'Send failed', 'error'); return; }
+  // ── WhatsApp-style send "swoosh". Same Web Audio helper used by the
+  //    Drop Sigma AI chat (_aiPlaySendSound at ~L36357) so the two
+  //    chat surfaces feel unified. Wrapped in a try/catch because the
+  //    AudioContext can be unavailable in older browsers / iframes.
+  try { if (typeof _aiPlaySendSound === 'function') _aiPlaySendSound(); } catch(_){}
+  // Clear our local typing pulse so a stale ping isn't reported the
+  // moment after we sent.
+  SPV._typingNextAllowedAt = 0;
   // Merge whitelist BEFORE the poll so the new message renders with
   // chips for tokens that the server just validated against the
   // tenant's own data.
@@ -39060,6 +39177,12 @@ async function spvPollChat(){
     `/sourcing-partners/api/conv/${SPV.activeConvId}/poll/?after=${last}&after_id=${last}`
   );
   if (!ok) return;
+  // ── Typing presence (the OPS side of the conversation) ──────────
+  // The backend returns {presence: {partner_typing, tenant_typing}}.
+  // partner_typing = TRUE means the Drop Sigma operator is mid-keystroke;
+  // we render the WhatsApp-style "is typing…" pill below the thread.
+  try { spvRenderPartnerTyping(!!(data.presence && data.presence.partner_typing)); } catch(_){}
+
   // Merge whitelist BEFORE rendering — otherwise spvRenderMsg sees an
   // empty Set on first paint and renders every token as plain text.
   spvMergeValidTokens(data && data.valid_tokens);
@@ -39086,6 +39209,145 @@ async function spvPollChat(){
   // Use the image-aware helper so pasted screenshots / shared images
   // don't push the latest text up out of view once they finish loading.
   spvScrollChatToBottom();
+  // ── WhatsApp-style "ding" on incoming partner message. Same Web
+  //    Audio helper as Drop Sigma AI receive (_aiPlayReceiveSound at
+  //    ~L36384). Skip if the only new messages were ones the tenant
+  //    sent themselves (sender echo).
+  const incoming = fresh.some(m => m.direction === 'in');
+  if (incoming){
+    try { if (typeof _aiPlayReceiveSound === 'function') _aiPlayReceiveSound(); } catch(_){}
+  }
+  // Tenant is actively reading → drop their own typing pill regardless
+  // of how the partner ended up here.
+  spvRenderPartnerTyping(false); // re-affirm after render
+}
+
+/* ── Typing indicator render ──────────────────────────────────────
+   The pill lives in #spvChatTyping (rendered alongside #spvChatMsgs in
+   the chat shell). show=true paints the dots; show=false hides them.
+   Idempotent. */
+function spvRenderPartnerTyping(show){
+  const el = document.getElementById('spvChatTyping');
+  if (!el) return;
+  el.style.display = show ? 'flex' : 'none';
+}
+
+/* ── Keystroke ping to /typing/ ──────────────────────────────────
+   Fires from the textarea's oninput. Rate-limited so the backend
+   sees one ping every ~3s while the user is actively typing — the
+   OPS poll endpoint treats anything within the last 6s as "still
+   typing" so a single dropped ping doesn't blink the indicator. */
+SPV._typingNextAllowedAt = 0;
+function spvNotifyTyping(){
+  if (!SPV.activeConvId) return;
+  const now = Date.now();
+  if (now < (SPV._typingNextAllowedAt || 0)) return;
+  SPV._typingNextAllowedAt = now + 3000;
+  // Fire-and-forget — we don't care about the response. Catch any
+  // network error so the keystroke handler never blows up the UI.
+  spvFetch(`/sourcing-partners/api/conv/${SPV.activeConvId}/typing/`,
+           {method:'POST', body:{}}).catch(()=>{});
+}
+
+/* ── Sidebar live badge + new-msg side popup ─────────────────────
+   Runs globally (not gated by activeConvId) so the tenant sees an
+   unread badge AND a side popup when a partner message arrives
+   while they're elsewhere in the dashboard. The popup auto-hides
+   after 7s; clicking it deep-links into the chat. */
+SPV._sidebarBadgeTimer = null;
+SPV._lastSeenLatestKey = '';
+function spvStartSidebarBadgePoll(){
+  // Avoid double timers from re-entry into Sourcing Partners section.
+  spvStopSidebarBadgePoll();
+  // Immediate kick so the badge isn't stale on first paint.
+  spvTickSidebarBadge();
+  SPV._sidebarBadgeTimer = setInterval(spvTickSidebarBadge, 5000);
+}
+function spvStopSidebarBadgePoll(){
+  if (SPV._sidebarBadgeTimer){
+    clearInterval(SPV._sidebarBadgeTimer);
+    SPV._sidebarBadgeTimer = null;
+  }
+}
+async function spvTickSidebarBadge(){
+  const {ok, data} = await spvFetch('/sourcing-partners/api/conv/unread-summary/');
+  if (!ok) return;
+  const n = +(data.total_unread || 0);
+  const badge = document.getElementById('spNavBadge');
+  if (badge){
+    if (n > 0){
+      badge.textContent = n > 99 ? '99+' : String(n);
+      badge.style.display = '';
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+  // Popup logic. Skip if there's no unread message OR the user is
+  // currently inside the chat (the polling loop above already shows
+  // the new message inline). Also skip if we already showed this
+  // exact message (key = conv+iso).
+  const latest = data.latest;
+  if (!latest) return;
+  const key = `${latest.conversation_id}:${latest.created_at_iso || ''}`;
+  if (key === SPV._lastSeenLatestKey) return;
+  SPV._lastSeenLatestKey = key;
+  // Inside-chat suppression — only suppress when the user is BOTH
+  // inside Sourcing Partners AND looking at this specific conv.
+  const inSourcing = document.body.getAttribute('data-active-section') === 'sourcingPartners';
+  const sameConv   = SPV.activeConvId === latest.conversation_id;
+  if (inSourcing && sameConv) return;
+  spvShowChatPopup(latest);
+}
+
+function spvShowChatPopup(latest){
+  // Drop Sigma branded side popup — bottom-right corner, gold border,
+  // slides in from the right, auto-hides at 7s, click to open chat.
+  let host = document.getElementById('spvChatPopupHost');
+  if (!host){
+    host = document.createElement('div');
+    host.id = 'spvChatPopupHost';
+    document.body.appendChild(host);
+  }
+  const node = document.createElement('div');
+  node.className = 'spv-chat-popup';
+  const labelHtml = `${spvEsc(latest.partner_name || 'Drop Sigma Sourcing')}`;
+  const bodyTxt = (latest.body || '').replace(/\s+/g, ' ').trim();
+  const preview = bodyTxt.length > 120 ? bodyTxt.slice(0, 117) + '…' : bodyTxt;
+  node.innerHTML = `
+    <div class="spv-chat-popup-head">
+      <span class="spv-chat-popup-dot"></span>
+      <strong>${labelHtml}</strong>
+      <button class="spv-chat-popup-x" aria-label="Dismiss">×</button>
+    </div>
+    <div class="spv-chat-popup-body">${spvEsc(preview)}</div>
+    <div class="spv-chat-popup-foot">Click to open chat</div>`;
+  // Wire interactions
+  const dismiss = (e) => {
+    if (e) { e.preventDefault(); e.stopPropagation(); }
+    node.classList.remove('in');
+    setTimeout(() => node.remove(), 250);
+  };
+  node.querySelector('.spv-chat-popup-x').addEventListener('click', dismiss);
+  node.addEventListener('click', () => {
+    dismiss();
+    try {
+      // Jump into the chat. dsEnterSourcingPartners gives us the
+      // branded transition splash; once it lands we pick the right
+      // conversation if the workspace already knows the partner.
+      if (typeof dsEnterSourcingPartners === 'function'){
+        dsEnterSourcingPartners();
+      } else {
+        showSection('sourcingPartners');
+      }
+    } catch(_){}
+  });
+  host.appendChild(node);
+  // Defer the .in class so the CSS transition runs.
+  requestAnimationFrame(() => node.classList.add('in'));
+  // Auto-hide after 7s.
+  setTimeout(dismiss, 7000);
+  // Polite ding so the user actually notices, even if mute.
+  try { if (typeof _aiPlayReceiveSound === 'function') _aiPlayReceiveSound(); } catch(_){}
 }
 
 /* ═════════════════════════════════════════════════════════════════════

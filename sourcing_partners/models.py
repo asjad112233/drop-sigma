@@ -85,15 +85,57 @@ class PartnerConversation(models.Model):
     last_message_at  = models.DateTimeField(auto_now_add=True, db_index=True)
     last_message_preview = models.CharField(max_length=200, blank=True)
     unread_count_for_tenant = models.PositiveIntegerField(default=0)
+    # OPS-side unread mirror: how many tenant->partner messages the OPS
+    # team hasn't opened yet. Tenant_unread badge on the OPS rail uses
+    # this; the existing api_chat_messages call sets is_read=True in
+    # bulk and resets this to 0 when an OPS user opens the thread.
+    unread_count_for_partner = models.PositiveIntegerField(default=0)
     is_archived      = models.BooleanField(default=False)
     created_at       = models.DateTimeField(auto_now_add=True)
+
+    # ── Live presence (typing indicator) ─────────────────────────────
+    # Each side pings these endpoints while typing; the other side's
+    # poll response uses "now - this stamp < 6s" to render the WhatsApp-
+    # style "typing…" pill. Nullable because most conversations are
+    # idle, and writes are cheap (single timestamp UPDATE) so we don't
+    # bother batching.
+    typing_tenant_at  = models.DateTimeField(null=True, blank=True)
+    typing_partner_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         unique_together = [("tenant", "partner")]
         ordering = ["-last_message_at"]
+        # Bottom-of-thread tail loads need fast (conv, created_at) range
+        # scans; the old solo index on PartnerMessage.created_at couldn't
+        # serve them without a sort step.
+        indexes = [
+            models.Index(fields=["tenant", "-last_message_at"]),
+        ]
 
     def __str__(self):
         return f"{self.tenant.username} ↔ {self.partner.name}"
+
+    # ─────────────────────────────────────────────────────────────────
+    # "Is the other side typing right now?" — recency check used by
+    # both poll endpoints. Threshold matches the front-end keystroke
+    # ping cadence (~3s) plus a generous margin so a single dropped
+    # ping doesn't blink the indicator off.
+    TYPING_FRESH_SECONDS = 6
+
+    def _is_fresh(self, stamp):
+        if not stamp:
+            return False
+        from django.utils import timezone
+        delta = (timezone.now() - stamp).total_seconds()
+        return 0 <= delta < self.TYPING_FRESH_SECONDS
+
+    @property
+    def is_tenant_typing(self):
+        return self._is_fresh(self.typing_tenant_at)
+
+    @property
+    def is_partner_typing(self):
+        return self._is_fresh(self.typing_partner_at)
 
 
 class PartnerMessage(models.Model):
@@ -113,6 +155,12 @@ class PartnerMessage(models.Model):
 
     class Meta:
         ordering = ["created_at"]
+        # Both poll endpoints look up "messages in conv X with id > N
+        # ordered by created_at". This composite serves both clauses
+        # without the WHERE→ORDER BY filesort the solo index forced.
+        indexes = [
+            models.Index(fields=["conversation", "created_at"]),
+        ]
 
     def __str__(self):
         return f"{self.direction} · {self.created_at:%Y-%m-%d %H:%M}"

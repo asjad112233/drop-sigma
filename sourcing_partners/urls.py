@@ -9,6 +9,14 @@ urlpatterns = [
     path("api/<int:pk>/open/",           views.api_open_conversation,   name="sp_api_open"),
     path("api/conv/<int:conv_id>/send/", views.api_send_message,        name="sp_api_send"),
     path("api/conv/<int:conv_id>/poll/", views.api_poll_messages,       name="sp_api_poll"),
+    # Typing-presence ping. The keystroke loop on the chat composer hits
+    # this every ~3s while typing; the OPS poll then surfaces it as the
+    # "tenant is typing…" pill.
+    path("api/conv/<int:conv_id>/typing/", views.api_typing,            name="sp_api_typing"),
+    # Tenant-wide unread summary — drives the sidebar badge + the
+    # side-popup that fires on a new partner message while the user
+    # isn't inside the chat thread.
+    path("api/conv/unread-summary/",     views.api_conv_unread_summary, name="sp_api_conv_unread_summary"),
 
     # ─── Dedicated Sourcing Manager (lazy-creates assignment) ───────────
     path("api/my-manager/",              views.api_my_manager,          name="sp_api_my_manager"),

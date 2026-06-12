@@ -200,6 +200,90 @@
   #opsChatRoot .cx-day-sep{text-align:center;margin:18px 0 12px;}
   #opsChatRoot .cx-day-sep span{display:inline-block;padding:3px 12px;border-radius:999px;background:rgba(15,23,42,.06);color:#64748b;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;}
 
+  /* Typing-indicator pill — sits just below the message list and above
+     the composer. Matches the tenant-side .spv-typing-pill so the same
+     conversation looks coherent across both surfaces. */
+  #opsChatRoot .cx-typing-row{
+    padding:6px 18px 0;display:flex;justify-content:flex-start;
+  }
+  #opsChatRoot .cx-typing-pill{
+    display:inline-flex;align-items:center;gap:10px;
+    padding:6px 12px;border-radius:999px;
+    background:rgba(15,23,42,.06);color:#cbd5e1;
+    font-size:12px;font-weight:700;
+    border:1px solid rgba(255,255,255,.06);
+  }
+  #opsChatRoot .cx-typing-dots{display:inline-flex;gap:3px;align-items:center;}
+  #opsChatRoot .cx-typing-dots span{
+    width:5px;height:5px;border-radius:50%;background:#a855f7;
+    animation:cxTypingDot 1.2s ease-in-out infinite;
+  }
+  #opsChatRoot .cx-typing-dots span:nth-child(2){animation-delay:.18s;}
+  #opsChatRoot .cx-typing-dots span:nth-child(3){animation-delay:.36s;}
+  @keyframes cxTypingDot{
+    0%,100%{transform:translateY(0);opacity:.45;}
+    50%    {transform:translateY(-3px);opacity:1;}
+  }
+
+  /* Side popup — fires globally when a new tenant message arrives
+     while the operator is NOT inside this thread. Matches the
+     tenant-side .spv-chat-popup styling but tuned for the OPS dark
+     dashboard. */
+  #opsChatPopupHost{
+    position:fixed;right:18px;bottom:18px;z-index:2147483400;
+    display:flex;flex-direction:column;gap:10px;align-items:flex-end;
+    pointer-events:none;
+  }
+  .ops-chat-popup{
+    pointer-events:auto;cursor:pointer;
+    width:340px;max-width:calc(100vw - 36px);
+    padding:14px 16px 12px;border-radius:14px;
+    background:linear-gradient(180deg,#1e293b 0%,#0f172a 100%);
+    border:1px solid rgba(168,85,247,.5);
+    box-shadow:0 18px 42px rgba(2,6,23,.55),
+               0 0 0 1px rgba(168,85,247,.18);
+    font-family:"Inter",ui-sans-serif,system-ui,sans-serif;
+    color:#e2e8f0;
+    transform:translateX(120%);opacity:0;
+    transition:transform .35s cubic-bezier(.2,.7,.2,1.05), opacity .25s ease;
+  }
+  .ops-chat-popup.in{transform:translateX(0);opacity:1;}
+  .ops-chat-popup:hover{transform:translateX(0) translateY(-2px);}
+  .ops-chat-popup-head{
+    display:flex;align-items:center;gap:8px;
+    font-size:12.5px;font-weight:800;color:#fff;
+  }
+  .ops-chat-popup-dot{
+    width:8px;height:8px;border-radius:50%;background:#10b981;
+    box-shadow:0 0 0 3px rgba(16,185,129,.25);
+    animation:opsPopupPing 1.4s ease-in-out infinite;
+  }
+  @keyframes opsPopupPing{
+    0%,100%{box-shadow:0 0 0 3px rgba(16,185,129,.25);}
+    50%    {box-shadow:0 0 0 7px rgba(16,185,129,.05);}
+  }
+  .ops-chat-popup-x{
+    margin-left:auto;background:transparent;border:0;
+    color:#94a3b8;font-size:18px;line-height:1;cursor:pointer;
+    padding:0 4px;border-radius:6px;
+  }
+  .ops-chat-popup-x:hover{background:rgba(255,255,255,.05);color:#fff;}
+  .ops-chat-popup-body{
+    margin-top:6px;font-size:12.5px;font-weight:600;color:#cbd5e1;
+    line-height:1.45;white-space:pre-wrap;word-break:break-word;
+  }
+  .ops-chat-popup-foot{
+    margin-top:8px;padding-top:8px;
+    border-top:1px dashed rgba(255,255,255,.08);
+    font-size:10.5px;font-weight:800;color:#fbbf24;
+    letter-spacing:.06em;text-transform:uppercase;
+  }
+  @media (prefers-reduced-motion: reduce){
+    .ops-chat-popup{transition:opacity .15s ease;}
+    .ops-chat-popup-dot,
+    #opsChatRoot .cx-typing-dots span{animation:none;}
+  }
+
   #opsChatRoot .cx-composer{
     padding:12px 16px;border-top:1px solid rgba(15,23,42,.06);background:#fff;
     display:flex;gap:10px;align-items:flex-end;
@@ -534,6 +618,8 @@
     }
     const conv = r.data.conversation;
     state.msgs = r.data.messages || [];
+    state.lastMsgId = state.msgs.reduce((m, x) => x.id > m ? x.id : m, 0);
+    state.seenMsgIds = new Set(state.msgs.map(x => x.id));
     // Merge BEFORE renderThread → renderMsg sees the whitelist on first
     // paint, so foreign tokens never flash as clickable.
     mergeValidTokens(r.data.valid_tokens);
@@ -544,7 +630,257 @@
     // NOT re-enter openThread (which would loop forever and flicker the
     // pane on "Loading conversation…").
     load(false);
+
+    // ── Live updates: kick the 3.5s poll so any tenant reply lands
+    //    inline without manual refresh. Idempotent — startThreadPoll
+    //    clears any existing timer first.
+    startThreadPoll();
   }
+
+  // ═══════════════════════════════════════════════════════════════
+  // LIVE CHAT — polling, typing, sounds, sidebar badge, toast popup
+  //
+  // Same UX shape as the tenant SP chat (templates/dashboard.html
+  // spvPollChat / spvNotifyTyping / spvTickSidebarBadge): we poll the
+  // active thread every 3.5s for new messages + presence, ping a
+  // typing endpoint while the operator is composing, render an in-pane
+  // "tenant is typing…" pill, play a Drop-Sigma-AI-style swoosh on
+  // send + ding on receive, and surface a side toast (+ keep the
+  // sidebar chat-chip badge live) when a new tenant message arrives
+  // while the operator is on a different OPS surface.
+  // ═══════════════════════════════════════════════════════════════
+  state.threadPollTimer = null;
+  state.sidebarPollTimer = null;
+  state.typingNextAllowedAt = 0;
+  state.lastSeenLatestKey = '';
+
+  function startThreadPoll(){
+    stopThreadPoll();
+    state.threadPollTimer = setInterval(pollThread, 3500);
+  }
+  function stopThreadPoll(){
+    if (state.threadPollTimer){
+      clearInterval(state.threadPollTimer);
+      state.threadPollTimer = null;
+    }
+  }
+
+  async function pollThread(){
+    if (!state.activeId) return;
+    const after = state.lastMsgId || 0;
+    const r = await opsFetch(`/ops/api/chat/${state.activeId}/poll/?after=${after}`);
+    if (!r.ok) return;
+    // Typing presence — render the "tenant is typing…" pill below the
+    // message list when the tenant side is mid-keystroke.
+    try { renderTenantTyping(!!(r.data.presence && r.data.presence.tenant_typing)); } catch(_){}
+
+    const msgs = r.data.messages || [];
+    if (!msgs.length) return;
+    mergeValidTokens(r.data.valid_tokens);
+
+    state.seenMsgIds = state.seenMsgIds || new Set();
+    let maxId = state.lastMsgId || 0;
+    const fresh = [];
+    for (const m of msgs){
+      if (!m || m.id == null) continue;
+      if (state.seenMsgIds.has(m.id)) continue;
+      state.seenMsgIds.add(m.id);
+      fresh.push(m);
+      if (m.id > maxId) maxId = m.id;
+    }
+    if (!fresh.length) return;
+    state.msgs.push(...fresh);
+    state.lastMsgId = maxId;
+
+    const msgsEl = document.getElementById('cxMsgs');
+    if (msgsEl){
+      msgsEl.insertAdjacentHTML('beforeend', fresh.map(renderMsg).join(''));
+      scrollMsgsToBottom(msgsEl);
+    }
+    // Drop sidebar count for THIS conv since we just absorbed unread
+    // tenant messages, and play the receive ding only for incoming.
+    const incoming = fresh.some(m => m.direction === 'out');
+    if (incoming){
+      try { opsChatPlayReceive(); } catch(_){}
+      // Inbox card preview update so the left list stays in sync.
+      const conv = state.convs.find(x => x.id === state.activeId);
+      if (conv){
+        const newest = fresh[fresh.length - 1];
+        conv.last_preview = (newest.body
+          || (newest.attachments?.some(a => a.kind==='image') ? '📷 Image' : '📎 Attachment')
+        ).slice(0, 160);
+        conv.last_direction = 'out';
+        conv.last_ago = 'Just now';
+        conv.tenant_unread = 0;  // we're reading it now
+        renderList();
+      }
+    }
+  }
+
+  function renderTenantTyping(show){
+    const el = document.getElementById('cxTyping');
+    if (!el) return;
+    el.style.display = show ? 'flex' : 'none';
+  }
+
+  function notifyTypingOps(){
+    if (!state.activeId) return;
+    const now = Date.now();
+    if (now < (state.typingNextAllowedAt || 0)) return;
+    state.typingNextAllowedAt = now + 3000;
+    // Fire-and-forget; we don't await.
+    fetch(`/ops/api/chat/${state.activeId}/typing/`, {
+      method:'POST',
+      headers: { 'X-CSRFToken': getCookie('csrftoken') || '' },
+      credentials:'same-origin',
+    }).catch(()=>{});
+  }
+
+  // ── Web Audio: send "swoosh" + receive "ding". Same envelope as
+  //    Drop Sigma AI chat helpers (dashboard.html _aiPlaySendSound /
+  //    _aiPlayReceiveSound). Inline here because the OPS dashboard is
+  //    a separate <html> document and doesn't share the dashboard.html
+  //    JS scope.
+  function opsChatAudioCtx(){
+    try {
+      const W = window.AudioContext || window.webkitAudioContext;
+      if (!W) return null;
+      if (!window.__opsChatAudioCtx) window.__opsChatAudioCtx = new W();
+      const ctx = window.__opsChatAudioCtx;
+      if (ctx.state === 'suspended'){ ctx.resume().catch(()=>{}); }
+      return ctx;
+    } catch(_){ return null; }
+  }
+  function opsChatPlaySend(){
+    const ctx = opsChatAudioCtx(); if (!ctx) return;
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(350, now);
+    osc.frequency.exponentialRampToValueAtTime(900, now + 0.14);
+    lp.frequency.setValueAtTime(800, now);
+    lp.frequency.exponentialRampToValueAtTime(3000, now + 0.14);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.18, now + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.15);
+    osc.connect(lp).connect(gain).connect(ctx.destination);
+    osc.start(now); osc.stop(now + 0.16);
+  }
+  function opsChatPlayReceive(){
+    const ctx = opsChatAudioCtx(); if (!ctx) return;
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(750, now);
+    osc.frequency.exponentialRampToValueAtTime(420, now + 0.18);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.22, now + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.19);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(now); osc.stop(now + 0.2);
+  }
+
+  // ── Sidebar live badge + new-msg toast popup ─────────────────────
+  // Runs globally (regardless of which OPS view is active) so the
+  // sidebar chat chip count stays live and a toast nudges the
+  // operator whenever a tenant message arrives in any conversation
+  // they're scoped to. Skipped when the operator is ALREADY inside
+  // the same conversation (the polling loop above handles it).
+  function startSidebarPoll(){
+    stopSidebarPoll();
+    tickSidebar();  // immediate kick
+    state.sidebarPollTimer = setInterval(tickSidebar, 5000);
+  }
+  function stopSidebarPoll(){
+    if (state.sidebarPollTimer){
+      clearInterval(state.sidebarPollTimer);
+      state.sidebarPollTimer = null;
+    }
+  }
+  async function tickSidebar(){
+    const r = await opsFetch('/ops/api/chat/unread-summary/');
+    if (!r.ok) return;
+    const n = +(r.data.total_unread || 0);
+    // Sidebar chip — the OPS dashboard exposes a setBadge helper in
+    // its global scope (see opsLoadOverview). Fall back to direct
+    // DOM mutation if the helper isn't bound yet.
+    try {
+      if (typeof setBadge === 'function'){
+        setBadge('opsCtChat', n, false);
+      } else {
+        const el = document.getElementById('opsCtChat');
+        if (el){
+          if (n > 0){ el.textContent = n > 99 ? '99+' : String(n); el.style.display = ''; }
+          else el.style.display = 'none';
+        }
+      }
+    } catch(_){}
+
+    const latest = r.data.latest;
+    if (!latest) return;
+    const key = `${latest.conversation_id}:${latest.created_at_iso || ''}`;
+    if (key === state.lastSeenLatestKey) return;
+    state.lastSeenLatestKey = key;
+    // Suppress if the operator is currently looking at this exact
+    // conversation in the chat view.
+    const inChatView = (document.body.getAttribute('data-active-section') === 'chat');
+    if (inChatView && state.activeId === latest.conversation_id) return;
+    showOpsChatPopup(latest);
+  }
+
+  function showOpsChatPopup(latest){
+    let host = document.getElementById('opsChatPopupHost');
+    if (!host){
+      host = document.createElement('div');
+      host.id = 'opsChatPopupHost';
+      document.body.appendChild(host);
+    }
+    const node = document.createElement('div');
+    node.className = 'ops-chat-popup';
+    const bodyTxt = (latest.body || '').replace(/\s+/g,' ').trim();
+    const preview = bodyTxt.length > 120 ? bodyTxt.slice(0,117) + '…' : bodyTxt;
+    node.innerHTML = `
+      <div class="ops-chat-popup-head">
+        <span class="ops-chat-popup-dot"></span>
+        <strong>${opsEsc(latest.tenant_label || 'Tenant')}</strong>
+        <button class="ops-chat-popup-x" aria-label="Dismiss">×</button>
+      </div>
+      <div class="ops-chat-popup-body">${opsEsc(preview)}</div>
+      <div class="ops-chat-popup-foot">Click to open chat</div>`;
+    const dismiss = (e) => {
+      if (e){ e.preventDefault(); e.stopPropagation(); }
+      node.classList.remove('in');
+      setTimeout(() => node.remove(), 250);
+    };
+    node.querySelector('.ops-chat-popup-x').addEventListener('click', dismiss);
+    node.addEventListener('click', () => {
+      dismiss();
+      try {
+        // Activate the chat view + open the offending thread.
+        if (typeof opsSwitchView === 'function'){
+          opsSwitchView('chat');
+        } else if (typeof switchOpsView === 'function'){
+          switchOpsView('chat');
+        }
+        setTimeout(() => openThread(latest.conversation_id), 50);
+      } catch(_){}
+    });
+    host.appendChild(node);
+    requestAnimationFrame(() => node.classList.add('in'));
+    setTimeout(dismiss, 7000);
+    try { opsChatPlayReceive(); } catch(_){}
+  }
+
+  // Sidebar poll boots as soon as the chat module loads — the
+  // operator should see new tenant messages from anywhere on the
+  // OPS dashboard, not just the Chat view. (getCookie is defined
+  // further down in this same IIFE for the existing send() flow;
+  // function declarations hoist so it's available here too.)
+  startSidebarPoll();
 
   // Reset per-thread upload tray when switching threads
   state.pendingFiles = state.pendingFiles || [];
@@ -992,6 +1328,12 @@
         <span class="pn">↔ ${opsEsc(conv.partner_name)}</span>
       </div>
       <div class="cx-msgs" id="cxMsgs"></div>
+      <div class="cx-typing-row" id="cxTyping" style="display:none;">
+        <div class="cx-typing-pill">
+          <span class="cx-typing-dots"><span></span><span></span><span></span></span>
+          <span id="cxTypingLabel">Tenant is typing…</span>
+        </div>
+      </div>
       <div class="cx-att-preview" id="cxAttPrev"></div>
       <div class="cx-composer">
         <button class="cx-attach-btn" onclick="document.getElementById('cxImgIn').click()" title="Attach image">🖼️</button>
@@ -999,7 +1341,7 @@
         <input type="file" id="cxImgIn" accept="image/*" multiple style="display:none;" onchange="opsChat._onFiles(this,'image')">
         <input type="file" id="cxFileIn" multiple style="display:none;" onchange="opsChat._onFiles(this,'file')">
         <textarea id="cxInput" rows="1" placeholder="Reply as Drop Sigma… (⌘V/Ctrl+V to paste image)"
-                  oninput="opsChat._auto(this);"
+                  oninput="opsChat._auto(this);opsChat._typing();"
                   onkeydown="opsChat._key(event)"
                   onpaste="opsChat._onPaste(event)"
                   ondrop="opsChat._onDrop(event)"
@@ -1101,6 +1443,14 @@
     btn.disabled = false; btn.textContent = 'Send';
     if (!r.ok){ opsToast(r.data?.error || 'Send failed', 'error'); return; }
 
+    // WhatsApp-style send swoosh (Web Audio, same envelope as Drop
+    // Sigma AI _aiPlaySendSound on the tenant side).
+    try { opsChatPlaySend(); } catch(_){}
+    // Tenant indicator should drop on our side immediately — the
+    // server clears typing_partner_at on send, but the local pulse
+    // gate also needs resetting so the very next keystroke pings.
+    state.typingNextAllowedAt = 0;
+
     // Clear input + clear pending attachments + revoke object URLs to free memory
     inp.value = '';
     inp.style.height = 'auto';
@@ -1186,6 +1536,7 @@
     },
     _openThread: openThread,
     _send: send,
+    _typing: notifyTypingOps,
     _auto(el){
       el.style.height = 'auto';
       el.style.height = Math.min(140, el.scrollHeight) + 'px';

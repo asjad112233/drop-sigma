@@ -68,6 +68,13 @@ urlpatterns = [
     path("api/chats/",                       views_chat.api_chats_list,    name="ops_api_chats_list"),
     path("api/chat/<int:conv_id>/messages/", views_chat.api_chat_messages, name="ops_api_chat_messages"),
     path("api/chat/<int:conv_id>/send/",     views_chat.api_chat_send,     name="ops_api_chat_send"),
+    # Live-polling endpoints. /poll/ returns just messages newer than
+    # ?after=<id> + typing presence; /typing/ is the keystroke ping;
+    # /unread-summary/ feeds the sidebar live badge + new-msg toast.
+    path("api/chat/<int:conv_id>/poll/",     views_chat.api_chat_poll,     name="ops_api_chat_poll"),
+    path("api/chat/<int:conv_id>/typing/",   views_chat.api_chat_typing,   name="ops_api_chat_typing"),
+    path("api/chat/unread-summary/",         views_chat.api_chat_unread_summary,
+                                                                            name="ops_api_chat_unread_summary"),
     # Smart-link resolver — scopes orders to the conversation's tenant so
     # ops staff see the same matches the tenant would see in their chat.
     path("api/chat/<int:conv_id>/lookup/",   views_chat.api_chat_lookup,   name="ops_api_chat_lookup"),

@@ -398,11 +398,18 @@ def api_send_message(request, conv_id):
             url = "https://" + url
         PartnerAttachment.objects.create(message=msg, kind="link", url=url[:500])
 
-    # Update conversation preview + simulate partner auto-reply (demo mode).
+    # Update conversation preview + bump OPS-side unread count + clear
+    # the tenant's typing stamp (they've now sent — they're no longer
+    # mid-keystroke; the OPS user should see the indicator drop).
     conv.last_message_at = msg.created_at
     preview = body or ("📎 Attachment" if files or links_raw else "")
     conv.last_message_preview = preview[:180]
-    conv.save(update_fields=["last_message_at", "last_message_preview"])
+    conv.unread_count_for_partner = (conv.unread_count_for_partner or 0) + 1
+    conv.typing_tenant_at = None
+    conv.save(update_fields=[
+        "last_message_at", "last_message_preview",
+        "unread_count_for_partner", "typing_tenant_at",
+    ])
 
     # NOTE: no auto-reply here. Welcome message is sent ONCE when the
     # tenant enters the chat (via ensure_tenant_manager → assignment
@@ -454,7 +461,9 @@ def _create_demo_autoreply(conv, tenant_msg):
 @login_required(login_url="/login/")
 @require_GET
 def api_poll_messages(request, conv_id):
-    """Return any messages newer than the supplied ?after_id=N."""
+    """Return any messages newer than the supplied ?after_id=N, plus the
+    OPS-side typing presence (so the tenant sees "Drop Sigma is typing…"
+    when the partner is mid-keystroke)."""
     conv = get_object_or_404(
         PartnerConversation,
         pk=conv_id, tenant=request.user,
@@ -466,14 +475,86 @@ def api_poll_messages(request, conv_id):
     except (TypeError, ValueError):
         after_id = 0
     new = list(conv.messages.filter(id__gt=after_id))
-    # Mark partner-sent ones read on poll.
-    [m for m in new]  # materialise before we mutate is_read below
-    conv.messages.filter(id__gt=after_id, direction="in", is_read=False).update(is_read=True)
+    # Mark partner-sent ones read on poll, and clear the tenant unread
+    # badge so the sidebar pill drops the moment they're looking at
+    # the thread.
+    if new:
+        conv.messages.filter(
+            id__gt=after_id, direction="in", is_read=False,
+        ).update(is_read=True)
+    # Tenant is actively looking at the thread → their unread counter
+    # should also reset on every poll, not just on send.
+    if conv.unread_count_for_tenant:
+        PartnerConversation.objects.filter(pk=conv.pk).update(
+            unread_count_for_tenant=0)
     return JsonResponse({
         "ok": True,
         "messages": [_message_json(m) for m in new],
         "valid_tokens": _validate_message_tokens(
             [m.body for m in new], request.user),
+        # Who's typing right now (from the tenant's perspective):
+        #   partner_typing — the OPS side is mid-keystroke
+        #   tenant_typing  — echo so the tenant can debug their own state
+        "presence": {
+            "partner_typing": conv.is_partner_typing,
+            "tenant_typing":  conv.is_tenant_typing,
+        },
+    })
+
+
+# ─── Typing presence ping (tenant → partner) ───────────────────────────
+@login_required(login_url="/login/")
+@require_POST
+def api_typing(request, conv_id):
+    """Tenant ping: mark them as typing in this conversation. The OPS
+    poll endpoint reads ``typing_tenant_at`` via ``is_tenant_typing`` to
+    render the "tenant is typing…" pill. Ping cadence on the frontend is
+    every 3s while the keystroke loop is active; we treat ANY stamp
+    within the last 6s as "still typing"."""
+    conv = get_object_or_404(
+        PartnerConversation,
+        pk=conv_id, tenant=request.user,
+    )
+    PartnerConversation.objects.filter(pk=conv.pk).update(
+        typing_tenant_at=timezone.now())
+    return JsonResponse({"ok": True})
+
+
+# ─── Unread + last-message summary (sidebar badge + popup) ──────────────
+@login_required(login_url="/login/")
+@require_GET
+def api_conv_unread_summary(request):
+    """Tenant-wide unread totals + the freshest "in" message preview.
+
+    The dashboard sidebar polls this every few seconds so the My Manager
+    badge stays live without re-opening the workspace, and so a small
+    side popup can fire on a NEW partner message when the user isn't
+    inside the chat thread.
+    """
+    convs = (PartnerConversation.objects
+             .filter(tenant=request.user, is_archived=False)
+             .order_by("-last_message_at"))
+    total_unread = 0
+    latest = None
+    for c in convs:
+        total_unread += int(c.unread_count_for_tenant or 0)
+        if latest is None and (c.unread_count_for_tenant or 0) > 0:
+            # Pull the freshest UNREAD incoming message so the popup
+            # has something to surface. Empty body falls back to the
+            # preview string we stamped on conv.
+            m = (c.messages
+                 .filter(direction="in", is_read=False)
+                 .order_by("-created_at").first())
+            latest = {
+                "conversation_id": c.pk,
+                "partner_name":    c.partner.name if c.partner_id else "Drop Sigma",
+                "body":            (m.body if m else c.last_message_preview) or "📎 New attachment",
+                "created_at_iso":  _iso(m.created_at if m else c.last_message_at),
+            }
+    return JsonResponse({
+        "ok": True,
+        "total_unread": total_unread,
+        "latest": latest,
     })
 
 
