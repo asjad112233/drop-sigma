@@ -1279,14 +1279,13 @@
             const prod = o.sourcing_product_usd != null ? opsUSD(o.sourcing_product_usd) : '—';
             const ship = o.sourcing_shipping_usd != null ? opsUSD(o.sourcing_shipping_usd) : '—';
             const tot  = Number(o.sourcing_total_usd) || 0;
-            // Margin policy (matches the OPS queue card):
-            //   USD tenant  → exact margin in USD.
-            //   Non-USD     → today's mid-market rate converts the USD
-            //                  Drop-Sigma charge into the tenant's
-            //                  currency, then margin = sells - converted.
-            //                  Result is QUOTED IN THE TENANT'S CURRENCY,
-            //                  flagged with an "est." pill + ⓘ tooltip.
-            //   FX missing  → "—" with a tooltip until it lands.
+            // Margin policy — OPS is INTERNAL, so margin is always
+            // quoted in USD (matches the Drop-Sigma quote unit):
+            //   USD tenant   → exact margin in USD.
+            //   Non-USD + FX → convert sells → USD via today's rate
+            //                   then margin_usd = sells_usd - tot.
+            //                   Flagged "est." + ⓘ tooltip.
+            //   FX missing   → "—" + tooltip until it lands.
             let marginRow = '';
             if (sells > 0){
               if (isUsd){
@@ -1301,24 +1300,20 @@
                     <div class="val">${sign}${opsUSD(Math.abs(margin))}</div>
                   </div>`;
               } else {
-                const rate   = Number(o.fx_rate_used);
-                const fxDate = o.fx_rate_date || '';
-                if (rate > 0){
-                  const totLocal = tot * rate;
-                  const margin   = sells - totLocal;
+                const sellsUsd = Number(o.merchant_total_converted_usd);
+                const rate     = Number(o.fx_rate_used);
+                const fxDate   = o.fx_rate_date || '';
+                if (sellsUsd > 0 && rate > 0){
+                  const margin = sellsUsd - tot;
                   const cls  = margin >= 0 ? 'pos' : 'neg';
                   const sign = margin >= 0 ? '+' : '−';
-                  const tip  = `Estimated by converting Drop Sigma's USD charge ($${tot.toFixed(2)}) into ${ccy} at today's mid-market rate (1 USD = ${rate.toFixed(4)} ${ccy}${fxDate ? `, ${fxDate}` : ''}). The actual margin the tenant realises will vary by ±2-3% based on the PSP / bank conversion applied at settlement.`;
-                  // "est." pill already flags this as an estimate —
-                  // dropping the redundant "~" prefix. Tooltip moves
-                  // onto the whole value cell so it triggers on any
-                  // hover, not just landing on the tiny ⓘ glyph.
+                  const tip  = `Estimated by converting tenant's sells (${opsUSD(sells)} ${ccy}) into USD at today's mid-market rate (1 USD = ${rate.toFixed(4)} ${ccy}${fxDate ? `, ${fxDate}` : ''}) → ${opsUSD(sellsUsd)} USD, then subtracting Drop Sigma's charge (${opsUSD(tot)} USD). Margin will shift ±2-3% based on the PSP / bank conversion at settlement.`;
                   marginRow = `
                     <div class="om-pricing-row is-margin ${cls}" title="${opsEsc(tip)}">
                       <div class="lbl">Tenant margin <span class="om-est-tag">est.</span>
-                        <span class="sublbl">Today's mid-market FX · ${opsEsc(ccy)}</span>
+                        <span class="sublbl">Today's mid-market FX · ${opsEsc(ccy)}→USD</span>
                       </div>
-                      <div class="val est-val" title="${opsEsc(tip)}">${sign}${opsUSD(Math.abs(margin))} <span class="om-ccy-badge">${opsEsc(ccy)}</span><span class="om-est-info" aria-hidden="true">ⓘ</span></div>
+                      <div class="val est-val" title="${opsEsc(tip)}">${sign}${opsUSD(Math.abs(margin))}<span class="om-est-info" aria-hidden="true">ⓘ</span></div>
                     </div>`;
                 } else {
                   marginRow = `
@@ -1903,21 +1898,21 @@
                   const rate   = Number(o.fx_rate_used);
                   const fxDate = o.fx_rate_date || '';
                   if (rate > 0){
-                    const totLocal = total * rate;
-                    const tMargin  = tenantSells - totLocal;
+                    // OPS is internal → margin always in USD.
+                    // Convert sells_local → USD via today's rate,
+                    // then subtract the USD quote total. Label flags
+                    // the figure as estimated; ⓘ tooltip names the
+                    // rate + variance caveat for the ops reader.
+                    const sellsUsd = tenantSells / rate;
+                    const tMargin  = sellsUsd - total;
                     const cls  = tMargin >= 0 ? 'pos' : 'neg';
                     const sign = tMargin >= 0 ? '+' : '−';
-                    const tip  = `Estimated by converting the USD quote ($${total.toFixed(2)}) into ${tenantCcy} at today's mid-market rate (1 USD = ${rate.toFixed(4)} ${tenantCcy}${fxDate ? `, ${fxDate}` : ''}). Actual margin will vary ±2-3% based on the tenant's PSP / bank conversion at settlement.`;
+                    const tip  = `Estimated by converting tenant's sells (${opsUSD(tenantSells)} ${tenantCcy}) into USD at today's mid-market rate (1 USD = ${rate.toFixed(4)} ${tenantCcy}${fxDate ? `, ${fxDate}` : ''}) → ${opsUSD(sellsUsd)} USD, then subtracting the USD quote (${opsUSD(total)}). Margin will shift ±2-3% based on the PSP / bank conversion at settlement.`;
                     tRow.classList.add(cls);
-                    // Title sits on the row + value (broader hit area
-                    // than just the tiny ⓘ glyph) so hover surfaces
-                    // the FX detail reliably. "est." pill on the
-                    // label conveys the estimate flag, so no "~"
-                    // prefix on the number.
                     tRow.title = tip;
                     tEl.title  = tip;
                     tEl.style.cursor = 'help';
-                    tEl.innerHTML = `${sign}${opsUSD(Math.abs(tMargin))} <span class="om-ccy-badge">${opsEsc(tenantCcy)}</span><span class="om-est-info" aria-hidden="true">ⓘ</span>`;
+                    tEl.innerHTML = `${sign}${opsUSD(Math.abs(tMargin))}<span class="om-est-info" aria-hidden="true">ⓘ</span>`;
                   } else {
                     tRow.title = `Tenant store sells in ${tenantCcy} — today's FX rate isn't available, so margin can't be estimated.`;
                     tEl.textContent = '—';
