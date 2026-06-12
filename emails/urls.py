@@ -17,6 +17,9 @@ from .views import (
     ai_training_snippets_api,
     ai_training_snippet_detail_api,
     ai_training_example_api,
+    ai_training_backup_export_api,
+    ai_training_backup_preview_api,
+    ai_training_backup_apply_api,
     category_training_list_api,
     category_training_detail_api,
     auto_suggest_reply_api,
@@ -109,6 +112,13 @@ urlpatterns = [
     path("api/ai-training/snippets/", ai_training_snippets_api, name="ai_training_snippets_api"),
     path("api/ai-training/snippets/<int:snippet_id>/", ai_training_snippet_detail_api, name="ai_training_snippet_detail_api"),
     path("api/ai-training/example/", ai_training_example_api, name="ai_training_example_api"),
+    # AI Training backup — export/import + cross-store reuse. The
+    # tenant downloads a portable JSON, validates before applying via
+    # preview, then commits with mode=replace|merge against the same
+    # or a different store under their account.
+    path("api/ai-training/backup/export/",  ai_training_backup_export_api,  name="ai_training_backup_export_api"),
+    path("api/ai-training/backup/preview/", ai_training_backup_preview_api, name="ai_training_backup_preview_api"),
+    path("api/ai-training/backup/apply/",   ai_training_backup_apply_api,   name="ai_training_backup_apply_api"),
     path("api/ai-training/categories/", category_training_list_api, name="category_training_list_api"),
     path("api/ai-training/categories/<slug:slug>/", category_training_detail_api, name="category_training_detail_api"),
 

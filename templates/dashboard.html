@@ -10388,6 +10388,143 @@ document.addEventListener("DOMContentLoaded", () => {
         #aiTrainingSection .v2-tabs{flex-wrap:wrap;}
       }
       @media (prefers-reduced-motion: reduce){#aiTrainingSection *{animation:none !important;transition:none !important;}}
+
+      /* ═══════ AI Training Backup & Restore modal ═══════ */
+      .ai-backup-modal{
+        position:fixed;inset:0;z-index:2147483500;
+        background:rgba(2,6,23,.55);
+        display:flex;align-items:center;justify-content:center;
+        padding:24px;
+        backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+        animation:aiBackupOverlayIn .25s ease;
+      }
+      @keyframes aiBackupOverlayIn{from{opacity:0;}to{opacity:1;}}
+      .ai-backup-card{
+        width:100%;max-width:580px;max-height:90vh;overflow:hidden;
+        background:#ffffff;border-radius:18px;
+        box-shadow:0 30px 70px rgba(2,6,23,.45),
+                   0 0 0 1px rgba(99,102,241,.10);
+        display:flex;flex-direction:column;
+        font-family:'Inter',ui-sans-serif,system-ui,sans-serif;
+        animation:aiBackupCardIn .35s cubic-bezier(.2,.7,.2,1.05);
+      }
+      @keyframes aiBackupCardIn{
+        from{transform:translateY(24px) scale(.96);opacity:0;}
+        to  {transform:translateY(0) scale(1);opacity:1;}
+      }
+      .ai-backup-head{
+        display:flex;align-items:flex-start;justify-content:space-between;
+        padding:18px 20px 16px;
+        background:linear-gradient(180deg,#fafbff 0%,#f4f5ff 100%);
+        border-bottom:1px solid rgba(99,102,241,.10);
+      }
+      .ai-backup-head-l{display:flex;align-items:flex-start;gap:14px;flex:1;min-width:0;}
+      .ai-backup-sigil{
+        flex-shrink:0;width:42px;height:42px;border-radius:13px;
+        background:linear-gradient(135deg,#6366f1 0%,#a855f7 60%,#06b6d4 130%);
+        color:#fff;font-size:17px;
+        display:flex;align-items:center;justify-content:center;
+        box-shadow:inset 0 0 0 1px rgba(255,255,255,.18),
+                   0 6px 16px rgba(99,102,241,.32);
+      }
+      .ai-backup-head h2{
+        margin:0;font-size:16.5px;font-weight:900;color:#0f172a;letter-spacing:-.01em;
+        line-height:1.3;
+      }
+      .ai-backup-sub{
+        margin:4px 0 0;font-size:12px;font-weight:600;color:#64748b;line-height:1.5;
+      }
+      .ai-backup-x{
+        background:transparent;border:0;
+        color:#94a3b8;font-size:22px;line-height:1;cursor:pointer;
+        padding:0 6px;border-radius:8px;transition:all .12s;
+        align-self:flex-start;
+      }
+      .ai-backup-x:hover{background:#eef2ff;color:#0f172a;}
+      .ai-backup-body{
+        padding:20px 22px;overflow-y:auto;flex:1;
+        font-size:13px;color:#334155;
+      }
+      .ai-backup-body .row{
+        display:flex;justify-content:space-between;align-items:baseline;gap:14px;
+        padding:9px 0;border-bottom:1px dashed #e2e8f0;
+      }
+      .ai-backup-body .row:last-child{border-bottom:0;}
+      .ai-backup-body .row .l{
+        font-size:11px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.06em;
+      }
+      .ai-backup-body .row .v{
+        font-size:13.5px;font-weight:800;color:#0f172a;letter-spacing:-.005em;
+        max-width:60%;text-align:right;word-break:break-word;
+      }
+      .ai-backup-body .row .v.muted{color:#94a3b8;font-weight:600;}
+      .ai-backup-body .panel{
+        background:linear-gradient(180deg,#f8fafc 0%,#f1f5f9 100%);
+        border:1px solid rgba(99,102,241,.10);border-left:3px solid #a855f7;
+        border-radius:11px;padding:14px 16px;margin-bottom:14px;
+      }
+      .ai-backup-body .panel-h{
+        font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+        color:#a855f7;margin-bottom:6px;
+      }
+      .ai-backup-body .mode-toggle{
+        display:flex;gap:10px;margin:14px 0 8px;
+      }
+      .ai-backup-body .mode-btn{
+        flex:1;padding:12px 14px;border-radius:11px;
+        background:#fff;border:1.5px solid #e2e8f0;cursor:pointer;
+        text-align:left;transition:all .15s;font-family:inherit;
+      }
+      .ai-backup-body .mode-btn:hover{border-color:#a855f7;}
+      .ai-backup-body .mode-btn.on{
+        border-color:#a855f7;background:linear-gradient(135deg,#faf5ff,#ede9fe);
+        box-shadow:0 4px 14px rgba(168,85,247,.18);
+      }
+      .ai-backup-body .mode-btn .mh{
+        font-size:13px;font-weight:900;color:#0f172a;display:flex;align-items:center;gap:7px;
+      }
+      .ai-backup-body .mode-btn .mb{
+        font-size:11.5px;font-weight:600;color:#64748b;margin-top:4px;line-height:1.5;
+      }
+      .ai-backup-foot{
+        display:flex;gap:10px;justify-content:flex-end;
+        padding:14px 22px 18px;border-top:1px solid #f1f5f9;
+        background:#fafbff;
+      }
+      .ai-backup-btn{
+        padding:11px 22px;border-radius:11px;border:0;
+        font-size:13px;font-weight:900;cursor:pointer;font-family:inherit;
+        letter-spacing:.01em;transition:all .15s;
+      }
+      .ai-backup-btn.ghost{
+        background:#fff;color:#475569;border:1px solid #e2e8f0;
+      }
+      .ai-backup-btn.ghost:hover{background:#f1f5f9;}
+      .ai-backup-btn.primary{
+        background:linear-gradient(135deg,#6366f1 0%,#a855f7 100%);color:#fff;
+        box-shadow:0 8px 22px rgba(99,102,241,.30);
+      }
+      .ai-backup-btn.primary:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 12px 28px rgba(99,102,241,.42);}
+      .ai-backup-btn.primary:disabled{opacity:.55;cursor:not-allowed;}
+      .ai-backup-spinner{
+        display:inline-block;width:14px;height:14px;border-radius:50%;
+        border:2px solid rgba(255,255,255,.35);border-top-color:#fff;
+        animation:aiBackupSpin 1s linear infinite;margin-right:6px;vertical-align:-2px;
+      }
+      @keyframes aiBackupSpin{to{transform:rotate(360deg);}}
+      .ai-backup-msg.error{
+        background:#fef2f2;border:1px solid #fecaca;color:#991b1b;
+        padding:11px 14px;border-radius:10px;font-size:12.5px;font-weight:700;
+        margin-bottom:14px;
+      }
+      .ai-backup-msg.success{
+        background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46;
+        padding:11px 14px;border-radius:10px;font-size:12.5px;font-weight:700;
+        margin-bottom:14px;
+      }
+      @media (prefers-reduced-motion: reduce){
+        .ai-backup-modal,.ai-backup-card{animation:none;}
+      }
     </style>
 
     <section id="aiTrainingSection" class="section">
@@ -10439,6 +10576,13 @@ document.addEventListener("DOMContentLoaded", () => {
         <div class="v2-cta">
           <button class="primary" onclick="v2SwitchTab('basic')"><i class="fa-solid fa-graduation-cap"></i> Q&amp;A</button>
           <button class="secondary" onclick="v2SwitchTab('test')"><i class="fa-regular fa-comment-dots"></i> Test</button>
+          {# Backup & Restore — export training as portable JSON, import to same or different store. #}
+          <button class="secondary" onclick="aiBackupExport()" title="Download your AI training as a portable JSON backup">
+            <i class="fa-solid fa-download"></i> Backup
+          </button>
+          <button class="secondary" onclick="aiBackupOpenImport()" title="Upload a previously downloaded backup to restore or reuse">
+            <i class="fa-solid fa-upload"></i> Restore
+          </button>
         </div>
       </div>
 
@@ -10854,6 +10998,28 @@ document.addEventListener("DOMContentLoaded", () => {
             </div>
           </div>
 
+        </div>
+      </div>
+
+
+      {# ═══════════════ AI Training Backup & Restore — modal + file input ═════════════════ #}
+      <input type="file" id="aiBackupFileInput" accept=".json,application/json" style="display:none;" onchange="aiBackupOnFile(event)">
+
+      <div id="aiBackupModal" class="ai-backup-modal" style="display:none;" onclick="if(event.target===this)aiBackupCloseModal()">
+        <div class="ai-backup-card" role="dialog" aria-modal="true" aria-labelledby="aiBackupTitle">
+          <div class="ai-backup-head">
+            <div class="ai-backup-head-l">
+              <div class="ai-backup-sigil"><i class="fa-solid fa-shield-halved"></i></div>
+              <div>
+                <h2 id="aiBackupTitle">Restore AI Training Backup</h2>
+                <p class="ai-backup-sub">Validate, preview, then apply — your existing training is never overwritten without confirmation.</p>
+              </div>
+            </div>
+            <button class="ai-backup-x" onclick="aiBackupCloseModal()" aria-label="Close">×</button>
+          </div>
+          <div class="ai-backup-body" id="aiBackupBody">
+            {# spvShowBackupModal fills this dynamically with the preview summary #}
+          </div>
         </div>
       </div>
 
@@ -18768,6 +18934,257 @@ async function v2TestSend(){
     btn.disabled = false;
     input.focus();
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   AI TRAINING — Backup & Restore
+   Export the whole training set (profile + snippets + feedback corpus)
+   as a portable JSON, then restore it back into the same OR a
+   different store under the tenant's account. Two-step import:
+   preview → apply, with replace/merge modes.
+═══════════════════════════════════════════════════════════════════ */
+const AI_BACKUP_API = '/emails/api/ai-training/backup';
+let _aiBackupPending = null;   // {file, summary} between preview and apply
+let _aiBackupMode    = 'merge';
+
+function _aiBackupCsrf(){
+  // Pull the CSRF token from the page's csrfmiddlewaretoken hidden field,
+  // same trick as the rest of the dashboard's POST endpoints.
+  try {
+    const el = document.querySelector('input[name=csrfmiddlewaretoken]');
+    return el ? el.value : '';
+  } catch (_) { return ''; }
+}
+
+function _aiBackupActiveStoreId(){
+  // Try to pull the active store id off the page (projectSwitcher), with
+  // graceful fallback to undefined — the backend resolves "active store"
+  // for the user when no store_id is sent.
+  try {
+    const sw = document.getElementById('projectSwitcher');
+    const id = sw && sw.value;
+    return id ? String(id) : '';
+  } catch (_) { return ''; }
+}
+
+/* ── Export — download the JSON file ─────────────────────────────── */
+async function aiBackupExport(){
+  try {
+    const sid = _aiBackupActiveStoreId();
+    const url = AI_BACKUP_API + '/export/' + (sid ? `?store_id=${encodeURIComponent(sid)}` : '');
+    const resp = await fetch(url, {credentials:'same-origin'});
+    if (!resp.ok){
+      let msg = 'Export failed.';
+      try { const j = await resp.json(); if (j && j.message) msg = j.message; } catch(_) {}
+      _aiBackupToast(msg, 'error');
+      return;
+    }
+    const blob = await resp.blob();
+    // The Content-Disposition filename is server-set with date + store
+    // name — pull it through if available.
+    let filename = 'dropsigma-ai-backup.json';
+    const cd = resp.headers.get('Content-Disposition') || '';
+    const m = cd.match(/filename="([^"]+)"/);
+    if (m) filename = m[1];
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    setTimeout(() => {
+      try { URL.revokeObjectURL(link.href); link.remove(); } catch(_){}
+    }, 200);
+    _aiBackupToast('Backup downloaded — keep it somewhere safe.', 'success');
+  } catch (e){
+    _aiBackupToast('Network error during export.', 'error');
+  }
+}
+
+/* ── Import flow — open file picker ──────────────────────────────── */
+function aiBackupOpenImport(){
+  const inp = document.getElementById('aiBackupFileInput');
+  if (inp) { inp.value = ''; inp.click(); }
+}
+
+async function aiBackupOnFile(event){
+  const file = event && event.target && event.target.files && event.target.files[0];
+  if (!file) return;
+  // Show the modal immediately with a spinner while we POST the preview.
+  aiBackupOpenModal();
+  const body = document.getElementById('aiBackupBody');
+  body.innerHTML = `
+    <div style="padding:34px 8px;text-align:center;color:#64748b;font-weight:700;">
+      <div class="ai-backup-spinner" style="border-color:rgba(99,102,241,.18);border-top-color:#6366f1;width:28px;height:28px;border-width:3px;margin-bottom:14px;"></div>
+      <div>Validating your backup…</div>
+    </div>`;
+  const fd = new FormData();
+  fd.append('backup_file', file);
+  let r;
+  try {
+    const resp = await fetch(AI_BACKUP_API + '/preview/', {
+      method:'POST',
+      body: fd,
+      headers: {'X-CSRFToken': _aiBackupCsrf()},
+      credentials:'same-origin',
+    });
+    r = {ok: resp.ok, data: await resp.json().catch(() => ({}))};
+  } catch (_){
+    r = {ok:false, data:{message:'Network error during preview.'}};
+  }
+  if (!r.ok || !r.data || !r.data.success){
+    const msg = (r.data && r.data.message) || 'Invalid backup file.';
+    body.innerHTML = `<div class="ai-backup-msg error"><i class="fa-solid fa-circle-exclamation"></i> ${_aiBackupEsc(msg)}</div>`;
+    _aiBackupRenderFoot(false);
+    return;
+  }
+  _aiBackupPending = {file, summary: r.data.summary};
+  _aiBackupMode    = 'merge';
+  _aiBackupRenderPreview(r.data.summary);
+}
+
+/* ── Render the preview + mode picker + apply button ─────────────── */
+function _aiBackupRenderPreview(summary){
+  const counts = (summary && summary.counts) || {};
+  const profile = (summary && summary.profile_preview) || {};
+  const src = (summary && summary.source_store) || {};
+  const expIso = summary && summary.exported_at ? summary.exported_at.slice(0,19).replace('T',' ') : '—';
+  const tones = (profile.tones || []).slice(0,4).join(', ') || '—';
+
+  const body = document.getElementById('aiBackupBody');
+  body.innerHTML = `
+    <div class="panel">
+      <div class="panel-h">Backup summary</div>
+      <div class="row"><span class="l">Exported</span><span class="v">${_aiBackupEsc(expIso)}</span></div>
+      <div class="row"><span class="l">Source store</span><span class="v">${_aiBackupEsc(src.store_name || '—')}</span></div>
+      <div class="row"><span class="l">Platform</span><span class="v">${_aiBackupEsc(src.platform || '—')}</span></div>
+      <div class="row"><span class="l">Q&amp;A answered</span><span class="v">${(counts.wizard_answers_filled || 0)}</span></div>
+      <div class="row"><span class="l">Snippets</span><span class="v">${(counts.snippets || 0)}</span></div>
+      <div class="row"><span class="l">Feedback rows</span><span class="v">${(counts.feedbacks || 0)}</span></div>
+    </div>
+    <div class="panel">
+      <div class="panel-h">Brand identity in this backup</div>
+      <div class="row"><span class="l">Business name</span><span class="v ${profile.business_name?'':'muted'}">${_aiBackupEsc(profile.business_name || '—')}</span></div>
+      <div class="row"><span class="l">Niche</span><span class="v ${profile.niche?'':'muted'}">${_aiBackupEsc(profile.niche || '—')}</span></div>
+      <div class="row"><span class="l">Language</span><span class="v ${profile.language?'':'muted'}">${_aiBackupEsc(profile.language || '—')}</span></div>
+      <div class="row"><span class="l">Reply mode</span><span class="v ${profile.mode?'':'muted'}">${_aiBackupEsc(profile.mode || '—')}</span></div>
+      <div class="row"><span class="l">Tones</span><span class="v ${tones==='—'?'muted':''}">${_aiBackupEsc(tones)}</span></div>
+    </div>
+    <div class="mode-toggle">
+      <button type="button" class="mode-btn on" data-mode="merge" onclick="_aiBackupSetMode('merge')">
+        <div class="mh"><i class="fa-solid fa-layer-group" style="color:#a855f7;"></i> Merge</div>
+        <div class="mb">Keep existing training. Add new snippets, update ones with the same title. Safe for cross-store reuse.</div>
+      </button>
+      <button type="button" class="mode-btn" data-mode="replace" onclick="_aiBackupSetMode('replace')">
+        <div class="mh"><i class="fa-solid fa-rotate-right" style="color:#dc2626;"></i> Replace</div>
+        <div class="mb">Wipe the current store's profile + snippets first, then write the backup. Use for clean restores.</div>
+      </button>
+    </div>
+    <div id="aiBackupApplyMsg"></div>
+  `;
+  _aiBackupRenderFoot(true);
+}
+
+function _aiBackupSetMode(m){
+  _aiBackupMode = (m === 'replace') ? 'replace' : 'merge';
+  document.querySelectorAll('#aiBackupBody .mode-btn').forEach(b => {
+    b.classList.toggle('on', b.dataset.mode === _aiBackupMode);
+  });
+}
+
+function _aiBackupRenderFoot(canApply){
+  // Build / replace the modal footer. Done as innerHTML on the parent so
+  // re-rendering after an error is trivial.
+  const card = document.querySelector('#aiBackupModal .ai-backup-card');
+  if (!card) return;
+  let foot = card.querySelector('.ai-backup-foot');
+  if (!foot){
+    foot = document.createElement('div');
+    foot.className = 'ai-backup-foot';
+    card.appendChild(foot);
+  }
+  foot.innerHTML = canApply
+    ? `<button class="ai-backup-btn ghost" onclick="aiBackupCloseModal()">Cancel</button>
+       <button class="ai-backup-btn primary" id="aiBackupApplyBtn" onclick="_aiBackupApply()">
+         <i class="fa-solid fa-shield-halved"></i> Restore to this store
+       </button>`
+    : `<button class="ai-backup-btn ghost" onclick="aiBackupCloseModal()">Close</button>
+       <button class="ai-backup-btn primary" onclick="aiBackupOpenImport()">
+         <i class="fa-solid fa-upload"></i> Choose another file
+       </button>`;
+}
+
+async function _aiBackupApply(){
+  if (!_aiBackupPending || !_aiBackupPending.file) return;
+  const msgHost = document.getElementById('aiBackupApplyMsg');
+  if (msgHost) msgHost.innerHTML = '';
+  const btn = document.getElementById('aiBackupApplyBtn');
+  if (btn){ btn.disabled = true; btn.innerHTML = '<span class="ai-backup-spinner"></span> Restoring…'; }
+  const fd = new FormData();
+  fd.append('backup_file', _aiBackupPending.file);
+  fd.append('mode',  _aiBackupMode);
+  const sid = _aiBackupActiveStoreId();
+  if (sid) fd.append('store_id', sid);
+  let r;
+  try {
+    const resp = await fetch(AI_BACKUP_API + '/apply/', {
+      method:'POST', body: fd,
+      headers: {'X-CSRFToken': _aiBackupCsrf()},
+      credentials:'same-origin',
+    });
+    r = {ok: resp.ok, data: await resp.json().catch(() => ({}))};
+  } catch(_){
+    r = {ok:false, data:{message:'Network error during restore.'}};
+  }
+  if (!r.ok || !r.data || !r.data.success){
+    if (msgHost){
+      msgHost.innerHTML = `<div class="ai-backup-msg error">
+        <i class="fa-solid fa-circle-exclamation"></i> ${_aiBackupEsc((r.data && r.data.message) || 'Restore failed.')}
+      </div>`;
+    }
+    if (btn){ btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-shield-halved"></i> Try again'; }
+    return;
+  }
+  // Success — show the applied summary, then refresh AI Training data so
+  // the new state is visible without a hard refresh.
+  const a = r.data.applied || {};
+  if (msgHost){
+    msgHost.innerHTML = `<div class="ai-backup-msg success">
+      <i class="fa-solid fa-circle-check"></i> ${_aiBackupEsc(r.data.message || 'Restore complete.')}
+      <div style="margin-top:6px;font-weight:600;font-size:11.5px;color:#065f46;">
+        New snippets: ${a.snippets_created || 0} ·
+        Updated: ${a.snippets_updated || 0} ·
+        Feedback added: ${a.feedbacks_added || 0}
+      </div>
+    </div>`;
+  }
+  if (btn){ btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-check"></i> Done'; }
+  // Re-pull AI training data + KPI badges so the UI reflects the restore.
+  try { if (typeof v2InitOnOpen === 'function') { _v2Loaded = false; v2InitOnOpen(); } } catch(_) {}
+  _aiBackupToast('AI training restored from backup.', 'success');
+  // Auto-close after a beat so the operator sees the success state.
+  setTimeout(aiBackupCloseModal, 1800);
+}
+
+function aiBackupOpenModal(){
+  const m = document.getElementById('aiBackupModal');
+  if (m) m.style.display = 'flex';
+}
+function aiBackupCloseModal(){
+  const m = document.getElementById('aiBackupModal');
+  if (m) m.style.display = 'none';
+  _aiBackupPending = null;
+  _aiBackupMode    = 'merge';
+}
+function _aiBackupEsc(s){
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function _aiBackupToast(msg, kind){
+  if (typeof toast === 'function') { try { toast(msg, kind); return; } catch(_){} }
+  if (typeof spvToast === 'function') { try { spvToast(msg, kind); return; } catch(_){} }
+  // Last-resort visual fallback so the user always sees the outcome.
+  try { console.log(`[ai-backup ${kind||'info'}] ${msg}`); } catch(_){}
 }
 
 /* ═══════════ Init hook ═══════════ */

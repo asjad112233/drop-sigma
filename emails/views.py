@@ -1945,6 +1945,498 @@ def ai_training_snippet_detail_api(request, snippet_id):
 
 
 # ════════════════════════════════════════════════════════════════════════════
+# 📦 AI TRAINING BACKUP — Export + Import + Preview
+#
+# Lets the tenant download a portable JSON file containing EVERY piece of
+# AI training they've authored — the profile, the snippets, and the
+# reply-feedback corpus — and restore it back into the SAME store after a
+# wipe / disconnect, or into a DIFFERENT store under the same account as
+# a head-start template.
+#
+# Why three endpoints?
+#
+#   1. /api/ai-training/backup/export/  (GET)
+#      Streams the JSON straight to the browser as a download. Tenant
+#      keeps the file as a personal safety copy.
+#
+#   2. /api/ai-training/backup/preview/ (POST, multipart)
+#      Tenant uploads the file; we validate it (schema version, shape,
+#      ownership-safety) and return a SUMMARY only ("contains 47 Q&A,
+#      120 snippets, 31 feedbacks · last edited 2026-05-31"). Nothing
+#      is written yet — the tenant confirms the diff before any commit.
+#
+#   3. /api/ai-training/backup/apply/   (POST, multipart)
+#      Same payload + a `mode` ("replace" | "merge") and target
+#      `store_id`. Wrapped in transaction.atomic so a mid-import error
+#      rolls back the whole restore — never leaves a half-applied
+#      training state on prod.
+#
+# Tenant isolation is enforced by _ai_get_user_store(...) on every entry
+# point; a backup tied to store A cannot be applied to store B unless
+# both stores belong to the calling user. Schema version checks on
+# import keep older backups portable as the model evolves.
+# ════════════════════════════════════════════════════════════════════════════
+
+AI_BACKUP_SCHEMA_VERSION = 1
+AI_BACKUP_MAX_SIZE_BYTES = 20 * 1024 * 1024   # 20MB hard cap on upload
+AI_BACKUP_FEEDBACK_HARD_CAP = 2000            # avoid runaway exports on
+                                              # ancient stores w/ 50k feedbacks
+
+
+def _serialize_profile_for_backup(profile):
+    """Turn an AiTrainingProfile row into a portable dict."""
+    if not profile:
+        return None
+    return {
+        "business_name":  profile.business_name or "",
+        "niche":          profile.niche or "",
+        "description":    profile.description or "",
+        "language":       profile.language or "English",
+        "support_hours":  profile.support_hours or "",
+        "tones":          list(profile.tones or []),
+        "reply_length":   profile.reply_length or "Medium",
+        "signoff":        profile.signoff or "",
+        "voice_example":  profile.voice_example or "",
+        "mode":           profile.mode or "draft",
+        "toggles":        dict(profile.toggles or {}),
+        "wizard_answers": dict(profile.wizard_answers or {}),
+        "wizard_completed_at": (profile.wizard_completed_at.isoformat()
+                                if profile.wizard_completed_at else None),
+        "extras":         dict(profile.extras or {}),
+    }
+
+
+def _serialize_snippet_for_backup(s):
+    return {
+        "category":    s.category,
+        "title":       s.title,
+        "text":        s.text,
+        "from_wizard": bool(s.from_wizard),
+        "order_idx":   int(s.order_idx or 0),
+        "is_enabled":  bool(s.is_enabled),
+    }
+
+
+def _serialize_feedback_for_backup(f):
+    return {
+        "feedback_type":     f.feedback_type,
+        "ai_draft":          f.ai_draft or "",
+        "final_text":        f.final_text or "",
+        "correction_note":   f.correction_note or "",
+        "customer_message":  f.customer_message or "",
+        "created_at":        f.created_at.isoformat() if f.created_at else None,
+    }
+
+
+def _build_ai_backup_payload(store, owner):
+    """Assemble the full backup dict for one store. Caller is responsible
+    for tenant scoping — this helper assumes the store/owner pair has
+    already been verified."""
+    from .models import AiTrainingProfile, KnowledgeSnippet, AiReplyFeedback
+    from django.utils import timezone
+
+    profile = AiTrainingProfile.objects.filter(store=store).first()
+    snippets = list(KnowledgeSnippet.objects.filter(store=store)
+                    .order_by("order_idx", "id"))
+    feedbacks = list(
+        AiReplyFeedback.objects.filter(store=store)
+        .order_by("-created_at")[:AI_BACKUP_FEEDBACK_HARD_CAP]
+    )
+
+    return {
+        # ─ Versioning metadata so future imports stay compatible ─
+        "schema_version":  AI_BACKUP_SCHEMA_VERSION,
+        "exported_at":     timezone.now().isoformat(),
+        "exported_by":     {
+            "user_id":     owner.id,
+            "username":    owner.username or "",
+        },
+        "source_store":    {
+            "store_id":    store.id,
+            "store_name":  getattr(store, "store_name", "") or getattr(store, "name", "") or "",
+            "platform":    getattr(store, "platform", "") or "",
+            "store_url":   getattr(store, "store_url", "") or "",
+        },
+        # ─ Payload ─
+        "profile":   _serialize_profile_for_backup(profile),
+        "snippets":  [_serialize_snippet_for_backup(s) for s in snippets],
+        "feedbacks": [_serialize_feedback_for_backup(f) for f in feedbacks],
+        # Per-tenant labels (EmailLabel) are owner-scoped, not store-scoped,
+        # so they don't need to ride with a per-store backup — every store
+        # the owner has already sees them.
+    }
+
+
+def _parse_backup_upload(request):
+    """Pull the uploaded JSON file off `backup_file`, decode it, validate
+    its outer shape, and return the parsed dict. Raises ValueError with
+    a tenant-friendly message on any failure."""
+    import json
+    f = request.FILES.get("backup_file")
+    if not f:
+        raise ValueError("No backup file uploaded.")
+    if f.size > AI_BACKUP_MAX_SIZE_BYTES:
+        mb = AI_BACKUP_MAX_SIZE_BYTES // (1024 * 1024)
+        raise ValueError(f"Backup file is too large (limit: {mb}MB).")
+    try:
+        raw = f.read()
+        if isinstance(raw, bytes):
+            raw = raw.decode("utf-8", errors="strict")
+        payload = json.loads(raw)
+    except (UnicodeDecodeError, ValueError):
+        raise ValueError(
+            "Couldn't read the backup file — it's not valid JSON. "
+            "Make sure you're uploading a Drop Sigma AI Training backup."
+        )
+    if not isinstance(payload, dict):
+        raise ValueError("Backup file isn't structured as expected.")
+    if "schema_version" not in payload:
+        raise ValueError(
+            "This file doesn't look like a Drop Sigma AI Training backup "
+            "(missing schema marker)."
+        )
+    sv = int(payload.get("schema_version") or 0)
+    if sv > AI_BACKUP_SCHEMA_VERSION:
+        raise ValueError(
+            f"This backup was created by a newer version of Drop Sigma "
+            f"(schema v{sv}, your portal supports up to v{AI_BACKUP_SCHEMA_VERSION}). "
+            f"Please update before importing."
+        )
+    if sv < 1:
+        raise ValueError("Unsupported backup schema version.")
+    return payload
+
+
+def _backup_summary(payload):
+    """Build the dict we return on `/preview/` and after `/apply/` so the
+    tenant sees exactly what they're importing / what just landed."""
+    profile = payload.get("profile") or {}
+    snippets = payload.get("snippets") or []
+    feedbacks = payload.get("feedbacks") or []
+    answered_wizard = sum(
+        1 for v in (profile.get("wizard_answers") or {}).values()
+        if (str(v or "").strip())
+    )
+    src = payload.get("source_store") or {}
+    return {
+        "schema_version":  payload.get("schema_version"),
+        "exported_at":     payload.get("exported_at"),
+        "source_store":    {
+            "store_name": src.get("store_name") or "",
+            "platform":   src.get("platform") or "",
+        },
+        "counts": {
+            "snippets":  len(snippets),
+            "feedbacks": len(feedbacks),
+            "wizard_answers_filled": answered_wizard,
+            "has_profile": bool(profile),
+        },
+        "profile_preview": {
+            "business_name": (profile.get("business_name") or "")[:120],
+            "niche":         (profile.get("niche") or "")[:120],
+            "language":      (profile.get("language") or "")[:60],
+            "mode":          (profile.get("mode") or "")[:30],
+            "tones":         (profile.get("tones") or [])[:6],
+        },
+    }
+
+
+@csrf_exempt
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def ai_training_backup_export_api(request):
+    """Download the full AI training backup for the current user's
+    active (or ?store_id=N) store as a JSON file."""
+    import json
+    from django.http import HttpResponse
+
+    store = _ai_get_user_store(request, request.GET.get("store_id"))
+    if not store:
+        return Response({"success": False, "message": "No active store found."}, status=400)
+
+    owner = _data_owner(request)
+    payload = _build_ai_backup_payload(store, owner)
+
+    body = json.dumps(payload, ensure_ascii=False, indent=2)
+    from django.utils import timezone
+    stamp = timezone.now().strftime("%Y%m%d-%H%M%S")
+    safe_name = "".join(c for c in (payload["source_store"]["store_name"] or "store")
+                        if c.isalnum() or c in "-_")[:40] or "store"
+    filename = f"dropsigma-ai-backup-{safe_name}-{stamp}.json"
+
+    resp = HttpResponse(body, content_type="application/json; charset=utf-8")
+    resp["Content-Disposition"] = f'attachment; filename="{filename}"'
+    resp["X-Backup-Schema-Version"] = str(AI_BACKUP_SCHEMA_VERSION)
+    return resp
+
+
+@csrf_exempt
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def ai_training_backup_preview_api(request):
+    """Validate an uploaded backup and return a human-readable summary.
+    Nothing is written — tenant confirms what they're about to restore
+    before /apply/ runs."""
+    try:
+        payload = _parse_backup_upload(request)
+    except ValueError as e:
+        return Response({"success": False, "message": str(e)}, status=400)
+    return Response({
+        "success": True,
+        "summary": _backup_summary(payload),
+    })
+
+
+@csrf_exempt
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def ai_training_backup_apply_api(request):
+    """Apply a previously-validated backup to a target store.
+
+    POST multipart fields:
+      backup_file  — the JSON file (re-validated server-side)
+      store_id     — optional; target store. Defaults to the active store.
+      mode         — "replace" or "merge". Default: "merge".
+        * replace: wipe existing profile/snippets first, then write the
+                   backup. Feedbacks are appended either way (no dedup
+                   on append since they're a quality signal).
+        * merge:   keep existing profile fields that the backup leaves
+                   blank; for snippets, dedup on (category, title) so
+                   re-importing the same backup twice doesn't double up.
+
+    Wrapped in transaction.atomic so a mid-import error rolls back the
+    whole restore — never leaves a half-applied training state.
+    """
+    from django.db import transaction
+    from django.utils import dateparse, timezone as _tz
+    from .models import AiTrainingProfile, KnowledgeSnippet, AiReplyFeedback
+
+    try:
+        payload = _parse_backup_upload(request)
+    except ValueError as e:
+        return Response({"success": False, "message": str(e)}, status=400)
+
+    mode = (request.POST.get("mode")
+            or (request.data.get("mode") if hasattr(request, "data") else "")
+            or "merge").strip().lower()
+    if mode not in ("replace", "merge"):
+        return Response({"success": False, "message": "mode must be 'replace' or 'merge'."}, status=400)
+
+    target_store_id = (request.POST.get("store_id")
+                       or (request.data.get("store_id") if hasattr(request, "data") else None))
+    store = _ai_get_user_store(request, target_store_id)
+    if not store:
+        return Response({"success": False, "message": "Target store not found."}, status=400)
+
+    p_in = payload.get("profile") or {}
+    snippets_in = list(payload.get("snippets") or [])
+    feedbacks_in = list(payload.get("feedbacks") or [])
+
+    counts_before = {
+        "snippets":  KnowledgeSnippet.objects.filter(store=store).count(),
+        "feedbacks": AiReplyFeedback.objects.filter(store=store).count(),
+    }
+
+    snippets_created = 0
+    snippets_updated = 0
+    snippets_kept    = 0
+    feedbacks_added  = 0
+
+    with transaction.atomic():
+        profile, _ = AiTrainingProfile.objects.get_or_create(store=store)
+
+        # ── Profile fields ────────────────────────────────────────────
+        if mode == "replace":
+            # In replace mode the backup is the source of truth for every
+            # tracked field — empty value in backup → wipe existing.
+            profile.business_name = p_in.get("business_name") or ""
+            profile.niche         = p_in.get("niche") or ""
+            profile.description   = p_in.get("description") or ""
+            profile.language      = p_in.get("language") or "English"
+            profile.support_hours = p_in.get("support_hours") or ""
+            profile.reply_length  = p_in.get("reply_length") or "Medium"
+            profile.signoff       = p_in.get("signoff") or ""
+            profile.voice_example = p_in.get("voice_example") or ""
+            profile.mode          = p_in.get("mode") or "draft"
+            profile.tones         = list(p_in.get("tones") or [])
+            profile.toggles       = dict(p_in.get("toggles") or {})
+            profile.wizard_answers = dict(p_in.get("wizard_answers") or {})
+            profile.extras        = dict(p_in.get("extras") or {})
+        else:
+            # Merge mode: backup wins where it has a non-empty value;
+            # current value wins where the backup is blank.
+            def _take_str(field, current):
+                v = (p_in.get(field) or "").strip()
+                return v if v else current
+            profile.business_name = _take_str("business_name", profile.business_name)
+            profile.niche         = _take_str("niche",         profile.niche)
+            profile.description   = _take_str("description",   profile.description)
+            profile.language      = _take_str("language",      profile.language)
+            profile.support_hours = _take_str("support_hours", profile.support_hours)
+            profile.reply_length  = _take_str("reply_length",  profile.reply_length)
+            profile.signoff       = _take_str("signoff",       profile.signoff)
+            profile.voice_example = _take_str("voice_example", profile.voice_example)
+            if p_in.get("mode"):
+                profile.mode = p_in["mode"]
+            # Tones / toggles / wizard_answers merge by key.
+            merged_tones = list(profile.tones or [])
+            for t in (p_in.get("tones") or []):
+                if t and t not in merged_tones:
+                    merged_tones.append(t)
+            profile.tones = merged_tones
+            merged_toggles = dict(profile.toggles or {})
+            merged_toggles.update(p_in.get("toggles") or {})
+            profile.toggles = merged_toggles
+            merged_answers = dict(profile.wizard_answers or {})
+            for k, v in (p_in.get("wizard_answers") or {}).items():
+                # Don't overwrite an existing answered question with a
+                # blank from the backup.
+                if str(v or "").strip():
+                    merged_answers[k] = v
+            profile.wizard_answers = merged_answers
+            merged_extras = dict(profile.extras or {})
+            merged_extras.update(p_in.get("extras") or {})
+            profile.extras = merged_extras
+
+        # wizard_completed_at: take the backup's stamp if newer, else keep.
+        wc_iso = p_in.get("wizard_completed_at")
+        if wc_iso:
+            try:
+                wc = dateparse.parse_datetime(wc_iso)
+                if wc and (not profile.wizard_completed_at
+                           or wc > profile.wizard_completed_at):
+                    profile.wizard_completed_at = wc
+            except (ValueError, TypeError):
+                pass
+        elif mode == "replace":
+            profile.wizard_completed_at = None
+
+        profile.save()
+
+        # ── Snippets ─────────────────────────────────────────────────
+        if mode == "replace":
+            KnowledgeSnippet.objects.filter(store=store).delete()
+            for s_in in snippets_in:
+                if not s_in.get("title") and not s_in.get("text"):
+                    continue
+                KnowledgeSnippet.objects.create(
+                    store=store,
+                    category=(s_in.get("category") or "FAQ")[:30],
+                    title=(s_in.get("title") or "")[:255],
+                    text=s_in.get("text") or "",
+                    from_wizard=bool(s_in.get("from_wizard")),
+                    order_idx=int(s_in.get("order_idx") or 0),
+                    is_enabled=bool(s_in.get("is_enabled", True)),
+                )
+                snippets_created += 1
+        else:
+            # Merge: dedup on (category, title). If the same slug exists,
+            # we UPDATE its text + flags (backup wins) instead of creating
+            # a duplicate. Empty-title rows can't dedup, so we just append.
+            existing_by_key = {}
+            for s in KnowledgeSnippet.objects.filter(store=store):
+                key = (s.category, (s.title or "").strip().lower())
+                if key[1]:
+                    existing_by_key[key] = s
+            for s_in in snippets_in:
+                title = (s_in.get("title") or "").strip()
+                if not title and not (s_in.get("text") or ""):
+                    continue
+                cat = (s_in.get("category") or "FAQ")[:30]
+                key = (cat, title.lower())
+                if title and key in existing_by_key:
+                    existing = existing_by_key[key]
+                    existing.text = s_in.get("text") or ""
+                    existing.from_wizard = bool(s_in.get("from_wizard"))
+                    existing.is_enabled = bool(s_in.get("is_enabled", True))
+                    if s_in.get("order_idx") is not None:
+                        existing.order_idx = int(s_in["order_idx"])
+                    existing.save()
+                    snippets_updated += 1
+                else:
+                    KnowledgeSnippet.objects.create(
+                        store=store,
+                        category=cat,
+                        title=title[:255],
+                        text=s_in.get("text") or "",
+                        from_wizard=bool(s_in.get("from_wizard")),
+                        order_idx=int(s_in.get("order_idx") or 0),
+                        is_enabled=bool(s_in.get("is_enabled", True)),
+                    )
+                    snippets_created += 1
+            snippets_kept = (KnowledgeSnippet.objects.filter(store=store).count()
+                             - snippets_created - snippets_updated)
+            if snippets_kept < 0:
+                snippets_kept = 0
+
+        # ── Feedbacks (append-only in both modes) ────────────────────
+        # Feedbacks are a quality signal — the more we have, the better
+        # future drafts get. Even in "replace" we APPEND rather than wipe,
+        # because the backup's feedbacks are additive evidence, not the
+        # canonical state. We dedup by (feedback_type, ai_draft, final_text)
+        # to avoid stacking duplicates on a re-import of the same backup.
+        seen = set()
+        for f in AiReplyFeedback.objects.filter(store=store).only(
+            "feedback_type", "ai_draft", "final_text"
+        ):
+            seen.add((f.feedback_type, (f.ai_draft or ""), (f.final_text or "")))
+        for f_in in feedbacks_in:
+            ft  = (f_in.get("feedback_type") or "edit")[:20]
+            ad  = f_in.get("ai_draft") or ""
+            ft2 = f_in.get("final_text") or ""
+            key = (ft, ad, ft2)
+            if key in seen:
+                continue
+            seen.add(key)
+            created_iso = f_in.get("created_at")
+            created_dt = None
+            if created_iso:
+                try:
+                    created_dt = dateparse.parse_datetime(created_iso)
+                except (ValueError, TypeError):
+                    created_dt = None
+            fb = AiReplyFeedback.objects.create(
+                store=store,
+                feedback_type=ft,
+                ai_draft=ad,
+                final_text=ft2,
+                correction_note=f_in.get("correction_note") or "",
+                customer_message=f_in.get("customer_message") or "",
+            )
+            if created_dt:
+                # auto_now_add stamps now; rewrite to keep history honest.
+                AiReplyFeedback.objects.filter(pk=fb.pk).update(created_at=created_dt)
+            feedbacks_added += 1
+
+    counts_after = {
+        "snippets":  KnowledgeSnippet.objects.filter(store=store).count(),
+        "feedbacks": AiReplyFeedback.objects.filter(store=store).count(),
+    }
+
+    return Response({
+        "success": True,
+        "message": (
+            f"Imported {snippets_created} new snippet(s), "
+            f"updated {snippets_updated}, added {feedbacks_added} feedback row(s)."
+        ),
+        "mode":   mode,
+        "target_store": {
+            "store_id":   store.id,
+            "store_name": getattr(store, "store_name", "") or getattr(store, "name", "") or "",
+        },
+        "summary": _backup_summary(payload),
+        "applied": {
+            "snippets_created": snippets_created,
+            "snippets_updated": snippets_updated,
+            "snippets_kept":    snippets_kept,
+            "feedbacks_added":  feedbacks_added,
+            "counts_before":    counts_before,
+            "counts_after":     counts_after,
+        },
+    })
+
+
+# ════════════════════════════════════════════════════════════════════════════
 # 🎯 DEFAULT REQUEST SNIPPETS — per-category Q&A wizards + auto-reply toggle
 # ════════════════════════════════════════════════════════════════════════════
 
