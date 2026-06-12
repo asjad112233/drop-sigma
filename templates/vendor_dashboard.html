@@ -520,6 +520,7 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
 </style>
 </head>
 <body>
+{% include "_ds_splash.html" %}
 
 <!-- Global loader -->
 <div id="gLoader" class="g-loader"></div>
@@ -611,7 +612,9 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
           </tr>
         </thead>
         <tbody id="vendorOrdersTable">
-          <tr><td colspan="5" style="text-align:center;padding:40px;color:#94a3b8;">Loading orders...</td></tr>
+          <tr><td colspan="5" style="padding:0;border:0;background:transparent;" data-ds-vendor-loader>
+            <div class="empty" data-ds-upgrade><p>Loading orders</p></div>
+          </td></tr>
         </tbody>
       </table>
     </div>
@@ -3632,5 +3635,6 @@ document.addEventListener('keydown', e=>{
 });
 </script>
 
+{% include "_ds_components.html" %}
 </body>
 </html>

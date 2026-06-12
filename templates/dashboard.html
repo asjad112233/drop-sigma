@@ -20315,7 +20315,16 @@ function _fixOrdersWrapHeight(){ /* no-op */ }
 
 async function loadOrders(){
   const table = document.getElementById("ordersTable");
-  if(table) table.innerHTML = `<tr><td colspan="11">Loading orders...</td></tr>`;
+  if(table){
+    // Drop Sigma branded loader instead of bare "Loading orders..." text.
+    // window.ds.loaderHTML is loaded from the global _ds_components.html
+    // partial; we fall back to a styled cell if the partial hasn't booted
+    // yet (e.g. during very early page hydration).
+    const loaderInner = (window.ds && window.ds.loaderHTML)
+      ? window.ds.loaderHTML('md', 'Loading orders')
+      : '<div style="padding:48px 20px;text-align:center;color:#94a3b8;font-weight:700;">Loading orders…</div>';
+    table.innerHTML = `<tr><td colspan="11" style="padding:0;border:0;background:transparent;">${loaderInner}</td></tr>`;
+  }
   // update store name label in top bar
   const switcher = document.getElementById("projectSwitcher");
   const lbl = document.getElementById("poxStoreNameLabel");

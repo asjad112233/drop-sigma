@@ -290,21 +290,46 @@
   //
   // Opt-out: add data-ds-no-upgrade on any element you DON'T want
   // converted (rare — e.g. a button label that says "Loading more…").
+  // Class-attribute selector that matches any element whose class list
+  // contains a token with "loading", "empty", or "skel" — covers
+  // .empty, .sp-loading, .ops-loading, .em-settings-loading, .tf-empty,
+  // .mc-skeleton, .vf-skel, etc. Plus the explicit [data-ds-upgrade]
+  // opt-in for hosts that want the loader without one of those tokens.
   var LOADING_SELECTOR = [
-    '.empty',           // OPS / SP / superadmin
-    '.sp-loading',      // SP-specific
-    '.loading',         // common
-    '.vf-skel',         // legacy dashboard skeleton
-    '[data-ds-upgrade]',// explicit opt-in
+    '[class*="loading"]',
+    '[class*="Loading"]',
+    '[class*="empty"]',
+    '[class*="Empty"]',
+    '[class*="skel"]',
+    '[class*="Skel"]',
+    '[data-ds-upgrade]',
   ].join(',');
 
+  // Guardrails to keep the upgrade from chewing through unrelated nodes
+  // that happen to match the broad selector (a button labelled "Empty
+  // archive", a brand class with "skeleton" in the name, etc).
+  var SAFE_TAGS = {
+    DIV:1, SECTION:1, TD:1, TR:1, ARTICLE:1, ASIDE:1,
+    P:1, SPAN:1, MAIN:1, LI:1, UL:1, OL:1, FIGURE:1,
+  };
+  // Heavy ancestor containers we should never replace — the upgrade is
+  // only meant for tiny placeholder cards, not whole sections.
+  var BLOCK_ANCESTORS = ['FORM','HEADER','NAV','TABLE','THEAD','TBODY'];
+
   function _looksLikeLoading(el){
-    if (el.dataset.dsUpgraded === '1') return false;
+    if (!el || el.dataset.dsUpgraded === '1') return false;
     if (el.dataset.dsNoUpgrade !== undefined) return false;
-    // Only upgrade if the visible text actually says "Loading" — guards
-    // against repurposed empty/error states that share the class.
-    var t = (el.textContent || '').toLowerCase();
-    return t.indexOf('loading') !== -1;
+    if (!SAFE_TAGS[el.tagName]) return false;
+    // The visible text must mention "Loading" — guards against repurposed
+    // empty/error states (e.g. "No matches yet") that share the class.
+    var t = (el.textContent || '').trim().toLowerCase();
+    if (t.indexOf('loading') === -1) return false;
+    // Only upgrade leaf-ish placeholders. If the candidate has substantial
+    // content (>320 chars) or holds form/table machinery, it's almost
+    // certainly not a tiny loader stub.
+    if (t.length > 320) return false;
+    if (el.querySelector('input,textarea,select,button,table,form')) return false;
+    return true;
   }
 
   function upgradeAll(root){
