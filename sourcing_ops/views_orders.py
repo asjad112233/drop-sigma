@@ -920,9 +920,10 @@ def api_order_ship(request, order_id):
         )
         # Tenant bell notification — shipping is the moment the tenant
         # is waiting for. High priority because they likely want to
-        # forward the tracking link to their end customer.
-        from orders.tracking_link import build_ds_tracking_link
-        from orders.carrier_safety import safe_carrier_name
+        # forward the tracking link to their end customer. safe_carrier_name
+        # collapses cross-border supplier brands to "Drop Sigma" before
+        # surfacing to the tenant.
+        from orders.tracking_link import build_ds_tracking_link, safe_carrier_name
         _notify_tenant(
             order, category="tracking",
             title=f"Shipped — {safe_carrier_name(tracking_company)} "
