@@ -1,0 +1,239 @@
+{# Drop Sigma full-screen splash — covers the page from the very first
+   paint until the portal's data is ready, so a hard refresh never
+   exposes the half-rendered DOM.
+
+   How it works:
+
+     1. This partial is included at the TOP of <body> in every portal
+        entry point (tenant dashboard, OPS, superadmin). Browser parses
+        the inline <style> + <div> + <script> before anything below it,
+        so the overlay appears in the very first paint frame.
+
+     2. The overlay covers the viewport (position:fixed, z-index:1e9)
+        on a Drop Sigma midnight gradient with the animated DS sigil.
+
+     3. Hiding is opt-in via window.ds.hideSplash() — each portal's
+        boot routine calls it once the initial data is rendered. If a
+        portal forgets to wire it, two safety nets fire:
+            * window.load + 1.6s grace — page is fully loaded
+            * absolute cap at 8s — never trap the user
+
+     4. A small "minimum visible time" prevents a sub-200ms flash on
+        instant cache hits. The splash always shows for at least 350ms
+        once the overlay is in the DOM.
+
+   No required HTML on the host page — the partial owns the overlay
+   node and removes it when done. #}
+<style>
+  /* Splash overlay. Sits above everything (the OPS dashboard's
+     top-rail and modal layer max out around z:1000), and intentionally
+     covers <html> too (background applied to the overlay itself) so
+     even an un-styled body never bleeds through during the very first
+     paint frame. */
+  #ds-splash-overlay{
+    position:fixed;inset:0;z-index:2147483600;
+    background:
+      radial-gradient(80% 60% at 50% 38%, rgba(99,102,241,.22) 0%, transparent 70%),
+      radial-gradient(60% 40% at 50% 100%, rgba(168,85,247,.18) 0%, transparent 70%),
+      linear-gradient(135deg, #0b1224 0%, #1e293b 55%, #0f172a 100%);
+    display:flex;align-items:center;justify-content:center;
+    flex-direction:column;
+    color:#e2e8f0;font-family:"Inter",ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    transition:opacity .42s ease, visibility .42s ease;
+    overflow:hidden;
+  }
+  /* Decorative grid lines + soft vignette behind the card. */
+  #ds-splash-overlay::before{
+    content:"";position:absolute;inset:0;pointer-events:none;
+    background-image:
+      linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+    background-size:48px 48px;
+    mask-image:radial-gradient(70% 60% at 50% 50%, #000 30%, transparent 75%);
+    -webkit-mask-image:radial-gradient(70% 60% at 50% 50%, #000 30%, transparent 75%);
+  }
+  /* The card itself — name, sigil, label, progress sliver. */
+  .ds-splash-card{
+    position:relative;display:flex;flex-direction:column;
+    align-items:center;gap:22px;
+    padding:42px 56px 38px;border-radius:22px;
+    background:linear-gradient(180deg, rgba(255,255,255,.04) 0%, rgba(255,255,255,.01) 100%);
+    border:1px solid rgba(255,255,255,.08);
+    box-shadow:
+      0 30px 80px rgba(2,6,23,.55),
+      0 0 0 1px rgba(255,255,255,.04) inset;
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    min-width:340px;
+    animation:dsSplashCardIn .6s cubic-bezier(.2,.7,.2,1.05) both;
+  }
+  @keyframes dsSplashCardIn{
+    from{opacity:0;transform:translateY(10px) scale(.98);}
+    to  {opacity:1;transform:translateY(0)    scale(1);}
+  }
+  /* Sigil — conic gradient ring + DS mark, matches the inline loader. */
+  .ds-splash-sigil{
+    position:relative;width:92px;height:92px;
+  }
+  .ds-splash-sigil::before{
+    content:"";position:absolute;inset:0;border-radius:50%;
+    background:conic-gradient(from 0deg,
+      #6366f1 0%, #a855f7 28%, #06b6d4 56%,
+      rgba(255,255,255,.05) 78%, #6366f1 100%);
+    -webkit-mask:radial-gradient(circle, transparent 56%, #000 58%);
+            mask:radial-gradient(circle, transparent 56%, #000 58%);
+    animation:dsSplashSpin 1.4s linear infinite;
+    filter:drop-shadow(0 10px 28px rgba(99,102,241,.55));
+  }
+  @keyframes dsSplashSpin{to{transform:rotate(360deg);}}
+  .ds-splash-mark{
+    position:absolute;inset:11px;border-radius:50%;
+    background:linear-gradient(135deg, #0b1224 0%, #1e293b 100%);
+    border:1px solid rgba(255,255,255,.10);
+    display:flex;align-items:center;justify-content:center;
+    color:#fff;font-weight:900;font-size:30px;letter-spacing:-1px;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.05),
+               0 0 28px rgba(99,102,241,.25);
+    animation:dsSplashPulse 2.2s ease-in-out infinite;
+  }
+  @keyframes dsSplashPulse{
+    0%,100%{transform:scale(1);}
+    50%    {transform:scale(.94);}
+  }
+  /* Wordmark + tagline. */
+  .ds-splash-word{
+    display:flex;flex-direction:column;align-items:center;gap:5px;
+    text-align:center;
+  }
+  .ds-splash-name{
+    font-size:22px;font-weight:900;letter-spacing:.02em;
+    background:linear-gradient(135deg,#d4af37 0%, #a855f7 60%, #6366f1 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .ds-splash-tag{
+    font-size:11.5px;font-weight:700;color:#94a3b8;
+    text-transform:uppercase;letter-spacing:.22em;
+    display:flex;align-items:center;gap:8px;
+  }
+  .ds-splash-tag .dot{
+    width:5px;height:5px;border-radius:50%;background:#6366f1;
+    animation:dsSplashDot 1.2s ease-in-out infinite;
+  }
+  .ds-splash-tag .dot:nth-child(2){animation-delay:.18s;}
+  .ds-splash-tag .dot:nth-child(3){animation-delay:.36s;}
+  @keyframes dsSplashDot{
+    0%,100%{transform:scale(1);opacity:.45;}
+    50%    {transform:scale(1.4);opacity:1;}
+  }
+  /* Indeterminate progress sliver — shows continuous activity even
+     while we're waiting on the network. */
+  .ds-splash-bar{
+    width:240px;height:3px;border-radius:999px;
+    background:rgba(255,255,255,.08);overflow:hidden;
+  }
+  .ds-splash-bar-fill{
+    width:38%;height:100%;border-radius:999px;
+    background:linear-gradient(90deg, #6366f1 0%, #a855f7 50%, #06b6d4 100%);
+    animation:dsSplashSlide 1.4s ease-in-out infinite;
+  }
+  @keyframes dsSplashSlide{
+    0%   {transform:translateX(-120%);}
+    50%  {transform:translateX(180%);}
+    100% {transform:translateX(360%);}
+  }
+  /* Hide state — driven by .ds-splash-out class so the leaving
+     transition can play. */
+  #ds-splash-overlay.ds-splash-out{
+    opacity:0;visibility:hidden;pointer-events:none;
+  }
+  /* While the splash is up, lock body scroll so reflows under the
+     overlay don't flash into view as the layout resolves. */
+  body.ds-splash-on{overflow:hidden!important;}
+  @media (prefers-reduced-motion: reduce){
+    .ds-splash-sigil::before,
+    .ds-splash-mark,
+    .ds-splash-bar-fill,
+    .ds-splash-tag .dot{animation:none!important;}
+  }
+</style>
+
+<div id="ds-splash-overlay" role="status" aria-live="polite" aria-label="Loading Drop Sigma">
+  <div class="ds-splash-card">
+    <div class="ds-splash-sigil">
+      <div class="ds-splash-mark">Σ</div>
+    </div>
+    <div class="ds-splash-word">
+      <div class="ds-splash-name">Drop Sigma</div>
+      <div class="ds-splash-tag">
+        Loading workspace
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+      </div>
+    </div>
+    <div class="ds-splash-bar"><div class="ds-splash-bar-fill"></div></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  // Mark the body so CSS can lock scroll while the splash is up.
+  try { document.body.classList.add('ds-splash-on'); } catch(_) {}
+
+  var overlay     = document.getElementById('ds-splash-overlay');
+  var hidden      = false;
+  var minVisible  = 350;        // never flash for less than this
+  var safetyMs    = 8000;       // absolute upper bound
+  var loadDelayMs = 1600;       // grace after window.load if portal
+                                // didn't call hideSplash explicitly
+  var startedAt   = Date.now();
+
+  function _doHide(){
+    if (hidden || !overlay) return;
+    hidden = true;
+    overlay.classList.add('ds-splash-out');
+    // Remove the node + body lock after the fade-out finishes so we
+    // don't leave a fixed full-screen layer eating clicks.
+    setTimeout(function(){
+      try { document.body.classList.remove('ds-splash-on'); } catch(_) {}
+      if (overlay && overlay.parentNode){
+        overlay.parentNode.removeChild(overlay);
+      }
+    }, 460);
+  }
+
+  function hide(){
+    if (hidden) return;
+    var elapsed = Date.now() - startedAt;
+    var wait = Math.max(0, minVisible - elapsed);
+    if (wait > 0) setTimeout(_doHide, wait);
+    else _doHide();
+  }
+
+  // Safety net: hide no matter what after safetyMs so a stalled boot
+  // never traps the user behind the splash.
+  var safetyTimer = setTimeout(hide, safetyMs);
+
+  // Expose the public API. Portals call window.ds.hideSplash() once
+  // their initial data has rendered.
+  window.ds = window.ds || {};
+  window.ds.hideSplash = function(){
+    clearTimeout(safetyTimer);
+    hide();
+  };
+  // Convenience flag — sections can check window.ds.splashGone before
+  // running scroll-restore / focus logic.
+  Object.defineProperty(window.ds, 'splashGone', {
+    get: function(){ return hidden; },
+  });
+
+  // Default fallback: if no portal explicitly hides us, hide a short
+  // moment after window.load. This handles every "just refreshed a
+  // static page" case.
+  if (document.readyState === 'complete'){
+    setTimeout(function(){ if (!hidden) hide(); }, loadDelayMs);
+  } else {
+    window.addEventListener('load', function(){
+      setTimeout(function(){ if (!hidden) hide(); }, loadDelayMs);
+    });
+  }
+})();
+</script>

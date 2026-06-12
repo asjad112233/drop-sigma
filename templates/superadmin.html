@@ -279,6 +279,7 @@ a{color:inherit;text-decoration:none;}
 </style>
 </head>
 <body>
+{% include "_ds_splash.html" %}
 
 <div class="toast-stack" id="toastStack"></div>
 
@@ -3420,7 +3421,13 @@ function locFilter(f, btn){
 /* ═══════════════════════════════════════════════════════
    BOOT
 ═══════════════════════════════════════════════════════ */
-loadAll();
+(async function dsSuperadminBoot(){
+  try { await loadAll(); }
+  catch(e){ /* loadAll handles its own errors per-section */ }
+  finally {
+    try { window.ds && window.ds.hideSplash && window.ds.hideSplash(); } catch(_) {}
+  }
+})();
 </script>
 
 {% include "_ds_components.html" %}

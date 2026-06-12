@@ -152,6 +152,7 @@
   </style>
 </head>
 <body>
+{% include "_ds_splash.html" %}
 
   <div class="ops-layout">
 
@@ -2489,7 +2490,11 @@
         const av = (u.display_name || '?').split(' ').slice(0,2).map(s => s[0] || '').join('').toUpperCase();
         document.getElementById('opsUserAv').textContent = av || 'Σ';
       }
-      opsLoadOverview();
+      // Kick off overview load; once it returns we drop the splash so
+      // the user lands directly on populated KPIs instead of a hollow
+      // dashboard with "Loading KPIs…" everywhere.
+      await opsLoadOverview();
+      try { window.ds && window.ds.hideSplash && window.ds.hideSplash(); } catch(_) {}
     }
 
     /* ─── OVERVIEW loader ─────────────────────────────────────────── */
