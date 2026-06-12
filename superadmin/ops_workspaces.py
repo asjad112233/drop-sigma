@@ -201,9 +201,9 @@ def api_workspaces_default(request):
 
 
 # ── List + create workspaces ───────────────────────────────────────
+@csrf_exempt
 @superadmin_required
 @require_http_methods(["GET", "POST"])
-@csrf_exempt
 def api_workspaces(request):
     if request.method == "GET":
         rows = [_workspace_brief(w) for w in OpsWorkspace.objects.all()]
@@ -229,9 +229,9 @@ def api_workspaces(request):
 
 
 # ── Workspace detail + update + delete ─────────────────────────────
+@csrf_exempt
 @superadmin_required
 @require_http_methods(["GET", "PATCH", "DELETE"])
-@csrf_exempt
 def api_workspace_detail(request, pk):
     ws = _ws_or_404(pk)
 
@@ -291,9 +291,9 @@ def api_workspace_detail(request, pk):
 
 
 # ── Tenant assignment ──────────────────────────────────────────────
+@csrf_exempt
 @superadmin_required
 @require_POST
-@csrf_exempt
 def api_workspace_assign_tenant(request, pk):
     """Assign a tenant (auth_user) to this workspace. If the tenant is
     already in a different workspace, the previous assignment is
@@ -320,9 +320,9 @@ def api_workspace_assign_tenant(request, pk):
     return JsonResponse({"ok": True, "tenant": _tenant_brief(tenant)})
 
 
+@csrf_exempt
 @superadmin_required
 @require_http_methods(["DELETE"])
-@csrf_exempt
 def api_workspace_unassign_tenant(request, pk, tenant_id):
     ws = _ws_or_404(pk)
     OpsWorkspaceTenant.objects.filter(workspace=ws, tenant_id=tenant_id).delete()
@@ -366,9 +366,9 @@ def api_assignable_tenants(request, pk):
 
 
 # ── Invitations ────────────────────────────────────────────────────
+@csrf_exempt
 @superadmin_required
 @require_POST
-@csrf_exempt
 def api_workspace_invite(request, pk):
     """Create + email a new invitation. Body: {email, name?, role_id?,
     title?, is_manager?}"""
@@ -401,9 +401,9 @@ def api_workspace_invite(request, pk):
     }, status=201)
 
 
+@csrf_exempt
 @superadmin_required
 @require_POST
-@csrf_exempt
 def api_workspace_invite_resend(request, pk, iid):
     ws = _ws_or_404(pk)
     invite = get_object_or_404(OpsInvitation, pk=iid, workspace=ws)
@@ -423,9 +423,9 @@ def api_workspace_invite_resend(request, pk, iid):
     })
 
 
+@csrf_exempt
 @superadmin_required
 @require_POST
-@csrf_exempt
 def api_workspace_invite_revoke(request, pk, iid):
     ws = _ws_or_404(pk)
     invite = get_object_or_404(OpsInvitation, pk=iid, workspace=ws)
@@ -442,9 +442,9 @@ def api_workspace_invite_revoke(request, pk, iid):
 
 
 # ── Member removal ─────────────────────────────────────────────────
+@csrf_exempt
 @superadmin_required
 @require_http_methods(["DELETE"])
-@csrf_exempt
 def api_workspace_member_remove(request, pk, member_id):
     """Detach an OpsTeamMember from this workspace. Their auth.User
     stays so they can keep logging in (e.g. as a superuser or with no

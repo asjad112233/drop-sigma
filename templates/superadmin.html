@@ -2315,9 +2315,23 @@ let _OPS_WS_DETAIL = null;      // detail payload for currently-open ws
 const _opsHtml = s => String(s == null ? '' : s)
   .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
   .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+function _opsCsrf(){
+  // Defence-in-depth: even though the workspace endpoints are
+  // @csrf_exempt, we send X-CSRFToken anyway. If a decorator order
+  // ever flips back wrong, the request still succeeds because the
+  // CSRF middleware accepts the matching cookie+header pair.
+  const m = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/);
+  return m ? decodeURIComponent(m[1]) : '';
+}
 async function _opsFetch(url, opts={}){
+  const headers = Object.assign({
+    'Content-Type':'application/json',
+    'X-Requested-With':'XMLHttpRequest',
+  }, opts.headers || {});
+  const token = _opsCsrf();
+  if (token) headers['X-CSRFToken'] = token;
   const r = await fetch(url, Object.assign({
-    headers: {'Content-Type':'application/json', 'X-Requested-With':'XMLHttpRequest'},
+    headers,
     credentials:'same-origin',
   }, opts));
   let data = {};
