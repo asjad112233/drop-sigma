@@ -344,6 +344,55 @@ class PendingAiTrainingSnapshot(models.Model):
         return f"Pending AI snapshot for {self.user_id} ← {self.source_store_url}"
 
 
+class AiTrainingAutoBackup(models.Model):
+    """Safety-net snapshot taken automatically BEFORE every restore-from-
+    backup apply (both replace AND merge modes), so an accidental wipe
+    is always reversible from the UI with one click.
+
+    Keep up to AUTO_BACKUP_RETAIN per store — newer rows evict the oldest
+    so we don't accumulate snapshots forever. The whole training state
+    fits comfortably in three JSON columns (profile, snippets list,
+    feedbacks list) so we don't need a per-row mirror table."""
+
+    AUTO_BACKUP_RETAIN = 5  # per store
+
+    store           = models.ForeignKey(
+        'stores.Store', on_delete=models.CASCADE,
+        related_name='ai_training_auto_backups',
+    )
+    actor           = models.ForeignKey(
+        'auth.User', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='ai_training_auto_backups',
+    )
+    # What triggered this snapshot. Today the only writer is
+    # 'pre_restore'; leaving the field flexible for future destructive
+    # paths (delete-store, factory-reset, etc).
+    reason          = models.CharField(max_length=40, default='pre_restore')
+    # Human-friendly note (e.g. "Pre-restore from backup.json · replace mode")
+    label           = models.CharField(max_length=200, blank=True, default='')
+
+    # The full snapshot payload — same shape as the export endpoint
+    # returns, so the undo path can replay it through the same apply
+    # logic.
+    payload         = models.JSONField(default=dict, blank=True)
+
+    # Quick counters so the UI can show "47 Q&A · 120 snippets" without
+    # rehydrating the whole payload.
+    snippets_count  = models.PositiveIntegerField(default=0)
+    feedbacks_count = models.PositiveIntegerField(default=0)
+
+    created_at      = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['store', '-created_at']),
+        ]
+
+    def __str__(self):
+        return f"AutoBackup<{self.store_id} @ {self.created_at:%Y-%m-%d %H:%M}>"
+
+
 class KnowledgeSnippet(models.Model):
     """
     Knowledge base entry for a store's AI.

@@ -10525,6 +10525,24 @@ document.addEventListener("DOMContentLoaded", () => {
       @media (prefers-reduced-motion: reduce){
         .ai-backup-modal,.ai-backup-card{animation:none;}
       }
+      /* Recovery panel — list of safety snapshots with Undo */
+      .ai-backup-snap-list{display:flex;flex-direction:column;gap:8px;margin-bottom:14px;}
+      .ai-backup-snap{
+        display:flex;align-items:center;gap:14px;
+        padding:12px 14px;border-radius:11px;
+        background:#fff;border:1px solid #e2e8f0;
+      }
+      .ai-backup-snap-meta{flex:1;min-width:0;}
+      .ai-backup-snap-when{
+        font-size:13px;font-weight:900;color:#0f172a;letter-spacing:-.005em;
+      }
+      .ai-backup-snap-label{
+        font-size:11.5px;color:#64748b;font-weight:600;margin-top:2px;
+      }
+      .ai-backup-snap-counts{
+        font-size:10.5px;color:#a855f7;font-weight:800;
+        letter-spacing:.06em;text-transform:uppercase;margin-top:4px;
+      }
     </style>
 
     <section id="aiTrainingSection" class="section">
@@ -10582,6 +10600,9 @@ document.addEventListener("DOMContentLoaded", () => {
           </button>
           <button class="secondary" onclick="aiBackupOpenImport()" title="Upload a previously downloaded backup to restore or reuse">
             <i class="fa-solid fa-upload"></i> Restore
+          </button>
+          <button class="secondary" onclick="aiBackupOpenRecovery()" title="Undo a recent restore — every restore auto-snapshots the previous state, so you can roll back with one click">
+            <i class="fa-solid fa-rotate-left"></i> Recover
           </button>
         </div>
       </div>
@@ -18965,6 +18986,106 @@ function _aiBackupActiveStoreId(){
     const id = sw && sw.value;
     return id ? String(id) : '';
   } catch (_) { return ''; }
+}
+
+/* ── Open the recovery panel — shows all auto-snapshots we took
+   before any prior restore, with one-click undo. Surfaces silently
+   if there are no snapshots to recover. */
+async function aiBackupOpenRecovery(){
+  aiBackupOpenModal();
+  const body = document.getElementById('aiBackupBody');
+  body.innerHTML = `
+    <div style="padding:34px 8px;text-align:center;color:#64748b;font-weight:700;">
+      <div class="ai-backup-spinner" style="border-color:rgba(99,102,241,.18);border-top-color:#6366f1;width:28px;height:28px;border-width:3px;margin-bottom:14px;"></div>
+      <div>Looking for safety snapshots…</div>
+    </div>`;
+  const sid = _aiBackupActiveStoreId();
+  let r;
+  try {
+    const resp = await fetch(AI_BACKUP_API + '/snapshots/' + (sid ? `?store_id=${encodeURIComponent(sid)}` : ''), {
+      credentials:'same-origin',
+    });
+    r = {ok: resp.ok, data: await resp.json().catch(() => ({}))};
+  } catch(_){
+    r = {ok:false, data:{message:'Network error.'}};
+  }
+  if (!r.ok || !r.data || !r.data.success){
+    body.innerHTML = `<div class="ai-backup-msg error">${_aiBackupEsc((r.data && r.data.message) || 'Could not load snapshots.')}</div>`;
+    _aiBackupRenderFoot(false);
+    return;
+  }
+  const snaps = r.data.snapshots || [];
+  if (!snaps.length){
+    body.innerHTML = `
+      <div class="panel">
+        <div class="panel-h">No restore in this store's recent history</div>
+        <div style="font-size:13px;color:#475569;line-height:1.6;">
+          The training auto-snapshot system kicks in whenever you use
+          <b>Restore</b>. There are no snapshots yet — your existing
+          training has never been overwritten by a restore on this store.
+        </div>
+      </div>`;
+    _aiBackupRenderFoot(false);
+    return;
+  }
+  body.innerHTML = `
+    <div class="panel">
+      <div class="panel-h">Safety snapshots — last ${snaps.length}</div>
+      <div style="font-size:12.5px;color:#475569;line-height:1.55;margin-bottom:6px;">
+        Each row is the state of this store's training <em>just before</em>
+        a restore ran. Click <b>Undo</b> to replay any of them.
+      </div>
+    </div>
+    <div class="ai-backup-snap-list">
+      ${snaps.map(s => `
+        <div class="ai-backup-snap">
+          <div class="ai-backup-snap-meta">
+            <div class="ai-backup-snap-when">${_aiBackupEsc((s.created_at || '').replace('T',' ').slice(0,19))}</div>
+            <div class="ai-backup-snap-label">${_aiBackupEsc(s.label || 'pre-restore snapshot')}</div>
+            <div class="ai-backup-snap-counts">${s.snippets_count} snippet${s.snippets_count===1?'':'s'} · ${s.feedbacks_count} feedback</div>
+          </div>
+          <button class="ai-backup-btn primary" style="padding:9px 16px;font-size:12px;" onclick="_aiBackupUndo(${s.id}, this)">
+            <i class="fa-solid fa-rotate-left"></i> Undo
+          </button>
+        </div>
+      `).join('')}
+    </div>
+    <div id="aiBackupApplyMsg"></div>
+  `;
+  _aiBackupRenderFoot(false);
+}
+
+async function _aiBackupUndo(snapId, btn){
+  if (!snapId) return;
+  if (btn){ btn.disabled = true; btn.innerHTML = '<span class="ai-backup-spinner"></span> Restoring…'; }
+  const fd = new FormData();
+  fd.append('snapshot_id', String(snapId));
+  let r;
+  try {
+    const resp = await fetch(AI_BACKUP_API + '/undo/', {
+      method:'POST', body: fd,
+      headers: {'X-CSRFToken': _aiBackupCsrf()},
+      credentials:'same-origin',
+    });
+    r = {ok: resp.ok, data: await resp.json().catch(() => ({}))};
+  } catch(_){
+    r = {ok:false, data:{message:'Network error.'}};
+  }
+  const msgHost = document.getElementById('aiBackupApplyMsg');
+  if (!r.ok || !r.data || !r.data.success){
+    if (msgHost){
+      msgHost.innerHTML = `<div class="ai-backup-msg error">${_aiBackupEsc((r.data && r.data.message) || 'Undo failed.')}</div>`;
+    }
+    if (btn){ btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-rotate-left"></i> Undo'; }
+    return;
+  }
+  if (msgHost){
+    msgHost.innerHTML = `<div class="ai-backup-msg success">${_aiBackupEsc(r.data.message)}</div>`;
+  }
+  // Re-pull AI training data so the UI flips back to the restored state.
+  try { if (typeof v2InitOnOpen === 'function') { _v2Loaded = false; v2InitOnOpen(); } } catch(_) {}
+  _aiBackupToast('Training restored from snapshot.', 'success');
+  setTimeout(aiBackupCloseModal, 1600);
 }
 
 /* ── Export — download the JSON file ─────────────────────────────── */

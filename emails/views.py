@@ -2237,6 +2237,40 @@ def ai_training_backup_apply_api(request):
         "feedbacks": AiReplyFeedback.objects.filter(store=store).count(),
     }
 
+    # ─── SAFETY NET ──────────────────────────────────────────────────
+    # Before the restore touches a single row, take an auto-snapshot
+    # of the CURRENT state. The undo endpoint replays this snapshot if
+    # the operator realises they imported the wrong file or chose the
+    # wrong mode. Keeps the last AUTO_BACKUP_RETAIN per store.
+    try:
+        owner = _data_owner(request)
+        from .models import AiTrainingAutoBackup
+        current_payload = _build_ai_backup_payload(store, owner)
+        AiTrainingAutoBackup.objects.create(
+            store=store, actor=owner,
+            reason="pre_restore",
+            label=f"Auto-snapshot before {mode} restore",
+            payload=current_payload,
+            snippets_count=len(current_payload.get("snippets") or []),
+            feedbacks_count=len(current_payload.get("feedbacks") or []),
+        )
+        # Evict the oldest beyond the retain cap.
+        cap = AiTrainingAutoBackup.AUTO_BACKUP_RETAIN
+        keep_ids = list(
+            AiTrainingAutoBackup.objects.filter(store=store)
+            .order_by("-created_at").values_list("id", flat=True)[:cap]
+        )
+        AiTrainingAutoBackup.objects.filter(
+            store=store).exclude(id__in=keep_ids).delete()
+    except Exception:
+        # Never let snapshot capture failure block the restore — log to
+        # the Django logger and proceed. The user knowingly clicked
+        # Apply; they can roll forward with their backup file.
+        import logging
+        logging.getLogger(__name__).warning(
+            "AI training auto-snapshot failed for store=%s", store.id,
+            exc_info=True)
+
     snippets_created = 0
     snippets_updated = 0
     snippets_kept    = 0
@@ -2433,6 +2467,194 @@ def ai_training_backup_apply_api(request):
             "counts_before":    counts_before,
             "counts_after":     counts_after,
         },
+    })
+
+
+@csrf_exempt
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def ai_training_backup_snapshots_api(request):
+    """List the auto-snapshots Drop Sigma took before any /apply/ ran
+    against this store. Tenant uses this for the "Undo last restore"
+    UI — picks the snapshot from before the regrettable action and
+    replays it.
+    """
+    from .models import AiTrainingAutoBackup
+    store = _ai_get_user_store(request, request.GET.get("store_id"))
+    if not store:
+        return Response({"success": False, "message": "No active store found."}, status=400)
+    rows = []
+    for snap in (AiTrainingAutoBackup.objects
+                 .filter(store=store)
+                 .order_by("-created_at")[:AiTrainingAutoBackup.AUTO_BACKUP_RETAIN]):
+        rows.append({
+            "id":              snap.id,
+            "reason":          snap.reason,
+            "label":           snap.label or "",
+            "snippets_count":  snap.snippets_count,
+            "feedbacks_count": snap.feedbacks_count,
+            "created_at":      snap.created_at.isoformat() if snap.created_at else None,
+        })
+    return Response({"success": True, "snapshots": rows})
+
+
+@csrf_exempt
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def ai_training_backup_undo_api(request):
+    """Replay a specific auto-snapshot onto its store in REPLACE mode,
+    so the destructive `/apply/` that just ran is fully reversed.
+    Required body: ``{"snapshot_id": <id>}``.
+
+    Implicit ownership check: the snapshot's store must belong to the
+    calling user (we look it up via _ai_get_user_store). Cross-tenant
+    undo is impossible by construction.
+    """
+    from django.db import transaction
+    from django.utils import dateparse
+    from .models import (
+        AiTrainingAutoBackup, AiTrainingProfile,
+        KnowledgeSnippet, AiReplyFeedback,
+    )
+
+    sid = None
+    # Accept JSON body, form-encoded body, or query string. DRF's
+    # request.data covers JSON + multipart; POST covers form-encoded.
+    if hasattr(request, "data") and request.data:
+        sid = request.data.get("snapshot_id")
+    if sid is None and request.POST:
+        sid = request.POST.get("snapshot_id")
+    if sid is None:
+        sid = request.GET.get("snapshot_id")
+    if sid is None:
+        return Response({"success": False, "message": "snapshot_id required."}, status=400)
+    try:
+        sid = int(sid)
+    except (TypeError, ValueError):
+        return Response({"success": False, "message": "snapshot_id must be int."}, status=400)
+
+    snap = AiTrainingAutoBackup.objects.filter(id=sid).select_related("store").first()
+    if not snap:
+        return Response({"success": False, "message": "Snapshot not found."}, status=404)
+
+    # Re-confirm the store is one the caller can act on.
+    store = _ai_get_user_store(request, snap.store_id)
+    if not store or store.id != snap.store_id:
+        return Response({"success": False, "message": "Forbidden."}, status=403)
+
+    payload = snap.payload or {}
+    p_in = payload.get("profile") or {}
+    snippets_in = list(payload.get("snippets") or [])
+    feedbacks_in = list(payload.get("feedbacks") or [])
+
+    with transaction.atomic():
+        # Capture a fresh snapshot of the CURRENT state before we undo,
+        # so an "undo the undo" is still possible.
+        try:
+            owner = _data_owner(request)
+            current_payload = _build_ai_backup_payload(store, owner)
+            AiTrainingAutoBackup.objects.create(
+                store=store, actor=owner,
+                reason="pre_undo",
+                label=f"Auto-snapshot before undo to {snap.created_at:%Y-%m-%d %H:%M}",
+                payload=current_payload,
+                snippets_count=len(current_payload.get("snippets") or []),
+                feedbacks_count=len(current_payload.get("feedbacks") or []),
+            )
+            cap = AiTrainingAutoBackup.AUTO_BACKUP_RETAIN
+            keep_ids = list(
+                AiTrainingAutoBackup.objects.filter(store=store)
+                .order_by("-created_at").values_list("id", flat=True)[:cap]
+            )
+            AiTrainingAutoBackup.objects.filter(
+                store=store).exclude(id__in=keep_ids).delete()
+        except Exception:
+            import logging
+            logging.getLogger(__name__).warning(
+                "AI training pre-undo snapshot failed for store=%s", store.id,
+                exc_info=True)
+
+        # Profile — full restore.
+        profile, _ = AiTrainingProfile.objects.get_or_create(store=store)
+        profile.business_name = p_in.get("business_name") or ""
+        profile.niche         = p_in.get("niche") or ""
+        profile.description   = p_in.get("description") or ""
+        profile.language      = p_in.get("language") or "English"
+        profile.support_hours = p_in.get("support_hours") or ""
+        profile.reply_length  = p_in.get("reply_length") or "Medium"
+        profile.signoff       = p_in.get("signoff") or ""
+        profile.voice_example = p_in.get("voice_example") or ""
+        profile.mode          = p_in.get("mode") or "draft"
+        profile.tones         = list(p_in.get("tones") or [])
+        profile.toggles       = dict(p_in.get("toggles") or {})
+        profile.wizard_answers = dict(p_in.get("wizard_answers") or {})
+        profile.extras        = dict(p_in.get("extras") or {})
+        wc_iso = p_in.get("wizard_completed_at")
+        if wc_iso:
+            try:
+                profile.wizard_completed_at = dateparse.parse_datetime(wc_iso)
+            except (ValueError, TypeError):
+                profile.wizard_completed_at = None
+        else:
+            profile.wizard_completed_at = None
+        profile.save()
+
+        # Snippets — wipe, then re-create from the snapshot.
+        KnowledgeSnippet.objects.filter(store=store).delete()
+        snippets_created = 0
+        for s_in in snippets_in:
+            if not s_in.get("title") and not s_in.get("text"):
+                continue
+            KnowledgeSnippet.objects.create(
+                store=store,
+                category=(s_in.get("category") or "FAQ")[:30],
+                title=(s_in.get("title") or "")[:255],
+                text=s_in.get("text") or "",
+                from_wizard=bool(s_in.get("from_wizard")),
+                order_idx=int(s_in.get("order_idx") or 0),
+                is_enabled=bool(s_in.get("is_enabled", True)),
+            )
+            snippets_created += 1
+
+        # Feedbacks — same dedup story as apply.
+        seen = set()
+        for f in AiReplyFeedback.objects.filter(store=store).only(
+            "feedback_type", "ai_draft", "final_text"
+        ):
+            seen.add((f.feedback_type, f.ai_draft or "", f.final_text or ""))
+        feedbacks_added = 0
+        for f_in in feedbacks_in:
+            ft  = (f_in.get("feedback_type") or "edit")[:20]
+            ad  = f_in.get("ai_draft") or ""
+            ft2 = f_in.get("final_text") or ""
+            key = (ft, ad, ft2)
+            if key in seen:
+                continue
+            seen.add(key)
+            fb = AiReplyFeedback.objects.create(
+                store=store, feedback_type=ft, ai_draft=ad, final_text=ft2,
+                correction_note=f_in.get("correction_note") or "",
+                customer_message=f_in.get("customer_message") or "",
+            )
+            created_iso = f_in.get("created_at")
+            if created_iso:
+                try:
+                    dt = dateparse.parse_datetime(created_iso)
+                    if dt:
+                        AiReplyFeedback.objects.filter(pk=fb.pk).update(created_at=dt)
+                except (ValueError, TypeError):
+                    pass
+            feedbacks_added += 1
+
+    return Response({
+        "success": True,
+        "message": (
+            f"Restored from snapshot taken at "
+            f"{snap.created_at:%Y-%m-%d %H:%M} — "
+            f"{snippets_created} snippet(s), {feedbacks_added} feedback row(s)."
+        ),
+        "restored_snippets":  snippets_created,
+        "restored_feedbacks": feedbacks_added,
     })
 
 

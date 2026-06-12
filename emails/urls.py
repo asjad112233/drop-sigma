@@ -20,6 +20,8 @@ from .views import (
     ai_training_backup_export_api,
     ai_training_backup_preview_api,
     ai_training_backup_apply_api,
+    ai_training_backup_snapshots_api,
+    ai_training_backup_undo_api,
     category_training_list_api,
     category_training_detail_api,
     auto_suggest_reply_api,
@@ -116,9 +118,14 @@ urlpatterns = [
     # tenant downloads a portable JSON, validates before applying via
     # preview, then commits with mode=replace|merge against the same
     # or a different store under their account.
-    path("api/ai-training/backup/export/",  ai_training_backup_export_api,  name="ai_training_backup_export_api"),
-    path("api/ai-training/backup/preview/", ai_training_backup_preview_api, name="ai_training_backup_preview_api"),
-    path("api/ai-training/backup/apply/",   ai_training_backup_apply_api,   name="ai_training_backup_apply_api"),
+    path("api/ai-training/backup/export/",    ai_training_backup_export_api,    name="ai_training_backup_export_api"),
+    path("api/ai-training/backup/preview/",   ai_training_backup_preview_api,   name="ai_training_backup_preview_api"),
+    path("api/ai-training/backup/apply/",     ai_training_backup_apply_api,     name="ai_training_backup_apply_api"),
+    # Safety-net: every /apply/ takes an auto-snapshot of the previous
+    # state. /snapshots/ lists them, /undo/ replays one. So even an
+    # accidental "Replace" mode never permanently nukes the training.
+    path("api/ai-training/backup/snapshots/", ai_training_backup_snapshots_api, name="ai_training_backup_snapshots_api"),
+    path("api/ai-training/backup/undo/",      ai_training_backup_undo_api,      name="ai_training_backup_undo_api"),
     path("api/ai-training/categories/", category_training_list_api, name="category_training_list_api"),
     path("api/ai-training/categories/<slug:slug>/", category_training_detail_api, name="category_training_detail_api"),
 
