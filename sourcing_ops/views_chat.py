@@ -136,16 +136,37 @@ def _msg_to_dict(m):
     }
 
 
+def _conv_qs_for(user):
+    """Workspace-scoped ``PartnerConversation`` queryset for single-
+    conversation lookups (api_chat_messages / send / lookup / order
+    detail). Wraps ``conversation_qs_visible_to`` so a workspace-bound
+    ops user can't fetch / reply to a conversation that doesn't belong
+    to their assigned tenants. Superusers + legacy global ops users
+    pass through unscoped.
+    """
+    from .scoping import conversation_qs_visible_to
+    return conversation_qs_visible_to(
+        user,
+        PartnerConversation.objects.select_related("tenant", "partner"),
+    )
+
+
 # ─── List all chats across all tenants ──────────────────────────────────
 @ops_required
 @require_GET
 def api_chats_list(request):
+    from .scoping import conversation_qs_visible_to
     q = (request.GET.get("q") or "").strip()
     only_unread = request.GET.get("unread") == "1"
 
-    qs = (PartnerConversation.objects
-          .select_related("tenant", "partner")
-          .filter(is_archived=False))
+    # Workspace-scope first — every other filter rides on top.
+    # Superusers and legacy global ops users pass through untouched
+    # (helper returns base qs); workspace-bound members only see
+    # tenants assigned to their workspace via OpsWorkspaceTenant.
+    qs = conversation_qs_visible_to(
+        request.user,
+        PartnerConversation.objects.select_related("tenant", "partner"),
+    ).filter(is_archived=False)
 
     if q:
         qs = qs.filter(
@@ -178,9 +199,7 @@ def api_chats_list(request):
 @require_GET
 def api_chat_messages(request, conv_id):
     try:
-        c = (PartnerConversation.objects
-             .select_related("tenant", "partner")
-             .get(pk=conv_id))
+        c = (_conv_qs_for(request.user).get(pk=conv_id))
     except PartnerConversation.DoesNotExist:
         return JsonResponse({"ok": False, "error": "Conversation not found."}, status=404)
 
@@ -208,9 +227,7 @@ def api_chat_messages(request, conv_id):
 @require_POST
 def api_chat_send(request, conv_id):
     try:
-        c = (PartnerConversation.objects
-             .select_related("tenant", "partner")
-             .get(pk=conv_id))
+        c = (_conv_qs_for(request.user).get(pk=conv_id))
     except PartnerConversation.DoesNotExist:
         return JsonResponse({"ok": False, "error": "Conversation not found."}, status=404)
 
@@ -295,8 +312,7 @@ def api_chat_lookup(request, conv_id):
         return JsonResponse({"ok": False, "error": "no_token"}, status=400)
 
     try:
-        conv = (PartnerConversation.objects
-                .select_related("tenant").get(pk=conv_id))
+        conv = (_conv_qs_for(request.user).get(pk=conv_id))
     except PartnerConversation.DoesNotExist:
         return JsonResponse({"ok": False, "error": "no_conversation"}, status=404)
 
@@ -322,8 +338,7 @@ def api_chat_lookup(request, conv_id):
 @require_GET
 def api_chat_order_detail(request, conv_id, order_id):
     try:
-        conv = (PartnerConversation.objects
-                .select_related("tenant").get(pk=conv_id))
+        conv = (_conv_qs_for(request.user).get(pk=conv_id))
     except PartnerConversation.DoesNotExist:
         return JsonResponse({"ok": False, "error": "no_conversation"}, status=404)
 
