@@ -10,9 +10,13 @@ Key relationship:
   - tenant pays via wallet (existing flow) → processing
   - ops portal tracks procurement, QC, ships, marks delivered
 """
+import uuid
+from datetime import timedelta
 from decimal import Decimal
+
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 
 
 # ───────────────────────────────────────────────────────────────────────
@@ -300,6 +304,21 @@ class OpsTeamMember(models.Model):
     is_manager  = models.BooleanField(default=False)
     can_assign  = models.BooleanField(default=True)
     can_quote   = models.BooleanField(default=True)
+
+    # ── Workspace scoping ──────────────────────────────────────────
+    # NULL = legacy/global ops user — sees every tenant (backward
+    # compatible with the original /ops/ flow). Set on accept of an
+    # OpsInvitation by the workspace-aware invitation handler.
+    workspace   = models.ForeignKey(
+        "OpsWorkspace",
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="members",
+        help_text=(
+            "If set, this ops user only sees tenants assigned to that "
+            "workspace. NULL = global ops user (sees everything)."
+        ),
+    )
 
     joined_at   = models.DateTimeField(auto_now_add=True)
 
@@ -621,4 +640,189 @@ class TenantManagerAssignment(models.Model):
 
     def __str__(self):
         return f"{self.tenant.username} → {self.manager}"
+
+
+# ════════════════════════════════════════════════════════════════════
+# OPS WORKSPACES — Multi-instance scoping
+# ════════════════════════════════════════════════════════════════════
+# A workspace is a logical "slice" of the OPS portal that the
+# superadmin creates and then assigns tenants + team members to. Each
+# workspace member sees only the tenants assigned to their workspace
+# — never the full fleet. Superusers and legacy ops users with no
+# workspace continue to see everything, so existing flows stay intact.
+#
+# Why this exists:
+#   - Drop Sigma's ops team grows into per-region / per-vertical
+#     desks (Asia Hub, Europe Hub, Apparel Desk, Beauty Desk, …).
+#   - Each desk needs an isolated view of the workload, the chat,
+#     the team roster, and the supplier mapping.
+#   - Tenants don't move workspaces casually; assignment is the
+#     superadmin's call, not the ops member's.
+# ════════════════════════════════════════════════════════════════════
+
+
+class OpsWorkspace(models.Model):
+    """A scoped slice of the OPS portal — its team only sees tenants
+    that the superadmin has explicitly assigned to this workspace."""
+
+    name        = models.CharField(max_length=80)
+    slug        = models.SlugField(max_length=80, unique=True,
+                                    help_text="URL-safe id used in invite links")
+    description = models.TextField(blank=True)
+    color       = models.CharField(max_length=20, default="#6366f1",
+                                    help_text="Used for workspace chips in the superadmin UI")
+    emoji       = models.CharField(max_length=4, default="🛠️")
+
+    is_active   = models.BooleanField(default=True,
+                                       help_text="Deactivate to hide from invite lists + revoke member access")
+
+    created_by  = models.ForeignKey(settings.AUTH_USER_MODEL,
+                                     on_delete=models.SET_NULL,
+                                     null=True, blank=True,
+                                     related_name="ops_workspaces_created")
+    created_at  = models.DateTimeField(auto_now_add=True)
+    updated_at  = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def tenant_count(self):
+        return self.tenant_assignments.count()
+
+    @property
+    def member_count(self):
+        return self.members.count()
+
+    @property
+    def pending_invite_count(self):
+        return self.invitations.filter(status="pending").count()
+
+
+class OpsWorkspaceTenant(models.Model):
+    """Maps a tenant (Django User who owns Stores) to an OpsWorkspace.
+
+    A tenant can be assigned to AT MOST one workspace at a time —
+    enforced by the unique_together constraint on the tenant. The
+    superadmin moves a tenant by deleting the old row + creating a
+    new one (or via the workspace_assign_tenant view which handles
+    that atomically)."""
+
+    workspace   = models.ForeignKey(OpsWorkspace,
+                                     on_delete=models.CASCADE,
+                                     related_name="tenant_assignments")
+    tenant      = models.OneToOneField(settings.AUTH_USER_MODEL,
+                                        on_delete=models.CASCADE,
+                                        related_name="ops_workspace_assignment")
+    assigned_by = models.ForeignKey(settings.AUTH_USER_MODEL,
+                                     on_delete=models.SET_NULL,
+                                     null=True, blank=True,
+                                     related_name="ops_tenant_assignments_made")
+    assigned_at = models.DateTimeField(auto_now_add=True)
+    note        = models.CharField(max_length=255, blank=True,
+                                    help_text="Optional reason / context for the assignment")
+
+    class Meta:
+        ordering = ["-assigned_at"]
+        indexes  = [
+            models.Index(fields=["workspace", "tenant"]),
+        ]
+
+    def __str__(self):
+        return f"{self.tenant.username} → {self.workspace.name}"
+
+
+class OpsInvitation(models.Model):
+    """Invite a new ops team member into a workspace.
+
+    Lifecycle:
+        pending  → invitee receives email, link is live
+        accepted → invitee set their password + an OpsTeamMember row
+                    exists for them in this workspace
+        revoked  → superadmin pulled the invite before acceptance
+        expired  → past expires_at AND still pending
+    """
+
+    STATUS_CHOICES = [
+        ("pending",  "Pending"),
+        ("accepted", "Accepted"),
+        ("revoked",  "Revoked"),
+        ("expired",  "Expired"),
+    ]
+
+    workspace   = models.ForeignKey(OpsWorkspace,
+                                     on_delete=models.CASCADE,
+                                     related_name="invitations")
+    email       = models.EmailField()
+    name        = models.CharField(max_length=120, blank=True,
+                                    help_text="Display name shown in the welcome email")
+    role        = models.ForeignKey(OpsRole,
+                                     on_delete=models.SET_NULL,
+                                     null=True, blank=True,
+                                     related_name="pending_invitations")
+    title       = models.CharField(max_length=120, blank=True,
+                                    help_text="Job title — copied to OpsTeamMember on accept")
+    is_manager  = models.BooleanField(default=False,
+                                       help_text="Promote the new member to workspace manager on accept")
+
+    # ── Single-use token ───────────────────────────────────────────
+    token       = models.UUIDField(default=uuid.uuid4, unique=True,
+                                    editable=False)
+    status      = models.CharField(max_length=20, choices=STATUS_CHOICES,
+                                    default="pending", db_index=True)
+
+    invited_by  = models.ForeignKey(settings.AUTH_USER_MODEL,
+                                     on_delete=models.SET_NULL,
+                                     null=True, blank=True,
+                                     related_name="ops_invitations_sent")
+    invited_at  = models.DateTimeField(auto_now_add=True)
+    expires_at  = models.DateTimeField(
+        help_text="Hard expiry — past this the link 404s even if still 'pending'."
+    )
+    accepted_at = models.DateTimeField(null=True, blank=True)
+    revoked_at  = models.DateTimeField(null=True, blank=True)
+    revoked_by  = models.ForeignKey(settings.AUTH_USER_MODEL,
+                                     on_delete=models.SET_NULL,
+                                     null=True, blank=True,
+                                     related_name="ops_invitations_revoked")
+    last_sent_at = models.DateTimeField(null=True, blank=True,
+                                         help_text="Updated whenever the invite email is (re-)sent")
+    send_count   = models.PositiveIntegerField(default=0)
+
+    # Link the User created on acceptance — useful for audit + the
+    # "view member" link on the superadmin invite list.
+    accepted_user = models.ForeignKey(settings.AUTH_USER_MODEL,
+                                       on_delete=models.SET_NULL,
+                                       null=True, blank=True,
+                                       related_name="ops_invitations_accepted")
+
+    class Meta:
+        ordering = ["-invited_at"]
+        indexes  = [
+            models.Index(fields=["workspace", "status"]),
+            models.Index(fields=["email", "status"]),
+        ]
+
+    def save(self, *args, **kwargs):
+        if not self.expires_at:
+            # Default 7-day window — long enough for someone away on
+            # the weekend to still get in, short enough that a
+            # forgotten invite eventually fails closed.
+            self.expires_at = (timezone.now()
+                               if not self.invited_at else self.invited_at) + timedelta(days=7)
+        super().save(*args, **kwargs)
+
+    def is_expired(self) -> bool:
+        return timezone.now() >= self.expires_at
+
+    def can_accept(self) -> bool:
+        """Returns True only when the invite is still a valid acceptance
+        target — pending + not past expiry."""
+        return self.status == "pending" and not self.is_expired()
+
+    def __str__(self):
+        return f"{self.email} → {self.workspace.name} ({self.status})"
 

@@ -6,11 +6,18 @@ from . import views_suppliers
 from . import views_team
 from . import views_chat
 from . import views_catalog
+from . import invitations as views_invite
 
 
 urlpatterns = [
     # ── SPA shell ────────────────────────────────────────────────────
     path("",                 views.ops_dashboard,  name="ops_dashboard"),
+
+    # ── Invitation acceptance (public — token-gated) ─────────────────
+    path("invite/accept/<uuid:token>/",        views_invite.accept_invitation_view,
+         name="ops_invite_accept"),
+    path("invite/accept/<uuid:token>/submit/", views_invite.submit_invitation_accept_api,
+         name="ops_invite_accept_submit"),
 
     # ── Design previews (mock data, for design review only) ──────────
     path("wallet-preview/",               views.ops_wallet_preview,               name="ops_wallet_preview"),

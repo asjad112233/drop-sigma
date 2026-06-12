@@ -1,0 +1,182 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Accept invitation · {{ workspace.name }} · Drop Sigma Ops</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    background:
+      radial-gradient(900px 600px at 12% -10%, rgba(99,102,241,.12), transparent 60%),
+      radial-gradient(800px 600px at 92% 8%, rgba(168,85,247,.10), transparent 60%),
+      linear-gradient(180deg,#fafbff 0%,#f3f4f9 100%);
+    color:#0f172a;-webkit-font-smoothing:antialiased;
+    display:flex;align-items:center;justify-content:center;
+    min-height:100vh;padding:32px 18px;
+  }
+  .card{
+    width:100%;max-width:460px;background:#fff;border-radius:20px;
+    box-shadow:0 22px 60px rgba(15,23,42,.10);overflow:hidden;
+  }
+  .head{
+    background:linear-gradient(135deg,#6366f1 0%,#a855f7 60%,#06b6d4 100%);
+    padding:32px 36px 26px;text-align:center;
+  }
+  .mark{
+    display:inline-flex;align-items:center;gap:10px;
+  }
+  .mark img{width:42px;height:42px;border-radius:11px;background:#fff;padding:3px;}
+  .mark-name{font-size:18px;font-weight:900;color:#fff;letter-spacing:-.3px;}
+  .eyebrow{
+    margin-top:14px;font-size:10.5px;font-weight:800;letter-spacing:.22em;
+    color:rgba(255,255,255,.88);text-transform:uppercase;
+  }
+  .body{padding:34px 36px 30px;}
+  .h1{font-size:22px;font-weight:900;letter-spacing:-.4px;line-height:1.25;margin-bottom:8px;}
+  .lead{font-size:13.5px;color:#475569;line-height:1.65;font-weight:500;margin-bottom:22px;}
+  .lead b{color:#0f172a;}
+  .field{margin-bottom:14px;}
+  .label{
+    display:block;font-size:10.5px;font-weight:800;color:#64748b;
+    letter-spacing:.14em;text-transform:uppercase;margin-bottom:6px;
+  }
+  .input{
+    width:100%;padding:11px 14px;border:1.5px solid #e2e8f0;border-radius:11px;
+    font-size:14px;font-weight:600;color:#0f172a;background:#fff;
+    transition:border-color .15s,box-shadow .15s;font-family:inherit;
+  }
+  .input:focus{outline:0;border-color:#6366f1;box-shadow:0 0 0 4px rgba(99,102,241,.12);}
+  .hint{font-size:11px;color:#94a3b8;font-weight:600;margin-top:5px;line-height:1.5;}
+  .submit{
+    width:100%;margin-top:8px;padding:13px 16px;
+    border:0;border-radius:12px;cursor:pointer;
+    font-size:14px;font-weight:800;letter-spacing:.02em;color:#fff;
+    background:linear-gradient(135deg,#6366f1 0%,#a855f7 70%,#ec4899 100%);
+    box-shadow:0 12px 28px rgba(99,102,241,.30);
+    transition:transform .15s,box-shadow .15s;
+  }
+  .submit:hover{transform:translateY(-1px);box-shadow:0 16px 32px rgba(99,102,241,.36);}
+  .submit:disabled{opacity:.55;cursor:not-allowed;transform:none;}
+  .meta{
+    margin-top:18px;padding:13px 14px;border-radius:10px;
+    background:#f8fafc;border:1px solid #eef2f7;
+    font-size:11.5px;color:#64748b;font-weight:600;line-height:1.55;
+  }
+  .meta b{color:#0f172a;}
+  .err{
+    margin-bottom:14px;padding:11px 13px;border-radius:10px;
+    background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);
+    font-size:12.5px;color:#b91c1c;font-weight:600;line-height:1.5;display:none;
+  }
+  .err.show{display:block;}
+  .foot{
+    padding:16px 36px;text-align:center;border-top:1px solid #eef2f7;background:#fafbff;
+    font-size:11px;color:#94a3b8;font-weight:700;letter-spacing:.04em;
+  }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="head">
+      <div class="mark">
+        <img src="/static/branding/icon.png" alt="DS">
+        <span class="mark-name">Drop Sigma</span>
+      </div>
+      <div class="eyebrow">Operations Portal · Invitation</div>
+    </div>
+
+    <div class="body">
+      <h1 class="h1">Welcome to {{ workspace.name }}</h1>
+      <p class="lead">
+        Set your password to activate your account as
+        {% if role_label %}<b>{{ role_label }}</b>{% else %}an operations team member{% endif %}
+        on the <b>{{ workspace.name }}</b> desk. You'll land straight in
+        the Ops Portal after this step.
+      </p>
+
+      <div id="err" class="err"></div>
+
+      <form id="form" autocomplete="off">
+        <div class="field">
+          <label class="label" for="name">Your name</label>
+          <input class="input" id="name" type="text"
+                 placeholder="First last"
+                 value="{{ invite.name|default:'' }}" autocomplete="name">
+        </div>
+        <div class="field">
+          <label class="label" for="email">Account email</label>
+          <input class="input" id="email" type="email"
+                 value="{{ invite.email }}" disabled
+                 style="background:#f8fafc;color:#64748b;">
+        </div>
+        <div class="field">
+          <label class="label" for="password">Choose a password</label>
+          <input class="input" id="password" type="password"
+                 placeholder="At least 8 characters"
+                 minlength="8" autocomplete="new-password" required>
+          <div class="hint">8+ characters, not all numeric, not too common.</div>
+        </div>
+
+        <button class="submit" id="submit" type="submit">
+          Activate account &amp; open Ops Portal →
+        </button>
+      </form>
+
+      <div class="meta">
+        Invited by <b>{{ invite.invited_by.get_full_name|default:invite.invited_by.username|default:"Drop Sigma" }}</b><br>
+        Expires <b>{{ invite.expires_at|date:"d M Y · H:i" }} UTC</b>
+      </div>
+    </div>
+
+    <div class="foot">© Drop Sigma · Operations Portal</div>
+  </div>
+
+<script>
+  const form  = document.getElementById('form');
+  const btn   = document.getElementById('submit');
+  const errEl = document.getElementById('err');
+  const token = "{{ token }}";
+
+  function setErr(msg){
+    if(!msg){ errEl.classList.remove('show'); errEl.textContent=''; return; }
+    errEl.textContent = msg;
+    errEl.classList.add('show');
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    setErr('');
+    const name = document.getElementById('name').value.trim();
+    const password = document.getElementById('password').value;
+    if(password.length < 8){
+      setErr('Password must be at least 8 characters.');
+      return;
+    }
+    btn.disabled = true;
+    btn.textContent = 'Activating…';
+    try {
+      const r = await fetch(`/ops/invite/accept/${token}/submit/`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({name, password}),
+      });
+      const data = await r.json().catch(() => ({}));
+      if(!r.ok || !data.ok){
+        setErr(data.message || 'Could not activate the account — try again.');
+        btn.disabled = false;
+        btn.innerHTML = 'Activate account &amp; open Ops Portal →';
+        return;
+      }
+      window.location.assign(data.redirect_url || '/ops/');
+    } catch(_){
+      setErr('Network error. Try again.');
+      btn.disabled = false;
+      btn.innerHTML = 'Activate account &amp; open Ops Portal →';
+    }
+  });
+</script>
+</body></html>

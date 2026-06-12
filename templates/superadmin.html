@@ -307,6 +307,7 @@ a{color:inherit;text-decoration:none;}
     <button class="nav-item" data-page="locations"><span class="ico">📍</span> Locations</button>
     <button class="nav-item" data-page="diagnostics"><span class="ico">🩺</span> Diagnostics</button>
     <button class="nav-item" data-page="gateways"><span class="ico">💳</span> Payment Gateways</button>
+    <button class="nav-item" data-page="opsWorkspaces"><span class="ico">🛠️</span> Ops Workspaces</button>
 
     <div class="me-card">
       <div class="who">Owner Mode</div>
@@ -559,6 +560,8 @@ function setTitle(page){
     locations: ['Locations',     'Super Admin · IP & Location Intelligence'],
     diagnostics: ['Diagnostics', 'Super Admin · System Health'],
     gateways:  ['Payment Gateways', 'Super Admin · Charge Tenants via Stripe / PayPal'],
+    opsWorkspaces:    ['Ops Workspaces', 'Super Admin · Create + assign tenants + invite team'],
+    opsWorkspaceDetail: ['Ops Workspace', 'Super Admin · Tenants, team & invitations'],
   };
   const [t,c] = map[page] || ['Super Admin',''];
   document.getElementById('pageTitle').textContent  = t;
@@ -606,6 +609,8 @@ async function renderPage(){
     case 'locations': await renderLocations(c); break;
     case 'diagnostics': await renderDiagnostics(c); break;
     case 'gateways':  await renderGateways(c); break;
+    case 'opsWorkspaces': await renderOpsWorkspaces(c); break;
+    case 'opsWorkspaceDetail': await renderOpsWorkspaceDetail(c); break;
     default: c.innerHTML = '<div class="empty"><p>Page not found.</p></div>';
   }
 }
@@ -2298,6 +2303,403 @@ async function tfLoadDevices(){
 /* ═══════════════════════════════════════════════════════
    PAYMENT GATEWAYS — Stripe + PayPal (platform-owner keys)
 ═══════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════
+   OPS WORKSPACES — multi-instance Ops Portal management
+   ─────────────────────────────────────────────────────────
+   List + create at the top, click any row → detail page
+   with tenant assignment, team roster, and invitation flow.
+═══════════════════════════════════════════════════════ */
+let _OPS_WS_LIST = [];          // last fetched workspace list
+let _OPS_WS_ID   = null;        // currently-open workspace id
+let _OPS_WS_DETAIL = null;      // detail payload for currently-open ws
+const _opsHtml = s => String(s == null ? '' : s)
+  .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+  .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+async function _opsFetch(url, opts={}){
+  const r = await fetch(url, Object.assign({
+    headers: {'Content-Type':'application/json', 'X-Requested-With':'XMLHttpRequest'},
+    credentials:'same-origin',
+  }, opts));
+  let data = {};
+  try { data = await r.json(); } catch(_){}
+  return { ok: r.ok && (data.ok !== false), data, status: r.status };
+}
+
+async function renderOpsWorkspaces(c){
+  c.innerHTML = `<div class="empty"><div class="ic">⏳</div><p>Loading workspaces…</p></div>`;
+  const { ok, data } = await _opsFetch('/superadmin/api/ops-workspaces/');
+  if(!ok){ c.innerHTML = `<div class="empty"><div class="ic">❌</div><p>Could not load workspaces.</p></div>`; return; }
+  _OPS_WS_LIST = data.workspaces || [];
+  c.innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:18px;max-width:1080px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;">
+        <div>
+          <h2 style="font-size:22px;font-weight:900;margin:0 0 4px;letter-spacing:-.3px;">Ops Workspaces</h2>
+          <p style="font-size:13.5px;color:#64748b;margin:0;font-weight:500;line-height:1.5;">
+            Each workspace is an isolated slice of <code style="background:#f1f5f9;padding:1px 6px;border-radius:4px;font-family:'SF Mono',Menlo,monospace;font-size:12px;">/ops/</code>
+            — its team only sees tenants you assign here. Superusers always see everything.
+          </p>
+        </div>
+        <button id="opsWsCreateBtn" style="background:linear-gradient(135deg,#6366f1,#a855f7);color:#fff;border:0;border-radius:10px;padding:10px 18px;font-size:13px;font-weight:800;cursor:pointer;box-shadow:0 8px 20px rgba(99,102,241,.30);">
+          + Create workspace
+        </button>
+      </div>
+
+      <div id="opsWsList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;">
+        ${(_OPS_WS_LIST.length ? _OPS_WS_LIST.map(_opsRenderWsCard).join('') :
+          `<div class="empty" style="grid-column:1/-1;"><div class="ic">🛠️</div><p>No workspaces yet — create one to scope your ops team.</p></div>`)}
+      </div>
+    </div>
+  `;
+  document.getElementById('opsWsCreateBtn').onclick = _opsOpenCreateModal;
+  c.querySelectorAll('[data-ws-id]').forEach(el => {
+    el.onclick = () => { _OPS_WS_ID = +el.dataset.wsId; navTo('opsWorkspaceDetail'); };
+  });
+}
+
+function _opsRenderWsCard(w){
+  const accent = w.color || '#6366f1';
+  return `
+    <div data-ws-id="${w.id}" style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:18px 18px 16px;cursor:pointer;transition:all .15s;border-left:4px solid ${_opsHtml(accent)};box-shadow:0 2px 6px rgba(15,23,42,.04);"
+         onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 14px 30px rgba(15,23,42,.08)';"
+         onmouseout="this.style.transform='';this.style.boxShadow='0 2px 6px rgba(15,23,42,.04)';">
+      <div style="display:flex;align-items:center;gap:11px;margin-bottom:12px;">
+        <div style="width:42px;height:42px;border-radius:11px;background:${_opsHtml(accent)};color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">
+          ${_opsHtml(w.emoji || '🛠️')}
+        </div>
+        <div style="min-width:0;flex:1;">
+          <div style="font-size:15px;font-weight:900;color:#0f172a;letter-spacing:-.2px;line-height:1.2;">${_opsHtml(w.name)}</div>
+          <div style="font-size:10.5px;font-weight:700;color:#94a3b8;letter-spacing:.04em;margin-top:2px;font-family:'SF Mono',Menlo,monospace;">${_opsHtml(w.slug)}</div>
+        </div>
+        ${w.is_active ? `<span style="font-size:9.5px;font-weight:800;color:#15803d;background:#dcfce7;padding:3px 8px;border-radius:99px;letter-spacing:.04em;">ACTIVE</span>`
+                       : `<span style="font-size:9.5px;font-weight:800;color:#94a3b8;background:#f1f5f9;padding:3px 8px;border-radius:99px;letter-spacing:.04em;">PAUSED</span>`}
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:10px;">
+        ${_opsStatChip('Tenants', w.tenant_count)}
+        ${_opsStatChip('Members', w.member_count)}
+        ${_opsStatChip('Pending', w.pending_invites, w.pending_invites > 0 ? '#b45309' : '#94a3b8')}
+      </div>
+    </div>`;
+}
+
+function _opsStatChip(label, n, color){
+  return `
+    <div style="background:#f8fafc;border:1px solid #eef2f7;border-radius:8px;padding:7px 10px;text-align:center;">
+      <div style="font-size:9px;font-weight:800;color:#94a3b8;letter-spacing:.1em;text-transform:uppercase;">${_opsHtml(label)}</div>
+      <div style="font-size:16px;font-weight:900;color:${_opsHtml(color || '#0f172a')};margin-top:2px;">${n}</div>
+    </div>`;
+}
+
+function _opsOpenCreateModal(){
+  const modal = _opsModal({
+    title: 'New workspace',
+    bodyHtml: `
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div><div class="lbl">Workspace name</div>
+          <input id="wsCName" placeholder="e.g. Asia Hub" style="width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:13.5px;font-weight:600;"></div>
+        <div><div class="lbl">Description (optional)</div>
+          <textarea id="wsCDesc" placeholder="Who handles this desk?" rows="2" style="width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:13px;resize:vertical;font-family:inherit;"></textarea></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div><div class="lbl">Accent colour</div>
+            <input id="wsCColor" type="color" value="#6366f1" style="width:100%;height:38px;border:1.5px solid #e2e8f0;border-radius:9px;cursor:pointer;"></div>
+          <div><div class="lbl">Emoji</div>
+            <input id="wsCEmoji" value="🛠️" maxlength="4" style="width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:18px;text-align:center;"></div>
+        </div>
+      </div>
+    `,
+    primary: 'Create workspace',
+    onPrimary: async () => {
+      const name = document.getElementById('wsCName').value.trim();
+      if(!name){ _opsToast('Name required', 'error'); return; }
+      const body = {
+        name,
+        description: document.getElementById('wsCDesc').value.trim(),
+        color: document.getElementById('wsCColor').value,
+        emoji: document.getElementById('wsCEmoji').value.trim() || '🛠️',
+      };
+      const { ok, data } = await _opsFetch('/superadmin/api/ops-workspaces/', {
+        method:'POST', body: JSON.stringify(body),
+      });
+      if(!ok){ _opsToast('Could not create workspace', 'error'); return; }
+      modal.close();
+      _opsToast('Workspace created', 'success');
+      _OPS_WS_ID = data.workspace.id;
+      navTo('opsWorkspaceDetail');
+    },
+  });
+}
+
+/* ── Detail page (Tenants + Team + Invitations) ─────────── */
+async function renderOpsWorkspaceDetail(c){
+  if(!_OPS_WS_ID){ navTo('opsWorkspaces'); return; }
+  c.innerHTML = `<div class="empty"><div class="ic">⏳</div><p>Loading workspace…</p></div>`;
+  const { ok, data } = await _opsFetch(`/superadmin/api/ops-workspaces/${_OPS_WS_ID}/`);
+  if(!ok){ c.innerHTML = `<div class="empty"><div class="ic">❌</div><p>Workspace not found.</p></div>`; return; }
+  _OPS_WS_DETAIL = data;
+  const w = data.workspace;
+
+  c.innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:18px;max-width:1100px;">
+      <div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:20px 22px;border-left:5px solid ${_opsHtml(w.color)};">
+        <div style="display:flex;align-items:center;gap:14px;">
+          <div style="width:50px;height:50px;border-radius:13px;background:${_opsHtml(w.color)};color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;">${_opsHtml(w.emoji)}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;">
+              <h2 style="margin:0;font-size:20px;font-weight:900;letter-spacing:-.3px;">${_opsHtml(w.name)}</h2>
+              ${w.is_active ? `<span style="font-size:9.5px;font-weight:800;color:#15803d;background:#dcfce7;padding:3px 8px;border-radius:99px;letter-spacing:.04em;">ACTIVE</span>` : `<span style="font-size:9.5px;font-weight:800;color:#94a3b8;background:#f1f5f9;padding:3px 8px;border-radius:99px;">PAUSED</span>`}
+            </div>
+            <div style="font-size:12px;color:#64748b;margin-top:3px;font-weight:600;">
+              ${_opsHtml(w.description) || 'No description'} · created ${_opsHtml((w.created_at||'').slice(0,10))} by ${_opsHtml(w.created_by || 'system')}
+            </div>
+          </div>
+          <button onclick="navTo('opsWorkspaces')" style="background:#f1f5f9;border:0;color:#475569;padding:8px 14px;border-radius:9px;font-size:12px;font-weight:800;cursor:pointer;">← Back to list</button>
+        </div>
+      </div>
+
+      <!-- Tenants -->
+      <div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:20px 22px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+          <h3 style="margin:0;font-size:15px;font-weight:900;color:#0f172a;letter-spacing:-.2px;">Assigned tenants <span style="font-size:11px;font-weight:700;color:#94a3b8;margin-left:6px;">${data.tenants.length}</span></h3>
+          <button id="opsWsAssignBtn" style="background:linear-gradient(135deg,#22c55e,#15803d);color:#fff;border:0;border-radius:9px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer;">+ Assign tenant</button>
+        </div>
+        ${data.tenants.length === 0
+          ? `<div style="text-align:center;padding:20px;color:#94a3b8;font-size:13px;">No tenants assigned. Click + Assign tenant to add one.</div>`
+          : `<div style="display:flex;flex-direction:column;gap:6px;">${data.tenants.map(_opsRenderTenantRow).join('')}</div>`}
+      </div>
+
+      <!-- Team members + Pending invitations side-by-side on wide screens -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:20px 22px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+            <h3 style="margin:0;font-size:15px;font-weight:900;letter-spacing:-.2px;">Team <span style="font-size:11px;font-weight:700;color:#94a3b8;margin-left:6px;">${data.members.length}</span></h3>
+            <button id="opsWsInviteBtn" style="background:#0f172a;color:#fff;border:0;border-radius:9px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer;">✉ Invite member</button>
+          </div>
+          ${data.members.length === 0
+            ? `<div style="text-align:center;padding:20px;color:#94a3b8;font-size:13px;">No team members yet.</div>`
+            : `<div style="display:flex;flex-direction:column;gap:6px;">${data.members.map(_opsRenderMemberRow).join('')}</div>`}
+        </div>
+
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:20px 22px;">
+          <h3 style="margin:0 0 14px;font-size:15px;font-weight:900;letter-spacing:-.2px;">Invitations <span style="font-size:11px;font-weight:700;color:#94a3b8;margin-left:6px;">${data.invitations.length}</span></h3>
+          ${data.invitations.length === 0
+            ? `<div style="text-align:center;padding:20px;color:#94a3b8;font-size:13px;">No invitations sent.</div>`
+            : `<div style="display:flex;flex-direction:column;gap:6px;">${data.invitations.map(_opsRenderInviteRow).join('')}</div>`}
+        </div>
+      </div>
+    </div>
+  `;
+  document.getElementById('opsWsAssignBtn').onclick = _opsOpenAssignModal;
+  document.getElementById('opsWsInviteBtn').onclick = _opsOpenInviteModal;
+}
+
+function _opsRenderTenantRow(t){
+  return `
+    <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;background:#f8fafc;border:1px solid #eef2f7;border-radius:9px;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:800;color:#0f172a;">${_opsHtml(t.full_name || t.username)} <span style="font-size:11px;color:#94a3b8;font-weight:600;margin-left:5px;">${_opsHtml(t.email)}</span></div>
+        <div style="font-size:10.5px;color:#64748b;margin-top:2px;font-weight:600;">${t.store_count} store${t.store_count===1?'':'s'} · ${t.stores.map(s=>_opsHtml(s.name)).join(' · ') || 'no stores'}</div>
+      </div>
+      <button onclick="_opsUnassignTenant(${t.id})" style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);color:#b91c1c;padding:6px 11px;border-radius:7px;font-size:11.5px;font-weight:800;cursor:pointer;">Remove</button>
+    </div>`;
+}
+
+function _opsRenderMemberRow(m){
+  return `
+    <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;background:#f8fafc;border:1px solid #eef2f7;border-radius:9px;">
+      <div style="width:32px;height:32px;border-radius:50%;background:${_opsHtml(m.role_color)};color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0;">${_opsHtml((m.display_name||m.username).charAt(0).toUpperCase())}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:800;color:#0f172a;">${_opsHtml(m.display_name || m.username)} ${m.is_manager?'<span style="font-size:9px;font-weight:800;color:#fff;background:#a855f7;padding:1.5px 6px;border-radius:4px;margin-left:5px;">MGR</span>':''}</div>
+        <div style="font-size:10.5px;color:#64748b;margin-top:2px;font-weight:600;">${_opsHtml(m.role || 'Team member')} · ${_opsHtml(m.email)}</div>
+      </div>
+      <button onclick="_opsRemoveMember(${m.id}, '${_opsHtml(m.display_name||m.username)}')" style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);color:#b91c1c;padding:6px 11px;border-radius:7px;font-size:11.5px;font-weight:800;cursor:pointer;">Remove</button>
+    </div>`;
+}
+
+function _opsRenderInviteRow(inv){
+  const STATUS_PILL = {
+    pending: `<span style="font-size:9px;font-weight:800;color:#b45309;background:#fef3c7;padding:2.5px 7px;border-radius:99px;letter-spacing:.04em;">PENDING</span>`,
+    accepted:`<span style="font-size:9px;font-weight:800;color:#15803d;background:#dcfce7;padding:2.5px 7px;border-radius:99px;letter-spacing:.04em;">ACCEPTED</span>`,
+    revoked: `<span style="font-size:9px;font-weight:800;color:#b91c1c;background:#fee2e2;padding:2.5px 7px;border-radius:99px;letter-spacing:.04em;">REVOKED</span>`,
+    expired: `<span style="font-size:9px;font-weight:800;color:#64748b;background:#f1f5f9;padding:2.5px 7px;border-radius:99px;letter-spacing:.04em;">EXPIRED</span>`,
+  };
+  return `
+    <div style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:#f8fafc;border:1px solid #eef2f7;border-radius:9px;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:12.5px;font-weight:800;color:#0f172a;">${_opsHtml(inv.email)} ${STATUS_PILL[inv.status] || ''}</div>
+        <div style="font-size:10.5px;color:#64748b;margin-top:2px;font-weight:600;">${_opsHtml(inv.role || 'Member')} · invited ${_opsHtml((inv.invited_at||'').slice(0,10))} · sent ${inv.send_count}×</div>
+      </div>
+      ${inv.status === 'pending' ? `
+        <button onclick="_opsResendInvite(${inv.id})" title="Resend email" style="background:#eef2ff;border:1px solid #c7d2fe;color:#4338ca;padding:5px 9px;border-radius:7px;font-size:11px;font-weight:800;cursor:pointer;">↻ Resend</button>
+        <button onclick="_opsRevokeInvite(${inv.id})" title="Revoke" style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);color:#b91c1c;padding:5px 9px;border-radius:7px;font-size:11px;font-weight:800;cursor:pointer;">Revoke</button>
+      ` : ''}
+    </div>`;
+}
+
+/* ── Mutating actions ──────────────────────────────────── */
+async function _opsUnassignTenant(tenantId){
+  if(!confirm('Remove this tenant from the workspace? Its ops staff will lose visibility.')) return;
+  const { ok } = await _opsFetch(`/superadmin/api/ops-workspaces/${_OPS_WS_ID}/tenants/${tenantId}/`, {method:'DELETE'});
+  if(!ok){ _opsToast('Could not unassign tenant','error'); return; }
+  _opsToast('Tenant removed','success');
+  navTo('opsWorkspaceDetail');
+}
+async function _opsRemoveMember(memberId, label){
+  if(!confirm(`Remove ${label} from this workspace?`)) return;
+  const { ok } = await _opsFetch(`/superadmin/api/ops-workspaces/${_OPS_WS_ID}/members/${memberId}/`, {method:'DELETE'});
+  if(!ok){ _opsToast('Could not remove member','error'); return; }
+  _opsToast('Member removed','success');
+  navTo('opsWorkspaceDetail');
+}
+async function _opsResendInvite(inviteId){
+  const { ok, data } = await _opsFetch(`/superadmin/api/ops-workspaces/${_OPS_WS_ID}/invitations/${inviteId}/resend/`, {method:'POST', body:JSON.stringify({})});
+  if(!ok){ _opsToast('Could not resend','error'); return; }
+  _opsToast(data.email_sent ? 'Invitation re-sent' : 'Re-sent (email queued)','success');
+  navTo('opsWorkspaceDetail');
+}
+async function _opsRevokeInvite(inviteId){
+  if(!confirm('Revoke this invitation? The accept link will stop working.')) return;
+  const { ok } = await _opsFetch(`/superadmin/api/ops-workspaces/${_OPS_WS_ID}/invitations/${inviteId}/revoke/`, {method:'POST', body:JSON.stringify({})});
+  if(!ok){ _opsToast('Could not revoke','error'); return; }
+  _opsToast('Invitation revoked','success');
+  navTo('opsWorkspaceDetail');
+}
+
+/* ── Assign tenant modal (with search) ─────────────────── */
+async function _opsOpenAssignModal(){
+  const modal = _opsModal({
+    title: 'Assign tenant to workspace',
+    bodyHtml: `
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <input id="wsTSearch" placeholder="Search by name / email / username…" style="width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:13.5px;font-weight:500;">
+        <div id="wsTList" style="max-height:340px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:9px;background:#f8fafc;"></div>
+      </div>
+    `,
+    primary: null,
+  });
+  const list = document.getElementById('wsTList');
+  async function refresh(q){
+    list.innerHTML = `<div style="text-align:center;padding:14px;color:#94a3b8;font-size:12px;">Loading…</div>`;
+    const { ok, data } = await _opsFetch(`/superadmin/api/ops-workspaces/${_OPS_WS_ID}/assignable-tenants/${q?'?q='+encodeURIComponent(q):''}`);
+    if(!ok){ list.innerHTML = `<div style="text-align:center;padding:14px;color:#dc2626;font-size:12px;">Could not load tenants</div>`; return; }
+    if(!data.tenants.length){ list.innerHTML = `<div style="text-align:center;padding:14px;color:#94a3b8;font-size:12px;">No matching tenants</div>`; return; }
+    list.innerHTML = data.tenants.map(t => `
+      <div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid #eef2f7;">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:12.5px;font-weight:800;color:#0f172a;">${_opsHtml(t.full_name || t.username)} ${t.is_in_this_workspace?'<span style="font-size:9px;font-weight:800;color:#15803d;background:#dcfce7;padding:1.5px 6px;border-radius:4px;margin-left:5px;">IN THIS WS</span>':''}</div>
+          <div style="font-size:10.5px;color:#64748b;margin-top:2px;font-weight:600;">${_opsHtml(t.email)} · ${t.store_count} store${t.store_count===1?'':'s'}${t.current_workspace && !t.is_in_this_workspace ? ` · currently in <b>${_opsHtml(t.current_workspace)}</b>`:''}</div>
+        </div>
+        ${t.is_in_this_workspace ? `<span style="font-size:11px;color:#64748b;font-weight:700;">Assigned</span>` :
+          `<button onclick="_opsConfirmAssign(${t.id})" style="background:linear-gradient(135deg,#22c55e,#15803d);color:#fff;border:0;padding:6px 13px;border-radius:7px;font-size:11.5px;font-weight:800;cursor:pointer;">Assign</button>`}
+      </div>
+    `).join('');
+  }
+  document.getElementById('wsTSearch').addEventListener('input', (e) => {
+    clearTimeout(window._wsTSearchT);
+    window._wsTSearchT = setTimeout(() => refresh(e.target.value), 200);
+  });
+  refresh('');
+  window._opsAssignModal = modal;
+}
+
+async function _opsConfirmAssign(userId){
+  const { ok } = await _opsFetch(`/superadmin/api/ops-workspaces/${_OPS_WS_ID}/tenants/`, {
+    method:'POST', body: JSON.stringify({user_id: userId}),
+  });
+  if(!ok){ _opsToast('Could not assign','error'); return; }
+  window._opsAssignModal && window._opsAssignModal.close();
+  _opsToast('Tenant assigned','success');
+  navTo('opsWorkspaceDetail');
+}
+
+/* ── Invite member modal ───────────────────────────────── */
+function _opsOpenInviteModal(){
+  const roles = (_OPS_WS_DETAIL?.roles || []);
+  const roleOpts = ['<option value="">— No role —</option>']
+    .concat(roles.map(r => `<option value="${r.id}">${_opsHtml(r.name)}</option>`))
+    .join('');
+  const modal = _opsModal({
+    title: 'Invite team member',
+    bodyHtml: `
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div><div class="lbl">Email</div>
+          <input id="invEmail" type="email" placeholder="member@example.com" style="width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:13.5px;"></div>
+        <div><div class="lbl">Name (optional)</div>
+          <input id="invName" placeholder="First last" style="width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:13.5px;"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div><div class="lbl">Role</div>
+            <select id="invRole" style="width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:13.5px;background:#fff;">${roleOpts}</select></div>
+          <div><div class="lbl">Title (optional)</div>
+            <input id="invTitle" placeholder="e.g. Sourcing Manager" style="width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:13.5px;"></div>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:#475569;font-weight:600;cursor:pointer;">
+          <input id="invIsManager" type="checkbox" style="width:16px;height:16px;cursor:pointer;">
+          Make them a workspace manager (can assign tenants + quotes)
+        </label>
+      </div>
+    `,
+    primary: 'Send invitation email',
+    onPrimary: async () => {
+      const email = document.getElementById('invEmail').value.trim();
+      if(!email || email.indexOf('@') < 0){ _opsToast('Valid email required','error'); return; }
+      const body = {
+        email, name: document.getElementById('invName').value.trim(),
+        role_id: document.getElementById('invRole').value || null,
+        title: document.getElementById('invTitle').value.trim(),
+        is_manager: document.getElementById('invIsManager').checked,
+      };
+      const { ok, data } = await _opsFetch(`/superadmin/api/ops-workspaces/${_OPS_WS_ID}/invitations/`, {
+        method:'POST', body: JSON.stringify(body),
+      });
+      if(!ok){ _opsToast('Could not send invitation','error'); return; }
+      modal.close();
+      _opsToast(data.email_sent ? 'Invitation sent' : 'Invitation queued (email pending)','success');
+      navTo('opsWorkspaceDetail');
+    },
+  });
+}
+
+/* ── Lightweight modal + toast helpers (scoped to ops UI) ─ */
+function _opsModal({title, bodyHtml, primary, onPrimary}){
+  const back = document.createElement('div');
+  back.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.55);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;';
+  back.innerHTML = `
+    <div style="background:#fff;border-radius:16px;max-width:520px;width:100%;max-height:90vh;overflow:auto;box-shadow:0 24px 60px rgba(15,23,42,.30);">
+      <div style="padding:18px 22px;border-bottom:1px solid #eef2f7;display:flex;justify-content:space-between;align-items:center;">
+        <h3 style="margin:0;font-size:16px;font-weight:900;letter-spacing:-.2px;">${_opsHtml(title)}</h3>
+        <button id="opsModalX" style="background:none;border:0;font-size:20px;color:#94a3b8;cursor:pointer;line-height:1;padding:0;">×</button>
+      </div>
+      <div style="padding:20px 22px;">
+        <style>.lbl{font-size:10.5px;font-weight:800;color:#64748b;letter-spacing:.12em;text-transform:uppercase;margin-bottom:5px;}</style>
+        ${bodyHtml}
+      </div>
+      ${primary ? `<div style="padding:14px 22px;border-top:1px solid #eef2f7;display:flex;justify-content:flex-end;gap:8px;">
+        <button id="opsModalCancel" style="background:#f1f5f9;border:0;color:#475569;padding:9px 16px;border-radius:9px;font-size:12.5px;font-weight:800;cursor:pointer;">Cancel</button>
+        <button id="opsModalGo" style="background:linear-gradient(135deg,#6366f1,#a855f7);color:#fff;border:0;padding:9px 18px;border-radius:9px;font-size:12.5px;font-weight:800;cursor:pointer;">${_opsHtml(primary)}</button>
+      </div>` : ''}
+    </div>
+  `;
+  document.body.appendChild(back);
+  const close = () => back.remove();
+  back.querySelector('#opsModalX').onclick = close;
+  if(primary){
+    back.querySelector('#opsModalCancel').onclick = close;
+    back.querySelector('#opsModalGo').onclick = () => onPrimary && onPrimary();
+  }
+  back.addEventListener('click', e => { if(e.target === back) close(); });
+  return { close };
+}
+
+function _opsToast(msg, kind){
+  const color = kind === 'error' ? '#b91c1c' : '#15803d';
+  const bg    = kind === 'error' ? '#fee2e2' : '#dcfce7';
+  const t = document.createElement('div');
+  t.style.cssText = `position:fixed;top:24px;left:50%;transform:translateX(-50%);background:${bg};color:${color};border:1px solid ${color}33;border-radius:10px;padding:10px 18px;font-size:13px;font-weight:800;box-shadow:0 14px 30px rgba(15,23,42,.18);z-index:99999;animation:opsToastIn .2s ease-out;`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity .3s'; }, 1800);
+  setTimeout(() => t.remove(), 2300);
+}
+
 let GATEWAY_DATA = null;
 
 async function renderGateways(c){

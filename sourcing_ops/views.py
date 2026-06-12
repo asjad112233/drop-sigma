@@ -394,8 +394,13 @@ def serialize_order_brief(o):
 def api_overview(request):
     """Top-level KPIs for the ops dashboard."""
     from orders.models import Order
+    from .scoping import order_qs_visible_to
 
-    qs = Order.objects.all()
+    # Scope to the requesting ops user's workspace. Superusers and
+    # legacy ops users (no workspace bound) see every tenant — the
+    # helper is a no-op for them. Workspace-bound users only count
+    # tenants assigned to that workspace via OpsWorkspaceTenant.
+    qs = order_qs_visible_to(request.user, Order.objects.all())
     now = timezone.now()
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 

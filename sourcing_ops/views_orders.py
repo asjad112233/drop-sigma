@@ -40,13 +40,18 @@ from .views import (
 # ───────────────────────────────────────────────────────────────────────
 # Internal helpers
 # ───────────────────────────────────────────────────────────────────────
-def _get_order_or_404(order_id):
-    """Fetch a tenant Order with the related objects we need most often."""
+def _get_order_or_404(order_id, *, user=None):
+    """Fetch a tenant Order with the related objects we need most often.
+
+    Pass ``user`` to clip the lookup to the workspace this ops user can
+    see — without it (legacy callers) the lookup is unscoped.
+    """
     from orders.models import Order
-    return (Order.objects
-            .select_related("store", "store__user")
-            .filter(pk=order_id)
-            .first())
+    from .scoping import order_qs_visible_to
+    qs = Order.objects.select_related("store", "store__user").filter(pk=order_id)
+    if user is not None:
+        qs = order_qs_visible_to(user, qs)
+    return qs.first()
 
 
 def _ensure_state(order):
@@ -297,8 +302,10 @@ def _serialize_state(state):
 @require_GET
 def api_orders_list(request):
     from orders.models import Order
+    from .scoping import order_qs_visible_to
 
-    qs = (Order.objects
+    qs = order_qs_visible_to(request.user, Order.objects.all())
+    qs = (qs
             .select_related("store", "store__user", "ops_state", "ops_state__supplier")
             .prefetch_related("ops_assignments__member__user", "ops_assignments__member__role"))
 
@@ -374,7 +381,7 @@ def api_orders_list(request):
 @ops_required
 @require_GET
 def api_order_detail(request, order_id):
-    order = _get_order_or_404(order_id)
+    order = _get_order_or_404(order_id, user=request.user)
     if not order:
         return JsonResponse({"ok": False, "error": "Order not found."}, status=404)
 
@@ -452,7 +459,7 @@ def api_order_detail(request, order_id):
 @ops_required
 @require_POST
 def api_order_quote(request, order_id):
-    order = _get_order_or_404(order_id)
+    order = _get_order_or_404(order_id, user=request.user)
     if not order:
         return JsonResponse({"ok": False, "error": "Order not found."}, status=404)
 
@@ -616,7 +623,7 @@ def api_order_quote(request, order_id):
 @ops_required
 @require_POST
 def api_order_assign(request, order_id):
-    order = _get_order_or_404(order_id)
+    order = _get_order_or_404(order_id, user=request.user)
     if not order:
         return JsonResponse({"ok": False, "error": "Order not found."}, status=404)
 
@@ -659,7 +666,7 @@ def api_order_assign(request, order_id):
 @ops_required
 @require_POST
 def api_order_procure(request, order_id):
-    order = _get_order_or_404(order_id)
+    order = _get_order_or_404(order_id, user=request.user)
     if not order:
         return JsonResponse({"ok": False, "error": "Order not found."}, status=404)
 
@@ -704,7 +711,7 @@ def api_order_procure(request, order_id):
 @ops_required
 @require_POST
 def api_order_qc(request, order_id):
-    order = _get_order_or_404(order_id)
+    order = _get_order_or_404(order_id, user=request.user)
     if not order:
         return JsonResponse({"ok": False, "error": "Order not found."}, status=404)
 
@@ -746,7 +753,7 @@ def api_order_qc(request, order_id):
 @ops_required
 @require_POST
 def api_order_ship(request, order_id):
-    order = _get_order_or_404(order_id)
+    order = _get_order_or_404(order_id, user=request.user)
     if not order:
         return JsonResponse({"ok": False, "error": "Order not found."}, status=404)
 
@@ -795,7 +802,7 @@ def api_order_ship(request, order_id):
 @ops_required
 @require_POST
 def api_order_deliver(request, order_id):
-    order = _get_order_or_404(order_id)
+    order = _get_order_or_404(order_id, user=request.user)
     if not order:
         return JsonResponse({"ok": False, "error": "Order not found."}, status=404)
 
@@ -826,7 +833,7 @@ def api_order_deliver(request, order_id):
 @ops_required
 @require_POST
 def api_order_cancel(request, order_id):
-    order = _get_order_or_404(order_id)
+    order = _get_order_or_404(order_id, user=request.user)
     if not order:
         return JsonResponse({"ok": False, "error": "Order not found."}, status=404)
 
@@ -859,7 +866,7 @@ def api_order_cancel(request, order_id):
 @ops_required
 @require_GET
 def api_order_activity(request, order_id):
-    order = _get_order_or_404(order_id)
+    order = _get_order_or_404(order_id, user=request.user)
     if not order:
         return JsonResponse({"ok": False, "error": "Order not found."}, status=404)
     items = list(order.ops_activity.all()[:50])
@@ -875,7 +882,7 @@ def api_order_activity(request, order_id):
 @ops_required
 @require_GET
 def api_order_message_list(request, order_id):
-    order = _get_order_or_404(order_id)
+    order = _get_order_or_404(order_id, user=request.user)
     if not order:
         return JsonResponse({"ok": False, "error": "Order not found."}, status=404)
     msgs = list(order.ops_messages
@@ -890,7 +897,7 @@ def api_order_message_list(request, order_id):
 @ops_required
 @require_POST
 def api_order_message_send(request, order_id):
-    order = _get_order_or_404(order_id)
+    order = _get_order_or_404(order_id, user=request.user)
     if not order:
         return JsonResponse({"ok": False, "error": "Order not found."}, status=404)
     body = _parse_body(request)
