@@ -402,10 +402,14 @@ def api_chat_unread_summary(request):
             )
             latest = {
                 "conversation_id": c.pk,
+                # Frontend dedups on message_id so a popup fires once
+                # per new id and re-fires only after the nudge window.
+                "message_id":      int(m.pk) if m else 0,
                 "tenant_label":    tenant_label,
                 "body":            (m.body if m else c.last_message_preview)
                                    or "📎 New attachment",
                 "created_at_iso":  _iso(m.created_at if m else c.last_message_at),
+                "conv_unread":     int(c.unread_count_for_partner or 0),
             }
     return JsonResponse({
         "ok": True,

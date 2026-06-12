@@ -926,6 +926,16 @@
     // 3s cadence — the sidebar chip badge and new-msg toast should
     // surface within seconds of a tenant sending.
     state.sidebarPollTimer = setInterval(tickSidebar, 3000);
+    // Tab-visibility resume: when the operator returns to the OPS tab
+    // after lunch / a context switch, immediately re-tick so the
+    // badge + any pending popup appear right away (vs waiting up to
+    // 3s for the next interval boundary). Bound once.
+    if (!state.sidebarVisListenerBound){
+      document.addEventListener('visibilitychange', function(){
+        if (!document.hidden){ try { tickSidebar(); } catch(_){} }
+      });
+      state.sidebarVisListenerBound = true;
+    }
   }
   function stopSidebarPoll(){
     if (state.sidebarPollTimer){
@@ -957,38 +967,83 @@
       return { ok: false, data: { error: String(err) } };
     }
   }
+  // ─────────────────────────────────────────────────────────────────
+  // OPS sidebar poll — drives BOTH the chat-chip count on the rail
+  // AND the side popup that surfaces tenant messages from anywhere
+  // on the OPS dashboard.
+  //
+  //   • Chip (#opsCtChat) ALWAYS reflects live unread.
+  //   • Popup fires once per new message_id; if dismissed but still
+  //     unread, re-fires every RE_NUDGE_MS so important messages
+  //     aren't missed because the operator clicked × by reflex.
+  //   • Skips while the tab is hidden (saves a request AND prevents
+  //     a popup queue when the operator returns).
+  //   • Logs failures to console — silent dies are the bug we just
+  //     hunted down, so every code path that returns early says why.
+  // ─────────────────────────────────────────────────────────────────
+  state.lastSeenMessageId = 0;
+  state.lastPopupAt       = 0;
+  state.reNudgeMs         = 45000;
   async function tickSidebar(){
-    const r = await _opsChatFetch('/ops/api/chat/unread-summary/');
-    if (!r.ok) return;
+    if (document.hidden) return;
+    let r;
+    try {
+      r = await _opsChatFetch('/ops/api/chat/unread-summary/');
+    } catch (err){
+      console.warn('[ops chat] unread-summary fetch failed:', err);
+      return;
+    }
+    if (!r || !r.ok || !r.data){
+      console.warn('[ops chat] unread-summary returned non-ok:', r);
+      return;
+    }
     const n = +(r.data.total_unread || 0);
     // Sidebar chip — the OPS dashboard exposes a setBadge helper in
     // its global scope (see opsLoadOverview). Fall back to direct
-    // DOM mutation if the helper isn't bound yet.
+    // DOM mutation. The `display:flex` keeps the count centred when
+    // the helper isn't bound.
     try {
       if (typeof setBadge === 'function'){
         setBadge('opsCtChat', n, false);
       } else {
         const el = document.getElementById('opsCtChat');
         if (el){
-          if (n > 0){ el.textContent = n > 99 ? '99+' : String(n); el.style.display = ''; }
-          else el.style.display = 'none';
+          if (n > 0){
+            el.textContent = n > 99 ? '99+' : String(n);
+            el.style.display = 'inline-flex';
+            el.classList.add('ops-nav-chip-pulse');
+          } else {
+            el.style.display = 'none';
+            el.classList.remove('ops-nav-chip-pulse');
+          }
         }
       }
     } catch(_){}
 
     const latest = r.data.latest;
-    if (!latest) return;
-    const key = `${latest.conversation_id}:${latest.created_at_iso || ''}`;
-    if (key === state.lastSeenLatestKey) return;
-    state.lastSeenLatestKey = key;
-    // Suppression per user feedback: notification SHOULD ONLY fire
-    // when the operator is OUTSIDE the chat view. Inside Tenant Chat,
-    // the inbox panel on the left already shows per-conversation
-    // unread badges so a toast on top would be noise. window.OPS.view
-    // is the source of truth (set by opsSwitchView in dashboard.html).
+    if (!latest) {
+      // Nothing unread → reset dedup so the next incoming message
+      // always pops.
+      state.lastSeenMessageId = 0;
+      return;
+    }
+    // Suppress popup if the operator is on the Tenant Chat view.
+    // window.OPS.view is the source of truth (set by opsSwitchView in
+    // dashboard.html). Everywhere ELSE — Overview, Queue, Quotes,
+    // Procurement, Shipping, Suppliers, Team, Settings — pop.
     const onChatView = !!(window.OPS && window.OPS.view === 'chat');
-    if (onChatView) return;
-    showOpsChatPopup(latest, +(r.data.total_unread || 0));
+    if (onChatView){
+      state.lastSeenMessageId = +(latest.message_id || 0) || state.lastSeenMessageId;
+      return;
+    }
+    const msgId = +(latest.message_id || 0);
+    const isNew = msgId && msgId > state.lastSeenMessageId;
+    const sinceLast = Date.now() - (state.lastPopupAt || 0);
+    const shouldReNudge = !isNew && sinceLast > state.reNudgeMs && n > 0;
+    if (!isNew && !shouldReNudge) return;
+    state.lastSeenMessageId = Math.max(state.lastSeenMessageId, msgId || 0);
+    state.lastPopupAt = Date.now();
+    showOpsChatPopup(latest, n);
   }
 
   function showOpsChatPopup(latest, totalUnread){
@@ -1014,9 +1069,11 @@
       ? `<span class="ops-chat-popup-count">${unreadN > 99 ? '99+' : unreadN} new</span>`
       : '<span class="ops-chat-popup-count">New message</span>';
 
-    const countLabel = unreadN > 1
-      ? (unreadN > 99 ? '99+' : unreadN) + ' NEW'
-      : 'NEW';
+    // ALWAYS show the count. "1 NEW", "2 NEW", "12 NEW", "99+ NEW" —
+    // never just "NEW" alone. The operator needs to know at a glance
+    // how many threads have unread tenant messages.
+    const displayN = unreadN > 99 ? '99+' : String(unreadN || 1);
+    const countLabel = displayN + ' NEW';
     node.innerHTML = `
       <div class="ops-chat-popup-brand">
         <div class="ops-chat-popup-sigil">DS</div>

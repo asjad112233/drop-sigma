@@ -570,11 +570,18 @@ def api_conv_unread_summary(request):
             m = (c.messages
                  .filter(direction="in", is_read=False)
                  .order_by("-created_at").first())
+            # message_id is the dedup key on the frontend — popup only
+            # fires once per new id, and re-fires only after the
+            # client-side nudge window when the same id is still
+            # unread. Always include it (even when m is None) so the
+            # frontend doesn't dedup against a stale 0.
             latest = {
                 "conversation_id": c.pk,
+                "message_id":      int(m.pk) if m else 0,
                 "partner_name":    c.partner.name if c.partner_id else "Drop Sigma",
                 "body":            (m.body if m else c.last_message_preview) or "📎 New attachment",
                 "created_at_iso":  _iso(m.created_at if m else c.last_message_at),
+                "conv_unread":     int(c.unread_count_for_tenant or 0),
             }
     return JsonResponse({
         "ok": True,

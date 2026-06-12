@@ -67,6 +67,21 @@
     .ops-nav .lbl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
     .ops-nav .ct{background:#ef4444;color:#fff;font-size:10px;font-weight:900;min-width:18px;height:18px;padding:0 5px;border-radius:999px;line-height:18px;text-align:center;}
     .ops-nav .ct.amber{background:#f59e0b!important;}
+    /* Pulsing red halo when chat has unread tenant messages — pulls
+       the eye to the rail from any OPS section. The .ct already has
+       a red bg; we only animate the box-shadow. */
+    .ops-nav .ct.ops-nav-chip-pulse{
+      animation:opsNavChipPulse 1.7s ease-in-out infinite;
+      box-shadow:0 0 0 0 rgba(239,68,68,.55);
+    }
+    @keyframes opsNavChipPulse{
+      0%   {box-shadow:0 0 0 0    rgba(239,68,68,.55);}
+      60%  {box-shadow:0 0 0 7px  rgba(239,68,68,0);}
+      100% {box-shadow:0 0 0 0    rgba(239,68,68,0);}
+    }
+    @media (prefers-reduced-motion: reduce){
+      .ops-nav .ct.ops-nav-chip-pulse{animation:none;}
+    }
     .ops-nav::before{content:"";position:absolute;left:-1px;top:8px;bottom:8px;width:3px;border-radius:3px;background:transparent;transition:background .15s;}
     .ops-nav:hover{background:rgba(212,175,55,.07);color:#fff;}
     .ops-nav:hover::before{background:rgba(244,196,48,.45);}
