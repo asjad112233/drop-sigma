@@ -503,6 +503,10 @@
       return;
     }
     OQ.orders = (r.data && r.data.orders) || [];
+    // status_counts comes from the backend (pre-status, post-search
+    // /assigned/supplier) — it's the source of truth for the chip
+    // badges so switching tabs doesn't make sibling counts disappear.
+    OQ.statusCounts = (r.data && r.data.status_counts) || null;
     renderChipsCounts();
     renderList();
   }
@@ -588,9 +592,23 @@
 
   /* ─── Render: status counts ─────────────────────────────────────── */
   function renderChipsCounts(){
-    const counts = {all: OQ.orders.length};
-    for (const c of STATUS_CHIPS){ if (c.key !== 'all') counts[c.key] = 0; }
-    for (const o of OQ.orders) counts[o.sourcing_status] = (counts[o.sourcing_status] || 0) + 1;
+    // Prefer the backend-supplied counts (computed pre-status filter
+    // on the workspace + search + assigned + supplier scoped queryset)
+    // so each chip reflects the TRUE number of matching orders in
+    // that status, not just whatever's currently rendered in the
+    // (already-filtered) OQ.orders list.
+    //
+    // Fallback to the local count only when the API didn't send
+    // status_counts — keeps the UI working through an older API
+    // version on hot-reload.
+    let counts;
+    if (OQ.statusCounts){
+      counts = OQ.statusCounts;
+    } else {
+      counts = {all: OQ.orders.length};
+      for (const c of STATUS_CHIPS){ if (c.key !== 'all') counts[c.key] = 0; }
+      for (const o of OQ.orders) counts[o.sourcing_status] = (counts[o.sourcing_status] || 0) + 1;
+    }
     for (const c of STATUS_CHIPS){
       const el = document.getElementById('oqCt-' + c.key);
       if (el) el.textContent = counts[c.key] || 0;

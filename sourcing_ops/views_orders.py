@@ -302,19 +302,17 @@ def _serialize_state(state):
 @require_GET
 def api_orders_list(request):
     from orders.models import Order
+    from django.db.models import Count
     from .scoping import order_qs_visible_to
 
-    qs = order_qs_visible_to(request.user, Order.objects.all())
-    qs = (qs
-            .select_related("store", "store__user", "ops_state", "ops_state__supplier")
-            .prefetch_related("ops_assignments__member__user", "ops_assignments__member__role"))
+    base = order_qs_visible_to(request.user, Order.objects.all())
 
-    status = (request.GET.get("status") or "").strip()
-    if status and status != "all":
-        if status == "active":
-            qs = qs.exclude(sourcing_status__in=["delivered", "cancel"])
-        else:
-            qs = qs.filter(sourcing_status=status)
+    # ── Apply EVERY non-status filter first ───────────────────────
+    # The chip counts must reflect search + assigned + supplier
+    # filters (otherwise switching tabs would surface orders that
+    # don't match what the user typed), but NOT the status filter
+    # itself — status is a pivot, not a narrowing predicate.
+    qs_pre_status = base
 
     search = (request.GET.get("search") or "").strip()
     if search:
@@ -333,25 +331,66 @@ def api_orders_list(request):
             tail = search[3:].lstrip("0")
             if tail.isdigit():
                 sq |= Q(pk=int(tail))
-        qs = qs.filter(sq)
+        qs_pre_status = qs_pre_status.filter(sq)
 
     assigned = (request.GET.get("assigned") or "").strip()
     if assigned == "unassigned":
-        qs = qs.exclude(ops_assignments__is_active=True)
+        qs_pre_status = qs_pre_status.exclude(ops_assignments__is_active=True)
     elif assigned == "me":
         profile = getattr(request.user, "ops_profile", None)
         if profile:
-            qs = qs.filter(ops_assignments__is_active=True,
-                           ops_assignments__member=profile)
+            qs_pre_status = qs_pre_status.filter(
+                ops_assignments__is_active=True,
+                ops_assignments__member=profile,
+            )
         else:
-            qs = qs.none()
+            qs_pre_status = qs_pre_status.none()
     elif assigned.isdigit():
-        qs = qs.filter(ops_assignments__is_active=True,
-                       ops_assignments__member_id=int(assigned))
+        qs_pre_status = qs_pre_status.filter(
+            ops_assignments__is_active=True,
+            ops_assignments__member_id=int(assigned),
+        )
 
     supplier = (request.GET.get("supplier") or "").strip()
     if supplier.isdigit():
-        qs = qs.filter(ops_state__supplier_id=int(supplier))
+        qs_pre_status = qs_pre_status.filter(ops_state__supplier_id=int(supplier))
+
+    # ── Per-status counts on the pre-status queryset ─────────────
+    # Single GROUP BY round-trip — far cheaper than 6 separate
+    # .count() calls. Initialise every chip to 0 so the frontend
+    # never has to defend against a missing key.
+    status_counts = {k: 0 for k in (
+        "pending_source", "pending_payment", "processing",
+        "shipping", "delivered", "cancel",
+    )}
+    by_status = (qs_pre_status
+                 .values("sourcing_status")
+                 .annotate(n=Count("id", distinct=True)))
+    for row in by_status:
+        key = row["sourcing_status"]
+        if key in status_counts:
+            status_counts[key] = row["n"]
+    status_counts["all"] = sum(status_counts.values())
+    status_counts["active"] = (
+        status_counts["pending_source"]
+        + status_counts["pending_payment"]
+        + status_counts["processing"]
+        + status_counts["shipping"]
+    )
+
+    # ── Now apply the status filter for the actual list payload ──
+    qs = qs_pre_status
+    status = (request.GET.get("status") or "").strip()
+    if status and status != "all":
+        if status == "active":
+            qs = qs.exclude(sourcing_status__in=["delivered", "cancel"])
+        else:
+            qs = qs.filter(sourcing_status=status)
+
+    # ── Select_related + prefetch_related ────────────────────────
+    qs = (qs
+            .select_related("store", "store__user", "ops_state", "ops_state__supplier")
+            .prefetch_related("ops_assignments__member__user", "ops_assignments__member__role"))
 
     sort = (request.GET.get("sort") or "newest").strip()
     if sort == "oldest":
@@ -372,7 +411,12 @@ def api_orders_list(request):
     qs = qs.distinct()[:limit]
 
     rows = [serialize_order_brief(o) for o in qs]
-    return JsonResponse({"ok": True, "orders": rows, "count": len(rows)})
+    return JsonResponse({
+        "ok": True,
+        "orders":        rows,
+        "count":         len(rows),
+        "status_counts": status_counts,
+    })
 
 
 # ───────────────────────────────────────────────────────────────────────
