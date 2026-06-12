@@ -225,62 +225,106 @@
     50%    {transform:translateY(-3px);opacity:1;}
   }
 
-  /* Side popup — fires globally when a new tenant message arrives
-     while the operator is NOT inside this thread. Matches the
-     tenant-side .spv-chat-popup styling but tuned for the OPS dark
-     dashboard. */
+  /* ──────────────────────────────────────────────────────────────
+     OPS chat side popup — premium Drop Sigma treatment for the dark
+     dashboard. Slides up + scales in from the bottom-right when a
+     new tenant message arrives and the operator is NOT on the Chat
+     view. Clean midnight card, indigo→purple→cyan top accent,
+     gradient avatar with the tenant's initials, prominent unread
+     count pill, neat relative timestamp, "click to open chat" CTA.
+     ────────────────────────────────────────────────────────────── */
   #opsChatPopupHost{
-    position:fixed;right:18px;bottom:18px;z-index:2147483400;
+    position:fixed;right:22px;bottom:22px;z-index:2147483400;
     display:flex;flex-direction:column;gap:10px;align-items:flex-end;
     pointer-events:none;
+    font-family:"Inter",ui-sans-serif,system-ui,sans-serif;
   }
   .ops-chat-popup{
     pointer-events:auto;cursor:pointer;
-    width:340px;max-width:calc(100vw - 36px);
-    padding:14px 16px 12px;border-radius:14px;
-    background:linear-gradient(180deg,#1e293b 0%,#0f172a 100%);
-    border:1px solid rgba(168,85,247,.5);
-    box-shadow:0 18px 42px rgba(2,6,23,.55),
-               0 0 0 1px rgba(168,85,247,.18);
-    font-family:"Inter",ui-sans-serif,system-ui,sans-serif;
+    width:360px;max-width:calc(100vw - 44px);
+    position:relative;overflow:hidden;
+    background:linear-gradient(180deg,#1e293b 0%,#0b1224 100%);
     color:#e2e8f0;
-    transform:translateX(120%);opacity:0;
-    transition:transform .35s cubic-bezier(.2,.7,.2,1.05), opacity .25s ease;
+    border-radius:16px;
+    border:1px solid rgba(99,102,241,.22);
+    box-shadow:0 24px 56px rgba(2,6,23,.55),
+               0 0 0 1px rgba(168,85,247,.10);
+    padding:14px 16px 12px;
+    transform:translateY(20px) scale(.96);opacity:0;
+    transition:transform .38s cubic-bezier(.2,.7,.2,1.05),
+               opacity .25s ease,
+               box-shadow .2s ease;
   }
-  .ops-chat-popup.in{transform:translateX(0);opacity:1;}
-  .ops-chat-popup:hover{transform:translateX(0) translateY(-2px);}
-  .ops-chat-popup-head{
+  .ops-chat-popup.in{transform:translateY(0) scale(1);opacity:1;}
+  .ops-chat-popup:hover{
+    box-shadow:0 30px 64px rgba(2,6,23,.65),
+               0 0 0 1px rgba(168,85,247,.28);
+  }
+  .ops-chat-popup::before{
+    content:"";position:absolute;top:0;left:0;right:0;height:3px;
+    background:linear-gradient(90deg,#d4af37 0%,#a855f7 50%,#6366f1 100%);
+  }
+  .ops-chat-popup-head{display:flex;align-items:center;gap:11px;}
+  .ops-chat-popup-av{
+    flex-shrink:0;width:38px;height:38px;border-radius:11px;
+    background:linear-gradient(135deg,#6366f1 0%,#a855f7 60%,#06b6d4 130%);
+    color:#fff;font-weight:900;font-size:13px;letter-spacing:.02em;
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.12),
+               0 4px 14px rgba(99,102,241,.36);
+  }
+  .ops-chat-popup-meta{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+  .ops-chat-popup-name{
+    font-size:13.5px;font-weight:900;color:#fff;
+    letter-spacing:-.01em;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .ops-chat-popup-sub{
     display:flex;align-items:center;gap:8px;
-    font-size:12.5px;font-weight:800;color:#fff;
+    font-size:10.5px;font-weight:800;
   }
-  .ops-chat-popup-dot{
-    width:8px;height:8px;border-radius:50%;background:#10b981;
-    box-shadow:0 0 0 3px rgba(16,185,129,.25);
-    animation:opsPopupPing 1.4s ease-in-out infinite;
+  .ops-chat-popup-count{
+    color:#fff;
+    background:linear-gradient(135deg,#10b981 0%,#059669 100%);
+    padding:2px 8px;border-radius:999px;letter-spacing:.04em;
+    text-transform:uppercase;font-size:9.5px;
+    box-shadow:0 2px 8px rgba(16,185,129,.36);
   }
-  @keyframes opsPopupPing{
-    0%,100%{box-shadow:0 0 0 3px rgba(16,185,129,.25);}
-    50%    {box-shadow:0 0 0 7px rgba(16,185,129,.05);}
+  .ops-chat-popup-time{
+    color:#94a3b8;font-weight:700;text-transform:none;letter-spacing:0;
+    font-size:11px;
   }
   .ops-chat-popup-x{
     margin-left:auto;background:transparent;border:0;
-    color:#94a3b8;font-size:18px;line-height:1;cursor:pointer;
-    padding:0 4px;border-radius:6px;
+    color:#475569;font-size:18px;line-height:1;cursor:pointer;
+    padding:2px 6px;border-radius:6px;transition:all .12s;
   }
-  .ops-chat-popup-x:hover{background:rgba(255,255,255,.05);color:#fff;}
+  .ops-chat-popup-x:hover{background:rgba(255,255,255,.06);color:#cbd5e1;}
   .ops-chat-popup-body{
-    margin-top:6px;font-size:12.5px;font-weight:600;color:#cbd5e1;
-    line-height:1.45;white-space:pre-wrap;word-break:break-word;
+    margin:10px 0 0 49px;font-size:13px;font-weight:600;color:#cbd5e1;
+    line-height:1.5;
+    display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;
+    overflow:hidden;
   }
   .ops-chat-popup-foot{
-    margin-top:8px;padding-top:8px;
-    border-top:1px dashed rgba(255,255,255,.08);
-    font-size:10.5px;font-weight:800;color:#fbbf24;
-    letter-spacing:.06em;text-transform:uppercase;
+    margin:10px 0 0 49px;
+    font-size:10.5px;font-weight:900;color:#fbbf24;
+    letter-spacing:.08em;text-transform:uppercase;
+    display:inline-flex;align-items:center;gap:6px;
+  }
+  .ops-chat-popup-foot-arrow{
+    font-size:13px;line-height:1;color:#fbbf24;
+    transition:transform .2s;
+  }
+  .ops-chat-popup:hover .ops-chat-popup-foot-arrow{
+    transform:translate(2px,-2px);
+  }
+  @media (max-width:480px){
+    #opsChatPopupHost{right:12px;bottom:12px;left:12px;align-items:stretch;}
+    .ops-chat-popup{width:100%;}
   }
   @media (prefers-reduced-motion: reduce){
     .ops-chat-popup{transition:opacity .15s ease;}
-    .ops-chat-popup-dot,
     #opsChatRoot .cx-typing-dots span{animation:none;}
   }
 
@@ -656,7 +700,11 @@
 
   function startThreadPoll(){
     stopThreadPoll();
-    state.threadPollTimer = setInterval(pollThread, 3500);
+    // 1.5s real-time poll. Combined with the typing indicator, a
+    // tenant reply lands inline within ~2 seconds of them hitting
+    // Send — fast enough that the chat feels live without burning
+    // server cycles on a 250ms loop.
+    state.threadPollTimer = setInterval(pollThread, 1500);
   }
   function stopThreadPoll(){
     if (state.threadPollTimer){
@@ -810,7 +858,9 @@
   function startSidebarPoll(){
     stopSidebarPoll();
     tickSidebar();  // immediate kick
-    state.sidebarPollTimer = setInterval(tickSidebar, 5000);
+    // 3s cadence — the sidebar chip badge and new-msg toast should
+    // surface within seconds of a tenant sending.
+    state.sidebarPollTimer = setInterval(tickSidebar, 3000);
   }
   function stopSidebarPoll(){
     if (state.sidebarPollTimer){
@@ -842,32 +892,53 @@
     const key = `${latest.conversation_id}:${latest.created_at_iso || ''}`;
     if (key === state.lastSeenLatestKey) return;
     state.lastSeenLatestKey = key;
-    // Suppress if the operator is currently looking at this exact
-    // conversation in the chat view.
-    const inChatView = (document.body.getAttribute('data-active-section') === 'chat');
-    if (inChatView && state.activeId === latest.conversation_id) return;
-    showOpsChatPopup(latest);
+    // Suppression per user feedback: notification SHOULD ONLY fire
+    // when the operator is OUTSIDE the chat view. Inside Tenant Chat,
+    // the inbox panel on the left already shows per-conversation
+    // unread badges so a toast on top would be noise. window.OPS.view
+    // is the source of truth (set by opsSwitchView in dashboard.html).
+    const onChatView = !!(window.OPS && window.OPS.view === 'chat');
+    if (onChatView) return;
+    showOpsChatPopup(latest, +(r.data.total_unread || 0));
   }
 
-  function showOpsChatPopup(latest){
+  function showOpsChatPopup(latest, totalUnread){
     let host = document.getElementById('opsChatPopupHost');
     if (!host){
       host = document.createElement('div');
       host.id = 'opsChatPopupHost';
       document.body.appendChild(host);
     }
+    // Only one popup at a time — newer events replace older.
+    while (host.firstChild) host.removeChild(host.firstChild);
+
     const node = document.createElement('div');
     node.className = 'ops-chat-popup';
+    const name = latest.tenant_label || 'Tenant';
+    const initials = (name.split(/\s+/).slice(0,2).map(s => s[0] || '')
+                       .join('') || 'T').toUpperCase();
     const bodyTxt = (latest.body || '').replace(/\s+/g,' ').trim();
-    const preview = bodyTxt.length > 120 ? bodyTxt.slice(0,117) + '…' : bodyTxt;
+    const preview = bodyTxt.length > 110 ? bodyTxt.slice(0,107) + '…' : bodyTxt;
+    const stampLabel = opsRelTime(latest.created_at_iso);
+    const unreadN = +totalUnread || 0;
+    const unreadBadge = unreadN > 1
+      ? `<span class="ops-chat-popup-count">${unreadN > 99 ? '99+' : unreadN} new</span>`
+      : '<span class="ops-chat-popup-count">New message</span>';
+
     node.innerHTML = `
       <div class="ops-chat-popup-head">
-        <span class="ops-chat-popup-dot"></span>
-        <strong>${opsEsc(latest.tenant_label || 'Tenant')}</strong>
+        <div class="ops-chat-popup-av">${opsEsc(initials)}</div>
+        <div class="ops-chat-popup-meta">
+          <div class="ops-chat-popup-name">${opsEsc(name)}</div>
+          <div class="ops-chat-popup-sub">${unreadBadge}<span class="ops-chat-popup-time">${opsEsc(stampLabel)}</span></div>
+        </div>
         <button class="ops-chat-popup-x" aria-label="Dismiss">×</button>
       </div>
       <div class="ops-chat-popup-body">${opsEsc(preview)}</div>
-      <div class="ops-chat-popup-foot">Click to open chat</div>`;
+      <div class="ops-chat-popup-foot">
+        <span class="ops-chat-popup-foot-arrow">↗</span>
+        Click to open chat
+      </div>`;
     const dismiss = (e) => {
       if (e){ e.preventDefault(); e.stopPropagation(); }
       node.classList.remove('in');
@@ -877,11 +948,8 @@
     node.addEventListener('click', () => {
       dismiss();
       try {
-        // Activate the chat view + open the offending thread.
         if (typeof opsSwitchView === 'function'){
           opsSwitchView('chat');
-        } else if (typeof switchOpsView === 'function'){
-          switchOpsView('chat');
         }
         setTimeout(() => openThread(latest.conversation_id), 50);
       } catch(_){}
@@ -890,6 +958,23 @@
     requestAnimationFrame(() => node.classList.add('in'));
     setTimeout(dismiss, 7000);
     try { opsChatPlayReceive(); } catch(_){}
+  }
+
+  // ── Human-readable relative time for popup stamps.
+  function opsRelTime(iso){
+    if (!iso) return 'just now';
+    const t = Date.parse(iso);
+    if (isNaN(t)) return 'just now';
+    const sec = Math.round((Date.now() - t) / 1000);
+    if (sec < 45) return 'just now';
+    if (sec < 90) return '1m ago';
+    const min = Math.round(sec / 60);
+    if (min < 45) return min + 'm ago';
+    if (min < 90) return '1h ago';
+    const hr = Math.round(min / 60);
+    if (hr < 24) return hr + 'h ago';
+    const day = Math.round(hr / 24);
+    return day + 'd ago';
   }
 
   // Sidebar poll boots as soon as the chat module loads — the

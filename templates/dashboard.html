@@ -11451,64 +11451,108 @@ document.addEventListener("DOMContentLoaded", () => {
           50%    {transform:translateY(-3px);opacity:1;}
         }
 
-        /* Side chat popup — fires globally (not just inside SP section)
-           when a new partner message arrives while the user is elsewhere.
-           Bottom-right toast that slides in from the right, gold border,
-           click anywhere to open the chat. */
+        /* ─────────────────────────────────────────────────────────────
+           Side chat popup — fires globally (outside Sourcing Partners
+           chat) when a new partner message arrives. Premium Drop Sigma
+           treatment: clean white card, indigo→purple→cyan brand accent
+           bar, soft gold avatar with the manager's initials, prominent
+           unread count, neat time stamp, "Click to open chat" CTA.
+           Slides in from the bottom-right, click anywhere to deep-link
+           straight into the chat.
+           ───────────────────────────────────────────────────────────── */
         #spvChatPopupHost{
-          position:fixed;right:18px;bottom:18px;z-index:2147483400;
+          position:fixed;right:22px;bottom:22px;z-index:2147483400;
           display:flex;flex-direction:column;gap:10px;align-items:flex-end;
           pointer-events:none;
+          font-family:"Inter",ui-sans-serif,system-ui,sans-serif;
         }
         .spv-chat-popup{
           pointer-events:auto;cursor:pointer;
-          width:340px;max-width:calc(100vw - 36px);
-          padding:14px 16px 12px;border-radius:14px;
-          background:linear-gradient(180deg,#fff 0%,#fefbf3 100%);
-          border:1px solid #fcd34d;
-          box-shadow:0 18px 42px rgba(2,6,23,.18),
-                     0 0 0 1px rgba(212,175,55,.18);
-          font-family:"Inter",ui-sans-serif,system-ui,sans-serif;
-          color:#0f172a;
-          transform:translateX(120%);opacity:0;
-          transition:transform .35s cubic-bezier(.2,.7,.2,1.05), opacity .25s ease;
+          width:360px;max-width:calc(100vw - 44px);
+          position:relative;overflow:hidden;
+          background:#ffffff;color:#0f172a;
+          border-radius:16px;
+          border:1px solid rgba(15,23,42,.08);
+          box-shadow:0 22px 48px rgba(2,6,23,.18),
+                     0 0 0 1px rgba(99,102,241,.06);
+          padding:14px 16px 12px;
+          transform:translateY(20px) scale(.96);opacity:0;
+          transition:transform .38s cubic-bezier(.2,.7,.2,1.05),
+                     opacity .25s ease,
+                     box-shadow .2s ease;
         }
-        .spv-chat-popup.in{transform:translateX(0);opacity:1;}
-        .spv-chat-popup:hover{transform:translateX(0) translateY(-2px);}
+        .spv-chat-popup.in{transform:translateY(0) scale(1);opacity:1;}
+        .spv-chat-popup:hover{
+          box-shadow:0 26px 56px rgba(2,6,23,.22),
+                     0 0 0 1px rgba(99,102,241,.16);
+        }
+        /* Top brand accent — the Drop Sigma signature gradient. */
+        .spv-chat-popup::before{
+          content:"";position:absolute;top:0;left:0;right:0;height:3px;
+          background:linear-gradient(90deg,#d4af37 0%,#a855f7 50%,#6366f1 100%);
+        }
         .spv-chat-popup-head{
+          display:flex;align-items:center;gap:11px;
+        }
+        .spv-chat-popup-av{
+          flex-shrink:0;width:38px;height:38px;border-radius:11px;
+          background:linear-gradient(135deg,#fbbf24 0%,#d4af37 60%,#a855f7 130%);
+          color:#fff;font-weight:900;font-size:13px;letter-spacing:.02em;
+          display:flex;align-items:center;justify-content:center;
+          box-shadow:inset 0 0 0 1px rgba(255,255,255,.15),
+                     0 4px 12px rgba(212,175,55,.32);
+        }
+        .spv-chat-popup-meta{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+        .spv-chat-popup-name{
+          font-size:13.5px;font-weight:900;color:#0f172a;
+          letter-spacing:-.01em;
+          white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+        }
+        .spv-chat-popup-sub{
           display:flex;align-items:center;gap:8px;
-          font-size:12.5px;font-weight:800;color:#0f172a;
+          font-size:10.5px;font-weight:800;
         }
-        .spv-chat-popup-dot{
-          width:8px;height:8px;border-radius:50%;
-          background:#10b981;
-          box-shadow:0 0 0 3px rgba(16,185,129,.22);
-          animation:spvPopupPing 1.4s ease-in-out infinite;
+        .spv-chat-popup-count{
+          color:#fff;background:linear-gradient(135deg,#10b981 0%,#059669 100%);
+          padding:2px 8px;border-radius:999px;letter-spacing:.04em;
+          text-transform:uppercase;font-size:9.5px;
+          box-shadow:0 2px 6px rgba(16,185,129,.32);
         }
-        @keyframes spvPopupPing{
-          0%,100%{box-shadow:0 0 0 3px rgba(16,185,129,.22);}
-          50%    {box-shadow:0 0 0 7px rgba(16,185,129,.05);}
+        .spv-chat-popup-time{
+          color:#94a3b8;font-weight:700;text-transform:none;letter-spacing:0;
+          font-size:11px;
         }
         .spv-chat-popup-x{
           margin-left:auto;background:transparent;border:0;
-          color:#94a3b8;font-size:18px;line-height:1;cursor:pointer;
-          padding:0 4px;border-radius:6px;
+          color:#cbd5e1;font-size:18px;line-height:1;cursor:pointer;
+          padding:2px 6px;border-radius:6px;transition:all .12s;
         }
         .spv-chat-popup-x:hover{background:#f1f5f9;color:#0f172a;}
         .spv-chat-popup-body{
-          margin-top:6px;font-size:12.5px;font-weight:600;color:#334155;
-          line-height:1.45;white-space:pre-wrap;
-          word-break:break-word;
+          margin:10px 0 0 49px;font-size:13px;font-weight:600;color:#475569;
+          line-height:1.5;
+          display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;
+          overflow:hidden;
         }
         .spv-chat-popup-foot{
-          margin-top:8px;padding-top:8px;
-          border-top:1px dashed rgba(15,23,42,.08);
-          font-size:10.5px;font-weight:800;color:#7a5a00;
-          letter-spacing:.06em;text-transform:uppercase;
+          margin:10px 0 0 49px;
+          font-size:10.5px;font-weight:900;color:#6366f1;
+          letter-spacing:.08em;text-transform:uppercase;
+          display:inline-flex;align-items:center;gap:6px;
+        }
+        .spv-chat-popup-foot-arrow{
+          font-size:13px;line-height:1;color:#a855f7;
+          transition:transform .2s;
+        }
+        .spv-chat-popup:hover .spv-chat-popup-foot-arrow{
+          transform:translate(2px,-2px);
+        }
+        @media (max-width:480px){
+          #spvChatPopupHost{right:12px;bottom:12px;left:12px;align-items:stretch;}
+          .spv-chat-popup{width:100%;}
         }
         @media (prefers-reduced-motion: reduce){
           .spv-chat-popup{transition:opacity .15s ease;}
-          .spv-chat-popup-dot{animation:none;}
         }
 
         /* Chat smart-link chips — pills inline with chat text. One colour
@@ -39163,7 +39207,12 @@ async function spvChatSend(){
 }
 function spvStartChatPoll(){
   spvStopChatPoll();
-  SPV.conv.pollTimer = setInterval(spvPollChat, 3500);
+  // Real-time feel: poll every 1.5s steady-state. The typing pill
+  // already cuts perceived latency further, and the receive ding +
+  // auto-scroll means a new message is on-screen in under two seconds
+  // from the OPS operator hitting Send. Server impact is bounded —
+  // only one tenant per session has this open at a time.
+  SPV.conv.pollTimer = setInterval(spvPollChat, 1500);
 }
 function spvStopChatPoll(){
   if (SPV.conv.pollTimer){ clearInterval(SPV.conv.pollTimer); SPV.conv.pollTimer = null; }
@@ -39273,7 +39322,9 @@ function spvStartSidebarBadgePoll(){
   spvStopSidebarBadgePoll();
   // Immediate kick so the badge isn't stale on first paint.
   spvTickSidebarBadge();
-  SPV._sidebarBadgeTimer = setInterval(spvTickSidebarBadge, 5000);
+  // 3s cadence so the sidebar badge + new-msg popup feel real-time.
+  // Cheap endpoint — single SUM over the tenant's own conversations.
+  SPV._sidebarBadgeTimer = setInterval(spvTickSidebarBadge, 3000);
 }
 function spvStopSidebarBadgePoll(){
   if (SPV._sidebarBadgeTimer){
@@ -39294,46 +39345,72 @@ async function spvTickSidebarBadge(){
       badge.style.display = 'none';
     }
   }
-  // Popup logic. Skip if there's no unread message OR the user is
-  // currently inside the chat (the polling loop above already shows
-  // the new message inline). Also skip if we already showed this
-  // exact message (key = conv+iso).
+  // Popup logic. Only fire when the user is ACTUALLY outside the
+  // Sourcing Partners chat. If they're already on the chat view, the
+  // inline polling loop above renders the new message in the thread
+  // AND the inbox card on the left shows its own unread badge — no
+  // toast needed (and toasts there would feel double-noted). Also
+  // dedup so we don't re-fire the same popup on consecutive polls.
   const latest = data.latest;
   if (!latest) return;
   const key = `${latest.conversation_id}:${latest.created_at_iso || ''}`;
   if (key === SPV._lastSeenLatestKey) return;
   SPV._lastSeenLatestKey = key;
-  // Inside-chat suppression — only suppress when the user is BOTH
-  // inside Sourcing Partners AND looking at this specific conv.
+  // Suppression rule per user feedback: notification SHOULD ONLY fire
+  // when the tenant is outside the chat — i.e. they're somewhere else
+  // in the dashboard. If they're inside Sourcing Partners on the chat
+  // view, skip. (Other Sourcing Partners views — Overview, Orders,
+  // Catalog — still get the toast because the chat thread isn't
+  // visible from there.)
   const inSourcing = document.body.getAttribute('data-active-section') === 'sourcingPartners';
-  const sameConv   = SPV.activeConvId === latest.conversation_id;
-  if (inSourcing && sameConv) return;
-  spvShowChatPopup(latest);
+  const onChatView = (SPV.view === 'chat');
+  if (inSourcing && onChatView) return;
+  spvShowChatPopup(latest, +(data.total_unread || 0));
 }
 
-function spvShowChatPopup(latest){
-  // Drop Sigma branded side popup — bottom-right corner, gold border,
-  // slides in from the right, auto-hides at 7s, click to open chat.
+function spvShowChatPopup(latest, totalUnread){
+  // Drop Sigma branded side popup — bottom-right corner, slides in
+  // from the right, auto-hides at 7s, click anywhere to open chat.
+  // Theme: tenant-facing surfaces use the light/gold treatment so the
+  // toast lands cleanly on overview / orders / wallet pages.
   let host = document.getElementById('spvChatPopupHost');
   if (!host){
     host = document.createElement('div');
     host.id = 'spvChatPopupHost';
     document.body.appendChild(host);
   }
+  // Only one popup at a time — newer events replace the older one
+  // instead of stacking and competing for attention.
+  while (host.firstChild) host.removeChild(host.firstChild);
+
   const node = document.createElement('div');
   node.className = 'spv-chat-popup';
-  const labelHtml = `${spvEsc(latest.partner_name || 'Drop Sigma Sourcing')}`;
+  const name = latest.partner_name || 'Drop Sigma Sourcing';
+  const initials = (name.split(/\s+/).slice(0,2).map(s => s[0] || '')
+                     .join('') || 'DS').toUpperCase();
   const bodyTxt = (latest.body || '').replace(/\s+/g, ' ').trim();
-  const preview = bodyTxt.length > 120 ? bodyTxt.slice(0, 117) + '…' : bodyTxt;
+  const preview = bodyTxt.length > 110 ? bodyTxt.slice(0, 107) + '…' : bodyTxt;
+  // Format created_at as a human "just now / 2m ago" stamp.
+  const stampLabel = spvRelTime(latest.created_at_iso);
+  const unreadN = +totalUnread || 0;
+  const unreadBadge = unreadN > 1
+    ? `<span class="spv-chat-popup-count">${unreadN > 99 ? '99+' : unreadN} new</span>`
+    : '<span class="spv-chat-popup-count">New message</span>';
+
   node.innerHTML = `
     <div class="spv-chat-popup-head">
-      <span class="spv-chat-popup-dot"></span>
-      <strong>${labelHtml}</strong>
+      <div class="spv-chat-popup-av">${spvEsc(initials)}</div>
+      <div class="spv-chat-popup-meta">
+        <div class="spv-chat-popup-name">${spvEsc(name)}</div>
+        <div class="spv-chat-popup-sub">${unreadBadge}<span class="spv-chat-popup-time">${spvEsc(stampLabel)}</span></div>
+      </div>
       <button class="spv-chat-popup-x" aria-label="Dismiss">×</button>
     </div>
     <div class="spv-chat-popup-body">${spvEsc(preview)}</div>
-    <div class="spv-chat-popup-foot">Click to open chat</div>`;
-  // Wire interactions
+    <div class="spv-chat-popup-foot">
+      <span class="spv-chat-popup-foot-arrow">↗</span>
+      Click to open chat
+    </div>`;
   const dismiss = (e) => {
     if (e) { e.preventDefault(); e.stopPropagation(); }
     node.classList.remove('in');
@@ -39344,22 +39421,44 @@ function spvShowChatPopup(latest){
     dismiss();
     try {
       // Jump into the chat. dsEnterSourcingPartners gives us the
-      // branded transition splash; once it lands we pick the right
-      // conversation if the workspace already knows the partner.
+      // branded transition splash; once it lands we switch to the
+      // chat view directly so the user doesn't have to click again.
       if (typeof dsEnterSourcingPartners === 'function'){
         dsEnterSourcingPartners();
       } else {
         showSection('sourcingPartners');
       }
+      // After the splash lands, jump to chat view. The 600ms wait is
+      // longer than the 60ms section swap so we don't fight the
+      // transition splash's own setup window.
+      setTimeout(() => {
+        try { if (typeof spvSwitchView === 'function') spvSwitchView('chat'); } catch(_){}
+      }, 650);
     } catch(_){}
   });
   host.appendChild(node);
-  // Defer the .in class so the CSS transition runs.
   requestAnimationFrame(() => node.classList.add('in'));
-  // Auto-hide after 7s.
   setTimeout(dismiss, 7000);
-  // Polite ding so the user actually notices, even if mute.
+  // Polite ding so the user actually notices.
   try { if (typeof _aiPlayReceiveSound === 'function') _aiPlayReceiveSound(); } catch(_){}
+}
+
+/* ── Human-readable relative time for chat popup stamps.
+   "just now" / "2m ago" / "1h ago" / "3d ago". */
+function spvRelTime(iso){
+  if (!iso) return 'just now';
+  const t = Date.parse(iso);
+  if (isNaN(t)) return 'just now';
+  const sec = Math.round((Date.now() - t) / 1000);
+  if (sec < 45) return 'just now';
+  if (sec < 90) return '1m ago';
+  const min = Math.round(sec / 60);
+  if (min < 45) return min + 'm ago';
+  if (min < 90) return '1h ago';
+  const hr = Math.round(min / 60);
+  if (hr < 24) return hr + 'h ago';
+  const day = Math.round(hr / 24);
+  return day + 'd ago';
 }
 
 /* ═════════════════════════════════════════════════════════════════════
