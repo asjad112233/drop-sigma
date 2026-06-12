@@ -12,6 +12,7 @@ urlpatterns = [
     path("api/ops-workspaces/<int:pk>/assignable-tenants/", ws.api_assignable_tenants,    name="sa_ops_ws_assignable_tenants"),
     path("api/ops-workspaces/<int:pk>/tenants/",         ws.api_workspace_assign_tenant,   name="sa_ops_ws_assign_tenant"),
     path("api/ops-workspaces/<int:pk>/tenants/<int:tenant_id>/", ws.api_workspace_unassign_tenant, name="sa_ops_ws_unassign_tenant"),
+    path("api/ops-workspaces/<int:pk>/tenants/<int:tenant_id>/manager/", ws.api_workspace_tenant_manager, name="sa_ops_ws_tenant_manager"),
     path("api/ops-workspaces/<int:pk>/invitations/",     ws.api_workspace_invite,          name="sa_ops_ws_invite"),
     path("api/ops-workspaces/<int:pk>/invitations/<int:iid>/resend/", ws.api_workspace_invite_resend, name="sa_ops_ws_invite_resend"),
     path("api/ops-workspaces/<int:pk>/invitations/<int:iid>/revoke/", ws.api_workspace_invite_revoke, name="sa_ops_ws_invite_revoke"),

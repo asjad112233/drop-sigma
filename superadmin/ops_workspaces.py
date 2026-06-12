@@ -47,6 +47,7 @@ from sourcing_ops.models import (
     OpsTeamMember,
     OpsWorkspace,
     OpsWorkspaceTenant,
+    TenantManagerAssignment,
 )
 from sourcing_ops.invitations import send_invitation_email
 
@@ -136,6 +137,26 @@ def _tenant_brief(user) -> dict:
     which Drop Sigma seller they're moving between workspaces."""
     stores = list(user.store_set.filter(is_active=True).values("id", "name")[:5]) \
         if hasattr(user, "store_set") else []
+
+    # Dedicated manager — the OpsTeamMember the superadmin (or an
+    # earlier auto-assign rule) pinned as the tenant's primary point
+    # of contact. None when nothing's been assigned yet.
+    mgr = None
+    try:
+        assignment = (TenantManagerAssignment.objects
+                          .select_related("manager", "manager__user", "manager__role")
+                          .get(tenant=user))
+        m = assignment.manager
+        mgr = {
+            "member_id":    m.id,
+            "display_name": m.display_name or m.user.username,
+            "title":        m.title,
+            "role":         m.role.name if m.role_id else "",
+            "role_color":   m.role.color if m.role_id else "#94a3b8",
+        }
+    except TenantManagerAssignment.DoesNotExist:
+        pass
+
     return {
         "id":         user.id,
         "username":   user.username,
@@ -144,6 +165,7 @@ def _tenant_brief(user) -> dict:
         "is_active":  user.is_active,
         "store_count": len(stores),
         "stores":     stores,
+        "manager":    mgr,
     }
 
 
@@ -326,7 +348,95 @@ def api_workspace_assign_tenant(request, pk):
 def api_workspace_unassign_tenant(request, pk, tenant_id):
     ws = _ws_or_404(pk)
     OpsWorkspaceTenant.objects.filter(workspace=ws, tenant_id=tenant_id).delete()
+    # Removing the tenant from the workspace also detaches any
+    # dedicated-manager mapping — otherwise the same User would still
+    # show up as "managed by X" inside /ops/ for a team that no
+    # longer has visibility into them.
+    TenantManagerAssignment.objects.filter(tenant_id=tenant_id).delete()
     return JsonResponse({"ok": True})
+
+
+# ── Tenant ↔ Manager pairing ───────────────────────────────────────
+@csrf_exempt
+@superadmin_required
+@require_POST
+def api_workspace_tenant_manager(request, pk, tenant_id):
+    """Assign / change / clear the dedicated Ops manager for a tenant.
+
+    Body: {"member_id": int}     pin this team member as the manager
+          {"member_id": null}    unassign (tenant goes back to "no
+                                  dedicated manager")
+    """
+    ws = _ws_or_404(pk)
+    body = _parse(request)
+    member_id = body.get("member_id")
+
+    # Confirm the tenant is actually inside this workspace — guards
+    # against someone POSTing a tenant ID from another workspace.
+    if not OpsWorkspaceTenant.objects.filter(
+        workspace=ws, tenant_id=tenant_id
+    ).exists():
+        return JsonResponse(
+            {"ok": False, "error": "tenant_not_in_workspace"},
+            status=404,
+        )
+
+    # Unassign branch — accept member_id = null / "" / 0.
+    if not member_id:
+        TenantManagerAssignment.objects.filter(tenant_id=tenant_id).delete()
+        return JsonResponse({"ok": True, "manager": None})
+
+    member = (OpsTeamMember.objects
+                  .select_related("user", "role")
+                  .filter(pk=member_id, workspace=ws)
+                  .first())
+    if member is None:
+        return JsonResponse(
+            {"ok": False, "error": "member_not_in_workspace"},
+            status=404,
+        )
+
+    # Preserve assignment history for audit when re-assigning.
+    existing = TenantManagerAssignment.objects.filter(
+        tenant_id=tenant_id
+    ).first()
+    if existing:
+        # Same manager → no-op.
+        if existing.manager_id == member.id:
+            return JsonResponse({
+                "ok": True,
+                "manager": _manager_brief(member),
+                "unchanged": True,
+            })
+        existing.previous_manager     = existing.manager
+        existing.manager              = member
+        existing.assigned_via         = "manual_ops"
+        existing.reassigned_at        = timezone.now()
+        existing.reassignment_reason  = (body.get("reason") or "")[:255]
+        existing.save(update_fields=[
+            "previous_manager", "manager", "assigned_via",
+            "reassigned_at", "reassignment_reason",
+        ])
+    else:
+        TenantManagerAssignment.objects.create(
+            tenant_id=tenant_id,
+            manager=member,
+            assigned_via="manual_ops",
+        )
+    return JsonResponse({
+        "ok": True,
+        "manager": _manager_brief(member),
+    })
+
+
+def _manager_brief(member: OpsTeamMember) -> dict:
+    return {
+        "member_id":    member.id,
+        "display_name": member.display_name or member.user.username,
+        "title":        member.title,
+        "role":         member.role.name if member.role_id else "",
+        "role_color":   member.role.color if member.role_id else "#94a3b8",
+    }
 
 
 # ── Tenant picker for the assign dialog ────────────────────────────

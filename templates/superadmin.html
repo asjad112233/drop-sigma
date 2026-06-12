@@ -2491,14 +2491,88 @@ async function renderOpsWorkspaceDetail(c){
 }
 
 function _opsRenderTenantRow(t){
+  // Dedicated-manager pill — shows who's been pinned, or "Unassigned"
+  // when nobody has. Click it to change. The button label changes
+  // colour so a workspace with un-managed tenants stands out.
+  const mgrPill = t.manager
+    ? `<button onclick="_opsOpenManagerPicker(${t.id}, ${t.manager.member_id})"
+               title="Change dedicated manager"
+               style="display:inline-flex;align-items:center;gap:6px;background:#eef2ff;border:1px solid #c7d2fe;color:#4338ca;padding:4px 9px 4px 5px;border-radius:99px;font-size:11px;font-weight:800;cursor:pointer;">
+         <span style="width:18px;height:18px;border-radius:50%;background:${_opsHtml(t.manager.role_color)};color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:900;">${_opsHtml((t.manager.display_name||'?').charAt(0).toUpperCase())}</span>
+         ${_opsHtml(t.manager.display_name)}
+       </button>`
+    : `<button onclick="_opsOpenManagerPicker(${t.id}, null)"
+               style="background:rgba(217,119,6,.10);border:1px solid rgba(217,119,6,.32);color:#b45309;padding:4px 11px;border-radius:99px;font-size:11px;font-weight:800;cursor:pointer;">
+         + Assign manager
+       </button>`;
+
   return `
     <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;background:#f8fafc;border:1px solid #eef2f7;border-radius:9px;">
       <div style="flex:1;min-width:0;">
         <div style="font-size:13px;font-weight:800;color:#0f172a;">${_opsHtml(t.full_name || t.username)} <span style="font-size:11px;color:#94a3b8;font-weight:600;margin-left:5px;">${_opsHtml(t.email)}</span></div>
         <div style="font-size:10.5px;color:#64748b;margin-top:2px;font-weight:600;">${t.store_count} store${t.store_count===1?'':'s'} · ${t.stores.map(s=>_opsHtml(s.name)).join(' · ') || 'no stores'}</div>
       </div>
+      ${mgrPill}
       <button onclick="_opsUnassignTenant(${t.id})" style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);color:#b91c1c;padding:6px 11px;border-radius:7px;font-size:11.5px;font-weight:800;cursor:pointer;">Remove</button>
     </div>`;
+}
+
+/* ── Manager picker modal ─────────────────────────────── */
+function _opsOpenManagerPicker(tenantId, currentMemberId){
+  const members = (_OPS_WS_DETAIL?.members || []);
+  if (!members.length){
+    _opsToast('Invite a team member first — there\'s nobody to assign.', 'error');
+    return;
+  }
+  const tenant = (_OPS_WS_DETAIL?.tenants || []).find(x => x.id === tenantId);
+  const tenantLabel = tenant ? (tenant.full_name || tenant.username) : `Tenant #${tenantId}`;
+
+  const rows = members.map(m => `
+    <div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid #eef2f7;">
+      <div style="width:32px;height:32px;border-radius:50%;background:${_opsHtml(m.role_color)};color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0;">
+        ${_opsHtml((m.display_name||m.username).charAt(0).toUpperCase())}
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:800;color:#0f172a;">${_opsHtml(m.display_name || m.username)} ${m.is_manager?'<span style="font-size:9px;font-weight:800;color:#fff;background:#a855f7;padding:1.5px 6px;border-radius:4px;margin-left:5px;">MGR</span>':''} ${m.id === currentMemberId ? '<span style="font-size:9px;font-weight:800;color:#15803d;background:#dcfce7;padding:1.5px 6px;border-radius:4px;margin-left:5px;">CURRENT</span>' : ''}</div>
+        <div style="font-size:10.5px;color:#64748b;margin-top:2px;font-weight:600;">${_opsHtml(m.role || m.title || 'Team member')} · ${_opsHtml(m.email)}</div>
+      </div>
+      ${m.id === currentMemberId
+        ? `<span style="font-size:11px;color:#64748b;font-weight:800;padding:0 6px;">Assigned</span>`
+        : `<button onclick="_opsAssignManager(${tenantId}, ${m.id})" style="background:linear-gradient(135deg,#6366f1,#a855f7);color:#fff;border:0;padding:7px 14px;border-radius:7px;font-size:11.5px;font-weight:800;cursor:pointer;">Pick</button>`}
+    </div>
+  `).join('');
+
+  const clearRow = currentMemberId ? `
+    <div style="padding:11px 14px;background:#fff8e1;border-top:1px solid #fde68a;display:flex;justify-content:space-between;align-items:center;">
+      <div style="font-size:12px;color:#92400e;font-weight:700;">Unassign — tenant has no dedicated manager</div>
+      <button onclick="_opsAssignManager(${tenantId}, null)" style="background:rgba(239,68,68,.10);border:1px solid rgba(239,68,68,.32);color:#b91c1c;padding:6px 12px;border-radius:7px;font-size:11px;font-weight:800;cursor:pointer;">Clear assignment</button>
+    </div>` : '';
+
+  window._opsMgrModal = _opsModal({
+    title: `Assign manager — ${tenantLabel}`,
+    bodyHtml: `
+      <p style="margin:0 0 12px;font-size:12.5px;color:#64748b;font-weight:600;line-height:1.55;">
+        Pick the Drop Sigma team member who'll be this tenant's dedicated Ops manager.
+        They'll show up as the tenant's contact inside their chat panel.
+      </p>
+      <div style="max-height:340px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:9px;background:#fff;">
+        ${rows}
+        ${clearRow}
+      </div>
+    `,
+    primary: null,
+  });
+}
+
+async function _opsAssignManager(tenantId, memberId){
+  const { ok } = await _opsFetch(
+    `/superadmin/api/ops-workspaces/${_OPS_WS_ID}/tenants/${tenantId}/manager/`,
+    { method: 'POST', body: JSON.stringify({ member_id: memberId }) }
+  );
+  if(!ok){ _opsToast('Could not update manager', 'error'); return; }
+  window._opsMgrModal && window._opsMgrModal.close();
+  _opsToast(memberId ? 'Manager assigned' : 'Manager cleared', 'success');
+  navTo('opsWorkspaceDetail');
 }
 
 function _opsRenderMemberRow(m){
