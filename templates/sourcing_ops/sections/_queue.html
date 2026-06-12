@@ -288,7 +288,25 @@
     font-weight:700;font-size:9.5px;color:#64748b;
     text-transform:uppercase;letter-spacing:.05em;
   }
-  #opsQueueRoot .oq-row-price .line.margin .v{font-weight:900;font-size:11.5px;}
+  #opsQueueRoot .oq-row-price .line.margin .v{
+    font-weight:900;font-size:11.5px;
+    display:inline-flex;align-items:center;gap:4px;
+  }
+  /* "est." pill on the label side — flags the row as estimated so
+     the ops reader knows the figure is FX-derived rather than direct. */
+  #opsQueueRoot .oq-row-price .line.margin .est-tag{
+    margin-left:5px;font-size:8px;font-weight:800;letter-spacing:.07em;
+    padding:1.5px 5px;border-radius:4px;
+    background:rgba(99,102,241,.14);color:#4338ca;
+    text-transform:uppercase;vertical-align:middle;
+  }
+  /* ⓘ info chip on the value side — hovering surfaces the rate
+     metadata. Soft contrast so it doesn't dominate the number. */
+  #opsQueueRoot .oq-row-price .line.margin .est-info{
+    font-size:10.5px;color:#94a3b8;cursor:help;
+    font-weight:700;
+  }
+  #opsQueueRoot .oq-row-price .line.margin .est-info:hover{color:#475569;}
   #opsQueueRoot .oq-row-price .line.margin.pos .v{color:#059669;}
   #opsQueueRoot .oq-row-price .line.margin.neg .v{color:#dc2626;}
   #opsQueueRoot .oq-price-pending{
@@ -815,9 +833,18 @@
     const ship = o.sourcing_shipping_usd != null ? opsUSD(o.sourcing_shipping_usd) : '—';
     const tot  = Number(o.sourcing_total_usd) || 0;
 
-    // Margin — only safe to compute when the tenant store sells in
-    // USD too (see CURRENCY RULE above). Otherwise show a neutral
-    // "—" with a tooltip; mixing AUD - USD straight would mislead.
+    // Margin policy:
+    //   • USD tenants → exact margin in USD (sells - tot).
+    //   • Non-USD tenants → if today's FX rate is available, convert
+    //     the USD Drop-Sigma charge INTO the tenant's currency and
+    //     compute the estimated margin IN THE TENANT'S CURRENCY (AUD
+    //     / EUR / GBP / …). That's the unit the tenant actually
+    //     thinks in — the ops reader sees the same figure their
+    //     tenant will reconcile against in their books. Marked with
+    //     a `~` prefix + ⓘ tooltip explaining the PSP / bank
+    //     conversion at settlement will differ by a few %.
+    //   • Non-USD tenants with no FX rate (Frankfurter down or
+    //     unsupported currency) → "—" + tooltip.
     let marginLine = '';
     if (sells > 0){
       if (isUsd){
@@ -826,7 +853,25 @@
         const sign = margin >= 0 ? '+' : '−';
         marginLine = `<span class="line margin ${cls}"><span class="l">Tenant Margin</span><span class="v">${sign}${opsUSD(Math.abs(margin))}</span></span>`;
       } else {
-        marginLine = `<span class="line margin" title="Tenant store sells in ${opsEsc(ccy)} — margin can't be computed without an FX conversion against the USD Drop-Sigma charge."><span class="l">Tenant Margin</span><span class="v" style="color:#94a3b8;font-weight:700;">—</span></span>`;
+        const rate   = Number(o.fx_rate_used);        // tenant_ccy per 1 USD
+        const fxDate = o.fx_rate_date || '';
+        if (rate > 0){
+          // Convert Drop-Sigma's USD charge into the tenant's
+          // currency, then subtract from what the tenant sold for
+          // (already in that currency). Margin is therefore quoted
+          // in the tenant's own unit.
+          const totLocal = tot * rate;
+          const margin   = sells - totLocal;
+          const cls  = margin >= 0 ? 'pos' : 'neg';
+          const sign = margin >= 0 ? '+' : '−';
+          const tip  = `Estimated by converting Drop Sigma's USD charge ($${tot.toFixed(2)}) into ${ccy} at today's mid-market rate (1 USD = ${rate.toFixed(4)} ${ccy}${fxDate ? `, ${fxDate}` : ''}). The actual margin the tenant realises will vary by ±2-3% based on the PSP / bank conversion applied at settlement.`;
+          marginLine = `<span class="line margin ${cls}" title="${opsEsc(tip)}">
+            <span class="l">Tenant Margin <span class="est-tag">est.</span></span>
+            <span class="v">~${sign}${opsUSD(Math.abs(margin))} <span class="ccy">${opsEsc(ccy)}</span><span class="est-info" title="${opsEsc(tip)}">ⓘ</span></span>
+          </span>`;
+        } else {
+          marginLine = `<span class="line margin" title="Tenant store sells in ${opsEsc(ccy)} — today's FX rate isn't available, so margin can't be estimated. Try again later."><span class="l">Tenant Margin</span><span class="v" style="color:#94a3b8;font-weight:700;">—</span></span>`;
+        }
       }
     }
 

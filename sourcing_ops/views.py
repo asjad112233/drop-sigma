@@ -16,6 +16,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_GET
 
 from orders.tracking_link import build_ds_tracking_link, safe_carrier_name
+from orders.fx_rates import convert_to_usd, get_rate_for, get_rate_date
 from .permissions import ops_required, is_ops_user
 from .models import (
     Supplier, OpsTeamMember, OpsActivity, OrderOpsState,
@@ -325,10 +326,35 @@ def serialize_order_brief(o):
         "sourcing_product_usd": _dec_to_float(o.sourcing_product_usd),
         "sourcing_shipping_usd": _dec_to_float(o.sourcing_shipping_usd),
         # Tenant's selling price = what the END CUSTOMER paid on the merchant
-        # store (Shopify / WooCommerce). Drop Sigma's charge to the tenant
-        # is `sourcing_total_usd`; subtracting gives the tenant's margin.
+        # store (Shopify / WooCommerce). The field name says "_usd" for
+        # historical reasons but the VALUE is in the merchant's native
+        # currency (o.currency) — that's why merchant_currency rides
+        # alongside it. Drop Sigma's charge to the tenant is
+        # sourcing_total_usd (in USD); subtracting directly would mix
+        # units when the store isn't on USD, so we ALSO expose a live-FX
+        # converted USD figure + the rate metadata for display.
         "merchant_total_usd":   _dec_to_float(o.total_price),
-        "merchant_currency":    o.currency or "USD",
+        "merchant_currency":    (o.currency or "USD").upper(),
+        # ── Live-FX margin estimate fields ──────────────────────────
+        # merchant_total_converted_usd:
+        #   o.total_price translated into USD via today's mid-market
+        #   rate. Equals merchant_total_usd when the store is on USD.
+        #   None when the store currency isn't supported by Frankfurter
+        #   OR every fetch attempt has failed this process — frontend
+        #   falls back to the "—" display.
+        # fx_rate_used:
+        #   The rate applied (units of merchant_currency per 1 USD).
+        #   Surfaced in the tooltip so ops can see what conversion
+        #   went into the estimate.
+        # fx_rate_date:
+        #   ECB rate date the cached rates were quoted on. Surfaced
+        #   so the ops reader knows whether the estimate is "today"
+        #   or "yesterday on a weekend".
+        "merchant_total_converted_usd": convert_to_usd(
+            o.total_price, o.currency or "USD"
+        ),
+        "fx_rate_used":  get_rate_for(o.currency or "USD"),
+        "fx_rate_date":  get_rate_date(),
         "supplier_id":     state.supplier_id if state and state.supplier_id else None,
         "supplier_name":   state.supplier.name if state and state.supplier_id else "",
         "supplier_country": (state.supplier.country if state and state.supplier_id else ""),
