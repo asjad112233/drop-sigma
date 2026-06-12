@@ -404,18 +404,47 @@ def api_orders_list(request):
     else:
         qs = qs.order_by("-created_at")
 
+    # ── Pagination ────────────────────────────────────────────────
+    # New default page_size is 25 (was an effective 200 cap). The
+    # frontend renders a Drop-Sigma pager with sizes 10 / 25 / 50 / 100
+    # — keep page_size capped at 100 to defend against URL fiddling
+    # that would explode the row payload.
     try:
-        limit = max(1, min(int(request.GET.get("limit") or 200), 500))
+        page_size = int(request.GET.get("page_size") or 25)
     except (TypeError, ValueError):
-        limit = 200
-    qs = qs.distinct()[:limit]
+        page_size = 25
+    page_size = max(1, min(page_size, 100))
+    try:
+        page = max(1, int(request.GET.get("page") or 1))
+    except (TypeError, ValueError):
+        page = 1
 
-    rows = [serialize_order_brief(o) for o in qs]
+    # distinct() count is the source of truth; the orders list below
+    # paginates the same distinct queryset so totals + page bounds
+    # always agree with what's rendered.
+    qs_distinct = qs.distinct()
+    total = qs_distinct.count()
+    total_pages = max(1, (total + page_size - 1) // page_size)
+    # Clamp out-of-range page numbers so a stale ?page=99 still
+    # surfaces the last page instead of an empty payload.
+    if page > total_pages:
+        page = total_pages
+
+    start = (page - 1) * page_size
+    end   = start + page_size
+    rows  = [serialize_order_brief(o) for o in qs_distinct[start:end]]
+
     return JsonResponse({
         "ok": True,
         "orders":        rows,
         "count":         len(rows),
         "status_counts": status_counts,
+        "pagination": {
+            "page":        page,
+            "page_size":   page_size,
+            "total":       total,
+            "total_pages": total_pages,
+        },
     })
 
 

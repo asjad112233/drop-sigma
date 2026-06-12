@@ -5,6 +5,144 @@
      Click → opens the order detail modal (window.opsOpenOrderModal). -->
 
 <style>
+  /* ═════════════════════════════════════════════════════════════════
+     DROP SIGMA LOADER (.ds-loader)
+     ─────────────────────────────────────────────────────────────────
+     Reusable theme-matched loader used across every section that
+     fetches data. Three sizes (sm / md / lg) for inline / panel /
+     full-screen contexts. The CSS lives here scoped globally because
+     other OPS sections will reuse it; it's small (~70 lines) so the
+     duplication if any other section hard-codes it is negligible.
+     The mark inside is the same DS gradient used in the brand mark
+     across the platform — instant recognition.
+  ═════════════════════════════════════════════════════════════════ */
+  .ds-loader{
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:14px;padding:36px 18px;
+  }
+  .ds-loader-ring{
+    position:relative;width:64px;height:64px;
+  }
+  /* Outer rotating conic-gradient ring */
+  .ds-loader-ring::before{
+    content:"";position:absolute;inset:0;border-radius:50%;
+    background:conic-gradient(from 0deg,
+      #6366f1 0%, #a855f7 30%, #06b6d4 65%,
+      transparent 80%, #6366f1 100%);
+    -webkit-mask:radial-gradient(circle, transparent 53%, #000 55%);
+    mask:radial-gradient(circle, transparent 53%, #000 55%);
+    animation:dsLoaderSpin 1.1s linear infinite;
+    filter:drop-shadow(0 6px 18px rgba(99,102,241,.32));
+  }
+  @keyframes dsLoaderSpin{to{transform:rotate(360deg);}}
+  /* Inner DS mark — same gradient as the platform brand */
+  .ds-loader-mark{
+    position:absolute;inset:9px;border-radius:50%;
+    background:linear-gradient(135deg,#0b1224 0%,#1e293b 100%);
+    display:flex;align-items:center;justify-content:center;
+    color:#fff;font-weight:900;font-size:14px;letter-spacing:-.4px;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);
+    animation:dsLoaderPulse 1.8s ease-in-out infinite;
+  }
+  @keyframes dsLoaderPulse{
+    0%,100%{transform:scale(1);opacity:1;}
+    50%{transform:scale(.92);opacity:.85;}
+  }
+  .ds-loader-label{
+    font-size:12.5px;font-weight:800;color:#475569;letter-spacing:.04em;
+    display:flex;align-items:center;gap:7px;
+  }
+  .ds-loader-label .dot{
+    width:5px;height:5px;border-radius:50%;background:#6366f1;
+    animation:dsLoaderDot 1.2s ease-in-out infinite;
+  }
+  .ds-loader-label .dot:nth-child(2){animation-delay:.18s;}
+  .ds-loader-label .dot:nth-child(3){animation-delay:.36s;}
+  @keyframes dsLoaderDot{
+    0%,100%{transform:scale(1);opacity:.5;}
+    50%{transform:scale(1.4);opacity:1;}
+  }
+  /* Sizes */
+  .ds-loader.sm .ds-loader-ring{width:36px;height:36px;}
+  .ds-loader.sm .ds-loader-mark{inset:6px;font-size:9px;}
+  .ds-loader.sm{padding:18px 12px;gap:10px;}
+  .ds-loader.lg .ds-loader-ring{width:96px;height:96px;}
+  .ds-loader.lg .ds-loader-mark{inset:14px;font-size:20px;}
+  .ds-loader.lg{padding:60px 18px;gap:20px;}
+  /* Shimmer skeleton rows (matches the placeholder strips the user
+     screen-shotted) — used inside list containers while paging. */
+  .ds-skeleton-list{display:flex;flex-direction:column;gap:14px;padding:18px 0;}
+  .ds-skeleton-row{
+    height:88px;border-radius:14px;
+    background:linear-gradient(90deg,#f1f5f9 0%,#e2e8f0 50%,#f1f5f9 100%);
+    background-size:240% 100%;
+    animation:dsSkeletonShimmer 1.4s linear infinite;
+  }
+  @keyframes dsSkeletonShimmer{
+    0%{background-position:240% 0;}
+    100%{background-position:-40% 0;}
+  }
+
+  /* ═════════════════════════════════════════════════════════════════
+     DROP SIGMA PAGINATION (.ds-pager)
+     ─────────────────────────────────────────────────────────────────
+     Reusable pagination strip used at the top of any long list:
+       [‹] [1] [2] [3] [...] [N] [›]  To page [_] [Confirm]
+                                 total X items   [10 items/page ▾]
+  ═════════════════════════════════════════════════════════════════ */
+  .ds-pager{
+    display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+    padding:10px 14px;border-radius:12px;
+    background:#fff;border:1px solid #e2e8f0;
+    font-size:12.5px;color:#475569;font-weight:700;
+    box-shadow:0 1px 2px rgba(15,23,42,.04);
+  }
+  .ds-pager-btn{
+    width:32px;height:32px;border-radius:8px;border:0;
+    background:#f8fafc;color:#475569;font-size:13px;font-weight:800;
+    cursor:pointer;transition:all .12s;display:inline-flex;
+    align-items:center;justify-content:center;
+  }
+  .ds-pager-btn:hover:not(:disabled){background:#eef2ff;color:#4338ca;}
+  .ds-pager-btn:disabled{opacity:.35;cursor:not-allowed;}
+  .ds-pager-btn.active{
+    background:linear-gradient(135deg,#6366f1,#a855f7);
+    color:#fff;box-shadow:0 6px 14px rgba(99,102,241,.30);
+  }
+  .ds-pager-btn.active:hover{color:#fff;}
+  .ds-pager-ellipsis{
+    padding:0 4px;color:#94a3b8;font-weight:700;letter-spacing:.04em;
+  }
+  .ds-pager-divider{
+    width:1px;height:20px;background:#e2e8f0;margin:0 6px;
+  }
+  .ds-pager-jump{
+    display:inline-flex;align-items:center;gap:6px;
+  }
+  .ds-pager-jump input{
+    width:50px;height:28px;border-radius:7px;border:1.5px solid #e2e8f0;
+    padding:0 7px;font-size:12.5px;font-weight:800;color:#0f172a;
+    text-align:center;font-family:inherit;
+  }
+  .ds-pager-jump input:focus{outline:0;border-color:#6366f1;
+                              box-shadow:0 0 0 3px rgba(99,102,241,.14);}
+  .ds-pager-jump button{
+    height:28px;padding:0 11px;border-radius:7px;border:1px solid #e2e8f0;
+    background:#fff;color:#475569;font-size:11.5px;font-weight:800;
+    cursor:pointer;
+  }
+  .ds-pager-jump button:hover{background:#eef2ff;color:#4338ca;border-color:#c7d2fe;}
+  .ds-pager-total{
+    color:#64748b;font-weight:700;
+  }
+  .ds-pager-total b{color:#0f172a;font-weight:900;}
+  .ds-pager-size select{
+    height:28px;padding:0 8px;border-radius:7px;border:1.5px solid #e2e8f0;
+    font-size:12px;font-weight:800;color:#0f172a;background:#fff;
+    cursor:pointer;font-family:inherit;
+  }
+  .ds-pager-size select:focus{outline:0;border-color:#6366f1;}
+
   /* All styles scoped under #opsQueueRoot so we don't bleed into other sections. */
   #opsQueueRoot{font-size:13px;}
   #opsQueueRoot .oq-toolbar{
@@ -415,7 +553,114 @@
     suppliers: [],
     rendering: false,
     debounce: null,
+    // Pagination state. Page resets to 1 whenever a filter changes;
+    // page_size persists across navigations until the user picks a
+    // different value in the dropdown.
+    page:        1,
+    page_size:   25,
+    total:       0,
+    total_pages: 1,
+    statusCounts: null,
   };
+
+  /* ─── Drop Sigma loader (small helper so every fetch site renders
+        the same affordance instead of plain "Loading…" text) ──────── */
+  function dsLoaderHTML(size, label){
+    const sz = size || 'md';
+    const lab = label || 'Loading';
+    return `
+      <div class="ds-loader ${sz}">
+        <div class="ds-loader-ring">
+          <div class="ds-loader-mark">DS</div>
+        </div>
+        <div class="ds-loader-label">
+          ${opsEsc(lab)}
+          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        </div>
+      </div>`;
+  }
+  /* Skeleton list — used while a paginated load is in-flight so the
+     row geometry doesn't jump when results arrive. */
+  function dsSkeletonHTML(rows){
+    const n = Math.max(1, rows || 6);
+    let out = '<div class="ds-skeleton-list">';
+    for (let i = 0; i < n; i++) out += '<div class="ds-skeleton-row"></div>';
+    return out + '</div>';
+  }
+
+  /* ─── Drop Sigma pagination component ─────────────────────────────
+     Pure-functional render — caller supplies state, we wire callbacks
+     onto the buttons via inline data-* + delegated click handler. */
+  function dsPagerHTML(state, onPage, onPageSize){
+    const { page, total_pages, total } = state;
+    if (total <= 0) return '';
+
+    // Build the chip list with elided middle (1 2 ... 5 6 7 ... N).
+    const pages = [];
+    const push = p => pages.push(p);
+    const around = 1; // pages around current
+    push(1);
+    let lastShown = 1;
+    for (let i = page - around; i <= page + around; i++){
+      if (i < 2 || i > total_pages - 1) continue;
+      if (i > lastShown + 1) push('…');
+      push(i);
+      lastShown = i;
+    }
+    if (total_pages > 1){
+      if (total_pages > lastShown + 1) push('…');
+      push(total_pages);
+    }
+
+    const chipHtml = pages.map(p => {
+      if (p === '…') return '<span class="ds-pager-ellipsis">…</span>';
+      return `<button class="ds-pager-btn ${p===page?'active':''}" data-pager-page="${p}">${p}</button>`;
+    }).join('');
+
+    const sizes = [10, 25, 50, 100];
+    const sizeOpts = sizes.map(s =>
+      `<option value="${s}" ${s===state.page_size?'selected':''}>${s} items/page</option>`
+    ).join('');
+
+    return `
+      <div class="ds-pager">
+        <button class="ds-pager-btn" data-pager-prev ${page<=1?'disabled':''}>‹</button>
+        ${chipHtml}
+        <button class="ds-pager-btn" data-pager-next ${page>=total_pages?'disabled':''}>›</button>
+        <div class="ds-pager-divider"></div>
+        <div class="ds-pager-jump">
+          To page <input type="number" min="1" max="${total_pages}" value="${page}" data-pager-jump>
+          page <button data-pager-jump-go>Confirm</button>
+        </div>
+        <div class="ds-pager-divider"></div>
+        <span class="ds-pager-total">total <b>${total}</b> items</span>
+        <div class="ds-pager-size">
+          <select data-pager-size>${sizeOpts}</select>
+        </div>
+      </div>`;
+  }
+
+  /* Attach click handlers to a pager rendered into `host`. */
+  function bindPager(host, state, onPage, onPageSize){
+    if (!host) return;
+    host.querySelectorAll('[data-pager-page]').forEach(b => {
+      b.addEventListener('click', () => onPage(+b.dataset.pagerPage));
+    });
+    const prev = host.querySelector('[data-pager-prev]');
+    if (prev) prev.addEventListener('click', () => state.page > 1 && onPage(state.page - 1));
+    const next = host.querySelector('[data-pager-next]');
+    if (next) next.addEventListener('click', () => state.page < state.total_pages && onPage(state.page + 1));
+    const goBtn = host.querySelector('[data-pager-jump-go]');
+    const jump  = host.querySelector('[data-pager-jump]');
+    const goJump = () => {
+      const v = Math.max(1, Math.min(state.total_pages, parseInt(jump.value, 10) || 1));
+      onPage(v);
+    };
+    if (goBtn) goBtn.addEventListener('click', goJump);
+    if (jump)  jump.addEventListener('keydown', e => { if (e.key === 'Enter') goJump(); });
+    const sz = host.querySelector('[data-pager-size]');
+    if (sz) sz.addEventListener('change', e => onPageSize(+e.target.value));
+  }
 
   const STATUS_CHIPS = [
     {key:'all',             label:'All'},
@@ -486,16 +731,28 @@
     ).join('');
   }
 
-  async function loadOrders(){
+  async function loadOrders(opts){
+    // Filter changes reset to page 1; explicit page navigations pass
+    // {keepPage:true}. Page-size change also resets to page 1 since
+    // the previous page index doesn't make sense at a new size.
+    if (!opts || !opts.keepPage) OQ.page = 1;
+
     const list = document.getElementById('oqList');
-    if (list) list.innerHTML =
-      Array.from({length:5}).map(() => '<div class="oq-skel-row"></div>').join('');
+    const top  = document.getElementById('oqPagerTop');
+    const bot  = document.getElementById('oqPagerBot');
+    // While loading, render the Drop-Sigma loader + a skeleton list so
+    // the section never feels boring or empty mid-fetch.
+    if (list) list.innerHTML = dsLoaderHTML('md', 'Loading orders') + dsSkeletonHTML(Math.min(OQ.page_size, 6));
+    if (top)  top.innerHTML  = '';
+    if (bot)  bot.innerHTML  = '';
 
     const qs = new URLSearchParams();
     if (OQ.filters.status && OQ.filters.status !== 'all') qs.set('status', OQ.filters.status);
     if (OQ.filters.search) qs.set('search', OQ.filters.search);
     if (OQ.filters.sort)   qs.set('sort', OQ.filters.sort);
     if (OQ.filters.assigned && OQ.filters.assigned !== 'any') qs.set('assigned', OQ.filters.assigned);
+    qs.set('page',      OQ.page);
+    qs.set('page_size', OQ.page_size);
 
     const r = await opsFetch('/ops/api/orders/?' + qs.toString());
     if (!r.ok){
@@ -503,12 +760,49 @@
       return;
     }
     OQ.orders = (r.data && r.data.orders) || [];
-    // status_counts comes from the backend (pre-status, post-search
-    // /assigned/supplier) — it's the source of truth for the chip
-    // badges so switching tabs doesn't make sibling counts disappear.
+    // status_counts comes from the backend (pre-status, post-search /
+    // assigned / supplier) — source of truth for the chip badges so
+    // switching tabs doesn't make sibling counts disappear.
     OQ.statusCounts = (r.data && r.data.status_counts) || null;
+    const pg = (r.data && r.data.pagination) || {};
+    OQ.page        = pg.page        || 1;
+    OQ.page_size   = pg.page_size   || OQ.page_size;
+    OQ.total       = pg.total       || 0;
+    OQ.total_pages = pg.total_pages || 1;
+
     renderChipsCounts();
     renderList();
+    renderPagers();
+  }
+
+  /* ─── Pagination render + event wire-up ─────────────────────────── */
+  function renderPagers(){
+    const state = {
+      page:        OQ.page,
+      page_size:   OQ.page_size,
+      total:       OQ.total,
+      total_pages: OQ.total_pages,
+    };
+    const html = dsPagerHTML(state);
+    const onPage = (p) => {
+      if (p === OQ.page) return;
+      OQ.page = p;
+      loadOrders({keepPage: true});
+      // Smooth scroll back to top so the new page lands in view.
+      const root = document.getElementById('opsQueueRoot');
+      if (root) root.scrollIntoView({behavior:'smooth', block:'start'});
+    };
+    const onPageSize = (sz) => {
+      OQ.page_size = sz;
+      OQ.page = 1;
+      loadOrders({keepPage: true});
+    };
+    for (const id of ['oqPagerTop', 'oqPagerBot']){
+      const host = document.getElementById(id);
+      if (!host) continue;
+      host.innerHTML = html;
+      bindPager(host, state, onPage, onPageSize);
+    }
   }
 
   /* ─── Render: shell ─────────────────────────────────────────────── */
@@ -541,7 +835,9 @@
         </div>
       </div>
       <div id="oqBulkBar"></div>
+      <div id="oqPagerTop" style="margin-top:12px;"></div>
       <div class="oq-list" id="oqList"></div>
+      <div id="oqPagerBot" style="margin-top:14px;"></div>
     `;
 
     // Status chips
