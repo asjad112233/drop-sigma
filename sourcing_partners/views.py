@@ -487,17 +487,42 @@ def api_poll_messages(request, conv_id):
     if conv.unread_count_for_tenant:
         PartnerConversation.objects.filter(pk=conv.pk).update(
             unread_count_for_tenant=0)
+
+    # ── Resolve the OPS manager's display name so the typing pill
+    # reads "Bryan Buford is typing…" instead of a generic brand
+    # label. Single select_related query, cached on the conv attr so
+    # repeat polls on the same conv don't re-hit the DB during a
+    # single request lifecycle.
+    partner_label = "Drop Sigma Sourcing"
+    try:
+        from sourcing_ops.models import TenantManagerAssignment
+        assignment = (TenantManagerAssignment.objects
+                      .select_related("manager", "manager__user")
+                      .filter(tenant=request.user).first())
+        if assignment and assignment.manager_id:
+            m = assignment.manager
+            u = m.user
+            partner_label = (m.display_name
+                             or (u.get_full_name() if u else "")
+                             or (u.username if u else "")
+                             or partner_label)
+    except Exception:
+        pass
+
     return JsonResponse({
         "ok": True,
         "messages": [_message_json(m) for m in new],
         "valid_tokens": _validate_message_tokens(
             [m.body for m in new], request.user),
         # Who's typing right now (from the tenant's perspective):
-        #   partner_typing — the OPS side is mid-keystroke
-        #   tenant_typing  — echo so the tenant can debug their own state
+        #   partner_typing       — the OPS manager is mid-keystroke
+        #   partner_display_name — their actual first/last name so the
+        #                          pill reads naturally
+        #   tenant_typing        — echo so the tenant can debug their own state
         "presence": {
-            "partner_typing": conv.is_partner_typing,
-            "tenant_typing":  conv.is_tenant_typing,
+            "partner_typing":       conv.is_partner_typing,
+            "partner_display_name": partner_label,
+            "tenant_typing":        conv.is_tenant_typing,
         },
     })
 

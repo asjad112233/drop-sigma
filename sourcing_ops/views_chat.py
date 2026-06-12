@@ -334,14 +334,22 @@ def api_chat_poll(request, conv_id):
             unread_count_for_partner=0)
 
     from sourcing_partners.views import _validate_message_tokens
+    # Tenant's actual name for the OPS typing pill — "Sarah Kim is
+    # typing…" beats the generic "Tenant is typing…". Falls back to
+    # username if the user has no first/last set.
+    tenant_label = ""
+    if c.tenant_id:
+        u = c.tenant
+        tenant_label = (u.get_full_name() or u.username or "Tenant")
     return JsonResponse({
         "ok": True,
         "messages": [_msg_to_dict(m) for m in new_msgs],
         "valid_tokens": _validate_message_tokens(
             [m.body for m in new_msgs], c.tenant),
         "presence": {
-            "tenant_typing":  c.is_tenant_typing,
-            "partner_typing": c.is_partner_typing,
+            "tenant_typing":       c.is_tenant_typing,
+            "tenant_display_name": tenant_label,
+            "partner_typing":      c.is_partner_typing,
         },
     })
 

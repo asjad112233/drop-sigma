@@ -38691,7 +38691,7 @@ async function spvOpenChatThread(partnerId){
       <div id="spvChatTyping" class="spv-typing-row" style="display:none;">
         <div class="spv-typing-pill">
           <span class="spv-typing-dots"><span></span><span></span><span></span></span>
-          Drop Sigma Sourcing is typing…
+          <span id="spvChatTypingLabel">Drop Sigma Sourcing is typing…</span>
         </div>
       </div>
       <div style="margin-top:10px;background:#fff;border:1px solid rgba(15,23,42,.06);border-radius:14px;padding:10px;">
@@ -39178,10 +39178,15 @@ async function spvPollChat(){
   );
   if (!ok) return;
   // ── Typing presence (the OPS side of the conversation) ──────────
-  // The backend returns {presence: {partner_typing, tenant_typing}}.
-  // partner_typing = TRUE means the Drop Sigma operator is mid-keystroke;
-  // we render the WhatsApp-style "is typing…" pill below the thread.
-  try { spvRenderPartnerTyping(!!(data.presence && data.presence.partner_typing)); } catch(_){}
+  // The backend returns
+  // {presence: {partner_typing, partner_display_name, tenant_typing}}.
+  // partner_typing = TRUE means the assigned Drop Sigma manager is
+  // mid-keystroke; partner_display_name is their actual first+last
+  // name so the pill reads naturally ("Bryan Buford is typing…").
+  try {
+    const p = data.presence || {};
+    spvRenderPartnerTyping(!!p.partner_typing, p.partner_display_name);
+  } catch(_){}
 
   // Merge whitelist BEFORE rendering — otherwise spvRenderMsg sees an
   // empty Set on first paint and renders every token as plain text.
@@ -39225,10 +39230,17 @@ async function spvPollChat(){
 /* ── Typing indicator render ──────────────────────────────────────
    The pill lives in #spvChatTyping (rendered alongside #spvChatMsgs in
    the chat shell). show=true paints the dots; show=false hides them.
-   Idempotent. */
-function spvRenderPartnerTyping(show){
-  const el = document.getElementById('spvChatTyping');
+   When show=true we also swap the label so it reads with the assigned
+   manager's actual name (e.g. "Bryan Buford is typing…"). Idempotent. */
+function spvRenderPartnerTyping(show, displayName){
+  const el  = document.getElementById('spvChatTyping');
+  const lbl = document.getElementById('spvChatTypingLabel');
   if (!el) return;
+  if (show && lbl){
+    const who = (displayName && String(displayName).trim())
+      || 'Your Sourcing Manager';
+    lbl.textContent = who + ' is typing…';
+  }
   el.style.display = show ? 'flex' : 'none';
 }
 

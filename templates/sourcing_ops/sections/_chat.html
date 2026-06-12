@@ -670,9 +670,14 @@
     const after = state.lastMsgId || 0;
     const r = await opsFetch(`/ops/api/chat/${state.activeId}/poll/?after=${after}`);
     if (!r.ok) return;
-    // Typing presence — render the "tenant is typing…" pill below the
-    // message list when the tenant side is mid-keystroke.
-    try { renderTenantTyping(!!(r.data.presence && r.data.presence.tenant_typing)); } catch(_){}
+    // Typing presence — render the "[tenant name] is typing…" pill
+    // below the message list. tenant_display_name comes from the poll
+    // response so the OPS operator sees the actual customer's name,
+    // not a generic placeholder.
+    try {
+      const pr = r.data.presence || {};
+      renderTenantTyping(!!pr.tenant_typing, pr.tenant_display_name);
+    } catch(_){}
 
     const msgs = r.data.messages || [];
     if (!msgs.length) return;
@@ -717,9 +722,21 @@
     }
   }
 
-  function renderTenantTyping(show){
-    const el = document.getElementById('cxTyping');
+  function renderTenantTyping(show, displayName){
+    const el  = document.getElementById('cxTyping');
+    const lbl = document.getElementById('cxTypingLabel');
     if (!el) return;
+    if (show && lbl){
+      // Fall back to the conversation card's tenant label when the
+      // poll response doesn't carry one (defensive — every poll now
+      // returns it, but the active inbox card always has it too).
+      const fromConv = (state.convs.find(x => x.id === state.activeId) || {});
+      const who = (displayName && String(displayName).trim())
+        || fromConv.tenant_label
+        || fromConv.tenant_username
+        || 'Tenant';
+      lbl.textContent = who + ' is typing…';
+    }
     el.style.display = show ? 'flex' : 'none';
   }
 
