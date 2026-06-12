@@ -1819,6 +1819,19 @@ def api_aggregate_overview(request):
                         .filter(tenant=user, partner=default_partner,
                                 is_archived=False)
                         .first())
+        # Lazy-create the conversation on first overview hit so the
+        # chat panel renders immediately for tenants whose workspace
+        # wasn't pre-seeded (e.g. brand-new sign-ups). The conversation
+        # is owned by this tenant and routes to the picked partner —
+        # exactly what seed_workspace would have created — so messages
+        # sent through it work the same way.
+        if not default_conv:
+            try:
+                default_conv = PartnerConversation.objects.create(
+                    tenant=user, partner=default_partner, is_archived=False,
+                )
+            except Exception:
+                default_conv = None
 
     return JsonResponse({
         "ok": True,
