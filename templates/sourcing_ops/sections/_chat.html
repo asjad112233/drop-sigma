@@ -966,8 +966,6 @@
   //     hunted down, so every code path that returns early says why.
   // ─────────────────────────────────────────────────────────────────
   state.lastSeenMessageId = 0;
-  state.lastPopupAt       = 0;
-  state.reNudgeMs         = 45000;
   async function tickSidebar(){
     if (document.hidden) return;
     let r;
@@ -1020,13 +1018,13 @@
       state.lastSeenMessageId = +(latest.message_id || 0) || state.lastSeenMessageId;
       return;
     }
+    // Pop ONCE per new message id — never re-nudge for the same one.
+    // Operators already see the unread chip count on the sidebar; the
+    // toast is just to grab their attention the moment something
+    // genuinely new arrives.
     const msgId = +(latest.message_id || 0);
-    const isNew = msgId && msgId > state.lastSeenMessageId;
-    const sinceLast = Date.now() - (state.lastPopupAt || 0);
-    const shouldReNudge = !isNew && sinceLast > state.reNudgeMs && n > 0;
-    if (!isNew && !shouldReNudge) return;
-    state.lastSeenMessageId = Math.max(state.lastSeenMessageId, msgId || 0);
-    state.lastPopupAt = Date.now();
+    if (!msgId || msgId <= state.lastSeenMessageId) return;
+    state.lastSeenMessageId = msgId;
     showOpsChatPopup(latest, n);
   }
 

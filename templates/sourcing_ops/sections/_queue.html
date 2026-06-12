@@ -207,6 +207,15 @@
   #opsQueueRoot .oq-row.is-checked{
     border-color:#a855f7;box-shadow:0 0 0 1px #a855f7,0 12px 28px -20px rgba(168,85,247,.4);
   }
+  /* Brief glow when a notification deep-link lands on this row. */
+  #opsQueueRoot .oq-row.oq-row-flash{
+    animation:oqRowFlash 1.8s ease-out;
+  }
+  @keyframes oqRowFlash{
+    0%   {box-shadow:0 0 0 0 rgba(168,85,247,0);}
+    15%  {box-shadow:0 0 0 4px rgba(168,85,247,.32),0 16px 32px rgba(168,85,247,.38);}
+    100% {box-shadow:0 0 0 0 rgba(168,85,247,0);}
+  }
 
   /* TOP STRIP — order meta */
   #opsQueueRoot .oq-strip{

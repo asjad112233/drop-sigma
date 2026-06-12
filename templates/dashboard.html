@@ -11778,6 +11778,15 @@ document.addEventListener("DOMContentLoaded", () => {
         #sourcingPartnersSection .sp-order-row:hover{
           box-shadow:0 8px 22px rgba(15,23,42,.06);transform:translateY(-1px);
         }
+        /* Brief glow when a notification deep-link lands on this row. */
+        #sourcingPartnersSection .sp-order-row.sp-row-flash{
+          animation:spRowFlash 1.8s ease-out;
+        }
+        @keyframes spRowFlash{
+          0%   {box-shadow:0 0 0 0 rgba(168,85,247,.0), 0 0 0 0 rgba(212,175,55,.0);}
+          15%  {box-shadow:0 0 0 4px rgba(168,85,247,.28), 0 12px 28px rgba(168,85,247,.32);}
+          100% {box-shadow:0 0 0 0 rgba(168,85,247,.0), 0 0 0 0 rgba(212,175,55,.0);}
+        }
         #sourcingPartnersSection .sp-order-img{
           width:48px;height:48px;border-radius:10px;
           background:#f1f5f9;
@@ -38531,7 +38540,51 @@ async function spvInitWorkspace(){
     spvSwitchView('wallet');
     return;
   }
+  // Deep-link from a notification: ?view=orders&focus=DS-000904
+  // → land on the Orders view with the search pre-filled to the
+  // exact DS ref so the row is the only one on screen. Then strip
+  // focus from the URL so a hard refresh doesn't re-pin it.
+  const _focus = (_p.get('focus') || '').trim();
+  const _wantOrders = _view === 'orders' || !!_focus;
+  if (_wantOrders){
+    if (_focus){
+      SPV.ordersQ = _focus;
+      SPV.ordersFilter = 'all';
+      try {
+        _p.delete('focus');
+        const qs = _p.toString();
+        const u = '/dashboard/?section=sourcingPartners&view=orders' + (qs ? '&' + qs : '');
+        window.history.replaceState({}, '', u);
+      } catch(_){}
+    }
+    spvSwitchView('orders');
+    // Highlight the row briefly once it lands so the user can see
+    // exactly which order the notification pointed at.
+    if (_focus){
+      setTimeout(() => { try { spvHighlightRow(_focus); } catch(_){} }, 700);
+      setTimeout(() => { try { spvHighlightRow(_focus); } catch(_){} }, 2200);
+    }
+    return;
+  }
   spvSwitchView(_view === 'wallet' ? 'wallet' : 'overview');
+}
+
+/* ── Brief glow on the row matching the given DS ref. Called when
+   a deep-link / notification lands the user on the orders view so
+   the operator's eye snaps to the right card immediately. */
+function spvHighlightRow(dsRef){
+  if (!dsRef) return;
+  const target = String(dsRef).trim().toUpperCase();
+  const rows = document.querySelectorAll('#sourcingPartnersSection .sp-order-row');
+  for (const row of rows){
+    const txt = (row.textContent || '').toUpperCase();
+    if (txt.indexOf(target) !== -1){
+      row.scrollIntoView({behavior:'smooth', block:'center'});
+      row.classList.add('sp-row-flash');
+      setTimeout(() => row.classList.remove('sp-row-flash'), 1800);
+      return;
+    }
+  }
 }
 
 async function spvLoadOverviewData(){
@@ -39494,8 +39547,6 @@ function spvNotifyTyping(){
 // ═════════════════════════════════════════════════════════════════
 SPV._sidebarBadgeTimer = null;
 SPV._lastSeenMessageId  = 0;     // dedup key — highest message id we've popped
-SPV._lastPopupAt        = 0;     // wallclock of the last popup fire
-SPV._reNudgeMs          = 45000; // re-fire if still unread + this much elapsed
 function spvStartSidebarBadgePoll(){
   // Avoid double timers from re-entry into Sourcing Partners section.
   spvStopSidebarBadgePoll();
@@ -39556,14 +39607,12 @@ async function spvTickSidebarBadge(){
     return;
   }
 
+  // Popup ONLY on a genuinely new message id we haven't popped yet.
+  // No re-nudge: once dismissed, the badge alone signals there's
+  // still unread; no need to keep re-firing the toast.
   const msgId = +(latest.message_id || 0);
-  const isNewMessage = msgId && msgId > SPV._lastSeenMessageId;
-  const sinceLast    = Date.now() - (SPV._lastPopupAt || 0);
-  const shouldReNudge = !isNewMessage && sinceLast > SPV._reNudgeMs && n > 0;
-  if (!isNewMessage && !shouldReNudge) return;
-
-  SPV._lastSeenMessageId = Math.max(SPV._lastSeenMessageId, msgId || 0);
-  SPV._lastPopupAt = Date.now();
+  if (!msgId || msgId <= SPV._lastSeenMessageId) return;
+  SPV._lastSeenMessageId = msgId;
   spvShowChatPopup(latest, n);
 }
 

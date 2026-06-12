@@ -2539,6 +2539,54 @@
       // dashboard with "Loading KPIs…" everywhere.
       await opsLoadOverview();
       try { window.ds && window.ds.hideSplash && window.ds.hideSplash(); } catch(_) {}
+      // Notification deep-link: /ops/?view=queue&focus=DS-000904
+      // jumps to the Queue with the search pre-filled to the exact
+      // DS ref so the row is the only one on screen. Strips focus
+      // from the URL so a refresh doesn't re-trigger it.
+      try { opsHandleDeepLink(); } catch(_) {}
+    }
+
+    function opsHandleDeepLink(){
+      const p = new URLSearchParams(window.location.search);
+      const view  = (p.get('view')  || '').trim();
+      const focus = (p.get('focus') || '').trim();
+      if (!view && !focus) return;
+      if (view === 'queue' || focus){
+        // Seed the queue search BEFORE switching the view so opsLoadQueue
+        // picks it up on its first fetch. OQ is initialised by the queue
+        // module; defensive guard if it hasn't booted yet.
+        if (focus && window.OQ && window.OQ.filters){
+          window.OQ.filters.search = focus;
+        }
+        opsSwitchView('queue');
+        // Highlight the matching row when it lands. Two attempts so
+        // the second sweep catches the row even if the first paint
+        // hasn't completed.
+        if (focus){
+          setTimeout(() => { try { opsHighlightQueueRow(focus); } catch(_){} }, 700);
+          setTimeout(() => { try { opsHighlightQueueRow(focus); } catch(_){} }, 2200);
+        }
+        try {
+          p.delete('focus');
+          const qs = p.toString();
+          window.history.replaceState({}, '', '/ops/' + (qs ? '?' + qs : ''));
+        } catch(_) {}
+      }
+    }
+
+    function opsHighlightQueueRow(dsRef){
+      if (!dsRef) return;
+      const target = String(dsRef).trim().toUpperCase();
+      const rows = document.querySelectorAll('#opsQueueRoot .oq-row');
+      for (const row of rows){
+        const txt = (row.textContent || '').toUpperCase();
+        if (txt.indexOf(target) !== -1){
+          row.scrollIntoView({behavior:'smooth', block:'center'});
+          row.classList.add('oq-row-flash');
+          setTimeout(() => row.classList.remove('oq-row-flash'), 1800);
+          return;
+        }
+      }
     }
 
     /* ─── OVERVIEW loader ─────────────────────────────────────────── */
