@@ -5557,7 +5557,7 @@ document.addEventListener("DOMContentLoaded", () => {
       <span id="rmaNavBadge" style="display:none;position:absolute;top:8px;right:8px;background:#ef4444;color:#fff;font-size:9px;font-weight:900;border-radius:999px;padding:1px 5px;min-width:16px;text-align:center;line-height:1.4;"></span>
     </button>
 
-    <button id="navSourcingPartners" data-tip="Sourcing Partners" onclick="showSection('sourcingPartners')" style="position:relative;">
+    <button id="navSourcingPartners" data-tip="Sourcing Partners" onclick="dsEnterSourcingPartners()" style="position:relative;">
       <svg class="sb-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-6 9 6v9a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3z"/><circle cx="12" cy="13" r="3"/></svg>
       Sourcing Partners
       <span id="spNavBadge" style="display:none;position:absolute;top:8px;right:8px;background:#ef4444;color:#fff;font-size:9px;font-weight:900;border-radius:999px;padding:1px 5px;min-width:16px;text-align:center;line-height:1.4;"></span>
@@ -16242,6 +16242,49 @@ function handleEmailNavClick(ev){
   showSection('emails');
   setTimeout(() => switchEmailView('inbox', document.getElementById('navSubEmailInbox')), 30);
   toggleEmailNavGroup(true);
+}
+
+// Sourcing Partners is its own sub-portal (separate top-bar, separate
+// sidebar, separate workspace look). We mark the transition with a
+// 2.4s Drop Sigma Sourcing splash so the user clearly feels they're
+// entering a new surface, not just swapping a div. The section itself
+// activates underneath the overlay so by the time the splash fades
+// out, the workspace is already painted and ready.
+function dsEnterSourcingPartners(){
+  // If we're already inside the Sourcing Partners section, the user
+  // tapped the active nav item — no point re-running the splash.
+  try {
+    if (document.body.getAttribute('data-active-section') === 'sourcingPartners'){
+      return;
+    }
+  } catch(_){}
+
+  // Defensive: if the global ds API hasn't loaded for any reason, fall
+  // back to a plain showSection so the click is never dead.
+  if (!(window.ds && window.ds.showTransitionSplash)){
+    showSection('sourcingPartners');
+    return;
+  }
+
+  window.ds.showTransitionSplash({
+    brand:    'Partner Network',
+    title:    'Drop Sigma Sourcing',
+    subtitle: 'Connecting you with verified suppliers, end-to-end fulfilment, and 24/7 support.',
+    duration: 2400,
+    icon:     ''
+      + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+      + 'stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'
+      + '<path d="M3 9l9-6 9 6v9a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3z"/>'
+      + '<circle cx="12" cy="13" r="3"/>'
+      + '<path d="M12 16v2"/>'
+      + '</svg>',
+  });
+  // Kick the section change immediately — the overlay sits on top so
+  // the user never sees the swap. By the time the splash fades, the
+  // workspace is already populated.
+  setTimeout(function(){
+    try { showSection('sourcingPartners'); } catch(_){}
+  }, 60);
 }
 
 function showSection(section){
