@@ -292,6 +292,10 @@
     font-weight:900;font-size:11.5px;
     display:inline-flex;align-items:center;gap:4px;
   }
+  /* Estimated-margin value: cursor:help over the WHOLE amount so any
+     hover anywhere on the number surfaces the FX tooltip — much
+     friendlier than asking the ops reader to land on the tiny ⓘ glyph. */
+  #opsQueueRoot .oq-row-price .line.margin .v.est-val{cursor:help;}
   /* "est." pill on the label side — flags the row as estimated so
      the ops reader knows the figure is FX-derived rather than direct. */
   #opsQueueRoot .oq-row-price .line.margin .est-tag{
@@ -300,13 +304,14 @@
     background:rgba(99,102,241,.14);color:#4338ca;
     text-transform:uppercase;vertical-align:middle;
   }
-  /* ⓘ info chip on the value side — hovering surfaces the rate
-     metadata. Soft contrast so it doesn't dominate the number. */
+  /* ⓘ info chip on the value side — purely a discoverability cue
+     now; pointer-events:none means it doesn't steal hover from the
+     parent .est-val span which carries the native title tooltip
+     for the whole amount. */
   #opsQueueRoot .oq-row-price .line.margin .est-info{
-    font-size:10.5px;color:#94a3b8;cursor:help;
-    font-weight:700;
+    font-size:10.5px;color:#94a3b8;font-weight:700;
+    pointer-events:none;
   }
-  #opsQueueRoot .oq-row-price .line.margin .est-info:hover{color:#475569;}
   #opsQueueRoot .oq-row-price .line.margin.pos .v{color:#059669;}
   #opsQueueRoot .oq-row-price .line.margin.neg .v{color:#dc2626;}
   #opsQueueRoot .oq-price-pending{
@@ -859,7 +864,11 @@
           // Convert Drop-Sigma's USD charge into the tenant's
           // currency, then subtract from what the tenant sold for
           // (already in that currency). Margin is therefore quoted
-          // in the tenant's own unit.
+          // in the tenant's own unit. The "est." pill on the label
+          // side already flags this as an estimate, so we DON'T also
+          // prefix with "~" — one indicator, not two. Native title
+          // tooltip sits on the WHOLE value span (not just the tiny
+          // ⓘ glyph) so even a casual hover surfaces the FX detail.
           const totLocal = tot * rate;
           const margin   = sells - totLocal;
           const cls  = margin >= 0 ? 'pos' : 'neg';
@@ -867,7 +876,7 @@
           const tip  = `Estimated by converting Drop Sigma's USD charge ($${tot.toFixed(2)}) into ${ccy} at today's mid-market rate (1 USD = ${rate.toFixed(4)} ${ccy}${fxDate ? `, ${fxDate}` : ''}). The actual margin the tenant realises will vary by ±2-3% based on the PSP / bank conversion applied at settlement.`;
           marginLine = `<span class="line margin ${cls}" title="${opsEsc(tip)}">
             <span class="l">Tenant Margin <span class="est-tag">est.</span></span>
-            <span class="v">~${sign}${opsUSD(Math.abs(margin))} <span class="ccy">${opsEsc(ccy)}</span><span class="est-info" title="${opsEsc(tip)}">ⓘ</span></span>
+            <span class="v est-val" title="${opsEsc(tip)}">${sign}${opsUSD(Math.abs(margin))} <span class="ccy">${opsEsc(ccy)}</span><span class="est-info" aria-hidden="true">ⓘ</span></span>
           </span>`;
         } else {
           marginLine = `<span class="line margin" title="Tenant store sells in ${opsEsc(ccy)} — today's FX rate isn't available, so margin can't be estimated. Try again later."><span class="l">Tenant Margin</span><span class="v" style="color:#94a3b8;font-weight:700;">—</span></span>`;
