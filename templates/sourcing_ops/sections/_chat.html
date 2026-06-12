@@ -268,95 +268,74 @@
                0 0 0 1px rgba(168,85,247,.28);
   }
 
-  /* ── 1. Brand strip ── */
+  /* ── 1. Brand strip (compact — the message body is the hero) ── */
   .ops-chat-popup-brand{
-    display:flex;align-items:center;gap:10px;
-    padding:11px 14px 11px 12px;
-    background:linear-gradient(135deg,
-      #0b1224 0%, #1e1b4b 35%, #312e81 65%, #4c1d95 100%);
-    color:#fff;
-    position:relative;
-  }
-  .ops-chat-popup-brand::after{
-    content:"";position:absolute;left:0;right:0;bottom:0;height:1px;
+    display:flex;align-items:center;gap:8px;
+    padding:7px 12px 7px 10px;
     background:linear-gradient(90deg,
-      transparent 0%,
-      #d4af37 22%, #a855f7 50%, #6366f1 78%,
-      transparent 100%);
-    opacity:.85;
+      #0b1224 0%, #1e1b4b 50%, #312e81 100%);
+    color:#fff;
   }
   .ops-chat-popup-sigil{
-    width:30px;height:30px;border-radius:9px;
+    width:18px;height:18px;border-radius:5px;
     background:linear-gradient(135deg,#fbbf24 0%, #d4af37 50%, #b45309 100%);
-    color:#0b1224;font-weight:900;font-size:11.5px;letter-spacing:-.5px;
+    color:#0b1224;font-weight:900;font-size:8px;letter-spacing:-.3px;
     display:flex;align-items:center;justify-content:center;
-    box-shadow:inset 0 0 0 1px rgba(255,255,255,.25),
-               0 4px 10px rgba(212,175,55,.36);
     flex-shrink:0;
   }
-  .ops-chat-popup-wordmark{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.2;}
   .ops-chat-popup-w-top{
-    font-size:10px;font-weight:900;letter-spacing:.18em;
-    background:linear-gradient(135deg,#fbbf24 0%, #a855f7 70%, #6366f1 100%);
-    -webkit-background-clip:text;background-clip:text;
-    -webkit-text-fill-color:transparent;
-  }
-  .ops-chat-popup-w-sub{
-    margin-top:2px;font-size:10.5px;font-weight:700;color:#cbd5e1;
-    display:inline-flex;align-items:center;gap:6px;
-  }
-  .ops-chat-popup-live{
-    width:6px;height:6px;border-radius:50%;background:#10b981;
-    box-shadow:0 0 0 3px rgba(16,185,129,.22);
-    animation:opsPopupLive 1.6s ease-in-out infinite;
-  }
-  @keyframes opsPopupLive{
-    0%,100%{box-shadow:0 0 0 3px rgba(16,185,129,.22);}
-    50%    {box-shadow:0 0 0 7px rgba(16,185,129,.04);}
+    flex:1;min-width:0;
+    font-size:9px;font-weight:900;letter-spacing:.16em;
+    color:#cbd5e1;
   }
   .ops-chat-popup-count{
     color:#0b1224;
     background:linear-gradient(135deg,#fbbf24 0%,#d4af37 100%);
-    padding:3px 9px;border-radius:999px;letter-spacing:.06em;
-    font-size:9.5px;font-weight:900;
-    box-shadow:0 3px 10px rgba(212,175,55,.36),
-               inset 0 0 0 1px rgba(255,255,255,.22);
+    padding:2px 7px;border-radius:999px;letter-spacing:.06em;
+    font-size:9px;font-weight:900;flex-shrink:0;
   }
   .ops-chat-popup-x{
-    margin-left:2px;background:transparent;border:0;
-    color:rgba(255,255,255,.65);font-size:18px;line-height:1;cursor:pointer;
-    padding:2px 6px;border-radius:6px;transition:all .12s;
+    background:transparent;border:0;
+    color:rgba(255,255,255,.55);font-size:16px;line-height:1;cursor:pointer;
+    padding:0 4px;border-radius:5px;transition:all .12s;flex-shrink:0;
   }
   .ops-chat-popup-x:hover{background:rgba(255,255,255,.10);color:#fff;}
 
-  /* ── 2. Sender row ── */
+  /* ── 2. Sender row (compact) ── */
   .ops-chat-popup-sender{
-    display:flex;align-items:center;gap:11px;
-    padding:14px 16px 0 16px;
+    display:flex;align-items:center;gap:10px;
+    padding:12px 16px 8px 16px;
   }
   .ops-chat-popup-av{
-    flex-shrink:0;width:42px;height:42px;border-radius:13px;
+    flex-shrink:0;width:32px;height:32px;border-radius:10px;
     background:linear-gradient(135deg,#6366f1 0%,#a855f7 60%,#06b6d4 130%);
-    color:#fff;font-weight:900;font-size:14px;letter-spacing:.02em;
+    color:#fff;font-weight:900;font-size:11.5px;letter-spacing:.02em;
     display:flex;align-items:center;justify-content:center;
     box-shadow:inset 0 0 0 1px rgba(255,255,255,.18),
-               0 6px 16px rgba(99,102,241,.36);
+               0 4px 10px rgba(99,102,241,.30);
   }
-  .ops-chat-popup-meta{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+  .ops-chat-popup-meta{flex:1;min-width:0;display:flex;align-items:baseline;gap:8px;}
   .ops-chat-popup-name{
-    font-size:14.5px;font-weight:900;color:#0f172a;
+    font-size:12.5px;font-weight:900;color:#0f172a;
     letter-spacing:-.01em;
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   }
   .ops-chat-popup-time{
-    font-size:11.5px;font-weight:700;color:#64748b;letter-spacing:.01em;
+    font-size:10.5px;font-weight:700;color:#94a3b8;letter-spacing:.01em;
+    white-space:nowrap;flex-shrink:0;
   }
 
-  /* ── 3. Body ── */
+  /* ── 3. Body — the HERO of the card ── */
   .ops-chat-popup-body{
-    margin:8px 16px 0 69px;font-size:13px;font-weight:600;color:#334155;
-    line-height:1.55;
-    display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;
+    margin:0 16px 14px 16px;
+    padding:14px 16px;
+    background:linear-gradient(180deg,#f8fafc 0%,#f1f5f9 100%);
+    border:1px solid rgba(99,102,241,.10);
+    border-left:3px solid #a855f7;
+    border-radius:11px;
+    font-size:15px;font-weight:600;color:#0f172a;
+    line-height:1.55;letter-spacing:-.005em;
+    display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;
     overflow:hidden;word-break:break-word;
   }
 
@@ -1082,13 +1061,7 @@
     node.innerHTML = `
       <div class="ops-chat-popup-brand">
         <div class="ops-chat-popup-sigil">DS</div>
-        <div class="ops-chat-popup-wordmark">
-          <div class="ops-chat-popup-w-top">DROP SIGMA · OPS</div>
-          <div class="ops-chat-popup-w-sub">
-            <span class="ops-chat-popup-live"></span>
-            Tenant inbox · live
-          </div>
-        </div>
+        <div class="ops-chat-popup-w-top">DROP SIGMA · OPS</div>
         <span class="ops-chat-popup-count">${opsEsc(countLabel)}</span>
         <button class="ops-chat-popup-x" aria-label="Dismiss">×</button>
       </div>
@@ -1096,7 +1069,7 @@
         <div class="ops-chat-popup-av">${opsEsc(initials)}</div>
         <div class="ops-chat-popup-meta">
           <div class="ops-chat-popup-name">${opsEsc(name)}</div>
-          <div class="ops-chat-popup-time">${opsEsc(stampLabel)} · new message</div>
+          <div class="ops-chat-popup-time">${opsEsc(stampLabel)}</div>
         </div>
       </div>
       <div class="ops-chat-popup-body">${opsEsc(preview)}</div>
