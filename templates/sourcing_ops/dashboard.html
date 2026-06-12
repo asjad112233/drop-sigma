@@ -2463,6 +2463,22 @@
 
     /* ─── Section nav ─────────────────────────────────────────────── */
     function opsSwitchView(view){
+      // ─────────────────────────────────────────────────────────────
+      // CRITICAL: stop the in-thread chat poll the moment the
+      // operator leaves the chat view. The /poll/ endpoint clears
+      // unread_count_for_partner as a side effect — a poll running
+      // in the background after leaving chat silently swallows new
+      // tenant messages for that conversation, beating the sidebar
+      // poll to it. Root cause of "kabhi popup aata kabhi nahi" on
+      // OPS: race between background thread poll and sidebar poll.
+      // ─────────────────────────────────────────────────────────────
+      if (OPS.view === 'chat' && view !== 'chat'){
+        try {
+          if (window.opsChat && typeof window.opsChat._onLeaveChatView === 'function'){
+            window.opsChat._onLeaveChatView();
+          }
+        } catch(_){}
+      }
       OPS.view = view;
       document.querySelectorAll('.ops-nav').forEach(el => {
         el.classList.toggle('active', el.dataset.view === view);

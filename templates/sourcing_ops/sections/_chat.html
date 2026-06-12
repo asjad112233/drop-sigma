@@ -776,6 +776,11 @@
       clearInterval(state.threadPollTimer);
       state.threadPollTimer = null;
     }
+    // NOTE: do NOT clear state.activeId here — startThreadPoll
+    // (called by openThread) calls stopThreadPoll first to clear
+    // any existing interval, and clearing activeId would break the
+    // very poll openThread just kicked off. activeId is cleared in
+    // opsSwitchView when actually leaving the chat view.
   }
 
   async function pollThread(){
@@ -1797,6 +1802,16 @@
       load();
     },
     _openThread: openThread,
+    _stopThreadPoll: stopThreadPoll,
+    // Called by opsSwitchView when the operator navigates AWAY from
+    // the chat view. Clears both the polling interval AND the active
+    // conversation id so a stale poll can't fire after the navigate.
+    // Distinct from _stopThreadPoll (which is called internally by
+    // openThread between threads and must NOT clear activeId).
+    _onLeaveChatView: function(){
+      try { stopThreadPoll(); } catch(_){}
+      state.activeId = null;
+    },
     _send: send,
     _typing: notifyTypingOps,
     _auto(el){

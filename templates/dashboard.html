@@ -16610,6 +16610,15 @@ function showSection(section){
   if(section !== "trackingQueue" && section !== "vendors"){
     _stopTqPolling();
   }
+  // Leaving Sourcing Partners → kill the background chat poll. Same
+  // root cause as the in-SP view switcher: /poll/ clears
+  // unread_count_for_tenant as a side effect, so a stale poll
+  // running after the user navigates away silently eats incoming
+  // partner messages before the sidebar can pop them.
+  if(section !== "sourcingPartners"){
+    try { if (typeof spvStopChatPoll === 'function') spvStopChatPoll(); } catch(_){}
+    try { if (window.SPV) SPV.activeConvId = null; } catch(_){}
+  }
   document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
   document.querySelectorAll(".sidebar button").forEach(b => b.classList.remove("active"));
   // Clean up frozen header when leaving orders
@@ -38601,6 +38610,20 @@ function spvOpenBrowse(){ spvSwitchView('overview'); }
 
 /* ── Section navigation ────────────────────────────────────────────── */
 function spvSwitchView(view){
+  // ─────────────────────────────────────────────────────────────────
+  // CRITICAL: stop the in-view chat poll the moment we leave the
+  // chat view. The /poll/ endpoint has a side effect of clearing
+  // unread_count_for_tenant to 0 — if the poll keeps running in the
+  // background after the user switches to Orders / Wallet / etc, it
+  // silently swallows every NEW partner message before the sidebar
+  // poll can surface it as a popup. Was the root cause of "kabhi
+  // popup aata kabhi nahi" — race between background chat poll and
+  // sidebar poll, depending on which fired first.
+  // ─────────────────────────────────────────────────────────────────
+  if (SPV.view === 'chat' && view !== 'chat'){
+    try { spvStopChatPoll(); } catch(_){}
+    SPV.activeConvId = null;
+  }
   SPV.view = view;
   document.querySelectorAll('#spvNavList .sp-nav-item').forEach(el => {
     el.classList.toggle('active', el.dataset.view === view);
