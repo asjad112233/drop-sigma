@@ -1,32 +1,34 @@
-{# Drop Sigma branded loader + pagination — global shared partial.
-   Included from every portal entry point (tenant dashboard, OPS, superadmin,
-   plus any standalone page that wants the affordance) so the same
-   theme-matched loader appears across the whole platform. The CSS is NOT
-   scoped to any container — the components are meant to be drop-in.
+{% comment %}
+  Drop Sigma branded loader + pagination — global shared partial.
+  Included from every portal entry point (tenant dashboard, OPS, superadmin,
+  plus any standalone page that wants the affordance) so the same
+  theme-matched loader appears across the whole platform. The CSS is NOT
+  scoped to any container — the components are meant to be drop-in.
 
-   Public JS API (lives on window.ds):
+  Public JS API (lives on window.ds):
 
-     window.ds.loaderHTML(size, label)
-         Returns an HTML string for an inline loader. size ∈ "sm" | "md" | "lg".
-         e.g.   el.innerHTML = window.ds.loaderHTML('md', 'Loading orders');
+    window.ds.loaderHTML(size, label)
+        Returns an HTML string for an inline loader. size in "sm" | "md" | "lg".
+        e.g.   el.innerHTML = window.ds.loaderHTML('md', 'Loading orders');
 
-     window.ds.skeletonHTML(n)
-         Returns an HTML string for n shimmer skeleton rows. Used inside list
-         containers to keep the geometry while results load.
+    window.ds.skeletonHTML(n)
+        Returns an HTML string for n shimmer skeleton rows. Used inside list
+        containers to keep the geometry while results load.
 
-     window.ds.pagerHTML(state)
-         Returns a pagination strip. state = {page, page_size, total, total_pages}.
-         Bind click handlers with bindPager(host, state, onPage, onPageSize).
+    window.ds.pagerHTML(state)
+        Returns a pagination strip. state has page, page_size, total, total_pages.
+        Bind click handlers with bindPager(host, state, onPage, onPageSize).
 
-     window.ds.bindPager(host, state, onPage, onPageSize)
-         Wires every button/input inside the host (the element you rendered
-         the pagerHTML into) to the supplied callbacks.
+    window.ds.bindPager(host, state, onPage, onPageSize)
+        Wires every button/input inside the host (the element you rendered
+        the pagerHTML into) to the supplied callbacks.
 
-     window.ds.show(el, label)
-         Shorthand: el.innerHTML = loaderHTML('md', label).
+    window.ds.show(el, label)
+        Shorthand: el.innerHTML = loaderHTML('md', label).
 
-   The components are intentionally CSS-only (no JS animation), so they
-   work in every section without per-section wiring. #}
+  The components are intentionally CSS-only (no JS animation), so they
+  work in every section without per-section wiring.
+{% endcomment %}
 <style>
   /* ── Drop Sigma loader ─────────────────────────────────────────── */
   .ds-loader{

@@ -1,29 +1,32 @@
-{# Drop Sigma full-screen splash — covers the page from the very first
-   paint until the portal's data is ready, so a hard refresh never
-   exposes the half-rendered DOM.
+{% comment %}
+  Drop Sigma full-screen splash — covers the page from the very first
+  paint until the portal's data is ready, so a hard refresh never
+  exposes the half-rendered DOM.
 
-   How it works:
+  How it works:
 
-     1. This partial is included at the TOP of <body> in every portal
-        entry point (tenant dashboard, OPS, superadmin). Browser parses
-        the inline <style> + <div> + <script> before anything below it,
-        so the overlay appears in the very first paint frame.
+    1. This partial is included at the TOP of body in every portal
+       entry point (tenant dashboard, OPS, superadmin). Browser parses
+       the inline style + div + script before anything below it,
+       so the overlay appears in the very first paint frame.
 
-     2. The overlay covers the viewport (position:fixed, z-index:1e9)
-        on a Drop Sigma midnight gradient with the animated DS sigil.
+    2. The overlay covers the viewport (position:fixed, very high
+       z-index) on a Drop Sigma midnight gradient with the animated
+       DS sigil.
 
-     3. Hiding is opt-in via window.ds.hideSplash() — each portal's
-        boot routine calls it once the initial data is rendered. If a
-        portal forgets to wire it, two safety nets fire:
-            * window.load + 1.6s grace — page is fully loaded
-            * absolute cap at 8s — never trap the user
+    3. Hiding is opt-in via window.ds.hideSplash() — each portal's
+       boot routine calls it once the initial data is rendered. If a
+       portal forgets to wire it, two safety nets fire:
+           * window.load + 1.6s grace — page is fully loaded
+           * absolute cap at 8s — never trap the user
 
-     4. A small "minimum visible time" prevents a sub-200ms flash on
-        instant cache hits. The splash always shows for at least 350ms
-        once the overlay is in the DOM.
+    4. A small "minimum visible time" prevents a sub-200ms flash on
+       instant cache hits. The splash always shows for at least 350ms
+       once the overlay is in the DOM.
 
-   No required HTML on the host page — the partial owns the overlay
-   node and removes it when done. #}
+  No required HTML on the host page — the partial owns the overlay
+  node and removes it when done.
+{% endcomment %}
 <style>
   /* Splash overlay. Sits above everything (the OPS dashboard's
      top-rail and modal layer max out around z:1000), and intentionally

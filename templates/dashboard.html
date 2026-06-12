@@ -4927,9 +4927,7 @@ textarea#emailReplyText:focus{border:none!important;box-shadow:none!important;}
   </linearGradient>
 </defs></svg>
 <body{% if embed_mode == "emails" %} class="ds-embed-emails{% if not embed_has_assignments %} ds-no-assignments{% endif %}" data-embed="emails" data-active-section="emails"{% endif %}>
-{# Drop Sigma splash — covers the page until the dashboard data has
-   rendered. Suppressed in iframe embed mode (emails view) because
-   the iframe itself stays hidden until its parent shows it. #}
+{# Splash: cover the page until the dashboard data renders. Hidden in emails-embed iframe (parent already hides it). #}
 {% if embed_mode != "emails" %}{% include "_ds_splash.html" %}{% endif %}
 {% if embed_mode == "emails" %}
 <style>
