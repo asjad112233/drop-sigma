@@ -185,7 +185,7 @@ def _country_flag(code):
 # ───────────────────────────────────────────────────────────────────────
 # Shell view — single-page-app at /ops/
 # ───────────────────────────────────────────────────────────────────────
-@login_required(login_url="/login/")
+@login_required(login_url="/ops/login/")
 def ops_dashboard(request):
     """Render the ops portal SPA shell. Non-ops users get redirected."""
     if not is_ops_user(request.user):
@@ -196,7 +196,7 @@ def ops_dashboard(request):
     })
 
 
-@login_required(login_url="/login/")
+@login_required(login_url="/ops/login/")
 def ops_wallet_preview(request):
     """Static design preview of the upcoming Wallets & Finance section.
 
@@ -209,7 +209,7 @@ def ops_wallet_preview(request):
     return render(request, "sourcing_ops/_wallet_preview.html")
 
 
-@login_required(login_url="/login/")
+@login_required(login_url="/ops/login/")
 def ops_supplier_form_preview(request):
     """Static design preview of the supplier-facing pricing form.
 
@@ -224,7 +224,7 @@ def ops_supplier_form_preview(request):
     return render(request, "sourcing_ops/_supplier_form_preview.html")
 
 
-@login_required(login_url="/login/")
+@login_required(login_url="/ops/login/")
 def ops_tenant_product_detail_preview(request):
     """Static design preview of the tenant-facing product detail page.
 
