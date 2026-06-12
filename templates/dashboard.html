@@ -16610,13 +16610,14 @@ function showSection(section){
   if(section !== "trackingQueue" && section !== "vendors"){
     _stopTqPolling();
   }
-  // Leaving Sourcing Partners → kill the background chat poll. Same
-  // root cause as the in-SP view switcher: /poll/ clears
-  // unread_count_for_tenant as a side effect, so a stale poll
-  // running after the user navigates away silently eats incoming
-  // partner messages before the sidebar can pop them.
+  // Leaving Sourcing Partners → kill the background chat poll AND
+  // the orders auto-sync. Same root cause for chat poll: /poll/
+  // clears unread_count_for_tenant as a side effect, so a stale
+  // poll running after the user navigates away silently eats
+  // incoming partner messages before the sidebar can pop them.
   if(section !== "sourcingPartners"){
     try { if (typeof spvStopChatPoll === 'function') spvStopChatPoll(); } catch(_){}
+    try { if (typeof spvStopOrdersAutoSync === 'function') spvStopOrdersAutoSync(); } catch(_){}
     try { if (window.SPV) SPV.activeConvId = null; } catch(_){}
   }
   document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
@@ -38624,6 +38625,13 @@ function spvSwitchView(view){
     try { spvStopChatPoll(); } catch(_){}
     SPV.activeConvId = null;
   }
+  // Orders view live-status sync: start a silent 8s background poll
+  // while the user is on Orders so OPS-side status changes (quote
+  // sent / paid / shipped / delivered / cancelled) surface in the
+  // list without a refresh. Stops the moment they leave.
+  if (SPV.view === 'orders' && view !== 'orders'){
+    try { spvStopOrdersAutoSync(); } catch(_){}
+  }
   SPV.view = view;
   document.querySelectorAll('#spvNavList .sp-nav-item').forEach(el => {
     el.classList.toggle('active', el.dataset.view === view);
@@ -38643,6 +38651,34 @@ function spvSwitchView(view){
   const body = document.getElementById('spvTabBody');
   body.innerHTML = '<div class="sp-loading">Loading…</div>';
   (loaders[view] || spvLoadOverview)();
+  // After the loader fires, kick the orders auto-sync if we're
+  // landing on the orders view. (Deferred via setTimeout so
+  // spvLoadOrders's own first fetch isn't doubled by the same-tick
+  // auto-sync immediate tick.)
+  if (view === 'orders'){
+    setTimeout(() => { try { spvStartOrdersAutoSync(); } catch(_){} }, 0);
+  }
+}
+
+/* ── Orders auto-sync ──────────────────────────────────────────────
+   Polls the same endpoint spvLoadOrders uses, but silently — no
+   loader flash, just an in-place re-render when status counts /
+   row data change. Background-tab-friendly (skips while hidden).
+   Idempotent: re-entering the orders view restarts the timer. */
+SPV._ordersAutoSyncTimer = null;
+function spvStartOrdersAutoSync(){
+  spvStopOrdersAutoSync();
+  SPV._ordersAutoSyncTimer = setInterval(() => {
+    if (document.hidden) return;
+    if (SPV.view !== 'orders') return;
+    try { spvLoadOrders({keepPage:true, silent:true}); } catch(_){}
+  }, 8000);
+}
+function spvStopOrdersAutoSync(){
+  if (SPV._ordersAutoSyncTimer){
+    clearInterval(SPV._ordersAutoSyncTimer);
+    SPV._ordersAutoSyncTimer = null;
+  }
 }
 
 function spvRenderSectionBar(){
@@ -39791,12 +39827,16 @@ function spvBindPager(host, state, onPage, onSize){
 async function spvLoadOrders(opts){
   // Filter / search / sort changes reset to page 1; explicit page
   // navigations pass {keepPage:true} so the user stays where they
-  // were when they tap "next" / "to page X".
+  // were when they tap "next" / "to page X". A {silent:true} flag
+  // skips the loader skeleton entirely so the 10s background
+  // refresh-poll doesn't flash on every tick — only the rows
+  // re-render in place when the data arrives.
   if (!opts || !opts.keepPage) SPV.ordersPage = 1;
+  const silent = !!(opts && opts.silent);
 
   // Drop-Sigma loader during fetch — no more boring empty list.
   const body = document.getElementById('spvTabBody');
-  if (body) body.innerHTML = spvLoaderHTML('md', 'Loading orders') + spvSkeletonHTML(Math.min(SPV.ordersPageSize, 6));
+  if (body && !silent) body.innerHTML = spvLoaderHTML('md', 'Loading orders') + spvSkeletonHTML(Math.min(SPV.ordersPageSize, 6));
 
   // Load orders + wallet in parallel so the floating bulk-pay bar can
   // immediately show "balance after charge" math.

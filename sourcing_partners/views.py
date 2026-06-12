@@ -2893,6 +2893,49 @@ def _charge_orders(user, order_ids):
             "id": o.id, "ds_order_ref": o.ds_order_ref,
             "amount_usd": _dec_to_float(o.sourcing_total_usd),
         })
+        # OPS-side feedback loop. Two things land:
+        #   1. OpsActivity row so the workspace activity feed shows
+        #      the tenant just paid (drives "Process Now" on the
+        #      OPS desk).
+        #   2. Bell-icon notification on the assigned manager's
+        #      account so they get a real ping, not just a feed
+        #      entry buried under a tab.
+        try:
+            from sourcing_ops.models import OpsActivity, TenantManagerAssignment
+            from notifications.services import notify
+            OpsActivity.objects.create(
+                order=o,
+                kind="paid",
+                title=f"Tenant paid · {o.ds_order_ref}",
+                detail=(f"${o.sourcing_total_usd:.2f} cleared. Ready "
+                        f"for procurement."),
+                icon="💰",
+                actor_user=user, actor_label=getattr(user, "username", ""),
+            )
+            assignment = (TenantManagerAssignment.objects
+                          .select_related("manager", "manager__user")
+                          .filter(tenant=user).first())
+            mgr_user = (assignment and assignment.manager
+                        and assignment.manager.user)
+            if mgr_user:
+                notify(
+                    recipient=mgr_user,
+                    audience="employee",
+                    category="payment",
+                    title=f"Paid · {o.ds_order_ref}",
+                    body=(f"{getattr(user, 'username', 'Tenant')} just paid "
+                          f"${o.sourcing_total_usd:.2f}. Move to procurement."),
+                    action_url=("/ops/?view=queue&focus="
+                                + (o.ds_order_ref or "")),
+                    action_label="Open in OPS Queue",
+                    icon="fa-solid fa-cash-register",
+                    priority="high",
+                    related_order_id=o.pk,
+                )
+        except Exception:
+            # Never let a notification problem swallow a successful
+            # charge — the wallet has already debited.
+            pass
     wallet.save(update_fields=["balance_usd", "updated_at"])
 
     return True, {

@@ -81,6 +81,43 @@ def _log_activity(order, *, kind, title, detail="", icon="", actor=None):
     )
 
 
+def _notify_tenant(order, *, category, title, body="",
+                   action_url="", action_label="View order",
+                   icon="", priority="medium"):
+    """Drop a bell-icon notification on the tenant's main dashboard
+    for an order event triggered by the OPS desk.
+
+    Idempotent at the call site — pass any defaults you want. Silent
+    no-op if the order isn't linked to a tenant user (orphan / legacy
+    rows). Default action_url deep-links into the tenant's Sourcing
+    Partners orders view so one click opens the order list with the
+    new status already reflected.
+    """
+    if not order or order.store_id is None or not order.store.user_id:
+        return
+    tenant = order.store.user
+    if not action_url:
+        action_url = ("/dashboard/?section=sourcingPartners"
+                      "&view=orders&focus=" + (order.ds_order_ref or ""))
+    try:
+        from notifications.services import notify
+        notify(
+            recipient=tenant,
+            audience="admin",  # tenant is admin of their store
+            category=category,
+            title=title,
+            body=body,
+            action_url=action_url,
+            action_label=action_label,
+            icon=icon,
+            priority=priority,
+            related_order_id=order.pk,
+        )
+    except Exception:
+        # Notifications must never break the upstream mutation.
+        pass
+
+
 def _auto_match_supplier_products(sku):
     if not sku:
         return SupplierProduct.objects.none()
@@ -690,6 +727,18 @@ def api_order_quote(request, order_id):
                     f"${drop_sigma_margin:.2f} ({margin_pct:.1f}%), lead {lead_days}d"),
             icon="💰", actor=request.user,
         )
+        # Tenant bell notification — fire only on transition INTO
+        # pending_payment so a quote-amendment doesn't double-notify.
+        if order.sourcing_status == "pending_payment":
+            _notify_tenant(
+                order, category="payment",
+                title="Quote ready — ready to pay",
+                body=(f"Drop Sigma quoted {order.ds_order_ref}: "
+                      f"${total:.2f} total · est. {lead_days} day lead time."),
+                action_label="Review & pay",
+                icon="fa-solid fa-file-invoice-dollar",
+                priority="high",
+            )
 
     return JsonResponse({
         "ok": True,
@@ -869,6 +918,22 @@ def api_order_ship(request, order_id):
             detail=f"Tracking: {tracking_number}",
             icon="✈️", actor=request.user,
         )
+        # Tenant bell notification — shipping is the moment the tenant
+        # is waiting for. High priority because they likely want to
+        # forward the tracking link to their end customer.
+        from orders.tracking_link import build_ds_tracking_link
+        from orders.carrier_safety import safe_carrier_name
+        _notify_tenant(
+            order, category="tracking",
+            title=f"Shipped — {safe_carrier_name(tracking_company)} "
+                  f"tracking added",
+            body=(f"{order.ds_order_ref} is on its way. Tracking: "
+                  f"{tracking_number}"),
+            action_url=build_ds_tracking_link(order),
+            action_label="Track shipment",
+            icon="fa-solid fa-truck-fast",
+            priority="high",
+        )
 
     return JsonResponse({
         "ok": True,
@@ -899,6 +964,15 @@ def api_order_deliver(request, order_id):
             order, kind="delivered",
             title="Marked delivered",
             detail="", icon="📬", actor=request.user,
+        )
+        _notify_tenant(
+            order, category="order",
+            title=f"Delivered — {order.ds_order_ref}",
+            body=("Drop Sigma has confirmed delivery. The order is "
+                  "complete and the wallet ledger is settled."),
+            action_label="View order",
+            icon="fa-solid fa-circle-check",
+            priority="medium",
         )
 
     return JsonResponse({
@@ -932,6 +1006,14 @@ def api_order_cancel(request, order_id):
             order, kind="cancelled",
             title="Order cancelled", detail=reason,
             icon="🚫", actor=request.user,
+        )
+        _notify_tenant(
+            order, category="order",
+            title=f"Cancelled — {order.ds_order_ref}",
+            body=f"Drop Sigma cancelled this order. Reason: {reason}",
+            action_label="View order",
+            icon="fa-solid fa-circle-xmark",
+            priority="high",
         )
 
     return JsonResponse({

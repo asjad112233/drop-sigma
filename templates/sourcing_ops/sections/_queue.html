@@ -708,7 +708,34 @@
     } finally {
       OQ.rendering = false;
     }
+    // Kick the silent 8s background sync so tenant-side mutations
+    // (pay, soft-delete, restore) show up in the Queue without a
+    // manual refresh.
+    startQueueAutoSync();
   };
+  // Exposed so opsSwitchView can stop the sync when the operator
+  // navigates away. (See dashboard.html opsSwitchView.)
+  window.opsStopQueueAutoSync = stopQueueAutoSync;
+
+  /* ── Queue auto-sync ───────────────────────────────────────────────
+     Polls the same /ops/api/orders/ endpoint loadOrders uses, but
+     silently — no loader flash, just an in-place re-render when
+     status counts / row data change. Skips while the tab is hidden
+     or the operator is on a different OPS view. */
+  function startQueueAutoSync(){
+    stopQueueAutoSync();
+    OQ._autoSyncTimer = setInterval(() => {
+      if (document.hidden) return;
+      if (!(window.OPS && window.OPS.view === 'queue')) return;
+      try { loadOrders({keepPage:true, silent:true}); } catch(_){}
+    }, 8000);
+  }
+  function stopQueueAutoSync(){
+    if (OQ._autoSyncTimer){
+      clearInterval(OQ._autoSyncTimer);
+      OQ._autoSyncTimer = null;
+    }
+  }
 
   /* ─── Side-loaders ──────────────────────────────────────────────── */
   async function loadMembersIfNeeded(){
@@ -740,14 +767,18 @@
     // Filter changes reset to page 1; explicit page navigations pass
     // {keepPage:true}. Page-size change also resets to page 1 since
     // the previous page index doesn't make sense at a new size.
+    // A {silent:true} flag skips the loader skeleton so the 8s
+    // background auto-sync re-renders in place without flashing
+    // the list. Used by startQueueAutoSync below.
     if (!opts || !opts.keepPage) OQ.page = 1;
+    const silent = !!(opts && opts.silent);
 
     const list = document.getElementById('oqList');
     const bot  = document.getElementById('oqPagerBot');
     // While loading, render the Drop-Sigma loader + a skeleton list so
     // the section never feels boring or empty mid-fetch.
-    if (list) list.innerHTML = dsLoaderHTML('md', 'Loading orders') + dsSkeletonHTML(Math.min(OQ.page_size, 6));
-    if (bot)  bot.innerHTML  = '';
+    if (list && !silent) list.innerHTML = dsLoaderHTML('md', 'Loading orders') + dsSkeletonHTML(Math.min(OQ.page_size, 6));
+    if (bot && !silent)  bot.innerHTML  = '';
 
     const qs = new URLSearchParams();
     if (OQ.filters.status && OQ.filters.status !== 'all') qs.set('status', OQ.filters.status);

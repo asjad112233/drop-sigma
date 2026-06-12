@@ -2479,6 +2479,15 @@
           }
         } catch(_){}
       }
+      // Leaving the Queue → stop the silent 8s auto-sync so we're
+      // not polling /ops/api/orders/ in the background for nothing.
+      if (OPS.view === 'queue' && view !== 'queue'){
+        try {
+          if (typeof window.opsStopQueueAutoSync === 'function'){
+            window.opsStopQueueAutoSync();
+          }
+        } catch(_){}
+      }
       OPS.view = view;
       document.querySelectorAll('.ops-nav').forEach(el => {
         el.classList.toggle('active', el.dataset.view === view);
