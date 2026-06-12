@@ -197,6 +197,10 @@
     var total       = state.total       || 0;
     var total_pages = state.total_pages || 1;
     if (total <= 0) return '';
+    // Hide entirely when the whole result set fits on one page.
+    // A pager that only shows "1 ... total 1 items" adds noise without
+    // giving the user anything to do.
+    if (total <= page_size && total_pages <= 1) return '';
 
     var pages = [1];
     var lastShown = 1;

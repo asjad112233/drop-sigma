@@ -39016,6 +39016,12 @@ function spvSkeletonHTML(n){
 function spvPagerHTML(state){
   const { page, total_pages, total, page_size } = state;
   if (total <= 0) return '';
+  // Single-page result sets don't need a pager — the chip count above
+  // already tells the user how many items they're looking at, and a
+  // pager that only shows "1 ... total N items" with no navigation is
+  // just visual noise. Drop Sigma rule: only show the pager once the
+  // user actually has somewhere to page TO.
+  if (total <= page_size && total_pages <= 1) return '';
   const pages = [];
   pages.push(1);
   let lastShown = 1;

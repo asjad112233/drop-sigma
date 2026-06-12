@@ -592,8 +592,13 @@
      Pure-functional render — caller supplies state, we wire callbacks
      onto the buttons via inline data-* + delegated click handler. */
   function dsPagerHTML(state, onPage, onPageSize){
-    const { page, total_pages, total } = state;
+    const { page, total_pages, total, page_size } = state;
     if (total <= 0) return '';
+    // Hide the pager when the whole result fits on a single page —
+    // a "1 ... total 1 items" strip with no actionable navigation is
+    // pure noise. Once the user has more rows than page_size, the
+    // pager re-appears.
+    if (total <= page_size && total_pages <= 1) return '';
 
     // Build the chip list with elided middle (1 2 ... 5 6 7 ... N).
     const pages = [];
