@@ -6,6 +6,7 @@ urlpatterns = [
     path("",                         views.superadmin_page,     name="superadmin"),
 
     # ─── OPS Workspaces (multi-instance Ops Portal) ──────────────────────
+    path("api/ops-workspaces/default/",                  ws.api_workspaces_default,        name="sa_ops_ws_default"),
     path("api/ops-workspaces/",                          ws.api_workspaces,                name="sa_ops_ws_list"),
     path("api/ops-workspaces/<int:pk>/",                 ws.api_workspace_detail,          name="sa_ops_ws_detail"),
     path("api/ops-workspaces/<int:pk>/assignable-tenants/", ws.api_assignable_tenants,    name="sa_ops_ws_assignable_tenants"),

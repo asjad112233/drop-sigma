@@ -66,6 +66,44 @@ def _ws_or_404(pk) -> OpsWorkspace:
     return get_object_or_404(OpsWorkspace, pk=pk)
 
 
+# Default-workspace name shown to ops staff inside /ops/. Match the
+# brand tagline elsewhere (sourcing_partners renders "Drop Sigma
+# Sourcing" — same family of names so screenshots, emails and chat
+# panels look like they came from one design system).
+DEFAULT_WORKSPACE_NAME  = "Drop Sigma Operations"
+DEFAULT_WORKSPACE_SLUG  = "drop-sigma-operations"
+
+
+def _get_or_create_default_workspace(user=None) -> OpsWorkspace:
+    """Resolve the single workspace the superadmin manages by default.
+
+    Drop Sigma's current product surface is one shared Ops Portal, so
+    we don't make the superadmin pick or create a workspace before
+    they can assign tenants / invite team. This helper materialises
+    the singleton workspace on first hit (idempotent), so the
+    Superadmin → Ops Workspaces page can land directly on the
+    management view.
+
+    Returns:
+        The default OpsWorkspace row, creating it the first time.
+    """
+    ws = OpsWorkspace.objects.filter(slug=DEFAULT_WORKSPACE_SLUG).first()
+    if ws:
+        return ws
+    return OpsWorkspace.objects.create(
+        name=DEFAULT_WORKSPACE_NAME,
+        slug=DEFAULT_WORKSPACE_SLUG,
+        description=(
+            "The Drop Sigma Operations team — handles every tenant-assigned "
+            "order end-to-end (sourcing, quotes, procurement, QC, shipping)."
+        ),
+        color="#6366f1",
+        emoji="🛠️",
+        is_active=True,
+        created_by=user if (user and getattr(user, "is_authenticated", False)) else None,
+    )
+
+
 def _slugify_unique(name: str) -> str:
     base = slugify(name) or "workspace"
     candidate, n = base, 1
@@ -146,6 +184,20 @@ def _invite_brief(inv: OpsInvitation) -> dict:
         "invited_by":  (inv.invited_by.get_full_name() or inv.invited_by.username)
                          if inv.invited_by_id else "",
     }
+
+
+# ── Default workspace (singleton entry point used by the UI) ───────
+@superadmin_required
+@require_GET
+def api_workspaces_default(request):
+    """Return the default Ops workspace, materialising it on first hit.
+
+    Used by the Superadmin → Ops Workspaces page so the page can land
+    straight on the management view without forcing the superadmin
+    to create a workspace first.
+    """
+    ws = _get_or_create_default_workspace(user=request.user)
+    return JsonResponse({"ok": True, "workspace": _workspace_brief(ws)})
 
 
 # ── List + create workspaces ───────────────────────────────────────
