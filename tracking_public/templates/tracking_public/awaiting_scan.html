@@ -1,0 +1,213 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>{{ page_title }}</title>
+<meta name="robots" content="noindex,nofollow">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
+  body{
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    background:
+      radial-gradient(900px 500px at 50% -180px, rgba(212,175,55,.10), transparent 60%),
+      radial-gradient(900px 500px at 90% 110%, rgba(99,102,241,.10), transparent 60%),
+      linear-gradient(180deg,#fafbff 0%,#f3f4f9 100%);
+    color:#0f172a;-webkit-font-smoothing:antialiased;
+    min-height:100vh;display:flex;flex-direction:column;overflow-x:hidden;
+  }
+  a{color:inherit;text-decoration:none;}
+  .fade-up{opacity:0;transform:translateY(14px);animation:fadeUp .7s cubic-bezier(.2,.7,.3,1) forwards;}
+  @keyframes fadeUp{to{opacity:1;transform:translateY(0);}}
+  .d-1{animation-delay:.05s;} .d-2{animation-delay:.15s;} .d-3{animation-delay:.25s;} .d-4{animation-delay:.40s;}
+
+  .brand-bar{max-width:1180px;margin:0 auto;padding:22px 28px;width:100%;display:flex;align-items:center;gap:11px;}
+  .ds-mark{
+    width:42px;height:42px;border-radius:13px;
+    background:linear-gradient(135deg,#6366f1 0%,#a855f7 60%,#06b6d4 100%);
+    display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:15px;letter-spacing:-.5px;
+    box-shadow:0 10px 26px rgba(99,102,241,.32);
+  }
+  .ds-name{font-size:16px;font-weight:900;color:#0f172a;letter-spacing:-.3px;line-height:1;}
+  .ds-sub{font-size:10.5px;color:#94a3b8;margin-top:3px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;}
+
+  .center{flex:1;display:flex;align-items:center;justify-content:center;padding:32px 22px 60px;}
+  .inner{max-width:560px;width:100%;text-align:center;}
+
+  .icon-wrap{
+    width:96px;height:96px;border-radius:50%;margin:0 auto 24px;
+    position:relative;
+    background:linear-gradient(135deg,#fff7ed,#fde68a);
+    display:flex;align-items:center;justify-content:center;font-size:42px;color:#b45309;
+    box-shadow:0 20px 50px rgba(212,175,55,.18);
+  }
+  .icon-wrap::before{
+    content:"";position:absolute;inset:-6px;border-radius:50%;
+    border:2px solid rgba(212,175,55,.32);
+    animation:pulseRing 2.4s ease-out infinite;
+  }
+  @keyframes pulseRing{
+    0%   {transform:scale(.92);opacity:1;}
+    100% {transform:scale(1.18);opacity:0;}
+  }
+
+  .h1{font-size:30px;font-weight:900;line-height:1.2;letter-spacing:-.9px;margin-bottom:14px;}
+  .lead{font-size:14.5px;line-height:1.65;color:#475569;font-weight:500;max-width:480px;margin:0 auto 26px;}
+
+  .id-box{
+    background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:16px 18px;
+    margin:0 auto 26px;max-width:440px;text-align:left;
+    box-shadow:0 8px 22px rgba(15,23,42,.06);
+    display:flex;align-items:center;gap:14px;
+  }
+  .id-meta{flex:1;min-width:0;}
+  .id-label{font-size:10.5px;font-weight:800;color:#94a3b8;letter-spacing:.14em;text-transform:uppercase;margin-bottom:4px;}
+  .id-value{
+    font-size:15px;font-weight:800;color:#0f172a;letter-spacing:.02em;
+    font-family:'SF Mono','JetBrains Mono',Menlo,monospace;word-break:break-all;
+  }
+  .id-status{
+    flex-shrink:0;font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;
+    padding:6px 11px;border-radius:999px;
+    background:linear-gradient(135deg,#fef3c7,#fde68a);color:#92400e;
+    display:inline-flex;align-items:center;gap:6px;
+  }
+  .id-status .dot{
+    width:6px;height:6px;border-radius:50%;background:#f59e0b;
+    box-shadow:0 0 0 3px rgba(245,158,11,.22);
+    animation:dotPulse 1.6s ease-in-out infinite;
+  }
+  @keyframes dotPulse{
+    0%,100%{box-shadow:0 0 0 3px rgba(245,158,11,.22);}
+    50%    {box-shadow:0 0 0 7px rgba(245,158,11,.04);}
+  }
+
+  .reasons{
+    background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:22px;
+    text-align:left;margin:0 auto;max-width:520px;
+    box-shadow:0 10px 26px rgba(15,23,42,.05);
+  }
+  .reasons-h{font-size:11px;font-weight:800;color:#94a3b8;letter-spacing:.14em;text-transform:uppercase;margin-bottom:14px;}
+  .reason{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid #f1f5f9;}
+  .reason:last-child{border-bottom:none;}
+  .r-ico{
+    width:30px;height:30px;border-radius:9px;background:#fef3c7;color:#92400e;
+    display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;
+  }
+  .r-text{font-size:13px;color:#475569;font-weight:600;line-height:1.5;}
+  .r-text b{color:#0f172a;font-weight:800;}
+
+  .auto-refresh{
+    margin:28px auto 0;max-width:440px;
+    background:linear-gradient(135deg,#eef2ff,#f5f3ff);
+    border:1px solid #ddd6fe;border-radius:12px;padding:12px 16px;
+    font-size:12px;font-weight:700;color:#4338ca;
+    display:flex;align-items:center;justify-content:center;gap:8px;
+  }
+  .auto-refresh .spinner{
+    width:14px;height:14px;border-radius:50%;
+    border:2px solid rgba(99,102,241,.22);border-top-color:#6366f1;
+    animation:spin 1s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  .footer{margin-top:60px;padding:24px 22px;text-align:center;border-top:1px solid #eef2f7;background:rgba(255,255,255,.6);}
+  .footer-text{font-size:11.5px;color:#94a3b8;font-weight:600;line-height:1.7;}
+  .footer-brand{display:inline-flex;align-items:center;gap:7px;margin-top:8px;font-size:11px;color:#64748b;font-weight:800;letter-spacing:.04em;}
+  .footer-mark{
+    width:18px;height:18px;border-radius:5px;background:linear-gradient(135deg,#6366f1,#a855f7,#06b6d4);
+    display:flex;align-items:center;justify-content:center;color:#fff;font-size:9px;font-weight:900;letter-spacing:-.3px;
+  }
+
+  @media(max-width:560px){
+    .brand-bar{padding:18px 18px;}
+    .h1{font-size:24px;letter-spacing:-.6px;}
+    .lead{font-size:13.5px;}
+    .icon-wrap{width:80px;height:80px;font-size:36px;}
+    .reasons{padding:18px;}
+    .id-box{flex-direction:column;align-items:stretch;text-align:left;}
+    .id-status{align-self:flex-start;}
+  }
+</style>
+</head>
+<body>
+
+  <header class="brand-bar fade-up d-1">
+    <a class="ds-mark" href="/">DS</a>
+    <div>
+      <div class="ds-name">{% if brand and brand.name %}{{ brand.name }}{% else %}Drop Sigma{% endif %}</div>
+      <div class="ds-sub">Shipment tracking</div>
+    </div>
+  </header>
+
+  <main class="center">
+    <div class="inner">
+      <div class="icon-wrap fade-up d-2">📡</div>
+
+      {% if looks_unrecognized %}
+        <h1 class="h1 fade-up d-2">We can't find this with the carrier yet</h1>
+        <p class="lead fade-up d-2">
+          We've tried looking this number up with our carrier network
+          {{ attempts }} time{{ attempts|pluralize }} but no scan has
+          come back yet. This usually means the parcel hasn't reached
+          the first sortation centre. We'll keep trying.
+        </p>
+      {% else %}
+        <h1 class="h1 fade-up d-2">Awaiting first carrier scan</h1>
+        <p class="lead fade-up d-2">
+          The tracking number is registered with Drop Sigma and we're
+          watching for the carrier's first event. Detailed shipment
+          milestones appear here as soon as the parcel is scanned at
+          its first checkpoint.
+        </p>
+      {% endif %}
+
+      <div class="id-box fade-up d-3">
+        <div class="id-meta">
+          <div class="id-label">Tracking number</div>
+          <div class="id-value">{{ tracking_id }}</div>
+        </div>
+        <div class="id-status"><span class="dot"></span>Pending scan</div>
+      </div>
+
+      <div class="reasons fade-up d-3">
+        <div class="reasons-h">What's happening behind the scenes</div>
+        <div class="reason">
+          <div class="r-ico">📦</div>
+          <div class="r-text"><b>Tracking registered.</b> The seller has handed the parcel over to the carrier — we're now watching for the first scan event.</div>
+        </div>
+        <div class="reason">
+          <div class="r-ico">⏳</div>
+          <div class="r-text"><b>First scan typically takes 24–72 hours.</b> The carrier scans the parcel when it reaches the first sortation centre, not immediately on hand-off.</div>
+        </div>
+        <div class="reason">
+          <div class="r-ico">🔄</div>
+          <div class="r-text"><b>This page updates automatically.</b> Bookmark it — you don't need to refresh. Real shipment events appear here the moment the carrier posts them.</div>
+        </div>
+      </div>
+
+      <div class="auto-refresh fade-up d-4">
+        <span class="spinner"></span>
+        <span>Live · checking with the carrier every few minutes</span>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-text">© Drop Sigma · The logistics intelligence layer</div>
+    <div class="footer-brand">
+      <span class="footer-mark">DS</span>
+      <span>track.dropsigma.com</span>
+    </div>
+  </footer>
+
+  <script>
+    // Soft auto-refresh every 3 minutes — once the carrier puller
+    // lands the first real event, the page will swap to the full
+    // timeline on the next refresh.
+    setTimeout(() => window.location.reload(), 3 * 60 * 1000);
+  </script>
+
+</body>
+</html>

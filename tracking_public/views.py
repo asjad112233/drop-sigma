@@ -82,6 +82,14 @@ def _resolve_order_for_tracking(tracking_input: str):
 def tracking_detail(request, tracking_id: str):
     """Render the tenant-branded detail page, or the not-associated
     page if the tracking number isn't owned by a Drop Sigma tenant.
+
+    Honesty rule: a tracking number that the carrier has never
+    confirmed gets a "Awaiting first carrier scan" page — NOT a
+    synthesised "Order placed → In production → Shipment created →
+    Origin hub → In transit" timeline that could mislead a customer
+    into thinking the parcel is in motion when nothing has been
+    scanned. Real carrier events (tracking_events JSON populated
+    by the carrier puller) flip the page back to the full timeline.
     """
     order, norm = _resolve_order_for_tracking(tracking_id)
 
@@ -90,6 +98,36 @@ def tracking_detail(request, tracking_id: str):
         return render(request, "tracking_public/not_found.html", {
             "tracking_id": norm or tracking_id,
         }, status=404)
+
+    # ── Pre-carrier state ─────────────────────────────────────────────
+    # If the carrier puller has NEVER returned events for this number,
+    # the page falls back to a "carrier scan pending" surface instead
+    # of fabricated milestones. Two markers we trust:
+    #   * tracking_events is empty/null — no real events yet
+    #   * tracking_events_attempts captures how many polls have run
+    #     (so a brand-new tracking number waits patiently; one that
+    #     has been polled repeatedly without any event implies the
+    #     number is bad / unknown to the carrier).
+    real_events = list(getattr(order, "tracking_events", None) or [])
+    attempts = int(getattr(order, "tracking_events_attempts", 0) or 0)
+    has_real_events = bool(real_events)
+    looks_unrecognized = (not has_real_events) and attempts >= 3
+
+    if not has_real_events:
+        brand = build_brand_payload(order.store)
+        return render(request, "tracking_public/awaiting_scan.html", {
+            "page_title":     f"Shipment {norm}",
+            "brand":          brand,
+            "tracking_id":    norm,
+            "service_label":  "Express international service",
+            "parcel_count":   1,
+            # When the carrier has been polled multiple times without
+            # any event coming back, surface a softer "we couldn't find
+            # this with the carrier yet" line instead of "waiting for
+            # the first scan". Keeps the page honest either way.
+            "looks_unrecognized": looks_unrecognized,
+            "attempts": attempts,
+        }, status=200)
 
     stages_payload = build_stages(order)
     brand = build_brand_payload(order.store)
