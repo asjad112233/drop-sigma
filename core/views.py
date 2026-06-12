@@ -447,8 +447,13 @@ def homepage(request):
 # ── Login / Logout ────────────────────────────────────────────────────────────
 
 def admin_login_page(request):
-    if request.user.is_authenticated and request.user.is_staff:
-        return redirect("/dashboard/")
+    # Already-authenticated users land on the page best suited to
+    # their role: admins/tenants → /dashboard/, ops members → /ops/.
+    if request.user.is_authenticated:
+        if hasattr(request.user, "ops_profile") and not request.user.is_staff:
+            return redirect("/ops/")
+        if request.user.is_staff:
+            return redirect("/dashboard/")
 
     tab   = request.GET.get("tab", "admin")
     error = request.GET.get("error", None)
@@ -464,17 +469,26 @@ def admin_login_page(request):
                 user = authenticate(request, username=u.username, password=password)
             except User.DoesNotExist:
                 pass
-        if user and user.is_staff:
+
+        # Three accepted roles on this login page:
+        #   1. Staff/admin tenants (existing flow)              → /dashboard/
+        #   2. OPS team members (have an OpsTeamMember profile) → /ops/
+        #   3. Superusers (covered by is_staff)                 → /dashboard/
+        is_ops_member = bool(user and hasattr(user, "ops_profile"))
+
+        if user and (user.is_staff or is_ops_member):
             login(request, user)
-            # Force fresh logins to land on Overview (?section=overview overrides
-            # any localStorage-saved section from a previous session). Respect
-            # ?next= only if it's an explicit deep link.
             next_url = request.GET.get("next")
-            if next_url and next_url != "/dashboard/":
+            if next_url and next_url not in ("/dashboard/", "/ops/"):
                 return redirect(next_url)
+            # Route to the surface this account actually uses. OPS-only
+            # members (no is_staff) go to /ops/ — they don't have a
+            # tenant /dashboard/ to land in.
+            if is_ops_member and not user.is_staff:
+                return redirect("/ops/")
             return redirect("/dashboard/?section=overview&login=1")
-        elif user and not user.is_staff:
-            error = "You don't have admin access."
+        elif user:
+            error = "You don't have access to this portal."
         else:
             error = "Invalid username or password."
         tab = "admin"
