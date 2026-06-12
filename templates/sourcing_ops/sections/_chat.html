@@ -225,14 +225,23 @@
     50%    {transform:translateY(-3px);opacity:1;}
   }
 
-  /* ──────────────────────────────────────────────────────────────
-     OPS chat side popup — premium Drop Sigma treatment for the dark
-     dashboard. Slides up + scales in from the bottom-right when a
-     new tenant message arrives and the operator is NOT on the Chat
-     view. Clean midnight card, indigo→purple→cyan top accent,
-     gradient avatar with the tenant's initials, prominent unread
-     count pill, neat relative timestamp, "click to open chat" CTA.
-     ────────────────────────────────────────────────────────────── */
+  /* ════════════════════════════════════════════════════════════════
+     PREMIUM Drop Sigma OPS notification card.
+
+     Fires from any OPS view (Overview, Queue, Quotes, Procurement,
+     Shipping, Suppliers, etc.) — anywhere the operator is NOT on
+     the Tenant Chat view. Mirrors the tenant-side card's layout so
+     the two surfaces feel like one product; the colour environment
+     is just tuned for the OPS dark dashboard.
+
+     Layout zones:
+       • Brand strip (midnight gradient + gold/purple accent border)
+         with sigil + "DROP SIGMA · OPS" wordmark + live dot +
+         "N NEW" count pill + dismiss button.
+       • Sender row (gradient avatar + tenant name + time).
+       • Message body (3-line clamp).
+       • Footer CTA: "Open thread →".
+     ════════════════════════════════════════════════════════════════ */
   #opsChatPopupHost{
     position:fixed;right:22px;bottom:22px;z-index:2147483400;
     display:flex;flex-direction:column;gap:10px;align-items:flex-end;
@@ -241,90 +250,146 @@
   }
   .ops-chat-popup{
     pointer-events:auto;cursor:pointer;
-    width:360px;max-width:calc(100vw - 44px);
+    width:380px;max-width:calc(100vw - 44px);
     position:relative;overflow:hidden;
-    background:linear-gradient(180deg,#1e293b 0%,#0b1224 100%);
-    color:#e2e8f0;
-    border-radius:16px;
-    border:1px solid rgba(99,102,241,.22);
-    box-shadow:0 24px 56px rgba(2,6,23,.55),
+    background:#ffffff;color:#0f172a;
+    border-radius:18px;
+    border:1px solid rgba(15,23,42,.06);
+    box-shadow:0 30px 60px rgba(2,6,23,.45),
                0 0 0 1px rgba(168,85,247,.10);
-    padding:14px 16px 12px;
-    transform:translateY(20px) scale(.96);opacity:0;
-    transition:transform .38s cubic-bezier(.2,.7,.2,1.05),
-               opacity .25s ease,
+    transform:translateY(24px) scale(.96);opacity:0;
+    transition:transform .42s cubic-bezier(.2,.7,.2,1.05),
+               opacity .28s ease,
                box-shadow .2s ease;
   }
   .ops-chat-popup.in{transform:translateY(0) scale(1);opacity:1;}
   .ops-chat-popup:hover{
-    box-shadow:0 30px 64px rgba(2,6,23,.65),
+    box-shadow:0 36px 72px rgba(2,6,23,.55),
                0 0 0 1px rgba(168,85,247,.28);
   }
-  .ops-chat-popup::before{
-    content:"";position:absolute;top:0;left:0;right:0;height:3px;
-    background:linear-gradient(90deg,#d4af37 0%,#a855f7 50%,#6366f1 100%);
+
+  /* ── 1. Brand strip ── */
+  .ops-chat-popup-brand{
+    display:flex;align-items:center;gap:10px;
+    padding:11px 14px 11px 12px;
+    background:linear-gradient(135deg,
+      #0b1224 0%, #1e1b4b 35%, #312e81 65%, #4c1d95 100%);
+    color:#fff;
+    position:relative;
   }
-  .ops-chat-popup-head{display:flex;align-items:center;gap:11px;}
-  .ops-chat-popup-av{
-    flex-shrink:0;width:38px;height:38px;border-radius:11px;
-    background:linear-gradient(135deg,#6366f1 0%,#a855f7 60%,#06b6d4 130%);
-    color:#fff;font-weight:900;font-size:13px;letter-spacing:.02em;
+  .ops-chat-popup-brand::after{
+    content:"";position:absolute;left:0;right:0;bottom:0;height:1px;
+    background:linear-gradient(90deg,
+      transparent 0%,
+      #d4af37 22%, #a855f7 50%, #6366f1 78%,
+      transparent 100%);
+    opacity:.85;
+  }
+  .ops-chat-popup-sigil{
+    width:30px;height:30px;border-radius:9px;
+    background:linear-gradient(135deg,#fbbf24 0%, #d4af37 50%, #b45309 100%);
+    color:#0b1224;font-weight:900;font-size:11.5px;letter-spacing:-.5px;
     display:flex;align-items:center;justify-content:center;
-    box-shadow:inset 0 0 0 1px rgba(255,255,255,.12),
-               0 4px 14px rgba(99,102,241,.36);
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.25),
+               0 4px 10px rgba(212,175,55,.36);
+    flex-shrink:0;
+  }
+  .ops-chat-popup-wordmark{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.2;}
+  .ops-chat-popup-w-top{
+    font-size:10px;font-weight:900;letter-spacing:.18em;
+    background:linear-gradient(135deg,#fbbf24 0%, #a855f7 70%, #6366f1 100%);
+    -webkit-background-clip:text;background-clip:text;
+    -webkit-text-fill-color:transparent;
+  }
+  .ops-chat-popup-w-sub{
+    margin-top:2px;font-size:10.5px;font-weight:700;color:#cbd5e1;
+    display:inline-flex;align-items:center;gap:6px;
+  }
+  .ops-chat-popup-live{
+    width:6px;height:6px;border-radius:50%;background:#10b981;
+    box-shadow:0 0 0 3px rgba(16,185,129,.22);
+    animation:opsPopupLive 1.6s ease-in-out infinite;
+  }
+  @keyframes opsPopupLive{
+    0%,100%{box-shadow:0 0 0 3px rgba(16,185,129,.22);}
+    50%    {box-shadow:0 0 0 7px rgba(16,185,129,.04);}
+  }
+  .ops-chat-popup-count{
+    color:#0b1224;
+    background:linear-gradient(135deg,#fbbf24 0%,#d4af37 100%);
+    padding:3px 9px;border-radius:999px;letter-spacing:.06em;
+    font-size:9.5px;font-weight:900;
+    box-shadow:0 3px 10px rgba(212,175,55,.36),
+               inset 0 0 0 1px rgba(255,255,255,.22);
+  }
+  .ops-chat-popup-x{
+    margin-left:2px;background:transparent;border:0;
+    color:rgba(255,255,255,.65);font-size:18px;line-height:1;cursor:pointer;
+    padding:2px 6px;border-radius:6px;transition:all .12s;
+  }
+  .ops-chat-popup-x:hover{background:rgba(255,255,255,.10);color:#fff;}
+
+  /* ── 2. Sender row ── */
+  .ops-chat-popup-sender{
+    display:flex;align-items:center;gap:11px;
+    padding:14px 16px 0 16px;
+  }
+  .ops-chat-popup-av{
+    flex-shrink:0;width:42px;height:42px;border-radius:13px;
+    background:linear-gradient(135deg,#6366f1 0%,#a855f7 60%,#06b6d4 130%);
+    color:#fff;font-weight:900;font-size:14px;letter-spacing:.02em;
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.18),
+               0 6px 16px rgba(99,102,241,.36);
   }
   .ops-chat-popup-meta{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
   .ops-chat-popup-name{
-    font-size:13.5px;font-weight:900;color:#fff;
+    font-size:14.5px;font-weight:900;color:#0f172a;
     letter-spacing:-.01em;
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   }
-  .ops-chat-popup-sub{
-    display:flex;align-items:center;gap:8px;
-    font-size:10.5px;font-weight:800;
-  }
-  .ops-chat-popup-count{
-    color:#fff;
-    background:linear-gradient(135deg,#10b981 0%,#059669 100%);
-    padding:2px 8px;border-radius:999px;letter-spacing:.04em;
-    text-transform:uppercase;font-size:9.5px;
-    box-shadow:0 2px 8px rgba(16,185,129,.36);
-  }
   .ops-chat-popup-time{
-    color:#94a3b8;font-weight:700;text-transform:none;letter-spacing:0;
-    font-size:11px;
+    font-size:11.5px;font-weight:700;color:#64748b;letter-spacing:.01em;
   }
-  .ops-chat-popup-x{
-    margin-left:auto;background:transparent;border:0;
-    color:#475569;font-size:18px;line-height:1;cursor:pointer;
-    padding:2px 6px;border-radius:6px;transition:all .12s;
-  }
-  .ops-chat-popup-x:hover{background:rgba(255,255,255,.06);color:#cbd5e1;}
+
+  /* ── 3. Body ── */
   .ops-chat-popup-body{
-    margin:10px 0 0 49px;font-size:13px;font-weight:600;color:#cbd5e1;
-    line-height:1.5;
+    margin:8px 16px 0 69px;font-size:13px;font-weight:600;color:#334155;
+    line-height:1.55;
     display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;
-    overflow:hidden;
+    overflow:hidden;word-break:break-word;
   }
+
+  /* ── 4. Footer ── */
   .ops-chat-popup-foot{
-    margin:10px 0 0 49px;
-    font-size:10.5px;font-weight:900;color:#fbbf24;
-    letter-spacing:.08em;text-transform:uppercase;
-    display:inline-flex;align-items:center;gap:6px;
+    margin-top:12px;
+    padding:11px 16px 12px;
+    background:linear-gradient(180deg,#fafbff 0%, #f4f5ff 100%);
+    border-top:1px solid rgba(99,102,241,.10);
+    display:flex;align-items:center;justify-content:space-between;
+    font-size:11.5px;font-weight:900;color:#4c1d95;
+    letter-spacing:.06em;text-transform:uppercase;
+  }
+  .ops-chat-popup-foot-cta{
+    background:linear-gradient(135deg,#6366f1 0%,#a855f7 100%);
+    -webkit-background-clip:text;background-clip:text;
+    -webkit-text-fill-color:transparent;
   }
   .ops-chat-popup-foot-arrow{
-    font-size:13px;line-height:1;color:#fbbf24;
-    transition:transform .2s;
+    font-size:16px;line-height:1;color:#6366f1;
+    transition:transform .22s ease;
   }
   .ops-chat-popup:hover .ops-chat-popup-foot-arrow{
-    transform:translate(2px,-2px);
+    transform:translateX(3px);
   }
+
   @media (max-width:480px){
     #opsChatPopupHost{right:12px;bottom:12px;left:12px;align-items:stretch;}
     .ops-chat-popup{width:100%;}
   }
   @media (prefers-reduced-motion: reduce){
     .ops-chat-popup{transition:opacity .15s ease;}
+    .ops-chat-popup-live,
     #opsChatRoot .cx-typing-dots span{animation:none;}
   }
 
@@ -868,8 +933,32 @@
       state.sidebarPollTimer = null;
     }
   }
+  /* Defensive fetch wrapper. The chat IIFE parses BEFORE the main
+     OPS dashboard script that declares opsFetch — so the very first
+     tickSidebar() call (which fires immediately on boot) hits an
+     undefined opsFetch and crashes silently. Fall back to a native
+     fetch with the CSRF cookie until the global lands; subsequent
+     ticks (3s later) use opsFetch normally. Without this, sidebar
+     polling silently dies on every page load and the operator never
+     gets popups from non-chat sections. */
+  async function _opsChatFetch(url){
+    if (typeof opsFetch === 'function'){
+      return opsFetch(url);
+    }
+    try {
+      const resp = await fetch(url, {
+        credentials: 'same-origin',
+        headers: { 'Accept': 'application/json',
+                   'X-CSRFToken': getCookie('csrftoken') || '' },
+      });
+      const data = await resp.json().catch(() => ({}));
+      return { ok: resp.ok && data.ok, data, status: resp.status };
+    } catch (err){
+      return { ok: false, data: { error: String(err) } };
+    }
+  }
   async function tickSidebar(){
-    const r = await opsFetch('/ops/api/chat/unread-summary/');
+    const r = await _opsChatFetch('/ops/api/chat/unread-summary/');
     if (!r.ok) return;
     const n = +(r.data.total_unread || 0);
     // Sidebar chip — the OPS dashboard exposes a setBadge helper in
@@ -925,19 +1014,33 @@
       ? `<span class="ops-chat-popup-count">${unreadN > 99 ? '99+' : unreadN} new</span>`
       : '<span class="ops-chat-popup-count">New message</span>';
 
+    const countLabel = unreadN > 1
+      ? (unreadN > 99 ? '99+' : unreadN) + ' NEW'
+      : 'NEW';
     node.innerHTML = `
-      <div class="ops-chat-popup-head">
+      <div class="ops-chat-popup-brand">
+        <div class="ops-chat-popup-sigil">DS</div>
+        <div class="ops-chat-popup-wordmark">
+          <div class="ops-chat-popup-w-top">DROP SIGMA · OPS</div>
+          <div class="ops-chat-popup-w-sub">
+            <span class="ops-chat-popup-live"></span>
+            Tenant inbox · live
+          </div>
+        </div>
+        <span class="ops-chat-popup-count">${opsEsc(countLabel)}</span>
+        <button class="ops-chat-popup-x" aria-label="Dismiss">×</button>
+      </div>
+      <div class="ops-chat-popup-sender">
         <div class="ops-chat-popup-av">${opsEsc(initials)}</div>
         <div class="ops-chat-popup-meta">
           <div class="ops-chat-popup-name">${opsEsc(name)}</div>
-          <div class="ops-chat-popup-sub">${unreadBadge}<span class="ops-chat-popup-time">${opsEsc(stampLabel)}</span></div>
+          <div class="ops-chat-popup-time">${opsEsc(stampLabel)} · new message</div>
         </div>
-        <button class="ops-chat-popup-x" aria-label="Dismiss">×</button>
       </div>
       <div class="ops-chat-popup-body">${opsEsc(preview)}</div>
       <div class="ops-chat-popup-foot">
-        <span class="ops-chat-popup-foot-arrow">↗</span>
-        Click to open chat
+        <span class="ops-chat-popup-foot-cta">Open thread</span>
+        <span class="ops-chat-popup-foot-arrow">→</span>
       </div>`;
     const dismiss = (e) => {
       if (e){ e.preventDefault(); e.stopPropagation(); }
