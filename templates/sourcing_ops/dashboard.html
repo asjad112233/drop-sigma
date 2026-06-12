@@ -613,7 +613,20 @@
             border-bottom:1px solid rgba(15,23,42,.12);
           }
           #opsOrderModal .om-pricing-row.is-sells .lbl{color:#047857;}
-          #opsOrderModal .om-pricing-row.is-sells .val{color:#047857;font-size:17px;}
+          #opsOrderModal .om-pricing-row.is-sells .val{
+            color:#047857;font-size:17px;
+            display:inline-flex;align-items:center;gap:7px;
+          }
+          /* Small uppercase pill next to "Tenant Sells" amount so the
+             ops reader sees the merchant currency (AUD/EUR/GBP/USD) at
+             a glance. Lights up red-amber for non-USD so the margin
+             discrepancy in the row below isn't a surprise. */
+          #opsOrderModal .om-ccy-badge{
+            font-size:9.5px;font-weight:800;letter-spacing:.06em;
+            padding:2px 6px;border-radius:5px;
+            background:rgba(16,185,129,.16);color:#047857;
+            line-height:1;
+          }
           /* Drop Sigma grand total — gold accent */
           #opsOrderModal .om-pricing-row.is-total{
             margin-top:4px;padding-top:12px;
@@ -1217,13 +1230,19 @@
           /* ─── Tab: Overview ───────────────────────────────── */
           function renderPricingCard(o){
             const sells = Number(o.merchant_total_usd) || 0;
+            const ccy   = (o.merchant_currency || 'USD').toUpperCase();
+            const isUsd = ccy === 'USD';
             const hasQuote = o.sourcing_total_usd != null && Number(o.sourcing_total_usd) > 0;
+            // Currency badge so the ops reader sees AUD/EUR/GBP/USD
+            // at a glance and knows whether the sells figure is
+            // directly comparable to the USD Drop-Sigma charge below.
+            const ccyBadge = `<span class="om-ccy-badge">${opsEsc(ccy)}</span>`;
             const sellsRow = sells > 0
               ? `<div class="om-pricing-row is-sells">
                    <div class="lbl">Tenant sells
                      <span class="sublbl">What the end customer paid on the merchant store</span>
                    </div>
-                   <div class="val">${opsUSD(sells)}</div>
+                   <div class="val">${opsUSD(sells)} ${ccyBadge}</div>
                  </div>`
               : '';
             if (!hasQuote){
@@ -1237,18 +1256,32 @@
             const prod = o.sourcing_product_usd != null ? opsUSD(o.sourcing_product_usd) : '—';
             const ship = o.sourcing_shipping_usd != null ? opsUSD(o.sourcing_shipping_usd) : '—';
             const tot  = Number(o.sourcing_total_usd) || 0;
+            // Margin is only computable when both sides are USD. For
+            // every other tenant currency we'd be mixing units and
+            // misleading the reader, so we show a neutral "—" with a
+            // tooltip until a live FX rate lands.
             let marginRow = '';
             if (sells > 0){
-              const margin = sells - tot;
-              const cls = margin >= 0 ? 'pos' : 'neg';
-              const sign = margin >= 0 ? '+' : '−';
-              marginRow = `
-                <div class="om-pricing-row is-margin ${cls}">
-                  <div class="lbl">Tenant margin
-                    <span class="sublbl">Tenant sells − Drop Sigma charge</span>
-                  </div>
-                  <div class="val">${sign}${opsUSD(Math.abs(margin))}</div>
-                </div>`;
+              if (isUsd){
+                const margin = sells - tot;
+                const cls = margin >= 0 ? 'pos' : 'neg';
+                const sign = margin >= 0 ? '+' : '−';
+                marginRow = `
+                  <div class="om-pricing-row is-margin ${cls}">
+                    <div class="lbl">Tenant margin
+                      <span class="sublbl">Tenant sells − Drop Sigma charge</span>
+                    </div>
+                    <div class="val">${sign}${opsUSD(Math.abs(margin))}</div>
+                  </div>`;
+              } else {
+                marginRow = `
+                  <div class="om-pricing-row is-margin" title="Tenant store sells in ${opsEsc(ccy)} — margin can't be computed without an FX conversion against the USD Drop-Sigma charge.">
+                    <div class="lbl">Tenant margin
+                      <span class="sublbl">Needs ${opsEsc(ccy)}→USD FX to compare</span>
+                    </div>
+                    <div class="val" style="color:#94a3b8;font-weight:700;">—</div>
+                  </div>`;
+              }
             }
             return `
               <div class="om-pricing">
@@ -1480,6 +1513,14 @@
             }
 
             const tenantSells = Number(o.merchant_total_usd) || 0;
+            // Merchant currency drives margin computability. Drop Sigma
+            // always charges in USD; mixing units (e.g. AUD sells minus
+            // USD cost) yields a nonsense margin, so we only show the
+            // tenant-margin row when both sides are USD. The currency
+            // is also surfaced as a small badge next to the sells
+            // amount so the ops reader knows what unit they're seeing.
+            const tenantCcy   = (o.merchant_currency || 'USD').toUpperCase();
+            const tenantIsUsd = tenantCcy === 'USD';
             const linesGross  = Number(o.merchant_lines_subtotal_usd) || 0;
             const discount    = Number(o.merchant_discount_usd) || 0;
             const merchShip   = Number(o.merchant_shipping_usd) || 0;
@@ -1522,7 +1563,7 @@
                     <div class="lbl">Tenant selling price
                       <span class="sublbl">What the end customer actually paid on the merchant store</span>
                     </div>
-                    <div class="val">${tenantSells > 0 ? opsUSD(tenantSells) : '—'}</div>
+                    <div class="val">${tenantSells > 0 ? `${opsUSD(tenantSells)} <span class="om-ccy-badge">${opsEsc(tenantCcy)}</span>` : '—'}</div>
                   </div>
                   ${breakdownRows}
                   ${d.auto_match_sku ? `
@@ -1789,13 +1830,30 @@
                 <span class="sublbl">Drop Sigma's profit on this order</span>`;
               document.getElementById('omQBTotal').textContent  = opsUSD(total);
               const tRow = document.getElementById('omQBTenantRow');
+              // Margin row policy: visible + computed only when the
+              // tenant store sells in USD (matching the USD quote total
+              // we compute above). For non-USD tenants we still SHOW
+              // the row so the ops reader notices it's intentionally
+              // skipped — value is "—" with a tooltip pointing at the
+              // currency mismatch. Hiding the row entirely would let
+              // someone forget margin discipline exists for this store.
               if (tenantSells > 0){
-                const tMargin = tenantSells - total;
-                const cls = tMargin >= 0 ? 'pos' : 'neg';
-                const sign = tMargin >= 0 ? '+' : '−';
                 tRow.style.display = '';
-                tRow.classList.remove('pos','neg'); tRow.classList.add(cls);
-                document.getElementById('omQBTenant').textContent = `${sign}${opsUSD(Math.abs(tMargin))}`;
+                tRow.classList.remove('pos','neg');
+                if (tenantIsUsd){
+                  const tMargin = tenantSells - total;
+                  const cls = tMargin >= 0 ? 'pos' : 'neg';
+                  const sign = tMargin >= 0 ? '+' : '−';
+                  tRow.classList.add(cls);
+                  tRow.title = '';
+                  document.getElementById('omQBTenant').textContent = `${sign}${opsUSD(Math.abs(tMargin))}`;
+                  document.getElementById('omQBTenant').style.color = '';
+                } else {
+                  tRow.title = `Tenant store sells in ${tenantCcy} — margin can't be computed without an FX conversion against the USD Drop-Sigma total.`;
+                  const tEl = document.getElementById('omQBTenant');
+                  tEl.textContent = '—';
+                  tEl.style.color = '#94a3b8';
+                }
               } else {
                 tRow.style.display = 'none';
               }

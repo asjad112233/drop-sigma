@@ -261,6 +261,15 @@
   }
   #opsQueueRoot .oq-row-price .line.sells .v{
     color:#065f46;font-weight:900;font-size:12px;
+    display:inline-flex;align-items:center;gap:5px;
+  }
+  /* Currency badge next to "Tenant Sells" — small uppercase pill so the
+     ops reader can tell at a glance whether the figure is comparable to
+     the USD Drop-Sigma charge below. AUD/EUR/GBP all light up here. */
+  #opsQueueRoot .oq-row-price .line.sells .ccy{
+    font-size:8.5px;font-weight:800;letter-spacing:.06em;
+    padding:1.5px 5px;border-radius:4px;
+    background:rgba(16,185,129,.15);color:#047857;
   }
   #opsQueueRoot .oq-row-price .line.is-total{
     margin-top:3px;padding-top:4px;
@@ -765,11 +774,32 @@
 
   /* Price block — Tenant Sells (top) + Product/Shipping/Drop-Sigma Total
      (middle) + Margin (bottom). Pending Source orders (no quote yet) only
-     show the tenant-sells line + an "Awaiting quote" placeholder. */
+     show the tenant-sells line + an "Awaiting quote" placeholder.
+
+     CURRENCY RULE — Drop Sigma charges the tenant in USD across the
+     board, but the tenant's merchant store can sell in any currency
+     (AUD, EUR, GBP, …). The "Tenant Sells" amount comes through in
+     the merchant's native currency, NOT USD, so subtracting it from
+     the USD Drop-Sigma charge to compute margin would mix currencies.
+     We therefore:
+       (a) always print the merchant currency code next to the sells
+           amount so an ops reader knows what unit they're looking at,
+       (b) only render the Tenant Margin line when the merchant
+           currency IS USD — otherwise the row shows "—" with a tooltip
+           explaining we can't compute margin without an FX conversion.
+     The day we have a live FX rate we can compute the margin for
+     every currency; for now the explicit "—" is the honest answer.  */
   function priceBlock(o){
     const sells = Number(o.merchant_total_usd) || 0;
+    const ccy   = (o.merchant_currency || 'USD').toUpperCase();
+    const isUsd = ccy === 'USD';
+    // For non-USD tenants we still pass the raw number to opsUSD (it
+    // just formats with 2 decimals + thousands separators) and tack
+    // the currency code on the end. opsUSD's "$" prefix is fine —
+    // it's a generic money symbol; the suffix disambiguates.
+    const sellsFmt = `${opsUSD(sells)} <span class="ccy">${opsEsc(ccy)}</span>`;
     const sellsLine = sells > 0
-      ? `<span class="line sells"><span class="l">Tenant Sells</span><span class="v">${opsUSD(sells)}</span></span>`
+      ? `<span class="line sells"><span class="l">Tenant Sells</span><span class="v">${sellsFmt}</span></span>`
       : '';
 
     if (o.sourcing_status === 'pending_source' || !o.sourcing_total_usd){
@@ -785,13 +815,19 @@
     const ship = o.sourcing_shipping_usd != null ? opsUSD(o.sourcing_shipping_usd) : '—';
     const tot  = Number(o.sourcing_total_usd) || 0;
 
-    // Margin = what tenant sells for − what Drop Sigma charges them
+    // Margin — only safe to compute when the tenant store sells in
+    // USD too (see CURRENCY RULE above). Otherwise show a neutral
+    // "—" with a tooltip; mixing AUD - USD straight would mislead.
     let marginLine = '';
     if (sells > 0){
-      const margin = sells - tot;
-      const cls = margin >= 0 ? 'pos' : 'neg';
-      const sign = margin >= 0 ? '+' : '−';
-      marginLine = `<span class="line margin ${cls}"><span class="l">Tenant Margin</span><span class="v">${sign}${opsUSD(Math.abs(margin))}</span></span>`;
+      if (isUsd){
+        const margin = sells - tot;
+        const cls = margin >= 0 ? 'pos' : 'neg';
+        const sign = margin >= 0 ? '+' : '−';
+        marginLine = `<span class="line margin ${cls}"><span class="l">Tenant Margin</span><span class="v">${sign}${opsUSD(Math.abs(margin))}</span></span>`;
+      } else {
+        marginLine = `<span class="line margin" title="Tenant store sells in ${opsEsc(ccy)} — margin can't be computed without an FX conversion against the USD Drop-Sigma charge."><span class="l">Tenant Margin</span><span class="v" style="color:#94a3b8;font-weight:700;">—</span></span>`;
+      }
     }
 
     return `
