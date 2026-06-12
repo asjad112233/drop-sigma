@@ -249,9 +249,7 @@
           <div class="ops-section-sub" id="opsSectionSub">Real-time overview of your sourcing operations</div>
         </div>
         <div class="actions" id="opsSectionActions"></div>
-        {# Bell-icon notifications for OPS users. audience="employee" so
-           the API filters to the OPS audience and tenant-side admin
-           notifications don't leak in. #}
+        {# Bell-icon notifications for OPS users — audience=employee scopes the bell to OPS-only rows. #}
         {% include "_notification_bar.html" with audience="employee" %}
       </div>
 
