@@ -1,0 +1,249 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Operations Portal · Drop Sigma</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
+  :root{
+    --c-accent:    #6366f1;
+    --c-accent-2:  #a855f7;
+    --c-accent-3:  #06b6d4;
+    --c-ink:       #0f172a;
+    --c-ink-soft:  #475569;
+    --c-ink-mute:  #94a3b8;
+    --c-line:      #1e293b;
+    --c-line-2:    #334155;
+    --c-card:      #0b1224;
+    --c-card-2:    #111a30;
+  }
+  body{
+    font-family:'Inter','SF Pro Display',-apple-system,BlinkMacSystemFont,
+                'Segoe UI',Roboto,sans-serif;
+    background:#04060c;color:#e2e8f0;
+    -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+    min-height:100vh;display:flex;align-items:center;justify-content:center;
+    padding:32px 18px;overflow-x:hidden;position:relative;
+  }
+  /* ── Ambient gradient mesh background ────────────────────────── */
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:-2;
+    background:
+      radial-gradient(900px 600px at 12% -10%, rgba(99,102,241,.20), transparent 60%),
+      radial-gradient(800px 600px at 92% 8%,   rgba(168,85,247,.15), transparent 60%),
+      radial-gradient(900px 700px at 78% 100%, rgba(6,182,212,.13),  transparent 60%),
+      radial-gradient(700px 500px at 6% 95%,   rgba(217,119,6,.10),  transparent 60%),
+      linear-gradient(180deg,#04060c 0%,#0b1224 100%);
+    animation:meshShift 30s ease-in-out infinite alternate;
+  }
+  @keyframes meshShift{
+    0%{transform:translate(0,0) scale(1);}
+    50%{transform:translate(-30px,20px) scale(1.04);}
+    100%{transform:translate(20px,-20px) scale(1.02);}
+  }
+  /* Subtle floating particles */
+  body::after{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:-1;opacity:.4;
+    background-image:
+      radial-gradient(circle at 22% 18%, rgba(99,102,241,.5) 0, transparent 1.4px),
+      radial-gradient(circle at 78% 36%, rgba(168,85,247,.4) 0, transparent 1.4px),
+      radial-gradient(circle at 11% 64%, rgba(6,182,212,.4)  0, transparent 1.4px),
+      radial-gradient(circle at 88% 80%, rgba(217,119,6,.4)  0, transparent 1.4px);
+    background-size:340px 340px,420px 420px,380px 380px,500px 500px;
+    animation:particlesFloat 42s linear infinite;
+  }
+  @keyframes particlesFloat{
+    0%{background-position:0 0,0 0,0 0,0 0;}
+    100%{background-position:340px 340px,-420px 420px,380px -380px,-500px 0;}
+  }
+
+  /* ── Card ─────────────────────────────────────────────────────── */
+  .card{
+    width:100%;max-width:440px;
+    background:linear-gradient(180deg,rgba(17,26,48,.85) 0%,rgba(11,18,36,.92) 100%);
+    backdrop-filter:blur(18px) saturate(160%);
+    -webkit-backdrop-filter:blur(18px) saturate(160%);
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:22px;overflow:hidden;
+    box-shadow:0 24px 70px rgba(0,0,0,.55),
+               inset 0 1px 0 rgba(255,255,255,.06);
+    opacity:0;transform:translateY(14px);
+    animation:cardIn .75s cubic-bezier(.2,.7,.3,1) .05s forwards;
+  }
+  @keyframes cardIn{to{opacity:1;transform:translateY(0);}}
+
+  /* ── Header ──────────────────────────────────────────────────── */
+  .head{
+    background:linear-gradient(135deg,#6366f1 0%,#a855f7 50%,#06b6d4 100%);
+    padding:30px 36px 26px;text-align:center;position:relative;overflow:hidden;
+  }
+  .head::before{
+    content:"";position:absolute;inset:0;
+    background:linear-gradient(90deg,
+      transparent 25%,rgba(255,255,255,.10) 50%,transparent 75%);
+    background-size:200% 100%;
+    animation:headShimmer 5s linear infinite;pointer-events:none;
+  }
+  @keyframes headShimmer{
+    from{background-position:200% 0;}
+    to{background-position:-200% 0;}
+  }
+  .mark{
+    display:inline-flex;align-items:center;gap:11px;position:relative;z-index:1;
+  }
+  .mark-img{
+    width:42px;height:42px;border-radius:11px;background:#fff;padding:3px;
+    object-fit:contain;display:block;
+  }
+  .mark-name{
+    font-size:18px;font-weight:900;color:#fff;letter-spacing:-.3px;line-height:1;
+  }
+  .eyebrow{
+    margin-top:12px;font-size:10.5px;font-weight:800;letter-spacing:.22em;
+    color:rgba(255,255,255,.90);text-transform:uppercase;position:relative;z-index:1;
+    display:inline-flex;align-items:center;gap:7px;
+  }
+  .live-dot{
+    width:6px;height:6px;border-radius:50%;background:#22c55e;
+    box-shadow:0 0 0 0 rgba(34,197,94,.5);
+    animation:liveDot 1.8s ease-out infinite;display:inline-block;
+  }
+  @keyframes liveDot{
+    0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,.5);}
+    50%{box-shadow:0 0 0 6px rgba(34,197,94,0);}
+  }
+
+  /* ── Body ────────────────────────────────────────────────────── */
+  .body{padding:32px 36px 28px;}
+  .h1{font-size:22px;font-weight:900;letter-spacing:-.4px;line-height:1.25;
+       color:#fff;margin-bottom:6px;}
+  .lead{font-size:13px;color:#94a3b8;line-height:1.6;font-weight:500;margin-bottom:22px;}
+
+  .err{
+    margin-bottom:16px;padding:11px 13px;border-radius:10px;
+    background:rgba(239,68,68,.10);border:1px solid rgba(239,68,68,.30);
+    font-size:12.5px;color:#fca5a5;font-weight:600;line-height:1.5;
+    display:flex;align-items:flex-start;gap:8px;
+  }
+  .err svg{flex-shrink:0;margin-top:1px;}
+
+  .field{margin-bottom:14px;}
+  .label{
+    display:block;font-size:10.5px;font-weight:800;color:#64748b;
+    letter-spacing:.14em;text-transform:uppercase;margin-bottom:6px;
+  }
+  .input{
+    width:100%;padding:11px 14px;border:1.5px solid rgba(255,255,255,.10);
+    border-radius:11px;font-size:14px;font-weight:600;color:#e2e8f0;
+    background:rgba(11,18,36,.6);font-family:inherit;
+    transition:border-color .15s,box-shadow .15s,background .15s;
+  }
+  .input::placeholder{color:#475569;font-weight:500;}
+  .input:focus{
+    outline:0;border-color:var(--c-accent);
+    box-shadow:0 0 0 4px rgba(99,102,241,.18);
+    background:rgba(11,18,36,.85);
+  }
+
+  .submit{
+    width:100%;margin-top:8px;padding:13px 16px;
+    border:0;border-radius:12px;cursor:pointer;
+    font-size:14px;font-weight:800;letter-spacing:.02em;color:#fff;
+    background:linear-gradient(135deg,#6366f1 0%,#a855f7 70%,#ec4899 100%);
+    box-shadow:0 12px 28px rgba(99,102,241,.30),inset 0 1px 0 rgba(255,255,255,.15);
+    transition:transform .15s,box-shadow .15s;
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  }
+  .submit:hover{transform:translateY(-1px);box-shadow:0 16px 32px rgba(99,102,241,.42);}
+  .submit:active{transform:translateY(0);}
+
+  .meta{
+    margin-top:20px;padding:12px 14px;border-radius:10px;
+    background:rgba(15,23,42,.6);border:1px solid rgba(255,255,255,.06);
+    font-size:11.5px;color:#94a3b8;font-weight:600;line-height:1.55;
+    display:flex;align-items:flex-start;gap:9px;
+  }
+  .meta svg{flex-shrink:0;margin-top:1px;color:#64748b;}
+  .meta b{color:#cbd5e1;}
+
+  .foot{
+    padding:16px 36px;text-align:center;
+    border-top:1px solid rgba(255,255,255,.04);background:rgba(4,6,12,.4);
+  }
+  .foot-text{
+    font-size:10.5px;color:#475569;font-weight:700;letter-spacing:.06em;
+    text-transform:uppercase;
+  }
+
+  /* ── Mobile ──────────────────────────────────────────────────── */
+  @media (max-width:480px){
+    .head{padding:26px 26px 22px;}
+    .body{padding:26px 26px 22px;}
+    .foot{padding:14px 26px;}
+    .h1{font-size:19px;}
+  }
+</style>
+</head>
+<body>
+
+  <div class="card">
+    <div class="head">
+      <div class="mark">
+        <img class="mark-img" src="/static/branding/icon.png" alt="DS"
+             onerror="this.style.display='none';">
+        <span class="mark-name">Drop Sigma</span>
+      </div>
+      <div class="eyebrow">
+        <span class="live-dot"></span> Operations Portal · Internal
+      </div>
+    </div>
+
+    <div class="body">
+      <h1 class="h1">Sign in to the Ops desk</h1>
+      <p class="lead">
+        Quotes, procurement, QC, shipping — the back-office where the
+        Drop Sigma team handles every tenant-assigned order end-to-end.
+      </p>
+
+      {% if error %}
+      <div class="err">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span>{{ error }}</span>
+      </div>
+      {% endif %}
+
+      <form method="post" action="/ops/login/{% if next_url and next_url != '/ops/' %}?next={{ next_url|urlencode }}{% endif %}" autocomplete="off">
+        {% csrf_token %}
+        <div class="field">
+          <label class="label" for="opsEmail">Email or username</label>
+          <input class="input" id="opsEmail" name="username" type="text"
+                 placeholder="you@dropsigma.com" required autofocus
+                 autocomplete="username">
+        </div>
+        <div class="field">
+          <label class="label" for="opsPw">Password</label>
+          <input class="input" id="opsPw" name="password" type="password"
+                 placeholder="••••••••" required autocomplete="current-password">
+        </div>
+        <button class="submit" type="submit">
+          Sign in
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </button>
+      </form>
+
+      <div class="meta">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1l8 4v7c0 5-3.5 9.5-8 11-4.5-1.5-8-6-8-11V5l8-4z"/><path d="M9 12l2 2 4-4"/></svg>
+        <span>Restricted to <b>Drop Sigma Operations team members</b>. Tenants and vendors sign in <a href="/login/" style="color:#a78bfa;text-decoration:none;font-weight:800;">here</a> instead.</span>
+      </div>
+    </div>
+
+    <div class="foot">
+      <div class="foot-text">© Drop Sigma · Operations</div>
+    </div>
+  </div>
+
+</body>
+</html>

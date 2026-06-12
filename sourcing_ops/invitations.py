@@ -109,10 +109,14 @@ def _build_invite_html(invite: OpsInvitation, accept_url: str) -> str:
               {accept_url}
             </p>
           </div>
-          <p style="margin:0 0 6px;font-size:12.5px;color:#94a3b8;font-weight:600;line-height:1.65;">
+          <p style="margin:0 0 12px;font-size:12.5px;color:#94a3b8;font-weight:600;line-height:1.65;">
             This invitation expires <b style="color:#475569;">{invite.expires_at.strftime("%d %b %Y, %H:%M UTC")}</b>.
             If you don't recognise this email, you can safely ignore it — the link is single-use and tied to
             <code style="font-family:'SF Mono',Menlo,monospace;background:#f1f5f9;padding:1px 4px;border-radius:3px;">{invite.email}</code>.
+          </p>
+          <p style="margin:0;font-size:11.5px;color:#94a3b8;font-weight:600;line-height:1.6;">
+            After activation, sign back in any time at
+            <a href="https://dropsigma.com/ops/login/" style="color:#6366f1;font-weight:800;text-decoration:none;">dropsigma.com/ops/login/</a>.
           </p>
         </td></tr>
         <!-- Footer -->

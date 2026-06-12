@@ -18,6 +18,72 @@ from django.views.decorators.http import require_GET
 from orders.tracking_link import build_ds_tracking_link, safe_carrier_name
 from orders.fx_rates import convert_to_usd, get_rate_for, get_rate_date
 from .permissions import ops_required, is_ops_user
+
+from django.contrib.auth import authenticate, login as auth_login, get_user_model
+from django.shortcuts import redirect, render
+from django.views.decorators.csrf import csrf_protect
+from django.views.decorators.http import require_http_methods
+
+
+@csrf_protect
+@require_http_methods(["GET", "POST"])
+def ops_login_page(request):
+    """Dedicated login surface for the Drop Sigma Operations Portal.
+
+    This is intentionally separate from /login/ (which serves tenants
+    + vendors + employees). OPS team members get their own URL,
+    branded specifically for the back-office. The decorator
+    @ops_required redirects here when an unauthenticated user hits
+    any /ops/* surface.
+
+    Accepts:
+      - OPS team members (have an ``ops_profile``)
+      - Superusers / staff (so founders can drop in without an
+        explicit OpsTeamMember row)
+
+    Anyone else gets a clear "not an Ops account" error rather than
+    being silently routed away. We don't want a tenant accidentally
+    discovering this URL to think the platform is broken.
+    """
+    User = get_user_model()
+
+    # Already-authenticated ops users skip straight to the portal.
+    if request.user.is_authenticated and is_ops_user(request.user):
+        return redirect("/ops/")
+
+    next_url = request.GET.get("next") or "/ops/"
+    error    = None
+
+    if request.method == "POST":
+        identifier = (request.POST.get("username") or "").strip()
+        password   = request.POST.get("password") or ""
+        user = authenticate(request, username=identifier, password=password)
+        if user is None and "@" in identifier:
+            # Email lookup fallback.
+            try:
+                u = User.objects.get(email__iexact=identifier)
+                user = authenticate(request, username=u.username, password=password)
+            except User.DoesNotExist:
+                user = None
+
+        if user and is_ops_user(user):
+            auth_login(request, user)
+            # Honour ?next= only when it points back into /ops/ — a
+            # tenant /dashboard/ URL on this login page should fall
+            # back to the canonical Ops home instead of silently
+            # taking an ops user to a portal they shouldn't render.
+            if next_url and next_url.startswith("/ops/"):
+                return redirect(next_url)
+            return redirect("/ops/")
+        elif user:
+            error = "This account isn't on the Ops team. Talk to a Drop Sigma superadmin."
+        else:
+            error = "Invalid email or password."
+
+    return render(request, "sourcing_ops/login.html", {
+        "error":    error,
+        "next_url": next_url,
+    })
 from .models import (
     Supplier, OpsTeamMember, OpsActivity, OrderOpsState,
 )

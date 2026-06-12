@@ -13,6 +13,12 @@ urlpatterns = [
     # ── SPA shell ────────────────────────────────────────────────────
     path("",                 views.ops_dashboard,  name="ops_dashboard"),
 
+    # ── Dedicated Ops login + logout ─────────────────────────────────
+    # Separate from /login/ on purpose — tenants/vendors/employees use
+    # that one, ops staff use this one. ops_required redirects here
+    # when an unauthenticated user hits any /ops/* surface.
+    path("login/",           views.ops_login_page, name="ops_login"),
+
     # ── Invitation acceptance (public — token-gated) ─────────────────
     path("invite/accept/<uuid:token>/",        views_invite.accept_invitation_view,
          name="ops_invite_accept"),
