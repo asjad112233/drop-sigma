@@ -20427,7 +20427,11 @@ function renderPremiumOrders(){
         : `<span class="pox-vendor-unassigned" onclick="poxOpenVendorAssign(event,${order.id})">＋ Assign vendor</span>`;
     const hasTracking=order.tracking_number&&!String(order.tracking_number).toLowerCase().includes("no tracking")&&String(order.tracking_number).toLowerCase()!=="pending";
     const tId=escapeHtml(String(order.tracking_number||"").slice(0,16));
-    const _tc=String(order.tracking_company||"");
+    // Carrier label shown next to the tracking number. We pipe through
+    // safeCarrierName so cross-border brands (Yuntrack, YunExpress,
+    // 4PX, Intelcom, Dragonfly, …) collapse to "Drop Sigma" before the
+    // tenant ever sees them on the orders list.
+    const _tc=safeCarrierName(String(order.tracking_company||""));
     const tCompany=(_tc&&!_tc.toLowerCase().startsWith("http"))?escapeHtml(_tc.slice(0,18)):"";
     const tUrl=escapeHtml(buildTrackUrl(order.tracking_company,order.tracking_number,order.tracking_url));
     const tLive=order.live_tracking_status?escapeHtml(String(order.live_tracking_status).slice(0,40)):"";
@@ -22757,7 +22761,7 @@ async function openOrderDetail(orderId){
             <div class="od-tn-display">
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#059669" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
               <div>
-                <div class="od-tn-label">${o.tracking_company?escapeHtml(o.tracking_company):"Tracking Number"}</div>
+                <div class="od-tn-label">${o.tracking_company?escapeHtml(safeCarrierName(o.tracking_company)):"Tracking Number"}</div>
                 <div class="od-tn-value">${escapeHtml(o.tracking_number)}</div>
                 ${(()=>{const u=buildTrackUrl(o.tracking_company,o.tracking_number,o.tracking_url);return u?`<a href="${escapeHtml(u)}" target="_blank" style="font-size:11.5px;color:var(--vf-primary);font-weight:600;text-decoration:none;">Track shipment ↗</a>`:"";})()}
               </div>
@@ -23152,6 +23156,36 @@ function buildTrackUrl(company, number, storedUrl){
   const tn = (number || '').toString().trim();
   if(!tn) return '';
   return `https://track.dropsigma.com/${encodeURIComponent(tn)}/`;
+}
+
+// Brand names that bleed supplier identity. Anything carrier-side that
+// reveals the cross-border / supplier-facing brand gets rewritten to
+// "Drop Sigma" before display. Mirror of emails/services.py
+// _CARRIER_BRAND_BLACKLIST + tracking_public/stage_mapper.py wipe list.
+const DS_CARRIER_BRAND_BLACKLIST = [
+  'yuntrack','yun track','yun express','yunexpress','yunexp',
+  '4px','4 px','4-px',
+  'china post','chinapost','ems china',
+  'sf express','sfexpress','shunfeng',
+  'yt express','yt-express','yto express',
+  'cainiao','alibaba',
+  'winit','ws express',
+  'intelcom','dragonfly',
+];
+
+function safeCarrierName(name){
+  // Returns the carrier name safe to display to the tenant on their
+  // own dashboard. Brands that would reveal a supplier hand-off
+  // (Yuntrack, YunExpress, 4PX, etc.) collapse to "Drop Sigma"; the
+  // tenant's legitimate retail carriers (DHL, FedEx, Royal Mail, …)
+  // pass through unchanged. Empty/missing input returns "" so the
+  // caller can decide between hiding the chip or showing a fallback.
+  if(!name) return '';
+  const low = String(name).toLowerCase().trim();
+  for(const brand of DS_CARRIER_BRAND_BLACKLIST){
+    if(low.indexOf(brand) >= 0) return 'Drop Sigma';
+  }
+  return name;
 }
 function courierLogoHtml(name){
   if(!name || !name.trim()) return '';
@@ -34443,7 +34477,7 @@ function soRenderOrders(){
           <div style="display:flex;align-items:center;gap:5px;">
             ${courierLogoHtml(order.tracking_company||'')}
             <div>
-              <div style="font-weight:700;font-size:12px;color:var(--vf-text);">${escapeHtml(order.tracking_company||'')} <span style="font-family:monospace;font-size:11px;">${escapeHtml(order.tracking_number)}</span></div>
+              <div style="font-weight:700;font-size:12px;color:var(--vf-text);">${escapeHtml(safeCarrierName(order.tracking_company||''))} <span style="font-family:monospace;font-size:11px;">${escapeHtml(order.tracking_number)}</span></div>
               ${_tStatBadge}
             </div>
           </div>
@@ -39003,8 +39037,8 @@ function spvRenderOrderRow(o){
   // (no empty colored space on the left).
   const trackingInfo = o.tracking_number
     ? `<div class="sp-track-row">
-         <div class="sp-track-info" title="${spvEsc(o.tracking_company || '')} · ${spvEsc(o.tracking_number)}">
-           🚚 <span class="sp-track-carrier">${spvEsc(o.tracking_company || 'In transit')}</span>
+         <div class="sp-track-info" title="${spvEsc(safeCarrierName(o.tracking_company || ''))} · ${spvEsc(o.tracking_number)}">
+           🚚 <span class="sp-track-carrier">${spvEsc(safeCarrierName(o.tracking_company || '') || 'In transit')}</span>
            <span class="sp-track-num">${spvEsc(o.tracking_number)}</span>
            <button class="sp-track-copy" title="Copy tracking number"
                    onclick="event.stopPropagation();spvCopyTracking(this, '${spvEsc(o.tracking_number).replace(/'/g, '&#39;')}')">📋</button>
@@ -39553,7 +39587,7 @@ async function spvOpenOrderModal(orderId, opts){
       <div class="sp-modal-shipping" style="display:flex;align-items:center;gap:10px;">
         <span style="font-size:18px;">🚚</span>
         <div style="flex:1;min-width:0;">
-          <div style="font-weight:800;color:#0f172a;">${spvEsc(o.tracking_company || 'In transit')}</div>
+          <div style="font-weight:800;color:#0f172a;">${spvEsc(safeCarrierName(o.tracking_company || '') || 'In transit')}</div>
           ${o.tracking_number
             ? `<div style="font-size:11.5px;color:#64748b;font-family:ui-monospace,Menlo,monospace;">${spvEsc(o.tracking_number)}</div>`
             : `<div style="font-size:11px;color:#94a3b8;font-weight:700;margin-top:1px;">Will ship via this carrier — tracking number added when dispatched</div>`}

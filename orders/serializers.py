@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import Order
+from .tracking_link import safe_carrier_name
 
 
 class OrderSerializer(serializers.ModelSerializer):
@@ -13,12 +14,23 @@ class OrderSerializer(serializers.ModelSerializer):
     assigned_vendor_name = serializers.CharField(source="assigned_vendor.name", read_only=True)
     assigned_vendor_company = serializers.CharField(source="assigned_vendor.company_name", read_only=True)
 
+    # tracking_company is sanitised before it reaches the tenant. The raw
+    # carrier identity (Yuntrack / YunExpress / 4PX / Intelcom / Dragonfly)
+    # reveals the supplier hand-off, so we collapse it to "Drop Sigma".
+    # Legitimate retail carriers (DHL, FedEx, Royal Mail, USPS, …) pass
+    # through unchanged. See orders/tracking_link.py for the canonical
+    # blacklist + JS twin (safeCarrierName in templates/dashboard.html).
+    tracking_company = serializers.SerializerMethodField()
+
     # Full structured shipping + billing addresses parsed from raw_data so
     # every UI (admin, vendor, employee) can render street/city/state/zip
     # without re-parsing WC vs Shopify JSON shapes themselves.
     shipping_address      = serializers.ReadOnlyField()
     billing_address       = serializers.ReadOnlyField()
     shipping_address_text = serializers.ReadOnlyField()
+
+    def get_tracking_company(self, obj):
+        return safe_carrier_name(obj.tracking_company or "")
 
     class Meta:
         model = Order

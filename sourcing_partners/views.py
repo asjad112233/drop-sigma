@@ -30,7 +30,7 @@ from .models import (
     TenantWallet, WalletTransaction,
 )
 from orders.models import Order
-from orders.tracking_link import build_ds_tracking_link
+from orders.tracking_link import build_ds_tracking_link, safe_carrier_name
 
 
 # ─── Serializers ────────────────────────────────────────────────────────────
@@ -1996,7 +1996,9 @@ def _order_row_json(o, *, include_address=False):
         # vendor-submission / admin-debug paths. See
         # orders/tracking_link.py for the contract.
         "tracking_url":       build_ds_tracking_link(o),
-        "tracking_company":   o.tracking_company or "",
+        # safe_carrier_name collapses cross-border supplier brands
+        # to "Drop Sigma" before the tenant sees the carrier.
+        "tracking_company":   safe_carrier_name(o.tracking_company or ""),
         "is_shipping_editable": o.is_shipping_editable,
         "created_at_iso":     _iso(o.created_at),
         "paid_at_iso":        _iso(o.sourcing_paid_at),

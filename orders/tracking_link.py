@@ -62,3 +62,40 @@ def build_ds_tracking_link_from_number(tracking_number: str) -> str:
     if not tn:
         return ""
     return f"https://{TRACK_DOMAIN}/{tn}/"
+
+
+# ── Carrier brand sanitiser ─────────────────────────────────────────
+# Sister to ``build_ds_tracking_link``: cleans up the carrier NAME
+# (Yuntrack, YunExpress, 4PX, Intelcom, Dragonfly, …) that bleeds
+# supplier identity. Used by the dashboard, OPS portal, Sourcing
+# Partners panel, and the shipping-notification email context — so a
+# single carrier rename never has to be done in five places.
+#
+# Mirror of the JS DS_CARRIER_BRAND_BLACKLIST in templates/dashboard.html
+# and the wipe list in tracking_public/stage_mapper.py.
+_CARRIER_BRAND_BLACKLIST = (
+    "yuntrack", "yun track", "yun express", "yunexpress", "yunexp",
+    "4px", "4 px", "4-px",
+    "china post", "chinapost", "ems china",
+    "sf express", "sfexpress", "shunfeng",
+    "yt express", "yt-express", "yto express",
+    "cainiao", "alibaba",
+    "winit", "ws express",
+    "intelcom", "dragonfly",
+)
+
+
+def safe_carrier_name(name: str) -> str:
+    """Return the carrier name safe to surface to the buyer (or to the
+    tenant on their own dashboard). Brands that would reveal a
+    cross-border supplier hand-off collapse to "Drop Sigma";
+    legitimate retail carriers (DHL, FedEx, Royal Mail, USPS, …) pass
+    through unchanged. Empty/missing input returns "" so the caller
+    can decide between hiding the chip or rendering a fallback."""
+    if not name:
+        return ""
+    low = str(name).lower().strip()
+    for brand in _CARRIER_BRAND_BLACKLIST:
+        if brand in low:
+            return "Drop Sigma"
+    return name
