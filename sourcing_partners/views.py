@@ -2056,13 +2056,41 @@ def api_aggregate_orders(request):
     else:
         qs = qs.order_by("-created_at")
 
-    rows = [_order_row_json(o) for o in qs[:200]]
+    # ── Pagination ────────────────────────────────────────────────
+    # The Sourcing Partners portal renders the same Drop-Sigma pager
+    # the OPS Queue uses (templates/dashboard.html ↔ ds-pager /
+    # ds-loader components). Default 25 rows, capped at 100. Total +
+    # total_pages ride alongside the per-status group_counts so the
+    # UI never confuses "visible right now" with "exists at all".
+    try:
+        page_size = int(request.GET.get("page_size") or 25)
+    except (TypeError, ValueError):
+        page_size = 25
+    page_size = max(1, min(page_size, 100))
+    try:
+        page = max(1, int(request.GET.get("page") or 1))
+    except (TypeError, ValueError):
+        page = 1
+
+    total = qs.count()
+    total_pages = max(1, (total + page_size - 1) // page_size)
+    if page > total_pages:
+        page = total_pages
+    start = (page - 1) * page_size
+    end   = start + page_size
+    rows  = [_order_row_json(o) for o in qs[start:end]]
 
     return JsonResponse({
         "ok": True,
         "group_counts": group_counts,
         "groups": [{"key": k, "label": l} for k, l in ORDER_STATUS_GROUPS],
         "orders": rows,
+        "pagination": {
+            "page":        page,
+            "page_size":   page_size,
+            "total":       total,
+            "total_pages": total_pages,
+        },
     })
 
 

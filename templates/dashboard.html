@@ -12248,6 +12248,99 @@ document.addEventListener("DOMContentLoaded", () => {
           color:#64748b!important;max-width:480px;margin:0 auto!important;
         }
 
+        /* ── Drop Sigma loader + pagination (shared brand affordance) ──
+           Scoped under #sourcingPartnersSection so the styles can't
+           bleed into other dashboard sections. CSS twins of the
+           helpers in templates/sourcing_ops/sections/_queue.html. */
+        #sourcingPartnersSection .ds-loader{
+          display:flex;flex-direction:column;align-items:center;justify-content:center;
+          gap:14px;padding:36px 18px;
+        }
+        #sourcingPartnersSection .ds-loader-ring{position:relative;width:64px;height:64px;}
+        #sourcingPartnersSection .ds-loader-ring::before{
+          content:"";position:absolute;inset:0;border-radius:50%;
+          background:conic-gradient(from 0deg,#6366f1 0%,#a855f7 30%,#06b6d4 65%,transparent 80%,#6366f1 100%);
+          -webkit-mask:radial-gradient(circle,transparent 53%,#000 55%);
+                  mask:radial-gradient(circle,transparent 53%,#000 55%);
+          animation:dsLoaderSpin 1.1s linear infinite;
+          filter:drop-shadow(0 6px 18px rgba(99,102,241,.32));
+        }
+        @keyframes dsLoaderSpin{to{transform:rotate(360deg);}}
+        #sourcingPartnersSection .ds-loader-mark{
+          position:absolute;inset:9px;border-radius:50%;
+          background:linear-gradient(135deg,#0b1224 0%,#1e293b 100%);
+          display:flex;align-items:center;justify-content:center;
+          color:#fff;font-weight:900;font-size:14px;letter-spacing:-.4px;
+          box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);
+          animation:dsLoaderPulse 1.8s ease-in-out infinite;
+        }
+        @keyframes dsLoaderPulse{0%,100%{transform:scale(1);opacity:1;}50%{transform:scale(.92);opacity:.85;}}
+        #sourcingPartnersSection .ds-loader-label{
+          font-size:12.5px;font-weight:800;color:#475569;letter-spacing:.04em;
+          display:flex;align-items:center;gap:7px;
+        }
+        #sourcingPartnersSection .ds-loader-label .dot{
+          width:5px;height:5px;border-radius:50%;background:#6366f1;
+          animation:dsLoaderDot 1.2s ease-in-out infinite;
+        }
+        #sourcingPartnersSection .ds-loader-label .dot:nth-child(2){animation-delay:.18s;}
+        #sourcingPartnersSection .ds-loader-label .dot:nth-child(3){animation-delay:.36s;}
+        @keyframes dsLoaderDot{0%,100%{transform:scale(1);opacity:.5;}50%{transform:scale(1.4);opacity:1;}}
+        #sourcingPartnersSection .ds-skeleton-list{display:flex;flex-direction:column;gap:14px;padding:18px 0;}
+        #sourcingPartnersSection .ds-skeleton-row{
+          height:88px;border-radius:14px;
+          background:linear-gradient(90deg,#f1f5f9 0%,#e2e8f0 50%,#f1f5f9 100%);
+          background-size:240% 100%;
+          animation:dsSkeletonShimmer 1.4s linear infinite;
+        }
+        @keyframes dsSkeletonShimmer{0%{background-position:240% 0;}100%{background-position:-40% 0;}}
+
+        #sourcingPartnersSection .ds-pager{
+          display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+          padding:10px 14px;border-radius:12px;
+          background:#fff;border:1px solid #e2e8f0;
+          font-size:12.5px;color:#475569;font-weight:700;
+          box-shadow:0 1px 2px rgba(15,23,42,.04);margin-top:16px;
+        }
+        #sourcingPartnersSection .ds-pager-btn{
+          width:32px;height:32px;border-radius:8px;border:0;
+          background:#f8fafc;color:#475569;font-size:13px;font-weight:800;
+          cursor:pointer;transition:all .12s;display:inline-flex;
+          align-items:center;justify-content:center;
+        }
+        #sourcingPartnersSection .ds-pager-btn:hover:not(:disabled){background:#eef2ff;color:#4338ca;}
+        #sourcingPartnersSection .ds-pager-btn:disabled{opacity:.35;cursor:not-allowed;}
+        #sourcingPartnersSection .ds-pager-btn.active{
+          background:linear-gradient(135deg,#6366f1,#a855f7);color:#fff;
+          box-shadow:0 6px 14px rgba(99,102,241,.30);
+        }
+        #sourcingPartnersSection .ds-pager-btn.active:hover{color:#fff;}
+        #sourcingPartnersSection .ds-pager-ellipsis{padding:0 4px;color:#94a3b8;font-weight:700;letter-spacing:.04em;}
+        #sourcingPartnersSection .ds-pager-divider{width:1px;height:20px;background:#e2e8f0;margin:0 6px;}
+        #sourcingPartnersSection .ds-pager-jump{display:inline-flex;align-items:center;gap:6px;}
+        #sourcingPartnersSection .ds-pager-jump input{
+          width:50px;height:28px;border-radius:7px;border:1.5px solid #e2e8f0;
+          padding:0 7px;font-size:12.5px;font-weight:800;color:#0f172a;
+          text-align:center;font-family:inherit;
+        }
+        #sourcingPartnersSection .ds-pager-jump input:focus{outline:0;border-color:#6366f1;
+                                  box-shadow:0 0 0 3px rgba(99,102,241,.14);}
+        #sourcingPartnersSection .ds-pager-jump button{
+          height:28px;padding:0 11px;border-radius:7px;border:1px solid #e2e8f0;
+          background:#fff;color:#475569;font-size:11.5px;font-weight:800;cursor:pointer;
+        }
+        #sourcingPartnersSection .ds-pager-jump button:hover{
+          background:#eef2ff;color:#4338ca;border-color:#c7d2fe;
+        }
+        #sourcingPartnersSection .ds-pager-total{color:#64748b;font-weight:700;}
+        #sourcingPartnersSection .ds-pager-total b{color:#0f172a;font-weight:900;}
+        #sourcingPartnersSection .ds-pager-size select{
+          height:28px;padding:0 8px;border-radius:7px;border:1.5px solid #e2e8f0;
+          font-size:12px;font-weight:800;color:#0f172a;background:#fff;
+          cursor:pointer;font-family:inherit;
+        }
+        #sourcingPartnersSection .ds-pager-size select:focus{outline:0;border-color:#6366f1;}
+
         /* ── Orders toolbar (search + sort) ────────────────────────── */
         #sourcingPartnersSection .sp-orders-toolbar{
           display:flex;gap:10px;align-items:center;margin-bottom:12px;
@@ -37960,6 +38053,13 @@ const SPV = {
   desks: [],                  // list of desks from overview
   ordersFilter: 'all',
   ordersData: null,
+  // Drop Sigma pager state — shared by every paginated SP list. Page
+  // resets to 1 on every filter / search / sort change; size persists
+  // until the tenant picks a different value in the dropdown.
+  ordersPage: 1,
+  ordersPageSize: 25,
+  ordersTotal: 0,
+  ordersTotalPages: 1,
 
   // Chat
   chatInbox: [],
@@ -38842,13 +38942,104 @@ const SPV_GROUP_LABEL = {
   cancel:          'Cancelled',
 };
 
-async function spvLoadOrders(){
+/* ─── Drop Sigma loader + pager (shared affordance used by every
+       SP list. The CSS twins live above in the
+       #sourcingPartnersSection style block). Same logic shape as
+       the OPS-side helpers in templates/sourcing_ops/sections/_queue.html
+       so a future shared file can drop both. ───────────────────── */
+function spvLoaderHTML(size, label){
+  return `
+    <div class="ds-loader ${size || 'md'}">
+      <div class="ds-loader-ring"><div class="ds-loader-mark">DS</div></div>
+      <div class="ds-loader-label">
+        ${spvEsc(label || 'Loading')}
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+      </div>
+    </div>`;
+}
+function spvSkeletonHTML(n){
+  let out = '<div class="ds-skeleton-list">';
+  for (let i = 0; i < Math.max(1, n || 6); i++) out += '<div class="ds-skeleton-row"></div>';
+  return out + '</div>';
+}
+function spvPagerHTML(state){
+  const { page, total_pages, total, page_size } = state;
+  if (total <= 0) return '';
+  const pages = [];
+  pages.push(1);
+  let lastShown = 1;
+  for (let i = page - 1; i <= page + 1; i++){
+    if (i < 2 || i > total_pages - 1) continue;
+    if (i > lastShown + 1) pages.push('…');
+    pages.push(i);
+    lastShown = i;
+  }
+  if (total_pages > 1){
+    if (total_pages > lastShown + 1) pages.push('…');
+    pages.push(total_pages);
+  }
+  const chips = pages.map(p =>
+    p === '…'
+      ? '<span class="ds-pager-ellipsis">…</span>'
+      : `<button class="ds-pager-btn ${p===page?'active':''}" data-spvp-page="${p}">${p}</button>`
+  ).join('');
+  const sizes = [10, 25, 50, 100].map(s =>
+    `<option value="${s}" ${s===page_size?'selected':''}>${s} items/page</option>`
+  ).join('');
+  return `
+    <div class="ds-pager">
+      <button class="ds-pager-btn" data-spvp-prev ${page<=1?'disabled':''}>‹</button>
+      ${chips}
+      <button class="ds-pager-btn" data-spvp-next ${page>=total_pages?'disabled':''}>›</button>
+      <div class="ds-pager-divider"></div>
+      <div class="ds-pager-jump">
+        To page <input type="number" min="1" max="${total_pages}" value="${page}" data-spvp-jump>
+        page <button data-spvp-jump-go>Confirm</button>
+      </div>
+      <div class="ds-pager-divider"></div>
+      <span class="ds-pager-total">total <b>${total}</b> items</span>
+      <div class="ds-pager-size"><select data-spvp-size>${sizes}</select></div>
+    </div>`;
+}
+function spvBindPager(host, state, onPage, onSize){
+  if (!host) return;
+  host.querySelectorAll('[data-spvp-page]').forEach(b =>
+    b.addEventListener('click', () => onPage(+b.dataset.spvpPage)));
+  const prev = host.querySelector('[data-spvp-prev]');
+  if (prev) prev.addEventListener('click', () => state.page > 1 && onPage(state.page - 1));
+  const next = host.querySelector('[data-spvp-next]');
+  if (next) next.addEventListener('click', () => state.page < state.total_pages && onPage(state.page + 1));
+  const jump = host.querySelector('[data-spvp-jump]');
+  const go = () => {
+    const v = Math.max(1, Math.min(state.total_pages, parseInt(jump.value, 10) || 1));
+    onPage(v);
+  };
+  const goBtn = host.querySelector('[data-spvp-jump-go]');
+  if (goBtn) goBtn.addEventListener('click', go);
+  if (jump) jump.addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
+  const sz = host.querySelector('[data-spvp-size]');
+  if (sz) sz.addEventListener('change', e => onSize(+e.target.value));
+}
+
+
+async function spvLoadOrders(opts){
+  // Filter / search / sort changes reset to page 1; explicit page
+  // navigations pass {keepPage:true} so the user stays where they
+  // were when they tap "next" / "to page X".
+  if (!opts || !opts.keepPage) SPV.ordersPage = 1;
+
+  // Drop-Sigma loader during fetch — no more boring empty list.
+  const body = document.getElementById('spvTabBody');
+  if (body) body.innerHTML = spvLoaderHTML('md', 'Loading orders') + spvSkeletonHTML(Math.min(SPV.ordersPageSize, 6));
+
   // Load orders + wallet in parallel so the floating bulk-pay bar can
   // immediately show "balance after charge" math.
   const params = new URLSearchParams();
   if (SPV.ordersFilter && SPV.ordersFilter !== 'all') params.set('group', SPV.ordersFilter);
   if (SPV.ordersQ) params.set('q', SPV.ordersQ);
   if (SPV.ordersSort) params.set('sort', SPV.ordersSort);
+  params.set('page',      SPV.ordersPage);
+  params.set('page_size', SPV.ordersPageSize);
   const qs = params.toString();
   const [ordersResp, walletResp] = await Promise.all([
     spvFetch('/sourcing-partners/api/all/orders/' + (qs ? '?' + qs : '')),
@@ -38856,6 +39047,12 @@ async function spvLoadOrders(){
   ]);
   if (!ordersResp.ok){ document.getElementById('spvTabBody').innerHTML = '<div class="sp-loading">Could not load orders.</div>'; return; }
   SPV.ordersData = ordersResp.data;
+  // Pagination metadata for the bottom pager.
+  const pg = (ordersResp.data && ordersResp.data.pagination) || {};
+  SPV.ordersPage        = pg.page        || 1;
+  SPV.ordersPageSize    = pg.page_size   || SPV.ordersPageSize;
+  SPV.ordersTotal       = pg.total       || 0;
+  SPV.ordersTotalPages  = pg.total_pages || 1;
   if (walletResp.ok) SPV.wallet = walletResp.data.wallet || SPV.wallet;
   // Drop selections that are no longer visible / no longer payable.
   const visible = new Set((SPV.ordersData.orders || []).map(o => o.id));
@@ -38904,8 +39101,34 @@ function spvRenderOrders(){
     ${searchSortBar}
     <div class="sp-orders-filters">${chips}</div>
     ${rows || '<div class="sp-loading">No orders match this filter.</div>'}
+    <div id="spvOrdersPager"></div>
     <div id="spvBulkPayBar" class="sp-bulk-bar" style="display:none;"></div>`;
   spvRenderBulkBar();
+
+  // ── Drop Sigma pager at the bottom only (the OPS Queue uses the
+  // same single-pager pattern). Renders when there's more than one
+  // page; the dsPagerHTML helper short-circuits when total=0.
+  const pagerHost = document.getElementById('spvOrdersPager');
+  if (pagerHost){
+    const state = {
+      page:        SPV.ordersPage,
+      page_size:   SPV.ordersPageSize,
+      total:       SPV.ordersTotal,
+      total_pages: SPV.ordersTotalPages,
+    };
+    pagerHost.innerHTML = spvPagerHTML(state);
+    spvBindPager(
+      pagerHost, state,
+      (p) => {
+        if (p === SPV.ordersPage) return;
+        SPV.ordersPage = p;
+        spvLoadOrders({keepPage: true});
+        const sec = document.getElementById('sourcingPartnersSection');
+        if (sec) sec.scrollIntoView({behavior:'smooth', block:'start'});
+      },
+      (sz) => { SPV.ordersPageSize = sz; SPV.ordersPage = 1; spvLoadOrders({keepPage: true}); },
+    );
+  }
   // Keep focus on the search input as the user types (preserve caret pos).
   const search = document.getElementById('spvOrdersSearch');
   if (search && document.activeElement !== search && SPV.ordersQ){

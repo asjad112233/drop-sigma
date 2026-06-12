@@ -738,12 +738,10 @@
     if (!opts || !opts.keepPage) OQ.page = 1;
 
     const list = document.getElementById('oqList');
-    const top  = document.getElementById('oqPagerTop');
     const bot  = document.getElementById('oqPagerBot');
     // While loading, render the Drop-Sigma loader + a skeleton list so
     // the section never feels boring or empty mid-fetch.
     if (list) list.innerHTML = dsLoaderHTML('md', 'Loading orders') + dsSkeletonHTML(Math.min(OQ.page_size, 6));
-    if (top)  top.innerHTML  = '';
     if (bot)  bot.innerHTML  = '';
 
     const qs = new URLSearchParams();
@@ -797,12 +795,10 @@
       OQ.page = 1;
       loadOrders({keepPage: true});
     };
-    for (const id of ['oqPagerTop', 'oqPagerBot']){
-      const host = document.getElementById(id);
-      if (!host) continue;
-      host.innerHTML = html;
-      bindPager(host, state, onPage, onPageSize);
-    }
+    const host = document.getElementById('oqPagerBot');
+    if (!host) return;
+    host.innerHTML = html;
+    bindPager(host, state, onPage, onPageSize);
   }
 
   /* ─── Render: shell ─────────────────────────────────────────────── */
@@ -835,9 +831,8 @@
         </div>
       </div>
       <div id="oqBulkBar"></div>
-      <div id="oqPagerTop" style="margin-top:12px;"></div>
       <div class="oq-list" id="oqList"></div>
-      <div id="oqPagerBot" style="margin-top:14px;"></div>
+      <div id="oqPagerBot" style="margin-top:16px;"></div>
     `;
 
     // Status chips
