@@ -307,6 +307,14 @@ def api_orders_list(request):
 
     base = order_qs_visible_to(request.user, Order.objects.all())
 
+    # Tenants can soft-delete pending_source / pending_payment orders
+    # from their Sourcing Partner queue. When they do, the row must
+    # vanish from the OPS queue too — the OPS team should never see
+    # work the tenant has explicitly rejected. The order isn't gone
+    # forever (the tenant can restore it from their Deleted bucket);
+    # we just hide it from every OPS surface until/unless that happens.
+    base = base.filter(is_deleted=False)
+
     # ── Apply EVERY non-status filter first ───────────────────────
     # The chip counts must reflect search + assigned + supplier
     # filters (otherwise switching tabs would surface orders that

@@ -151,9 +151,38 @@ class Order(models.Model):
     # UI uses raw_data's address.
     shipping_override = models.JSONField(null=True, blank=True)
 
+    # ===== TENANT-SIDE SOFT DELETE =====
+    # The tenant can remove orders from their Sourcing Partner queue while
+    # they're still in pending_source / pending_payment (i.e. before money
+    # has changed hands or procurement has started). We never hard-delete
+    # the Order row — the merchant store integration owns the canonical
+    # record and a hard delete would re-sync next poll. Instead we set
+    # is_deleted=True; the order vanishes from both the tenant queue AND
+    # the OPS queue, and shows up in a Deleted bucket where the tenant
+    # can restore it back into the live queue. db_index because every
+    # list query filters on this.
+    is_deleted = models.BooleanField(default=False, db_index=True)
+    deleted_at = models.DateTimeField(null=True, blank=True)
+    deleted_by = models.ForeignKey(
+        "auth.User",
+        on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="deleted_sourcing_orders",
+    )
+
     @property
     def is_shipping_editable(self):
         return self.sourcing_status in ("pending_source", "pending_payment")
+
+    @property
+    def is_tenant_deletable(self):
+        """Tenant can soft-delete only while no money has moved and the
+        OPS team hasn't started procurement. Same window as
+        is_shipping_editable, but kept as its own property so future
+        rules can diverge."""
+        return (
+            not self.is_deleted
+            and self.sourcing_status in ("pending_source", "pending_payment")
+        )
 
     @property
     def ds_order_ref(self):

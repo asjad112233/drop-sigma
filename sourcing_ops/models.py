@@ -470,20 +470,25 @@ class OpsActivity(models.Model):
     """Append-only audit log of every ops action on an order."""
 
     KIND_CHOICES = [
-        ("note",         "Note"),
-        ("assigned",     "Order assigned"),
-        ("supplier",     "Supplier linked"),
-        ("quote_sent",   "Quote sent"),
-        ("paid",         "Order paid"),
-        ("po_sent",      "PO sent to supplier"),
-        ("production",   "Production update"),
-        ("qc",           "QC inspection"),
-        ("shipped",      "Shipment dispatched"),
-        ("delivered",    "Order delivered"),
-        ("delay",        "Delay reported"),
-        ("issue",        "Issue raised"),
-        ("cancelled",    "Order cancelled"),
-        ("system",       "System event"),
+        ("note",            "Note"),
+        ("assigned",        "Order assigned"),
+        ("supplier",        "Supplier linked"),
+        ("quote_sent",      "Quote sent"),
+        ("paid",            "Order paid"),
+        ("po_sent",         "PO sent to supplier"),
+        ("production",      "Production update"),
+        ("qc",              "QC inspection"),
+        ("shipped",         "Shipment dispatched"),
+        ("delivered",       "Order delivered"),
+        ("delay",           "Delay reported"),
+        ("issue",           "Issue raised"),
+        ("cancelled",       "Order cancelled"),
+        ("system",          "System event"),
+        # Tenant-side soft delete + restore from the Sourcing Partner
+        # queue. Surfaced to the OPS workspace activity feed so the
+        # team sees in real-time when a tenant pulled / re-queued work.
+        ("tenant_delete",   "Tenant removed from queue"),
+        ("tenant_restore",  "Tenant restored to queue"),
     ]
 
     order      = models.ForeignKey("orders.Order", on_delete=models.CASCADE,

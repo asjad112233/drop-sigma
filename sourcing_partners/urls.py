@@ -120,6 +120,13 @@ urlpatterns = [
          views.api_order_invoice,            name="sp_api_sorder_invoice"),
     path("api/sourcing-orders/bulk-pay/",
          views.api_orders_bulk_pay,          name="sp_api_sorders_bulk_pay"),
+    # Tenant-side soft delete + restore for Pending Source / Pending
+    # Payment rows. Same {"order_ids": [...]} contract as bulk-pay so
+    # the frontend can reuse the request shape.
+    path("api/sourcing-orders/bulk-delete/",
+         views.api_orders_bulk_delete,       name="sp_api_sorders_bulk_delete"),
+    path("api/sourcing-orders/bulk-restore/",
+         views.api_orders_bulk_restore,      name="sp_api_sorders_bulk_restore"),
     path("api/wallet/",
          views.api_wallet,                   name="sp_api_wallet"),
 

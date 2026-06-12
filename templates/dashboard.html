@@ -11476,13 +11476,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
         /* Orders table */
         #sourcingPartnersSection .sp-orders-filters{
-          display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;
+          display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;
+          align-items:center;justify-content:space-between;
+        }
+        #sourcingPartnersSection .sp-orders-filters-main{
+          display:flex;gap:6px;flex-wrap:wrap;flex:1;min-width:0;
+        }
+        #sourcingPartnersSection .sp-orders-filters-tail{
+          display:flex;gap:6px;flex-shrink:0;padding-left:10px;
+          border-left:1px dashed #e5e7eb;
         }
         #sourcingPartnersSection .sp-chip{
           padding:6px 12px;border-radius:999px;
           font-size:11.5px;font-weight:700;color:#64748b;
           background:#fff;border:1px solid #e5e7eb;cursor:pointer;
           transition:all .12s;
+          display:inline-flex;align-items:center;gap:5px;
         }
         #sourcingPartnersSection .sp-chip:hover{background:#f1f5f9;color:#0f172a;}
         #sourcingPartnersSection .sp-chip.active{background:#0f172a;color:#fff;border-color:#0f172a;}
@@ -11491,6 +11500,65 @@ document.addEventListener("DOMContentLoaded", () => {
           font-size:10.5px;
         }
         #sourcingPartnersSection .sp-chip:not(.active) .ct{background:#f1f5f9;color:#64748b;}
+
+        /* Deleted bucket chip — danger-toned so the tenant always reads
+           it as archive, never as live status. Icon doubles as a hint
+           that this is the trash. */
+        #sourcingPartnersSection .sp-chip-deleted{
+          color:#b91c1c;border-color:#fecaca;background:#fff5f5;
+        }
+        #sourcingPartnersSection .sp-chip-deleted:hover{
+          background:#fee2e2;color:#991b1b;
+        }
+        #sourcingPartnersSection .sp-chip-deleted.active{
+          background:#b91c1c;border-color:#b91c1c;color:#fff;
+        }
+        #sourcingPartnersSection .sp-chip-deleted:not(.active) .ct{
+          background:#fee2e2;color:#b91c1c;
+        }
+        #sourcingPartnersSection .sp-chip-deleted-ic{
+          display:inline-flex;align-items:center;
+        }
+
+        /* Per-row Delete / Restore action buttons. Inherit .sp-btn sizing
+           but pick up brand-appropriate colour: red ghost for delete,
+           gold ghost for restore. */
+        #sourcingPartnersSection .sp-btn.sp-act-delete{
+          color:#b91c1c;border-color:#fecaca;background:#fff;
+        }
+        #sourcingPartnersSection .sp-btn.sp-act-delete:hover{
+          background:#fef2f2;border-color:#fca5a5;color:#991b1b;
+        }
+        #sourcingPartnersSection .sp-btn.sp-act-restore{
+          color:#7a5a00;border-color:#fde68a;background:#fffbeb;
+        }
+        #sourcingPartnersSection .sp-btn.sp-act-restore:hover{
+          background:#fef3c7;border-color:#fcd34d;color:#5a4200;
+        }
+        /* Solid danger button (used in the bulk bar's primary action). */
+        #sourcingPartnersSection .sp-btn.danger{
+          background:linear-gradient(135deg,#dc2626 0%,#b91c1c 100%);
+          border-color:#b91c1c;color:#fff;
+        }
+        #sourcingPartnersSection .sp-btn.danger:hover{
+          background:linear-gradient(135deg,#b91c1c 0%,#991b1b 100%);
+        }
+        /* Bulk-bar mode tinting so the action surface feels distinct in
+           pay vs delete vs restore. */
+        #sourcingPartnersSection .sp-bulk-bar.sp-bulk-bar-delete{
+          border-color:#fecaca;
+          box-shadow:0 -8px 30px rgba(220,38,38,.12);
+        }
+        #sourcingPartnersSection .sp-bulk-bar.sp-bulk-bar-delete .sp-bulk-bar-count .n{
+          color:#b91c1c;
+        }
+        #sourcingPartnersSection .sp-bulk-bar.sp-bulk-bar-restore{
+          border-color:#fde68a;
+          box-shadow:0 -8px 30px rgba(212,175,55,.18);
+        }
+        #sourcingPartnersSection .sp-bulk-bar.sp-bulk-bar-restore .sp-bulk-bar-count .n{
+          color:#7a5a00;
+        }
 
         #sourcingPartnersSection .sp-order-row{
           background:#fff;border:1px solid #e5e7eb;border-radius:14px;
@@ -39165,18 +39233,31 @@ async function spvLoadOrders(opts){
   SPV.ordersTotal       = pg.total       || 0;
   SPV.ordersTotalPages  = pg.total_pages || 1;
   if (walletResp.ok) SPV.wallet = walletResp.data.wallet || SPV.wallet;
-  // Drop selections that are no longer visible / no longer payable.
-  const visible = new Set((SPV.ordersData.orders || []).map(o => o.id));
-  const payable = new Set((SPV.ordersData.orders || [])
-    .filter(o => o.sourcing_status === 'pending_payment').map(o => o.id));
+  // Drop selections that are no longer eligible for ANY bulk action on
+  // this page. A row is "bulkable" if it can be paid (pending_payment
+  // with quote), deleted (pending_source / pending_payment), or
+  // restored (currently soft-deleted). Anything else falls off the
+  // selection set so the bulk bar never claims to act on rows the
+  // backend would just reject.
+  const visible  = new Set((SPV.ordersData.orders || []).map(o => o.id));
+  const bulkable = new Set((SPV.ordersData.orders || [])
+    .filter(o => (o.sourcing_status === 'pending_payment' && o.has_quote)
+               || o.is_tenant_deletable
+               || o.is_deleted)
+    .map(o => o.id));
   for (const id of [...SPV.selectedOrders]){
-    if (!visible.has(id) || !payable.has(id)) SPV.selectedOrders.delete(id);
+    if (!visible.has(id) || !bulkable.has(id)) SPV.selectedOrders.delete(id);
   }
   spvRenderOrders();
 }
 
 function spvRenderOrders(){
   const data = SPV.ordersData || {orders:[], group_counts:{}};
+  // Status chips are LIVE statuses only. The Deleted bucket (where
+  // soft-deleted Pending Source / Pending Payment orders go) is a
+  // separate chip rendered at the end of the row with a distinct
+  // pill style so the tenant always knows when they're looking at
+  // archive vs working queue.
   const filters = [
     {k:'all',             label:'All'},
     {k:'pending_source',  label:'Pending Source'},
@@ -39192,6 +39273,22 @@ function spvRenderOrders(){
     const active = (SPV.ordersFilter || 'all') === f.k;
     return `<button class="sp-chip ${active?'active':''}" onclick="spvSetOrdersFilter('${f.k}')">${spvEsc(f.label)} <span class="ct">${n}</span></button>`;
   }).join('');
+  // Deleted chip — sits visually separate (left-margin auto via flex
+  // children below) and uses the "danger" tone so the tenant reads it
+  // as archive, not live work.
+  const delN = gc['deleted'] || 0;
+  const delActive = (SPV.ordersFilter || '') === 'deleted';
+  const deletedChip = `
+    <button class="sp-chip sp-chip-deleted ${delActive?'active':''}"
+            onclick="spvSetOrdersFilter('deleted')"
+            title="Orders you removed from your queue — restore any back into the live workflow.">
+      <span class="sp-chip-deleted-ic" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14"/>
+        </svg>
+      </span>
+      Deleted <span class="ct">${delN}</span>
+    </button>`;
 
   const searchSortBar = `
     <div class="sp-orders-toolbar">
@@ -39219,10 +39316,17 @@ function spvRenderOrders(){
     </div>`;
 
   const rows = (data.orders || []).map(spvRenderOrderRow).join('');
+  const isDelView = (SPV.ordersFilter || '') === 'deleted';
+  const emptyMsg = isDelView
+    ? 'No deleted orders. Anything you remove from Pending Source or Pending Payment will land here so you can restore it.'
+    : 'No orders match this filter.';
   document.getElementById('spvTabBody').innerHTML = `
     ${searchSortBar}
-    <div class="sp-orders-filters">${chips}</div>
-    ${rows || '<div class="sp-loading">No orders match this filter.</div>'}
+    <div class="sp-orders-filters">
+      <div class="sp-orders-filters-main">${chips}</div>
+      <div class="sp-orders-filters-tail">${deletedChip}</div>
+    </div>
+    ${rows || `<div class="sp-loading">${spvEsc(emptyMsg)}</div>`}
     <div id="spvOrdersPager"></div>
     <div id="spvBulkPayBar" class="sp-bulk-bar" style="display:none;"></div>`;
   spvRenderBulkBar();
@@ -39361,6 +39465,8 @@ function spvRenderOrderRow(o){
   const grpLabel = SPV_GROUP_LABEL[grp] || grp;
   const isPayable = grp === 'pending_payment';
   const isEditable = !!o.is_shipping_editable;
+  const isDeletable = !!o.is_tenant_deletable;
+  const isDeleted   = !!o.is_deleted;
   const isSelected = SPV.selectedOrders.has(o.id);
 
   // Variant chips (size, color, etc.)
@@ -39406,6 +39512,15 @@ function spvRenderOrderRow(o){
   if (isEditable){
     actions = `<button class="sp-btn ghost sm" onclick="event.stopPropagation();spvOpenEditShipping(${o.id})">✏️ Edit shipping</button>` + actions;
   }
+  // Soft-delete (single-row) — only for pending_source / pending_payment
+  // rows the tenant still owns. Sits last in the action strip so the
+  // primary action (Pay / Edit) stays leftmost. Inside the Deleted
+  // view we swap this for a Restore button.
+  if (isDeleted){
+    actions = `<button class="sp-btn ghost sm sp-act-restore" onclick="event.stopPropagation();spvConfirmRestore([${o.id}])" title="Restore this order back into the live queue.">↩ Restore</button>` + actions;
+  } else if (isDeletable){
+    actions = actions + `<button class="sp-btn ghost sm sp-act-delete" onclick="event.stopPropagation();spvConfirmDelete([${o.id}])" title="Remove this order from your sourcing queue. It will also disappear from the Drop Sigma OPS desk. You can restore it any time from the Deleted bucket.">🗑 Delete</button>`;
+  }
 
   // etaLine retained as an empty placeholder so the body template below
   // still type-checks. Tracking info moved next to the action button.
@@ -39415,7 +39530,13 @@ function spvRenderOrderRow(o){
   const flag = spvCountryFlag(o.ship_country);
   const platBadge = spvPlatformBadge(o.store_platform);
 
-  const checkbox = isPayable
+  // Checkbox shows when the row is eligible for ANY bulk action:
+  //   * Pending Payment  → bulk Pay  (existing flow)
+  //   * Pending Source   → bulk Delete  (new)
+  //   * Pending Payment  → bulk Delete  (new — same row hosts both)
+  //   * Deleted view     → bulk Restore (new)
+  const isBulkable = isPayable || isDeletable || isDeleted;
+  const checkbox = isBulkable
     ? `<label class="sp-row-check" onclick="event.stopPropagation()"><input type="checkbox" ${isSelected?'checked':''} onchange="spvToggleSelectOrder(${o.id}, this.checked)"></label>`
     : '<span class="sp-row-check-spacer"></span>';
 
@@ -39478,9 +39599,16 @@ function spvOnOrdersSort(v){
   spvLoadOrders();
 }
 function spvSetOrdersFilter(k){
+  // Switching chips invalidates the current selection — the bulk bar
+  // shows one mode at a time (Pay / Delete / Restore) based on what's
+  // selected, and mixing rows across the chip boundary makes that
+  // contract unreadable. Always clear when the filter changes.
+  if (k !== SPV.ordersFilter){
+    SPV.selectedOrders.clear();
+  }
   SPV.ordersFilter = k;
-  // Selection persists only while still in pending_payment view; clear otherwise.
-  if (k !== 'pending_payment' && k !== 'all') SPV.selectedOrders.clear();
+  // Reset pagination so the user lands on page 1 of the new chip.
+  SPV.ordersPage = 1;
   spvLoadOrders();
 }
 
@@ -39500,36 +39628,120 @@ function spvRenderBulkBar(){
   const ids = [...SPV.selectedOrders];
   if (!ids.length){ bar.style.display = 'none'; return; }
   const rows = (SPV.ordersData?.orders || []).filter(o => SPV.selectedOrders.has(o.id));
-  const total = rows.reduce((s, o) => s + (o.sourcing_total_usd || 0), 0);
-  const bal = SPV.wallet.balance_usd || 0;
-  const afterBal = bal - total;
-  const insufficient = afterBal < 0;
+
+  // Mode selection. The active filter chip is the source of truth:
+  //   * Deleted chip   → Restore bar
+  //   * Pending Source → Delete bar
+  //   * Pending Payment with any payable rows → Pay bar (existing flow)
+  //   * Pending Payment with NO payable rows  → Delete bar (live but
+  //     awaiting Drop Sigma's quote → still safe to remove)
+  //   * Anything else  → no bar (selection cleared on filter change)
+  const filter = SPV.ordersFilter || 'all';
+  const payableRows  = rows.filter(o => o.sourcing_status === 'pending_payment' && o.has_quote);
+  const deletableRows = rows.filter(o => o.is_tenant_deletable);
+  const deletedRows  = rows.filter(o => o.is_deleted);
+
+  let mode = '';
+  if (filter === 'deleted')                       mode = 'restore';
+  else if (filter === 'pending_source')           mode = 'delete';
+  else if (filter === 'pending_payment'){
+    mode = payableRows.length ? 'pay' : 'delete';
+  } else {
+    // "all" / "processing" / etc. — no bulk action surface today.
+    bar.style.display = 'none';
+    return;
+  }
+
   bar.style.display = 'flex';
-  bar.innerHTML = `
-    <div class="sp-bulk-bar-info">
-      <div class="sp-bulk-bar-count">
-        <span class="n">${ids.length}</span>
-        <span class="l">selected</span>
+
+  if (mode === 'pay'){
+    const total = payableRows.reduce((s, o) => s + (o.sourcing_total_usd || 0), 0);
+    const bal = SPV.wallet.balance_usd || 0;
+    const afterBal = bal - total;
+    const insufficient = afterBal < 0;
+    bar.className = 'sp-bulk-bar sp-bulk-bar-pay';
+    bar.innerHTML = `
+      <div class="sp-bulk-bar-info">
+        <div class="sp-bulk-bar-count">
+          <span class="n">${payableRows.length}</span>
+          <span class="l">selected to pay</span>
+        </div>
+        <div class="sp-bulk-bar-block">
+          <div class="lbl">Total to charge</div>
+          <div class="val">${spvUSD(total)}</div>
+        </div>
+        <div class="sp-bulk-bar-block">
+          <div class="lbl">Wallet balance</div>
+          <div class="val">${spvUSD(bal)}</div>
+        </div>
+        <div class="sp-bulk-bar-block ${insufficient?'is-negative':''}">
+          <div class="lbl">${insufficient?'Shortfall':'Balance after'}</div>
+          <div class="val">${insufficient?spvUSD(-afterBal):spvUSD(afterBal)}</div>
+        </div>
       </div>
-      <div class="sp-bulk-bar-block">
-        <div class="lbl">Total to charge</div>
-        <div class="val">${spvUSD(total)}</div>
+      <div class="sp-bulk-bar-actions">
+        <button class="sp-btn ghost sm" onclick="spvClearOrderSelection()">Clear</button>
+        ${deletableRows.length
+          ? `<button class="sp-btn danger sm" onclick="spvConfirmDelete([${deletableRows.map(o=>o.id).join(',')}])">🗑 Delete ${deletableRows.length}</button>`
+          : ''}
+        ${insufficient
+          ? `<button class="sp-btn ghost sm" disabled style="opacity:.55;cursor:not-allowed;">Top up wallet</button>`
+          : `<button class="sp-btn gold" onclick="spvOpenPayConfirm([${payableRows.map(o=>o.id).join(',')}])">Pay ${spvUSD(total)} from wallet</button>`}
+      </div>`;
+    return;
+  }
+
+  if (mode === 'delete'){
+    const eligible = deletableRows.length;
+    const blocked  = rows.length - eligible;
+    bar.className = 'sp-bulk-bar sp-bulk-bar-delete';
+    bar.innerHTML = `
+      <div class="sp-bulk-bar-info">
+        <div class="sp-bulk-bar-count">
+          <span class="n">${eligible}</span>
+          <span class="l">to remove</span>
+        </div>
+        <div class="sp-bulk-bar-block">
+          <div class="lbl">Status</div>
+          <div class="val">${eligible
+            ? 'Safe to delete — no payment has moved yet.'
+            : 'Selected rows are locked (processing or later).'}</div>
+        </div>
+        ${blocked > 0
+          ? `<div class="sp-bulk-bar-block is-negative">
+               <div class="lbl">Skipped</div>
+               <div class="val">${blocked} locked row${blocked === 1 ? '' : 's'}</div>
+             </div>` : ''}
       </div>
-      <div class="sp-bulk-bar-block">
-        <div class="lbl">Wallet balance</div>
-        <div class="val">${spvUSD(bal)}</div>
+      <div class="sp-bulk-bar-actions">
+        <button class="sp-btn ghost sm" onclick="spvClearOrderSelection()">Clear</button>
+        ${eligible
+          ? `<button class="sp-btn danger" onclick="spvConfirmDelete([${deletableRows.map(o=>o.id).join(',')}])">🗑 Delete ${eligible} order${eligible === 1 ? '' : 's'}</button>`
+          : `<button class="sp-btn ghost" disabled style="opacity:.55;cursor:not-allowed;">Nothing to delete</button>`}
+      </div>`;
+    return;
+  }
+
+  if (mode === 'restore'){
+    const n = deletedRows.length;
+    bar.className = 'sp-bulk-bar sp-bulk-bar-restore';
+    bar.innerHTML = `
+      <div class="sp-bulk-bar-info">
+        <div class="sp-bulk-bar-count">
+          <span class="n">${n}</span>
+          <span class="l">to restore</span>
+        </div>
+        <div class="sp-bulk-bar-block">
+          <div class="lbl">Status</div>
+          <div class="val">Each row goes back to the status it was in when removed (Pending Source or Pending Payment).</div>
+        </div>
       </div>
-      <div class="sp-bulk-bar-block ${insufficient?'is-negative':''}">
-        <div class="lbl">${insufficient?'Shortfall':'Balance after'}</div>
-        <div class="val">${insufficient?spvUSD(-afterBal):spvUSD(afterBal)}</div>
-      </div>
-    </div>
-    <div class="sp-bulk-bar-actions">
-      <button class="sp-btn ghost sm" onclick="spvClearOrderSelection()">Clear</button>
-      ${insufficient
-        ? `<button class="sp-btn ghost sm" disabled style="opacity:.55;cursor:not-allowed;">Top up wallet</button>`
-        : `<button class="sp-btn gold" onclick="spvOpenPayConfirm([${ids.join(',')}])">Pay ${spvUSD(total)} from wallet</button>`}
-    </div>`;
+      <div class="sp-bulk-bar-actions">
+        <button class="sp-btn ghost sm" onclick="spvClearOrderSelection()">Clear</button>
+        <button class="sp-btn gold" onclick="spvConfirmRestore([${deletedRows.map(o=>o.id).join(',')}])">↩ Restore ${n} order${n === 1 ? '' : 's'}</button>
+      </div>`;
+    return;
+  }
 }
 
 function spvClearOrderSelection(){
@@ -39607,6 +39819,152 @@ async function spvDoPay(ids){
   spvCloseModal('spvOrderModal');
   SPV.selectedOrders.clear();
   await spvLoadOverviewData();
+  spvLoadOrders();
+}
+
+/* ── Tenant soft-delete + restore ─────────────────────────────────
+   Tenant can remove pending_source / pending_payment orders from
+   their Sourcing queue. The row disappears from both their queue
+   AND the OPS desk. The Deleted chip surfaces the archive; from
+   there any row can be restored back into the live workflow with
+   one click.
+
+   Confirmation modal explains exactly what's happening so the
+   tenant never deletes by accident:
+     * which rows
+     * that money hasn't moved
+     * that the row also leaves the OPS desk
+     * that it can be restored from Deleted bucket. */
+function spvConfirmDelete(ids){
+  if (!ids || !ids.length) return;
+  const rows = (SPV.ordersData?.orders || []).filter(o => ids.includes(o.id));
+  if (!rows.length){ spvToast('Nothing to delete', 'error'); return; }
+  document.getElementById('spvOrderModalTitle').textContent =
+    rows.length === 1
+      ? `Remove ${rows[0].ds_order_ref} from queue?`
+      : `Remove ${rows.length} orders from queue?`;
+
+  const list = rows.map(o => `
+    <div class="sp-pay-breakdown-row">
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:900;color:#0f172a;font-size:12.5px;">
+          ${spvEsc(o.ds_order_ref)}
+          <span style="color:#94a3b8;font-weight:600;font-size:11.5px;"> · ${spvEsc(o.product_name)}</span>
+        </div>
+        <div style="margin-top:4px;font-size:11px;color:#64748b;">
+          ${spvEsc(SPV_GROUP_LABEL[o.sourcing_status] || o.sourcing_status)} · ${spvEsc(o.customer_name || '—')}
+        </div>
+      </div>
+      <span class="sp-pill ${spvEsc(o.sourcing_status)}" style="font-size:9.5px;">${spvEsc(SPV_GROUP_LABEL[o.sourcing_status] || o.sourcing_status)}</span>
+    </div>`).join('');
+
+  document.getElementById('spvOrderModalBody').innerHTML = `
+    <div class="sp-pay-breakdown">${list}</div>
+    <div class="sp-pay-note" style="background:#fff7ed;border-color:#fed7aa;color:#9a3412;">
+      <strong>What happens:</strong>
+      <ul style="margin:6px 0 0;padding-left:18px;line-height:1.7;">
+        <li>The order leaves your Sourcing queue immediately.</li>
+        <li>The Drop Sigma OPS desk also stops seeing it — no quote work, no procurement.</li>
+        <li>No charges. Nothing moves on the merchant store.</li>
+        <li>You can restore it any time from the <strong>Deleted</strong> chip.</li>
+      </ul>
+    </div>`;
+  document.getElementById('spvOrderModalFoot').innerHTML = `
+    <button class="sp-btn ghost" onclick="spvCloseModal('spvOrderModal')">Cancel</button>
+    <button class="sp-btn danger" onclick="spvDoDelete([${rows.map(o=>o.id).join(',')}])">
+      🗑 Remove ${rows.length} order${rows.length === 1 ? '' : 's'}
+    </button>`;
+  spvOpenModal('spvOrderModal');
+}
+
+async function spvDoDelete(ids){
+  if (!ids || !ids.length) return;
+  const btn = document.querySelector('#spvOrderModalFoot .sp-btn.danger');
+  if (btn){ btn.disabled = true; btn.textContent = 'Removing…'; }
+  const resp = await spvFetch('/sourcing-partners/api/sourcing-orders/bulk-delete/',
+                              {method:'POST', body:{order_ids: ids}});
+  if (!resp.ok){
+    const e = resp.data || {};
+    spvToast(e.error || 'Could not remove orders', 'error');
+    if (btn){ btn.disabled = false; btn.textContent = 'Try again'; }
+    return;
+  }
+  const d = resp.data || {};
+  const nDel  = (d.deleted || []).length;
+  const nSkip = (d.skipped || []).length;
+  if (nDel && nSkip){
+    spvToast(`Removed ${nDel} · ${nSkip} skipped (locked)`, 'success');
+  } else if (nDel){
+    spvToast(`Removed ${nDel} order${nDel === 1 ? '' : 's'} · Restore from the Deleted chip if needed`, 'success');
+  } else {
+    spvToast('Nothing removed — selected rows are locked', 'error');
+  }
+  spvCloseModal('spvOrderModal');
+  SPV.selectedOrders.clear();
+  spvLoadOrders();
+}
+
+function spvConfirmRestore(ids){
+  if (!ids || !ids.length) return;
+  const rows = (SPV.ordersData?.orders || []).filter(o => ids.includes(o.id));
+  if (!rows.length){ spvToast('Nothing to restore', 'error'); return; }
+  document.getElementById('spvOrderModalTitle').textContent =
+    rows.length === 1
+      ? `Restore ${rows[0].ds_order_ref}?`
+      : `Restore ${rows.length} orders?`;
+
+  const list = rows.map(o => `
+    <div class="sp-pay-breakdown-row">
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:900;color:#0f172a;font-size:12.5px;">
+          ${spvEsc(o.ds_order_ref)}
+          <span style="color:#94a3b8;font-weight:600;font-size:11.5px;"> · ${spvEsc(o.product_name)}</span>
+        </div>
+        <div style="margin-top:4px;font-size:11px;color:#64748b;">
+          Will return to <strong style="color:#0f172a;">${spvEsc(SPV_GROUP_LABEL[o.sourcing_status] || o.sourcing_status)}</strong>
+        </div>
+      </div>
+    </div>`).join('');
+
+  document.getElementById('spvOrderModalBody').innerHTML = `
+    <div class="sp-pay-breakdown">${list}</div>
+    <div class="sp-pay-note">
+      <strong>What happens:</strong> the order returns to its previous status
+      (Pending Source or Pending Payment) in both your queue and the
+      Drop Sigma OPS desk. Quotes already given are preserved.
+    </div>`;
+  document.getElementById('spvOrderModalFoot').innerHTML = `
+    <button class="sp-btn ghost" onclick="spvCloseModal('spvOrderModal')">Cancel</button>
+    <button class="sp-btn gold" onclick="spvDoRestore([${rows.map(o=>o.id).join(',')}])">
+      ↩ Restore ${rows.length} order${rows.length === 1 ? '' : 's'}
+    </button>`;
+  spvOpenModal('spvOrderModal');
+}
+
+async function spvDoRestore(ids){
+  if (!ids || !ids.length) return;
+  const btn = document.querySelector('#spvOrderModalFoot .sp-btn.gold');
+  if (btn){ btn.disabled = true; btn.textContent = 'Restoring…'; }
+  const resp = await spvFetch('/sourcing-partners/api/sourcing-orders/bulk-restore/',
+                              {method:'POST', body:{order_ids: ids}});
+  if (!resp.ok){
+    const e = resp.data || {};
+    spvToast(e.error || 'Could not restore orders', 'error');
+    if (btn){ btn.disabled = false; btn.textContent = 'Try again'; }
+    return;
+  }
+  const d = resp.data || {};
+  const nRes  = (d.restored || []).length;
+  const nSkip = (d.skipped || []).length;
+  if (nRes && nSkip){
+    spvToast(`Restored ${nRes} · ${nSkip} skipped`, 'success');
+  } else if (nRes){
+    spvToast(`Restored ${nRes} order${nRes === 1 ? '' : 's'} back to your queue`, 'success');
+  } else {
+    spvToast('Nothing restored', 'error');
+  }
+  spvCloseModal('spvOrderModal');
+  SPV.selectedOrders.clear();
   spvLoadOrders();
 }
 

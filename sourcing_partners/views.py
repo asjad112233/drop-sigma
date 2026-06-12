@@ -2000,6 +2000,9 @@ def _order_row_json(o, *, include_address=False):
         # to "Drop Sigma" before the tenant sees the carrier.
         "tracking_company":   safe_carrier_name(o.tracking_company or ""),
         "is_shipping_editable": o.is_shipping_editable,
+        "is_tenant_deletable": o.is_tenant_deletable,
+        "is_deleted":         o.is_deleted,
+        "deleted_at_iso":     _iso(o.deleted_at),
         "created_at_iso":     _iso(o.created_at),
         "paid_at_iso":        _iso(o.sourcing_paid_at),
         "delivered_at_iso":   _iso(o.sourcing_delivered_at),
@@ -2012,20 +2015,37 @@ def _order_row_json(o, *, include_address=False):
 @login_required(login_url="/login/")
 @require_GET
 def api_aggregate_orders(request):
-    """Tenant-facing orders list — backed by Order (Shopify + WC synced)."""
-    user = request.user
-    base_qs = Order.objects.filter(store__user=user).select_related("store")
+    """Tenant-facing orders list — backed by Order (Shopify + WC synced).
 
-    # Counts over the full unfiltered set so chip badges always show realistic
-    # totals (even when a filter is active).
-    counts_qs = (Order.objects.filter(store__user=user)
-                 .values("sourcing_status").annotate(n=Count("id")))
-    group_counts = {row["sourcing_status"]: row["n"] for row in counts_qs}
+    Soft-delete behaviour:
+
+    * Default (every status chip from "all" through "cancel"): only LIVE
+      rows (``is_deleted=False``). The tenant should never see orders
+      they previously removed mixed into their working queue.
+    * ``?group=deleted``: ONLY soft-deleted rows. This is the dedicated
+      Deleted bucket the tenant uses to restore orders back into the
+      live queue. Counts in ``group_counts['deleted']`` reflect the
+      same set.
+    """
+    user = request.user
+    grp = (request.GET.get("group") or "").strip()
+    deleted_view = grp == "deleted"
+
+    base_qs = Order.objects.filter(store__user=user).select_related("store")
+    base_qs = base_qs.filter(is_deleted=deleted_view)
+
+    # Counts over both buckets so the chip row can show "Deleted (N)"
+    # without paying for a second round-trip. Live counts exclude
+    # deleted, deleted bucket count is its own number.
+    live_counts_qs = (Order.objects.filter(store__user=user, is_deleted=False)
+                      .values("sourcing_status").annotate(n=Count("id")))
+    group_counts = {row["sourcing_status"]: row["n"] for row in live_counts_qs}
     group_counts["all"] = sum(group_counts.get(g, 0) for g, _ in ORDER_STATUS_GROUPS)
+    group_counts["deleted"] = (Order.objects
+                               .filter(store__user=user, is_deleted=True).count())
 
     qs = base_qs
-    grp = (request.GET.get("group") or "").strip()
-    if grp and grp in _GROUP_KEYS:
+    if not deleted_view and grp and grp in _GROUP_KEYS:
         qs = qs.filter(sourcing_status=grp)
 
     # Search (DS#, customer #, customer name, product name)
@@ -2524,6 +2544,177 @@ def api_order_item_delete(request, order_id, item_index):
     return JsonResponse({
         "ok": True,
         "order": _order_row_json(o, include_address=True),
+    })
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Tenant-side soft-delete + restore for Sourcing orders.
+#
+# Eligibility: a row can be soft-deleted ONLY while it's in
+# pending_source / pending_payment AND the tenant owns it (Order.store.user
+# == request.user). Once procurement starts (processing onward) the row is
+# locked — too much downstream work (vendor orders, label generation,
+# wallet charges) hinges on it. The is_tenant_deletable property is the
+# single source of truth.
+#
+# Restore: only the rows owned by the tenant come back, and only into the
+# same status they were in when deleted (we never touched sourcing_status
+# during the delete — only is_deleted). So a soft-deleted Pending Source
+# row restores into Pending Source.
+#
+# Both endpoints log to OpsActivity so the OPS team sees the change in
+# real-time on their workspace activity feed.
+# ─────────────────────────────────────────────────────────────────────
+@login_required(login_url="/login/")
+@require_POST
+def api_orders_bulk_delete(request):
+    """Soft-delete one or more orders owned by the calling tenant.
+
+    Request body: ``{"order_ids": [1, 2, 3]}``
+
+    Returns: ``{ok: True, deleted: [...], skipped: [{id, reason}, ...]}``
+    Skipped rows include their reason (locked status, not owned, already
+    deleted) so the UI can surface a precise toast.
+    """
+    try:
+        payload = json.loads((request.body or b"{}").decode("utf-8"))
+    except Exception:
+        return JsonResponse({"ok": False, "error": "Bad JSON."}, status=400)
+
+    raw_ids = payload.get("order_ids") or []
+    try:
+        order_ids = [int(x) for x in raw_ids if x is not None]
+    except (TypeError, ValueError):
+        return JsonResponse({"ok": False, "error": "order_ids must be ints."}, status=400)
+
+    if not order_ids:
+        return JsonResponse({"ok": False, "error": "No orders selected."}, status=400)
+
+    user = request.user
+    qs = Order.objects.filter(id__in=order_ids).select_related("store")
+    found_ids = {o.id: o for o in qs}
+
+    deleted, skipped = [], []
+    now = timezone.now()
+    with transaction.atomic():
+        for oid in order_ids:
+            o = found_ids.get(oid)
+            if not o:
+                skipped.append({"id": oid, "reason": "not_found"})
+                continue
+            if o.store_id is None or o.store.user_id != user.id:
+                skipped.append({"id": oid, "reason": "not_owned"})
+                continue
+            if o.is_deleted:
+                skipped.append({"id": oid, "reason": "already_deleted"})
+                continue
+            if not o.is_tenant_deletable:
+                skipped.append({"id": oid, "reason": "locked_status"})
+                continue
+            o.is_deleted = True
+            o.deleted_at = now
+            o.deleted_by = user
+            o.save(update_fields=["is_deleted", "deleted_at", "deleted_by"])
+            deleted.append(o.id)
+
+    # OPS audit trail — write one activity per deleted order so the OPS
+    # workspace feed shows the tenant pulled it.
+    if deleted:
+        try:
+            from sourcing_ops.models import OpsActivity
+            for oid in deleted:
+                o = found_ids[oid]
+                OpsActivity.objects.create(
+                    order=o,
+                    kind="tenant_delete",
+                    title="Tenant removed order from queue",
+                    detail=(
+                        f"{o.ds_order_ref} was soft-deleted by the tenant "
+                        f"while in {o.sourcing_status}."
+                    ),
+                    icon="🗑️",
+                )
+        except Exception:
+            # Don't fail the request just because activity logging blew up.
+            pass
+
+    return JsonResponse({
+        "ok": True,
+        "deleted": deleted,
+        "skipped": skipped,
+    })
+
+
+@login_required(login_url="/login/")
+@require_POST
+def api_orders_bulk_restore(request):
+    """Restore one or more soft-deleted orders back into the live queue.
+
+    Request body: ``{"order_ids": [1, 2, 3]}``
+
+    Restored rows go back to the status they were in when deleted (we
+    never mutated sourcing_status during delete, so this is a no-op on
+    status — just flipping is_deleted back to False).
+    """
+    try:
+        payload = json.loads((request.body or b"{}").decode("utf-8"))
+    except Exception:
+        return JsonResponse({"ok": False, "error": "Bad JSON."}, status=400)
+
+    raw_ids = payload.get("order_ids") or []
+    try:
+        order_ids = [int(x) for x in raw_ids if x is not None]
+    except (TypeError, ValueError):
+        return JsonResponse({"ok": False, "error": "order_ids must be ints."}, status=400)
+
+    if not order_ids:
+        return JsonResponse({"ok": False, "error": "No orders selected."}, status=400)
+
+    user = request.user
+    qs = Order.objects.filter(id__in=order_ids).select_related("store")
+    found_ids = {o.id: o for o in qs}
+
+    restored, skipped = [], []
+    with transaction.atomic():
+        for oid in order_ids:
+            o = found_ids.get(oid)
+            if not o:
+                skipped.append({"id": oid, "reason": "not_found"})
+                continue
+            if o.store_id is None or o.store.user_id != user.id:
+                skipped.append({"id": oid, "reason": "not_owned"})
+                continue
+            if not o.is_deleted:
+                skipped.append({"id": oid, "reason": "not_deleted"})
+                continue
+            o.is_deleted = False
+            o.deleted_at = None
+            o.deleted_by = None
+            o.save(update_fields=["is_deleted", "deleted_at", "deleted_by"])
+            restored.append(o.id)
+
+    if restored:
+        try:
+            from sourcing_ops.models import OpsActivity
+            for oid in restored:
+                o = found_ids[oid]
+                OpsActivity.objects.create(
+                    order=o,
+                    kind="tenant_restore",
+                    title="Tenant restored order to queue",
+                    detail=(
+                        f"{o.ds_order_ref} was restored by the tenant — "
+                        f"back in {o.sourcing_status}."
+                    ),
+                    icon="↩️",
+                )
+        except Exception:
+            pass
+
+    return JsonResponse({
+        "ok": True,
+        "restored": restored,
+        "skipped": skipped,
     })
 
 

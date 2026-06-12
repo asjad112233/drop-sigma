@@ -466,7 +466,9 @@ def api_overview(request):
     # legacy ops users (no workspace bound) see every tenant — the
     # helper is a no-op for them. Workspace-bound users only count
     # tenants assigned to that workspace via OpsWorkspaceTenant.
-    qs = order_qs_visible_to(request.user, Order.objects.all())
+    # Exclude tenant-soft-deleted rows: KPIs should reflect actual
+    # outstanding work, not orders the tenant has already removed.
+    qs = order_qs_visible_to(request.user, Order.objects.all()).filter(is_deleted=False)
     now = timezone.now()
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
