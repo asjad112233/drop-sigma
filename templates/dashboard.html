@@ -38775,6 +38775,13 @@ async function spvOpenChatThread(partnerId){
   SPV.conv.lastMsgId = 0;
   SPV.conv.messages = [];
   SPV.conv._seenIds = new Set();  // fresh dedup set per opened thread
+  // First poll on chat open hydrates the entire thread history.
+  // Without this flag, spvPollChat would treat every existing partner
+  // message as a "new incoming" and play the receive sound — so just
+  // opening the chat would trigger a ding. Suppress for the first
+  // poll only; subsequent polls (when actual new messages arrive)
+  // play normally.
+  SPV.conv._suppressSoundOnce = true;
   SPV.chatPending = { files: [], links: [] };
 
   // Fetch the tenant's dedicated manager (lazy-cached on SPV.manager).
@@ -39394,9 +39401,13 @@ async function spvPollChat(){
   // ── WhatsApp-style "ding" on incoming partner message. Same Web
   //    Audio helper as Drop Sigma AI receive (_aiPlayReceiveSound at
   //    ~L36384). Skip if the only new messages were ones the tenant
-  //    sent themselves (sender echo).
+  //    sent themselves (sender echo), AND skip on the very first poll
+  //    after opening the chat — that "fresh" batch is just thread
+  //    history being hydrated, not a genuine new message arriving.
   const incoming = fresh.some(m => m.direction === 'in');
-  if (incoming){
+  const suppress = !!SPV.conv._suppressSoundOnce;
+  SPV.conv._suppressSoundOnce = false;
+  if (incoming && !suppress){
     try { if (typeof _aiPlayReceiveSound === 'function') _aiPlayReceiveSound(); } catch(_){}
   }
   // Tenant is actively reading → drop their own typing pill regardless
