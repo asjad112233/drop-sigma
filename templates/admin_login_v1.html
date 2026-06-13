@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login — Drop Sigma</title>
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
+<link rel="apple-touch-icon" href="/static/favicon.svg" />
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{
+  font-family:'Inter','Segoe UI',sans-serif;
+  min-height:100vh;
+  background:linear-gradient(135deg,#0f172a 0%,#1e293b 60%,#0f172a 100%);
+  display:flex;align-items:center;justify-content:center;
+  padding:20px;
+  -webkit-font-smoothing:antialiased;
+}
+.blob{position:fixed;border-radius:50%;filter:blur(90px);opacity:.14;pointer-events:none;transition:all .6s ease;}
+.blob1{width:520px;height:520px;background:#2563eb;top:-160px;left:-160px;}
+.blob2{width:420px;height:420px;background:#7c3aed;bottom:-120px;right:-120px;}
+
+.card{
+  position:relative;z-index:1;
+  background:rgba(255,255,255,.06);
+  backdrop-filter:blur(28px);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:30px;
+  padding:0;
+  width:100%;max-width:440px;
+  box-shadow:0 40px 100px rgba(0,0,0,.45);
+  overflow:hidden;
+}
+
+/* ── Brand header ── */
+.brand-bar{
+  display:flex;align-items:center;gap:12px;
+  padding:32px 40px 24px;
+  border-bottom:1px solid rgba(255,255,255,.07);
+}
+.brand-logo{
+  width:44px;height:44px;border-radius:13px;
+  background:linear-gradient(135deg,#2563eb,#7c3aed);
+  display:grid;place-items:center;
+  font-weight:900;font-size:15px;color:#fff;
+  box-shadow:0 6px 20px rgba(37,99,235,.35);
+  flex-shrink:0;
+}
+.brand-name{font-size:16px;font-weight:800;color:#fff;letter-spacing:-.01em;}
+.brand-tag{font-size:11px;color:rgba(255,255,255,.4);margin-top:2px;}
+
+/* ── Tab switcher ── */
+.tabs{
+  display:flex;gap:0;
+  padding:16px 40px 0;
+}
+.tab-btn{
+  flex:1;
+  padding:10px 6px;
+  background:none;
+  border:none;border-bottom:2px solid transparent;
+  color:rgba(255,255,255,.4);
+  font-size:12px;font-weight:700;
+  font-family:inherit;
+  cursor:pointer;
+  transition:.18s;
+  text-align:center;
+  letter-spacing:.02em;
+  text-transform:uppercase;
+}
+.tab-btn:hover{color:rgba(255,255,255,.75);}
+.tab-btn.active{color:#fff;border-bottom-color:#2563eb;}
+.tab-btn.active.vendor{border-bottom-color:#10b981;}
+.tab-btn.active.team{border-bottom-color:#7c3aed;}
+
+/* ── Form panels ── */
+.panels{padding:28px 40px 36px;min-height:320px;}
+.panel{display:none;}
+.panel.active{display:block;}
+
+.panel-title{font-size:22px;font-weight:800;color:#fff;letter-spacing:-.03em;margin-bottom:4px;}
+.panel-sub{font-size:13px;color:rgba(255,255,255,.45);margin-bottom:24px;}
+
+.field{margin-bottom:15px;}
+.field label{
+  display:block;font-size:11px;font-weight:700;
+  color:rgba(255,255,255,.55);margin-bottom:6px;
+  letter-spacing:.04em;text-transform:uppercase;
+}
+.field input{
+  width:100%;height:48px;
+  background:rgba(255,255,255,.07);
+  border:1px solid rgba(255,255,255,.13);
+  border-radius:12px;padding:0 16px;
+  font-size:14px;color:#fff;font-family:inherit;
+  outline:none;transition:.18s;
+}
+.field input::placeholder{color:rgba(255,255,255,.28);}
+.field input:focus{
+  border-color:rgba(37,99,235,.65);
+  background:rgba(37,99,235,.09);
+  box-shadow:0 0 0 3px rgba(37,99,235,.15);
+}
+.panel.vendor .field input:focus{
+  border-color:rgba(16,185,129,.65);
+  background:rgba(16,185,129,.07);
+  box-shadow:0 0 0 3px rgba(16,185,129,.13);
+}
+.panel.team .field input:focus{
+  border-color:rgba(124,58,237,.65);
+  background:rgba(124,58,237,.07);
+  box-shadow:0 0 0 3px rgba(124,58,237,.13);
+}
+
+.error-box{
+  background:rgba(239,68,68,.16);
+  border:1px solid rgba(239,68,68,.28);
+  color:#fca5a5;
+  font-size:13px;font-weight:600;
+  padding:11px 14px;border-radius:11px;
+  margin-bottom:18px;
+}
+
+.login-btn{
+  width:100%;height:50px;margin-top:6px;
+  border:none;border-radius:14px;
+  color:#fff;font-size:15px;font-weight:800;
+  cursor:pointer;font-family:inherit;
+  transition:.18s;
+}
+.login-btn:hover{opacity:.88;transform:translateY(-2px);}
+.login-btn:active{transform:scale(.98);}
+
+.panel.admin .login-btn{
+  background:linear-gradient(135deg,#2563eb,#7c3aed);
+  box-shadow:0 10px 28px rgba(37,99,235,.35);
+}
+.panel.vendor .login-btn{
+  background:linear-gradient(135deg,#059669,#10b981);
+  box-shadow:0 10px 28px rgba(16,185,129,.3);
+}
+.panel.team .login-btn{
+  background:linear-gradient(135deg,#6d28d9,#7c3aed);
+  box-shadow:0 10px 28px rgba(124,58,237,.35);
+}
+
+.forgot-link{
+  display:block;text-align:center;margin-top:12px;
+  font-size:12.5px;font-weight:600;
+  color:rgba(255,255,255,.55);
+  text-decoration:none;
+  cursor:pointer;background:none;border:none;font-family:inherit;
+  transition:color .15s;
+}
+.forgot-link:hover{color:rgba(255,255,255,.9);text-decoration:underline;}
+
+/* Forgot Password Modal */
+.fp-overlay{
+  display:none;position:fixed;inset:0;
+  background:rgba(5,8,20,.78);backdrop-filter:blur(8px);
+  z-index:9999;align-items:center;justify-content:center;padding:18px;
+}
+.fp-overlay.show{display:flex;}
+.fp-card{
+  background:rgba(20,18,42,.96);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:22px;padding:28px;
+  width:100%;max-width:420px;
+  box-shadow:0 40px 100px rgba(0,0,0,.5);
+  color:#fff;
+}
+.fp-card .fp-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+.fp-card .fp-title{font-size:18px;font-weight:800;letter-spacing:-.3px;}
+.fp-card .fp-close{
+  width:32px;height:32px;border-radius:10px;
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);
+  color:#fff;font-size:16px;cursor:pointer;font-family:inherit;
+}
+.fp-card .fp-sub{font-size:13px;color:rgba(255,255,255,.6);margin-bottom:18px;line-height:1.5;}
+.fp-card input{
+  width:100%;height:46px;padding:0 14px;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.1);border-radius:12px;
+  font-size:14px;color:#fff;font-family:inherit;outline:none;
+}
+.fp-card input:focus{border-color:#10b981;}
+.fp-msg{font-size:12.5px;margin-top:12px;min-height:18px;font-weight:600;}
+.fp-msg.ok{color:#34d399;}
+.fp-msg.err{color:#fca5a5;}
+.fp-actions{display:flex;gap:10px;margin-top:16px;}
+.fp-actions button{flex:1;height:44px;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:.15s;}
+.fp-actions .fp-cancel{background:rgba(255,255,255,.06);color:rgba(255,255,255,.7);}
+.fp-actions .fp-cancel:hover{background:rgba(255,255,255,.1);color:#fff;}
+.fp-actions .fp-submit{background:linear-gradient(135deg,#059669,#10b981);color:#fff;box-shadow:0 10px 24px rgba(16,185,129,.25);}
+.fp-actions .fp-submit:hover{opacity:.9;transform:translateY(-1px);}
+.fp-actions .fp-submit:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+</style>
+</head>
+<body>
+<div class="blob blob1"></div>
+<div class="blob blob2"></div>
+
+<div class="card">
+  <div class="brand-bar">
+    <div class="brand-logo">DS</div>
+    <div>
+      <div class="brand-name">Drop Sigma</div>
+      <div class="brand-tag">Management Portal</div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn admin" onclick="switchTab('admin')">🛡 Admin</button>
+    <button class="tab-btn vendor" onclick="switchTab('vendor')">🏪 Vendor</button>
+    <button class="tab-btn team" onclick="switchTab('team')">👥 Team</button>
+  </div>
+
+  <div class="panels">
+
+    <!-- Admin Panel -->
+    <div class="panel admin" id="panel-admin">
+      <div class="panel-title">Admin Login</div>
+      <div class="panel-sub">Sign in to access the admin dashboard</div>
+
+      {% if error and tab == "admin" %}
+      <div class="error-box">{{ error }}</div>
+      {% endif %}
+
+      <form method="post" action="/login/">
+        {% csrf_token %}
+        <div class="field">
+          <label>Username or Email</label>
+          <input type="text" name="username" id="adminEmailInput" placeholder="Enter username or email" {% if tab == "admin" %}autofocus{% endif %} required>
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <input type="password" name="password" placeholder="Enter password" required>
+        </div>
+        <button type="submit" class="login-btn">Sign In →</button>
+        <button type="button" class="forgot-link" onclick="openForgotPw('admin')">Forgot password?</button>
+      </form>
+    </div>
+
+    <!-- Vendor Panel -->
+    <div class="panel vendor" id="panel-vendor">
+      <div class="panel-title">Vendor Login</div>
+      <div class="panel-sub">Access your assigned orders and submit tracking</div>
+
+      {% if error and tab == "vendor" %}
+      <div class="error-box">{{ error }}</div>
+      {% endif %}
+
+      <form method="post" action="/vendor/login/">
+        {% csrf_token %}
+        <div class="field">
+          <label>Email Address</label>
+          <input type="email" name="email" id="vendorEmailInput" placeholder="vendor@email.com" {% if tab == "vendor" %}autofocus{% endif %} required>
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <input type="password" name="password" placeholder="Your password" required>
+        </div>
+        <button type="submit" class="login-btn">Sign In →</button>
+        <button type="button" class="forgot-link" onclick="openForgotPw()">Forgot password?</button>
+      </form>
+    </div>
+
+    <!-- Team Panel -->
+    <div class="panel team" id="panel-team">
+      <div class="panel-title">Team Login</div>
+      <div class="panel-sub">Sign in to your team member account</div>
+
+      {% if error and tab == "team" %}
+      <div class="error-box">{{ error }}</div>
+      {% endif %}
+
+      <form method="post" action="/employee/login/">
+        {% csrf_token %}
+        <div class="field">
+          <label>Email Address</label>
+          <input type="email" name="email" id="teamEmailInput" placeholder="team@email.com" {% if tab == "team" %}autofocus{% endif %} required>
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <input type="password" name="password" placeholder="Your password" required>
+        </div>
+        <button type="submit" class="login-btn">Sign In →</button>
+        <button type="button" class="forgot-link" onclick="openForgotPw('team')">Forgot password?</button>
+      </form>
+    </div>
+
+  </div>
+</div>
+
+<!-- Forgot Password Modal (works for admin / vendor / team) -->
+<div class="fp-overlay" id="fpOverlay">
+  <div class="fp-card">
+    <div class="fp-head">
+      <div class="fp-title" id="fpTitle">Reset password</div>
+      <button class="fp-close" type="button" onclick="closeForgotPw()" aria-label="Close">×</button>
+    </div>
+    <div class="fp-sub" id="fpSub">Enter the email on your account. We'll send you a link to set a new password.</div>
+    <input type="email" id="fpEmail" placeholder="you@email.com" autocomplete="email">
+    <div class="fp-msg" id="fpMsg"></div>
+    <div class="fp-actions">
+      <button type="button" class="fp-cancel" onclick="closeForgotPw()">Cancel</button>
+      <button type="button" class="fp-submit" id="fpSubmit" onclick="submitForgotPw()">Send reset link</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function switchTab(name){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelector('.tab-btn.'+name).classList.add('active');
+  document.getElementById('panel-'+name).classList.add('active');
+  const inp = document.querySelector('#panel-'+name+' input');
+  if(inp) inp.focus();
+}
+
+// Activate tab from Django context
+switchTab('{{ tab|default:"admin" }}');
+
+// ── Forgot Password (vendor) ──────────────────────────────────────────────
+function _fpGetCsrf(){
+  const c = document.cookie.split(";").find(c=>c.trim().startsWith("csrftoken="));
+  if(c) return c.split("=")[1].trim();
+  const inp = document.querySelector('form input[name="csrfmiddlewaretoken"]');
+  return inp ? inp.value : "";
+}
+function openForgotPw(role){
+  role = role || "vendor";
+  const overlay = document.getElementById("fpOverlay");
+  const emailInp = document.getElementById("fpEmail");
+  // Prefill from whichever tab they're on
+  const sources = {
+    admin:  document.getElementById("adminEmailInput"),
+    vendor: document.getElementById("vendorEmailInput"),
+    team:   document.getElementById("teamEmailInput"),
+  };
+  const src = sources[role];
+  if(src && src.value){
+    emailInp.value = src.value;
+  } else {
+    emailInp.value = "";
+  }
+  // Tailor copy per role
+  const titles = {
+    admin:  "Reset your password",
+    vendor: "Reset vendor password",
+    team:   "Reset team member password",
+  };
+  const subs = {
+    admin:  "Enter your account email. We'll send a link to set a new password.",
+    vendor: "Enter your vendor email. We'll send a link to set a new password.",
+    team:   "Enter your team member email. We'll send a link to set a new password.",
+  };
+  document.getElementById("fpTitle").textContent = titles[role] || titles.admin;
+  document.getElementById("fpSub").textContent   = subs[role]   || subs.admin;
+  document.getElementById("fpMsg").textContent = "";
+  document.getElementById("fpMsg").className = "fp-msg";
+  const btn = document.getElementById("fpSubmit");
+  btn.disabled = false; btn.textContent = "Send reset link";
+  overlay.classList.add("show");
+  setTimeout(()=>emailInp.focus(), 50);
+}
+function closeForgotPw(){
+  document.getElementById("fpOverlay").classList.remove("show");
+}
+async function submitForgotPw(){
+  const email = (document.getElementById("fpEmail").value||"").trim();
+  const msg = document.getElementById("fpMsg");
+  const btn = document.getElementById("fpSubmit");
+  msg.className = "fp-msg";
+  if(!email || !email.includes("@")){
+    msg.textContent = "Please enter a valid email."; msg.classList.add("err"); return;
+  }
+  btn.disabled = true; btn.textContent = "Sending…";
+  msg.textContent = "";
+  try{
+    const r = await fetch("/api/forgot-password/", {
+      method:"POST",
+      headers:{"Content-Type":"application/json","X-CSRFToken":_fpGetCsrf()},
+      body: JSON.stringify({email}),
+    });
+    const d = await r.json();
+    if(d.success){
+      msg.className = "fp-msg ok";
+      msg.textContent = d.message || "If an account exists for that email, a reset link has been sent. Check your inbox (and spam).";
+      btn.textContent = "Sent ✓";
+      setTimeout(()=>closeForgotPw(), 3500);
+    } else {
+      msg.className = "fp-msg err";
+      msg.textContent = d.message || "Could not send the request. Try again.";
+      btn.disabled = false; btn.textContent = "Send reset link";
+    }
+  }catch(e){
+    msg.className = "fp-msg err";
+    msg.textContent = e.message || "Network error.";
+    btn.disabled = false; btn.textContent = "Send reset link";
+  }
+}
+// Close on overlay click (not card click)
+document.getElementById("fpOverlay").addEventListener("click", e=>{
+  if(e.target.id === "fpOverlay") closeForgotPw();
+});
+// Esc to close
+document.addEventListener("keydown", e=>{
+  if(e.key === "Escape" && document.getElementById("fpOverlay").classList.contains("show")) closeForgotPw();
+});
+</script>
+</body>
+</html>
