@@ -28622,6 +28622,13 @@ async function loadEmails(options={}){
   const preserveSelection = options.preserveSelection || false;
   const list = document.getElementById("emailsList");
   const previousContact = currentThreadContact;
+  // Snapshot the openThread generation token at entry. Any user click
+  // on a different thread between now and when we finish will bump
+  // _openThreadGen — that's how we detect the race and refuse to re-open
+  // the OLD contact over the user's new pick. Without this the
+  // "preserveSelection" branch would clobber the user's choice with the
+  // pre-fetch selection ("the previous email reappears" bug).
+  const previousGen = (typeof _openThreadGen !== 'undefined') ? _openThreadGen : 0;
 
   if(!connectedStoreEmail){
     try{
@@ -28681,7 +28688,15 @@ async function loadEmails(options={}){
     const visibleThreads = getVisibleThreads(allThreads);
     const selectedStillExists = visibleThreads.some(t => t.contact === previousContact);
 
-    if(preserveSelection && previousContact && selectedStillExists){
+    // Re-open the previous thread ONLY if (a) the caller asked us to,
+    // (b) it still exists in the filtered list, AND (c) the user hasn't
+    // clicked a different thread while our fetch was in flight. The
+    // generation-token check is the guard against the "previous chat
+    // reappears" race — without it, this branch would clobber the
+    // user's new pick with the pre-fetch contact.
+    if(preserveSelection && previousContact && selectedStillExists
+       && previousGen === _openThreadGen
+       && previousContact === currentThreadContact){
       await openThread(previousContact, {preserveReply:true});
       return;
     }
@@ -28692,6 +28707,11 @@ async function loadEmails(options={}){
     if (currentThreadContact && visibleThreads.some(t => t.contact === currentThreadContact)){
       // keep current selection — do nothing
     } else {
+      // If the user clicked into a thread that the LATEST loadEmails
+      // hasn't materialized yet (allThreads doesn't contain it), don't
+      // wipe their selection — they're mid-load. The next loadEmails
+      // tick will reconcile.
+      if (previousGen !== _openThreadGen) return;
       clearEmailDetail();
       currentThreadContact = null;
     }
