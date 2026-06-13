@@ -5931,12 +5931,16 @@ document.addEventListener("DOMContentLoaded", () => {
     body[data-active-section="emails"] aside.sidebar:not(.sidebar-email){display:none!important;}
 
     /* ── CONTAINER — frosted glass, fits parent grid column (240px) ──
-       Subtract --ds-ref-h so the inbox sidebar doesn't extend past the
-       bottom of the viewport when the referral banner is showing. */
+       sidebar-email is an <aside> sibling of <main> in the layout grid
+       — the referral banner lives INSIDE main, not in the sidebar
+       column, so the sidebar stays a full 100vh tall regardless of
+       whether the banner is showing. (A previous commit mistakenly
+       made this calc(100vh - var(--ds-ref-h)) which left an empty gap
+       at the bottom of the sidebar.) */
     body[data-active-section="emails"] .sidebar.sidebar-email{
       display:flex!important;flex-direction:column!important;
       box-sizing:border-box!important;
-      height:calc(100vh - var(--ds-ref-h,0px))!important;width:100%!important;max-width:100%!important;min-width:0!important;
+      height:100vh!important;width:100%!important;max-width:100%!important;min-width:0!important;
       padding:0!important;margin:0!important;
       background:linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,248,253,0.98))!important;
       color:var(--ec-txt)!important;
@@ -11979,12 +11983,18 @@ document.addEventListener("DOMContentLoaded", () => {
           display:none!important;
         }
         /* Kill the main column's padding/overflow so the workspace can fill the viewport edge-to-edge.
-           --ds-ref-h is the live referral-banner height (0 when dismissed). Subtracting it here keeps
-           the bottom of the SPV section (pager + sticky bulk bar) inside the viewport — without it
-           the section was 100vh tall and the banner pushed the bottom 50px below the fold. */
+           NOTE on the math: .main is the FULL viewport (100vh). The referral
+           banner lives INSIDE main at the top, taking var(--ds-ref-h) of
+           vertical space. The section underneath must subtract that banner
+           height to fit alongside it — see the rule below. Earlier we
+           mistakenly shrunk .main itself to calc(100vh - var(--ds-ref-h))
+           which moved main's bottom edge UP by the banner height, leaving
+           a solid white strip at the bottom of the viewport (the body /
+           html background showing through where main no longer reached).
+           Reverting main to 100vh now. */
         body[data-active-section="sourcingPartners"] main.main{
           padding:0!important;
-          height:calc(100vh - var(--ds-ref-h,0px))!important;
+          height:100vh!important;
           overflow:hidden!important;
         }
         /* The section becomes the flex container: rail (280px) + workspace (1fr) side-by-side */
