@@ -5927,11 +5927,13 @@ document.addEventListener("DOMContentLoaded", () => {
     .sidebar-email{display:none!important;}
     body[data-active-section="emails"] aside.sidebar:not(.sidebar-email){display:none!important;}
 
-    /* ── CONTAINER — frosted glass, fits parent grid column (240px) ── */
+    /* ── CONTAINER — frosted glass, fits parent grid column (240px) ──
+       Subtract --ds-ref-h so the inbox sidebar doesn't extend past the
+       bottom of the viewport when the referral banner is showing. */
     body[data-active-section="emails"] .sidebar.sidebar-email{
       display:flex!important;flex-direction:column!important;
       box-sizing:border-box!important;
-      height:100vh!important;width:100%!important;max-width:100%!important;min-width:0!important;
+      height:calc(100vh - var(--ds-ref-h,0px))!important;width:100%!important;max-width:100%!important;min-width:0!important;
       padding:0!important;margin:0!important;
       background:linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,248,253,0.98))!important;
       color:var(--ec-txt)!important;
@@ -11968,15 +11970,21 @@ document.addEventListener("DOMContentLoaded", () => {
         body[data-active-section="sourcingPartners"] .topbar{
           display:none!important;
         }
-        /* Kill the main column's padding/overflow so the workspace can fill the viewport edge-to-edge */
+        /* Kill the main column's padding/overflow so the workspace can fill the viewport edge-to-edge.
+           --ds-ref-h is the live referral-banner height (0 when dismissed). Subtracting it here keeps
+           the bottom of the SPV section (pager + sticky bulk bar) inside the viewport — without it
+           the section was 100vh tall and the banner pushed the bottom 50px below the fold. */
         body[data-active-section="sourcingPartners"] main.main{
-          padding:0!important;height:100vh!important;overflow:hidden!important;
+          padding:0!important;
+          height:calc(100vh - var(--ds-ref-h,0px))!important;
+          overflow:hidden!important;
         }
         /* The section becomes the flex container: rail (280px) + workspace (1fr) side-by-side */
         body[data-active-section="sourcingPartners"] #sourcingPartnersSection.section.active{
           display:flex!important;flex-direction:row!important;
           padding:0!important;margin:0!important;
-          min-height:100vh;height:100vh;
+          min-height:calc(100vh - var(--ds-ref-h,0px));
+          height:calc(100vh - var(--ds-ref-h,0px));
           overflow:hidden;
           animation:none!important;
         }
@@ -11987,7 +11995,7 @@ document.addEventListener("DOMContentLoaded", () => {
         .sp-rail{display:none;}
         body[data-active-section="sourcingPartners"] .sp-rail{
           display:flex!important;flex-direction:column;
-          height:100vh;width:280px;
+          height:calc(100vh - var(--ds-ref-h,0px));width:280px;
           background:linear-gradient(180deg, #0b0f1f 0%, #131730 100%);
           color:rgba(255,255,255,.85);
           position:sticky;top:0;
