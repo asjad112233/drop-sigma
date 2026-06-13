@@ -1,0 +1,3979 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Drop Sigma — Ecommerce Operations OS for Dropshipping</title>
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
+<link rel="apple-touch-icon" href="/static/favicon.svg" />
+<meta name="description" content="Drop Sigma is a full-stack Ecommerce Operations OS for dropshipping. Connect WooCommerce/Shopify, manage orders, vendors, AI emails & live tracking — all in one tab."/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg-0:#05060f;
+  --bg-1:#0a0c1f;
+  --bg-2:#10122a;
+  --ink-0:#ffffff;
+  --ink-1:#e6e8f0;
+  --ink-2:#a4a8c4;
+  --ink-3:#6b6f8d;
+  --line:rgba(255,255,255,0.08);
+  --line-2:rgba(255,255,255,0.14);
+  --indigo:#6366f1;
+  --indigo-2:#818cf8;
+  --purple:#a855f7;
+  --purple-2:#c084fc;
+  --cyan:#22d3ee;
+  --cyan-2:#67e8f9;
+  --pink:#ec4899;
+  --green:#10b981;
+  --amber:#f59e0b;
+  --red:#ef4444;
+  --grad-a:linear-gradient(135deg,#6366f1 0%,#a855f7 50%,#ec4899 100%);
+  --grad-b:linear-gradient(135deg,#22d3ee 0%,#6366f1 100%);
+  --grad-c:linear-gradient(135deg,#a855f7 0%,#22d3ee 100%);
+  --shadow-glow:0 0 60px rgba(99,102,241,.35);
+  --shadow-card:0 30px 60px -20px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.06);
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  font-family:'Inter',system-ui,sans-serif;
+  background:var(--bg-0);
+  color:var(--ink-1);
+  overflow-x:hidden;
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ---------- Animated Cosmic Background ---------- */
+.cosmic-bg{
+  position:fixed;
+  inset:0;
+  z-index:-2;
+  background:
+    radial-gradient(ellipse at 15% 0%,rgba(99,102,241,.18),transparent 50%),
+    radial-gradient(ellipse at 85% 20%,rgba(168,85,247,.18),transparent 50%),
+    radial-gradient(ellipse at 50% 100%,rgba(34,211,238,.12),transparent 50%),
+    var(--bg-0);
+}
+.cosmic-bg::before{
+  content:"";
+  position:absolute;inset:0;
+  background-image:
+    linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px);
+  background-size:60px 60px;
+  mask-image:radial-gradient(ellipse at center,black 30%,transparent 80%);
+  -webkit-mask-image:radial-gradient(ellipse at center,black 30%,transparent 80%);
+}
+.cosmic-bg::after{
+  content:"";
+  position:absolute;inset:0;
+  background:
+    radial-gradient(2px 2px at 20% 30%,#fff,transparent),
+    radial-gradient(1px 1px at 70% 60%,#fff,transparent),
+    radial-gradient(1.5px 1.5px at 40% 80%,rgba(255,255,255,.7),transparent),
+    radial-gradient(1px 1px at 90% 15%,#fff,transparent),
+    radial-gradient(2px 2px at 10% 70%,rgba(168,85,247,.6),transparent),
+    radial-gradient(1px 1px at 60% 25%,#fff,transparent);
+  background-size:550px 550px;
+  animation:starsDrift 90s linear infinite;
+  opacity:.4;
+}
+@keyframes starsDrift{
+  from{background-position:0 0,0 0,0 0,0 0,0 0,0 0}
+  to{background-position:550px 550px,-550px 550px,550px -550px,-550px -550px,550px 0,0 550px}
+}
+
+.orb{
+  position:fixed;
+  border-radius:50%;
+  filter:blur(80px);
+  z-index:-1;
+  pointer-events:none;
+  opacity:.6;
+}
+.orb.o1{width:520px;height:520px;background:radial-gradient(circle,#6366f1,transparent 70%);top:-10%;left:-10%;animation:floatOrb1 22s ease-in-out infinite}
+.orb.o2{width:600px;height:600px;background:radial-gradient(circle,#a855f7,transparent 70%);top:30%;right:-15%;animation:floatOrb2 28s ease-in-out infinite}
+.orb.o3{width:480px;height:480px;background:radial-gradient(circle,#22d3ee,transparent 70%);bottom:-15%;left:30%;animation:floatOrb3 24s ease-in-out infinite}
+@keyframes floatOrb1{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(120px,80px) scale(1.15)}}
+@keyframes floatOrb2{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-100px,150px) scale(1.1)}}
+@keyframes floatOrb3{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(80px,-100px) scale(1.2)}}
+
+/* ---------- Container ---------- */
+.container{max-width:1280px;margin:0 auto;padding:0 24px}
+
+/* ---------- Navigation ---------- */
+nav{
+  position:fixed;top:0;left:0;right:0;
+  z-index:100;
+  padding:18px 0;
+  backdrop-filter:blur(20px) saturate(180%);
+  -webkit-backdrop-filter:blur(20px) saturate(180%);
+  background:rgba(5,6,15,.7);
+  border-bottom:1px solid var(--line);
+  transition:all .4s cubic-bezier(.2,.8,.2,1);
+}
+nav.scrolled{padding:12px 0;background:rgba(5,6,15,.92)}
+.nav-inner{display:flex;align-items:center;justify-content:space-between}
+.logo{display:flex;align-items:center;gap:12px;text-decoration:none;color:#fff}
+.logo-mark{
+  width:42px;height:42px;border-radius:12px;
+  background:var(--grad-a);
+  display:grid;place-items:center;
+  font-weight:800;font-size:16px;letter-spacing:-.5px;
+  color:#fff;
+  box-shadow:0 8px 24px rgba(99,102,241,.45),inset 0 1px 0 rgba(255,255,255,.3);
+  position:relative;overflow:hidden;
+}
+.logo-mark::before{
+  content:"";position:absolute;inset:-50%;
+  background:conic-gradient(from 0deg,transparent,rgba(255,255,255,.4),transparent 30%);
+  animation:rotateBorder 4s linear infinite;
+}
+.logo-mark span{position:relative;z-index:1}
+@keyframes rotateBorder{to{transform:rotate(360deg)}}
+.logo-text{font-weight:800;font-size:20px;letter-spacing:-.4px}
+.logo-sub{font-size:11px;color:var(--ink-2);font-weight:500;display:block;letter-spacing:.5px}
+
+.nav-links{display:flex;align-items:center;gap:36px}
+.nav-links a{
+  text-decoration:none;color:var(--ink-2);
+  font-size:14px;font-weight:500;
+  transition:color .25s;
+  position:relative;
+}
+.nav-links a:hover{color:#fff}
+.nav-links a::after{
+  content:"";position:absolute;bottom:-6px;left:0;
+  width:0;height:2px;background:var(--grad-a);
+  transition:width .3s;
+}
+.nav-links a:hover::after{width:100%}
+
+.nav-cta{display:flex;gap:12px;align-items:center}
+.btn{
+  font-family:inherit;
+  display:inline-flex;align-items:center;gap:8px;
+  padding:11px 22px;border-radius:10px;
+  font-weight:600;font-size:14px;
+  text-decoration:none;cursor:pointer;
+  transition:all .3s cubic-bezier(.2,.8,.2,1);
+  border:none;
+  position:relative;
+  overflow:hidden;
+}
+.btn-ghost{background:transparent;color:var(--ink-1);border:1px solid var(--line-2)}
+.btn-ghost:hover{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.25)}
+.btn-primary{
+  background:var(--grad-a);
+  color:#fff;
+  box-shadow:0 10px 30px -10px rgba(168,85,247,.6);
+}
+.btn-primary::before{
+  content:"";position:absolute;inset:0;
+  background:linear-gradient(135deg,#ec4899,#a855f7,#6366f1);
+  opacity:0;transition:opacity .3s;
+}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 14px 40px -8px rgba(168,85,247,.8)}
+.btn-primary:hover::before{opacity:1}
+.btn-primary span{position:relative;z-index:1;display:inline-flex;align-items:center;gap:8px}
+
+.menu-toggle{display:none;background:none;border:none;color:#fff;cursor:pointer;padding:8px}
+
+/* ---------- Hero ---------- */
+.hero{
+  padding:160px 0 100px;
+  position:relative;
+  overflow:hidden;
+}
+.hero-grid{
+  display:grid;
+  grid-template-columns:1.1fr 1fr;
+  gap:60px;
+  align-items:center;
+}
+.hero-badge{
+  display:inline-flex;align-items:center;gap:10px;
+  padding:8px 16px;border-radius:100px;
+  background:rgba(99,102,241,.1);
+  border:1px solid rgba(99,102,241,.3);
+  font-size:13px;font-weight:600;color:var(--indigo-2);
+  margin-bottom:28px;
+  animation:fadeInUp .8s ease-out;
+}
+.hero-badge::before{
+  content:"";width:8px;height:8px;border-radius:50%;
+  background:var(--green);
+  box-shadow:0 0 12px var(--green);
+  animation:pulse 2s ease-in-out infinite;
+}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(1.4)}}
+
+.hero h1{
+  font-size:clamp(38px,5.5vw,72px);
+  line-height:1.05;
+  letter-spacing:-2px;
+  font-weight:800;
+  color:#fff;
+  margin-bottom:24px;
+  animation:fadeInUp 1s ease-out .1s backwards;
+}
+.gradient-text{
+  background:var(--grad-a);
+  -webkit-background-clip:text;
+  background-clip:text;
+  -webkit-text-fill-color:transparent;
+  background-size:200% 200%;
+  animation:gradientShift 6s ease infinite;
+}
+@keyframes gradientShift{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+
+.hero p.lead{
+  font-size:19px;
+  color:var(--ink-2);
+  margin-bottom:36px;
+  max-width:580px;
+  animation:fadeInUp 1s ease-out .2s backwards;
+}
+
+.hero-ctas{display:flex;gap:14px;flex-wrap:wrap;animation:fadeInUp 1s ease-out .3s backwards}
+
+.hero-trust{
+  margin-top:48px;
+  display:flex;align-items:center;gap:32px;flex-wrap:wrap;
+  animation:fadeInUp 1s ease-out .4s backwards;
+}
+.trust-item{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--ink-2)}
+.trust-item .check{
+  width:20px;height:20px;border-radius:50%;
+  background:rgba(16,185,129,.15);
+  color:var(--green);
+  display:grid;place-items:center;font-size:11px;
+}
+
+@keyframes fadeInUp{
+  from{opacity:0;transform:translateY(40px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+/* Hero Mockup */
+.hero-mock{
+  position:relative;
+  perspective:1500px;
+  animation:fadeInUp 1.2s ease-out .5s backwards;
+}
+.dashboard-card{
+  background:linear-gradient(145deg,rgba(20,22,45,.95),rgba(10,12,30,.95));
+  border:1px solid var(--line-2);
+  border-radius:16px;
+  box-shadow:
+    0 50px 100px -20px rgba(0,0,0,.7),
+    0 0 0 1px rgba(255,255,255,.05),
+    0 0 80px rgba(99,102,241,.25);
+  transform:rotateY(-8deg) rotateX(4deg);
+  transform-style:preserve-3d;
+  overflow:hidden;
+  animation:floatMock 6s ease-in-out infinite;
+}
+@keyframes floatMock{0%,100%{transform:rotateY(-8deg) rotateX(4deg) translateY(0)}50%{transform:rotateY(-8deg) rotateX(4deg) translateY(-12px)}}
+
+/* ===== Live Operations Network ===== */
+.ops-hub{padding:22px;position:relative;overflow:hidden}
+.ops-hub::before{
+  content:"";position:absolute;inset:0;
+  background:
+    radial-gradient(circle at 50% 50%,rgba(168,85,247,.15),transparent 60%),
+    radial-gradient(circle at 20% 80%,rgba(34,211,238,.1),transparent 50%);
+  pointer-events:none;
+}
+.ops-bar{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:8px;
+  position:relative;z-index:2;
+}
+.ops-bar-left{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--ink-2);font-weight:600;letter-spacing:.4px}
+.ops-bar-left .live-dot{margin:0}
+.ops-bar-right{font-size:10px;color:var(--ink-3);font-family:'Space Grotesk',monospace}
+
+.network-svg{
+  width:100%;
+  height:auto;
+  display:block;
+  position:relative;
+  z-index:1;
+  filter:drop-shadow(0 0 24px rgba(168,85,247,.2));
+}
+.net-link{
+  stroke:url(#linkGrad);
+  stroke-width:1.4;
+  fill:none;
+  opacity:.45;
+  stroke-dasharray:3 4;
+  animation:linkDash 14s linear infinite;
+}
+@keyframes linkDash{to{stroke-dashoffset:-140}}
+.net-particle{filter:drop-shadow(0 0 6px var(--cyan))}
+.net-particle.purple{filter:drop-shadow(0 0 6px var(--purple))}
+
+.hub-ring{fill:none;stroke:url(#ringGrad);stroke-width:1}
+.hub-ring.r1{animation:hubPulse 3s ease-out infinite}
+.hub-ring.r2{animation:hubPulse 3s ease-out 1s infinite}
+.hub-ring.r3{animation:hubPulse 3s ease-out 2s infinite}
+@keyframes hubPulse{
+  0%{r:48px;opacity:.7}
+  100%{r:120px;opacity:0}
+}
+.hub-core{
+  fill:url(#hubGrad);
+  filter:drop-shadow(0 0 18px rgba(168,85,247,.7));
+}
+.hub-text{
+  fill:#fff;
+  font-family:'Space Grotesk',sans-serif;
+  font-size:18px;font-weight:800;
+  text-anchor:middle;
+  letter-spacing:-.5px;
+  pointer-events:none;
+}
+.hub-sub{
+  fill:rgba(255,255,255,.7);
+  font-size:7.5px;font-weight:600;
+  text-anchor:middle;letter-spacing:1px;
+  text-transform:uppercase;
+  pointer-events:none;
+}
+
+.sat{cursor:pointer;transition:transform .3s}
+.sat:hover{transform:scale(1.08)}
+.sat-bg{
+  fill:rgba(20,22,45,.95);
+  stroke:rgba(255,255,255,.15);
+  stroke-width:1;
+  transition:stroke .25s,fill .25s;
+}
+.sat:hover .sat-bg,
+.sat.active .sat-bg{stroke:var(--purple);fill:rgba(40,30,80,.95)}
+.sat-icon{
+  font-size:18px;
+  text-anchor:middle;
+  dominant-baseline:central;
+}
+.sat-label{
+  fill:rgba(255,255,255,.85);
+  font-size:9px;font-weight:600;
+  text-anchor:middle;
+  pointer-events:none;
+}
+.sat-count{
+  fill:var(--cyan-2);
+  font-family:'Space Grotesk',monospace;
+  font-size:8px;font-weight:700;
+  text-anchor:middle;
+  pointer-events:none;
+}
+
+/* Activity feed */
+.ops-feed{
+  margin-top:10px;
+  background:rgba(0,0,0,.3);
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:10px 14px;
+  position:relative;z-index:2;
+  max-height:140px;
+  overflow:hidden;
+}
+.ops-feed-head{
+  display:flex;align-items:center;justify-content:space-between;
+  font-size:10px;color:var(--ink-3);
+  text-transform:uppercase;letter-spacing:.6px;
+  margin-bottom:8px;
+  font-weight:600;
+}
+.ops-feed-head .pill-mini{
+  background:rgba(16,185,129,.15);color:var(--green);
+  padding:2px 7px;border-radius:100px;font-size:9px;
+  display:flex;align-items:center;gap:4px;
+}
+.ops-feed-head .pill-mini::before{
+  content:"";width:5px;height:5px;border-radius:50%;
+  background:var(--green);box-shadow:0 0 6px var(--green);
+  animation:pulse 1.6s ease-in-out infinite;
+}
+.feed-list{display:flex;flex-direction:column;gap:6px}
+.feed-row{
+  display:flex;align-items:center;gap:8px;
+  font-size:11px;color:var(--ink-1);
+  padding:5px 8px;
+  border-radius:6px;
+  background:rgba(255,255,255,.02);
+  animation:feedIn .5s ease-out;
+}
+.feed-row.fade{animation:feedFade .5s ease-out forwards}
+@keyframes feedIn{
+  from{opacity:0;transform:translateX(-12px)}
+  to{opacity:1;transform:translateX(0)}
+}
+@keyframes feedFade{
+  to{opacity:0;transform:translateX(20px)}
+}
+.feed-row .ic{
+  width:18px;height:18px;border-radius:5px;
+  display:grid;place-items:center;
+  font-size:10px;flex-shrink:0;
+}
+.feed-row .ic.g{background:rgba(16,185,129,.18);color:var(--green)}
+.feed-row .ic.p{background:rgba(168,85,247,.18);color:var(--purple-2)}
+.feed-row .ic.c{background:rgba(34,211,238,.18);color:var(--cyan-2)}
+.feed-row .ic.a{background:rgba(245,158,11,.18);color:var(--amber)}
+.feed-row .msg{flex:1;color:var(--ink-1)}
+.feed-row .msg b{color:#fff;font-weight:600}
+.feed-row .ts{
+  font-size:9px;color:var(--ink-3);
+  font-family:'Space Grotesk',monospace;
+  flex-shrink:0;
+}
+
+.dash-top{
+  display:flex;align-items:center;gap:8px;
+  padding:14px 18px;
+  border-bottom:1px solid var(--line);
+}
+.dash-dot{width:10px;height:10px;border-radius:50%}
+.dash-dot.r{background:#ff5f56}
+.dash-dot.y{background:#ffbd2e}
+.dash-dot.g{background:#27c93f}
+.dash-url{
+  margin-left:14px;
+  font-size:11px;color:var(--ink-3);
+  background:rgba(255,255,255,.03);
+  padding:4px 12px;border-radius:6px;
+  flex:1;
+}
+
+.dash-body{padding:18px;display:grid;gap:14px}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.kpi-mini{
+  background:rgba(255,255,255,.03);
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:12px;
+}
+.kpi-mini .l{font-size:9px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.kpi-mini .v{font-size:16px;font-weight:700;color:#fff}
+.kpi-mini .v.gradient{background:var(--grad-a);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.kpi-mini .d{font-size:9px;color:var(--green);margin-top:2px}
+
+.chart-mock{
+  background:rgba(255,255,255,.03);
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:14px;
+  height:140px;
+  position:relative;
+}
+.chart-bars{display:flex;align-items:flex-end;gap:8px;height:100px;padding-top:14px}
+.chart-bars .bar{
+  flex:1;
+  background:var(--grad-a);
+  border-radius:4px 4px 0 0;
+  position:relative;
+  opacity:.85;
+  height:50%;
+  transition:height .9s cubic-bezier(.2,.8,.2,1);
+}
+@keyframes barGrow{from{height:0}}
+
+/* Live tick flash on KPI value updates */
+.kpi-mini .v{transition:color .25s,transform .35s cubic-bezier(.2,.8,.2,1)}
+.kpi-mini .v.tick{
+  animation:tickFlash .8s ease-out;
+}
+@keyframes tickFlash{
+  0%{transform:translateY(8px) scale(.92);opacity:.4;filter:blur(2px)}
+  40%{transform:translateY(-2px) scale(1.05);opacity:1;filter:blur(0)}
+  100%{transform:translateY(0) scale(1);opacity:1}
+}
+.kpi-mini .d{transition:color .3s}
+.kpi-mini .d.flash{color:var(--green)}
+
+#chartTotal{transition:color .3s}
+#chartTotal.tick{animation:tickFlash .8s ease-out;color:var(--cyan-2)}
+
+/* Live pulse dot in title */
+.live-dot{
+  display:inline-block;width:7px;height:7px;border-radius:50%;
+  background:var(--green);box-shadow:0 0 10px var(--green);
+  margin-right:8px;vertical-align:middle;
+  animation:pulse 2s ease-in-out infinite;
+}
+
+/* New order row glow when one "arrives" */
+.order-row{transition:border-color .4s,background .4s}
+.order-row.arrived{
+  border-color:rgba(16,185,129,.5);
+  background:rgba(16,185,129,.08);
+  animation:rowFlash 1.2s ease-out;
+}
+@keyframes rowFlash{
+  0%{box-shadow:0 0 0 0 rgba(16,185,129,.5)}
+  50%{box-shadow:0 0 18px 2px rgba(16,185,129,.35)}
+  100%{box-shadow:0 0 0 0 rgba(16,185,129,0)}
+}
+
+.chart-title{font-size:10px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;display:flex;justify-content:space-between}
+.chart-title strong{color:#fff;font-size:11px}
+
+.order-row{
+  display:grid;grid-template-columns:1fr auto auto;
+  align-items:center;gap:12px;
+  padding:10px;
+  background:rgba(255,255,255,.02);
+  border-radius:8px;
+  border:1px solid var(--line);
+  font-size:11px;
+}
+.order-row .name{color:#fff;font-weight:500}
+.order-row .name span{color:var(--ink-3);display:block;font-weight:400;font-size:10px}
+.badge{
+  font-size:9px;font-weight:600;
+  padding:3px 8px;border-radius:100px;
+  text-transform:uppercase;letter-spacing:.5px;
+}
+.badge.success{background:rgba(16,185,129,.15);color:var(--green)}
+.badge.warn{background:rgba(245,158,11,.15);color:var(--amber)}
+.badge.info{background:rgba(99,102,241,.15);color:var(--indigo-2)}
+.price{color:#fff;font-weight:600;font-size:11px}
+
+/* Floating notification cards */
+.float-card{
+  position:absolute;
+  background:linear-gradient(145deg,rgba(20,22,45,.97),rgba(10,12,30,.97));
+  border:1px solid var(--line-2);
+  border-radius:14px;
+  padding:14px 16px;
+  box-shadow:0 20px 50px -10px rgba(0,0,0,.7);
+  display:flex;align-items:center;gap:12px;
+  font-size:12px;
+  backdrop-filter:blur(20px);
+  z-index:2;
+}
+.float-card .ico{
+  width:36px;height:36px;border-radius:10px;
+  display:grid;place-items:center;
+  flex-shrink:0;
+}
+.float-card .ico.green{background:rgba(16,185,129,.2);color:var(--green)}
+.float-card .ico.purple{background:rgba(168,85,247,.2);color:var(--purple-2)}
+.float-card strong{color:#fff;display:block;font-size:13px}
+.float-card span{color:var(--ink-3);font-size:11px}
+.float-card.fc1{top:10%;left:-10%;animation:floatA 5s ease-in-out infinite}
+.float-card.fc2{bottom:15%;right:-8%;animation:floatB 6s ease-in-out infinite}
+@keyframes floatA{0%,100%{transform:translateY(0)}50%{transform:translateY(-15px)}}
+@keyframes floatB{0%,100%{transform:translateY(0)}50%{transform:translateY(-20px)}}
+
+/* ---------- Marquee ---------- */
+.marquee{
+  padding:36px 0;
+  border-top:1px solid var(--line);
+  border-bottom:1px solid var(--line);
+  background:rgba(255,255,255,.01);
+  overflow:hidden;
+  position:relative;
+}
+.marquee-track{
+  display:flex;gap:60px;
+  animation:scroll 35s linear infinite;
+  white-space:nowrap;
+  width:fit-content;
+}
+.marquee-item{
+  display:flex;align-items:center;gap:12px;
+  font-size:18px;font-weight:600;
+  color:var(--ink-2);
+  letter-spacing:-.3px;
+}
+.marquee-item .dot{
+  width:6px;height:6px;border-radius:50%;
+  background:var(--grad-a);
+}
+@keyframes scroll{
+  to{transform:translateX(-50%)}
+}
+
+/* ---------- Stats ---------- */
+.section{padding:120px 0;position:relative}
+.section-head{text-align:center;max-width:780px;margin:0 auto 70px}
+.eyebrow{
+  display:inline-block;
+  font-size:13px;font-weight:600;
+  color:var(--indigo-2);
+  text-transform:uppercase;letter-spacing:1.2px;
+  margin-bottom:14px;
+  padding:6px 14px;
+  background:rgba(99,102,241,.1);
+  border:1px solid rgba(99,102,241,.25);
+  border-radius:100px;
+}
+.section-title{
+  font-size:clamp(32px,4.5vw,52px);
+  font-weight:800;
+  line-height:1.1;letter-spacing:-1.2px;
+  color:#fff;margin-bottom:18px;
+}
+.section-sub{
+  font-size:18px;color:var(--ink-2);
+  max-width:600px;margin:0 auto;
+}
+
+.stats-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:24px;
+}
+.stat-card{
+  background:linear-gradient(145deg,rgba(255,255,255,.04),rgba(255,255,255,.01));
+  border:1px solid var(--line-2);
+  border-radius:18px;
+  padding:32px 28px;
+  text-align:center;
+  position:relative;
+  overflow:hidden;
+  transition:transform .4s cubic-bezier(.2,.8,.2,1),border-color .3s;
+}
+.stat-card::before{
+  content:"";position:absolute;top:0;left:50%;transform:translateX(-50%);
+  width:60%;height:1px;
+  background:linear-gradient(90deg,transparent,var(--purple),transparent);
+}
+.stat-card:hover{transform:translateY(-6px);border-color:rgba(168,85,247,.3)}
+.stat-num{
+  font-family:'Space Grotesk',sans-serif;
+  font-size:54px;font-weight:700;
+  background:var(--grad-a);
+  -webkit-background-clip:text;background-clip:text;
+  -webkit-text-fill-color:transparent;
+  letter-spacing:-2px;
+  line-height:1;
+}
+.stat-num small{font-size:24px;background:inherit;-webkit-background-clip:inherit;background-clip:inherit;-webkit-text-fill-color:inherit}
+.stat-label{
+  font-size:14px;color:var(--ink-2);
+  margin-top:10px;font-weight:500;
+}
+
+/* ---------- Features ---------- */
+.features-grid{
+  display:grid;
+  grid-template-columns:repeat(12,1fr);
+  gap:20px;
+}
+.feat{
+  grid-column:span 4;
+  background:linear-gradient(145deg,rgba(255,255,255,.04),rgba(255,255,255,.01));
+  border:1px solid var(--line);
+  border-radius:20px;
+  padding:32px 28px;
+  position:relative;
+  overflow:hidden;
+  transition:transform .4s cubic-bezier(.2,.8,.2,1),border-color .3s;
+  cursor:default;
+}
+.feat::before{
+  content:"";position:absolute;
+  top:0;left:0;right:0;
+  height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.15),transparent);
+}
+.feat::after{
+  content:"";position:absolute;
+  inset:0;
+  background:radial-gradient(600px circle at var(--mx,50%) var(--my,50%),rgba(168,85,247,.08),transparent 40%);
+  opacity:0;transition:opacity .4s;
+  pointer-events:none;
+}
+.feat:hover{transform:translateY(-6px);border-color:var(--line-2)}
+.feat:hover::after{opacity:1}
+
+.feat.featured{
+  grid-column:span 8;
+  background:
+    linear-gradient(145deg,rgba(168,85,247,.12),rgba(99,102,241,.05)),
+    linear-gradient(145deg,rgba(255,255,255,.04),rgba(255,255,255,.01));
+  border-color:rgba(168,85,247,.3);
+  position:relative;
+}
+.feat.featured::before{
+  background:linear-gradient(90deg,transparent,var(--purple),var(--cyan),transparent);
+}
+.feat-icon{
+  width:52px;height:52px;border-radius:14px;
+  display:grid;place-items:center;
+  margin-bottom:22px;
+  font-size:22px;
+  background:rgba(99,102,241,.12);
+  border:1px solid rgba(99,102,241,.25);
+  color:var(--indigo-2);
+  position:relative;
+}
+.feat-icon::after{
+  content:"";position:absolute;inset:-2px;border-radius:16px;
+  background:var(--grad-a);
+  z-index:-1;opacity:0;
+  transition:opacity .3s;
+  filter:blur(8px);
+}
+.feat:hover .feat-icon::after{opacity:.6}
+
+.feat h3{
+  font-size:19px;font-weight:700;
+  color:#fff;margin-bottom:10px;
+  letter-spacing:-.4px;
+}
+.feat p{font-size:14px;color:var(--ink-2);line-height:1.65}
+.feat .pill{
+  display:inline-block;
+  margin-top:18px;
+  font-size:11px;font-weight:600;
+  color:var(--cyan-2);
+  padding:5px 12px;border-radius:100px;
+  background:rgba(34,211,238,.1);
+  border:1px solid rgba(34,211,238,.25);
+  text-transform:uppercase;letter-spacing:.5px;
+}
+.feat .pill.star::before{content:"★ ";color:var(--amber)}
+
+/* Live tracking animation in featured card */
+.live-track-anim{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-top:24px;padding:18px;
+  background:rgba(0,0,0,.25);
+  border-radius:12px;
+  border:1px solid var(--line);
+  position:relative;
+}
+.track-step{
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  font-size:11px;color:var(--ink-3);
+  position:relative;z-index:2;
+}
+.track-step .dot{
+  width:14px;height:14px;border-radius:50%;
+  background:rgba(255,255,255,.1);
+  border:2px solid var(--ink-3);
+  transition:all .3s;
+}
+.track-step.active .dot{background:var(--green);border-color:var(--green);box-shadow:0 0 12px var(--green)}
+.track-step.active{color:var(--green);font-weight:600}
+.track-line{
+  position:absolute;top:25px;left:30px;right:30px;
+  height:2px;background:rgba(255,255,255,.08);
+  z-index:1;
+  overflow:hidden;
+}
+.track-line::after{
+  content:"";position:absolute;left:0;top:0;height:100%;
+  background:linear-gradient(90deg,var(--green),var(--cyan));
+  width:0;
+  animation:trackProgress 4s ease-in-out infinite;
+}
+@keyframes trackProgress{
+  0%{width:0%}
+  25%{width:25%}
+  50%{width:60%}
+  75%{width:90%}
+  100%{width:100%}
+}
+
+/* ---------- How It Works ---------- */
+.hiw-grid{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:16px;
+  position:relative;
+}
+.step{
+  text-align:center;
+  position:relative;
+  padding:32px 18px;
+  background:rgba(255,255,255,.02);
+  border:1px solid var(--line);
+  border-radius:18px;
+  transition:transform .3s,border-color .3s;
+}
+.step:hover{transform:translateY(-4px);border-color:rgba(168,85,247,.3)}
+.step-num{
+  width:48px;height:48px;border-radius:14px;
+  background:var(--grad-a);
+  display:grid;place-items:center;
+  margin:0 auto 18px;
+  font-weight:800;font-size:18px;color:#fff;
+  box-shadow:0 8px 20px -4px rgba(168,85,247,.5);
+}
+.step h4{font-size:15px;font-weight:700;color:#fff;margin-bottom:8px}
+.step p{font-size:13px;color:var(--ink-2);line-height:1.6}
+
+/* ---------- Portals ---------- */
+.portals-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:24px;
+}
+.portal{
+  background:linear-gradient(145deg,rgba(255,255,255,.04),rgba(255,255,255,.01));
+  border:1px solid var(--line-2);
+  border-radius:20px;
+  padding:36px 32px;
+  position:relative;overflow:hidden;
+  transition:transform .4s,border-color .3s;
+}
+.portal:hover{transform:translateY(-6px)}
+.portal.admin{border-color:rgba(99,102,241,.3)}
+.portal.admin:hover{border-color:rgba(99,102,241,.6);box-shadow:0 30px 60px -20px rgba(99,102,241,.4)}
+.portal.vendor{border-color:rgba(168,85,247,.3)}
+.portal.vendor:hover{border-color:rgba(168,85,247,.6);box-shadow:0 30px 60px -20px rgba(168,85,247,.4)}
+.portal.team{border-color:rgba(34,211,238,.3)}
+.portal.team:hover{border-color:rgba(34,211,238,.6);box-shadow:0 30px 60px -20px rgba(34,211,238,.4)}
+
+.portal-tag{
+  display:inline-block;font-size:11px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.8px;
+  padding:5px 12px;border-radius:6px;
+  margin-bottom:18px;
+}
+.portal.admin .portal-tag{background:rgba(99,102,241,.15);color:var(--indigo-2)}
+.portal.vendor .portal-tag{background:rgba(168,85,247,.15);color:var(--purple-2)}
+.portal.team .portal-tag{background:rgba(34,211,238,.15);color:var(--cyan-2)}
+
+.portal h3{font-size:24px;font-weight:800;color:#fff;letter-spacing:-.6px;margin-bottom:10px}
+.portal .url{
+  font-family:'Space Grotesk',monospace;
+  font-size:13px;color:var(--ink-2);
+  display:block;margin-bottom:20px;
+}
+.portal ul{list-style:none}
+.portal li{
+  font-size:13px;color:var(--ink-2);
+  padding:8px 0 8px 26px;
+  position:relative;
+  border-bottom:1px solid var(--line);
+}
+.portal li:last-child{border-bottom:none}
+.portal li::before{
+  content:"";position:absolute;left:0;top:13px;
+  width:14px;height:14px;border-radius:4px;
+  background:var(--grad-a);
+  opacity:.85;
+}
+.portal li::after{
+  content:"✓";position:absolute;left:3px;top:8px;
+  font-size:10px;font-weight:800;color:#fff;
+}
+
+/* ---------- Pricing ---------- */
+.pricing-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:24px;
+  align-items:stretch;
+}
+.tier{
+  background:linear-gradient(145deg,rgba(255,255,255,.03),rgba(255,255,255,.005));
+  border:1px solid var(--line-2);
+  border-radius:24px;
+  padding:40px 34px;
+  position:relative;
+  display:flex;flex-direction:column;
+  transition:transform .4s,border-color .3s;
+}
+.tier:hover{transform:translateY(-8px)}
+.tier.popular{
+  background:
+    linear-gradient(145deg,rgba(168,85,247,.18),rgba(99,102,241,.08)),
+    linear-gradient(145deg,rgba(255,255,255,.04),rgba(255,255,255,.01));
+  border-color:rgba(168,85,247,.5);
+  box-shadow:0 30px 60px -20px rgba(168,85,247,.5);
+  transform:scale(1.03);
+}
+.tier.popular:hover{transform:scale(1.03) translateY(-8px)}
+
+.popular-badge{
+  position:absolute;top:-14px;left:50%;
+  transform:translateX(-50%);
+  background:var(--grad-a);
+  color:#fff;
+  font-size:11px;font-weight:700;
+  padding:6px 16px;border-radius:100px;
+  letter-spacing:1px;
+  box-shadow:0 8px 20px -4px rgba(168,85,247,.6);
+  text-transform:uppercase;
+  display:flex;align-items:center;gap:6px;
+}
+
+.tier-name{font-size:14px;font-weight:700;color:var(--ink-2);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px}
+.tier-for{font-size:13px;color:var(--ink-3);margin-bottom:24px}
+.tier-price{
+  display:flex;align-items:baseline;gap:6px;
+  margin-bottom:6px;
+}
+.tier-price .currency{font-size:22px;color:var(--ink-2);font-weight:600}
+.tier-price .amount{
+  font-family:'Space Grotesk',sans-serif;
+  font-size:62px;font-weight:700;
+  color:#fff;letter-spacing:-3px;line-height:1;
+}
+.tier.popular .tier-price .amount{
+  background:var(--grad-a);
+  -webkit-background-clip:text;background-clip:text;
+  -webkit-text-fill-color:transparent;
+}
+.tier-period{font-size:14px;color:var(--ink-3);margin-bottom:30px}
+
+.tier-cta{
+  width:100%;
+  margin-bottom:28px;
+  justify-content:center;
+}
+
+.tier-features{list-style:none;flex:1}
+.tier-features li{
+  font-size:13.5px;
+  padding:10px 0;
+  display:flex;align-items:flex-start;gap:10px;
+  color:var(--ink-1);
+  border-bottom:1px solid rgba(255,255,255,.04);
+}
+.tier-features li:last-child{border-bottom:none}
+.tier-features li.disabled{color:var(--ink-3);text-decoration:line-through}
+.tier-features li .ic{
+  flex-shrink:0;width:18px;height:18px;border-radius:50%;
+  display:grid;place-items:center;
+  font-size:10px;font-weight:800;
+  margin-top:2px;
+}
+.tier-features li .ic.yes{background:rgba(16,185,129,.18);color:var(--green)}
+.tier-features li.disabled .ic{background:rgba(239,68,68,.15);color:var(--red)}
+
+.tier-features li strong{color:#fff;font-weight:600}
+
+/* ---------- USP Section ---------- */
+.usp-grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:20px;
+}
+.usp-card{
+  display:flex;gap:20px;
+  padding:28px;
+  background:linear-gradient(145deg,rgba(255,255,255,.03),rgba(255,255,255,.005));
+  border:1px solid var(--line);
+  border-radius:18px;
+  transition:transform .3s,border-color .3s;
+}
+.usp-card:hover{transform:translateY(-4px);border-color:var(--line-2)}
+.usp-icon{
+  width:54px;height:54px;border-radius:14px;
+  background:var(--grad-a);
+  display:grid;place-items:center;
+  flex-shrink:0;
+  font-size:22px;
+  box-shadow:0 8px 20px -4px rgba(168,85,247,.4);
+}
+.usp-card h4{font-size:18px;font-weight:700;color:#fff;margin-bottom:8px;letter-spacing:-.3px}
+.usp-card p{font-size:14px;color:var(--ink-2);line-height:1.65}
+
+/* ---------- Tech / Trust strip ---------- */
+.tech-grid{
+  display:grid;grid-template-columns:repeat(6,1fr);gap:16px;
+}
+.tech-pill{
+  padding:18px;
+  background:rgba(255,255,255,.02);
+  border:1px solid var(--line);
+  border-radius:14px;
+  text-align:center;
+  transition:transform .3s,border-color .3s;
+}
+.tech-pill:hover{transform:translateY(-4px);border-color:var(--line-2)}
+.tech-pill .ic{font-size:26px;margin-bottom:8px}
+.tech-pill .nm{font-size:12px;font-weight:600;color:#fff}
+.tech-pill .sm{font-size:10px;color:var(--ink-3);margin-top:2px}
+
+/* ---------- Module Showcase (interactive tabbed) ---------- */
+.showcase-wrap{
+  background:linear-gradient(145deg,rgba(255,255,255,.04),rgba(255,255,255,.01));
+  border:1px solid var(--line-2);
+  border-radius:24px;
+  padding:34px;
+  position:relative;
+  overflow:hidden;
+}
+.showcase-wrap::before{
+  content:"";position:absolute;inset:0;
+  background:
+    radial-gradient(ellipse at top left,rgba(99,102,241,.15),transparent 50%),
+    radial-gradient(ellipse at bottom right,rgba(34,211,238,.1),transparent 50%);
+  pointer-events:none;
+}
+.showcase-tabs{
+  display:flex;gap:8px;flex-wrap:wrap;
+  margin-bottom:28px;
+  position:relative;z-index:1;
+  padding-bottom:18px;
+  border-bottom:1px solid var(--line);
+}
+.tab-btn{
+  font-family:inherit;
+  background:rgba(255,255,255,.03);
+  border:1px solid var(--line);
+  color:var(--ink-2);
+  padding:10px 18px;border-radius:100px;
+  font-size:13px;font-weight:600;
+  cursor:pointer;
+  transition:all .3s cubic-bezier(.2,.8,.2,1);
+  display:inline-flex;align-items:center;gap:8px;
+  position:relative;
+}
+.tab-btn .icon{font-size:14px}
+.tab-btn:hover{color:#fff;border-color:var(--line-2)}
+.tab-btn.active{
+  background:var(--grad-a);
+  color:#fff;
+  border-color:transparent;
+  box-shadow:0 8px 20px -4px rgba(168,85,247,.5);
+}
+.tab-btn.active .icon{filter:brightness(1.5)}
+
+.showcase-stage{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:32px;
+  align-items:center;
+  position:relative;z-index:1;
+  min-height:380px;
+}
+.showcase-pane{display:none}
+.showcase-pane.active{display:grid;grid-template-columns:subgrid;grid-column:1 / -1;animation:paneIn .5s ease-out}
+@keyframes paneIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+.pane-info h3{
+  font-size:28px;font-weight:800;
+  letter-spacing:-.7px;color:#fff;
+  margin-bottom:14px;
+  background:var(--grad-a);
+  -webkit-background-clip:text;background-clip:text;
+  -webkit-text-fill-color:transparent;
+}
+.pane-info p{font-size:15px;color:var(--ink-2);line-height:1.7;margin-bottom:20px}
+.pane-info ul{list-style:none;display:flex;flex-direction:column;gap:10px}
+.pane-info li{
+  font-size:13.5px;color:var(--ink-1);
+  padding-left:26px;position:relative;
+}
+.pane-info li::before{
+  content:"";position:absolute;left:0;top:5px;
+  width:14px;height:14px;border-radius:50%;
+  background:rgba(34,211,238,.18);
+  border:1px solid var(--cyan);
+}
+.pane-info li::after{
+  content:"✓";position:absolute;left:3px;top:1px;
+  font-size:9px;color:var(--cyan-2);font-weight:800;
+}
+
+.pane-mock{
+  background:rgba(0,0,0,.4);
+  border:1px solid var(--line-2);
+  border-radius:16px;
+  overflow:hidden;
+  box-shadow:0 30px 60px -20px rgba(0,0,0,.6);
+  min-height:340px;
+  position:relative;
+}
+.pmock-head{
+  padding:12px 16px;
+  border-bottom:1px solid var(--line);
+  display:flex;align-items:center;gap:8px;
+  font-size:11px;color:var(--ink-2);font-weight:600;
+}
+.pmock-head .dots{display:flex;gap:5px;margin-right:8px}
+.pmock-head .dots span{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.15)}
+.pmock-body{padding:16px}
+
+/* Pane: Orders mock */
+.mock-table-row{
+  display:grid;grid-template-columns:1fr auto auto auto;gap:10px;
+  padding:10px;border-radius:8px;
+  background:rgba(255,255,255,.02);
+  border:1px solid var(--line);
+  margin-bottom:8px;
+  font-size:11px;
+  align-items:center;
+  animation:slideIn .5s ease-out backwards;
+}
+.mock-table-row:nth-child(1){animation-delay:.05s}
+.mock-table-row:nth-child(2){animation-delay:.15s}
+.mock-table-row:nth-child(3){animation-delay:.25s}
+.mock-table-row:nth-child(4){animation-delay:.35s}
+.mock-table-row:nth-child(5){animation-delay:.45s}
+@keyframes slideIn{from{opacity:0;transform:translateX(-15px)}to{opacity:1;transform:translateX(0)}}
+.mock-table-row .cust{color:#fff;font-weight:500}
+.mock-table-row .cust span{display:block;color:var(--ink-3);font-size:9.5px;font-weight:400;margin-top:2px}
+.mock-table-row .vend{font-size:10px;color:var(--ink-2);background:rgba(168,85,247,.12);padding:3px 8px;border-radius:6px;border:1px solid rgba(168,85,247,.25)}
+
+/* Pane: Vendor mock */
+.vmock-card{
+  background:rgba(255,255,255,.02);
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:14px;
+  margin-bottom:10px;
+  font-size:12px;
+}
+.vmock-card .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.vmock-card .name{color:#fff;font-weight:600}
+.vmock-card .stat{font-size:9px;color:var(--green);background:rgba(16,185,129,.12);padding:3px 8px;border-radius:6px;text-transform:uppercase;letter-spacing:.5px}
+.vmock-bar{height:6px;background:rgba(255,255,255,.06);border-radius:100px;overflow:hidden;margin-top:8px}
+.vmock-bar-fill{height:100%;background:var(--grad-a);border-radius:100px;animation:barFill 1.5s ease-out backwards}
+@keyframes barFill{from{width:0}}
+.vmock-meta{display:flex;justify-content:space-between;font-size:10px;color:var(--ink-3);margin-top:6px}
+
+/* Pane: AI Email mock */
+.amock-thread{
+  background:rgba(255,255,255,.02);
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:12px;
+  font-size:12px;
+}
+.amock-thread .from{font-size:10px;color:var(--ink-3);margin-bottom:4px}
+.amock-thread .body{color:var(--ink-1);line-height:1.5;margin-bottom:14px}
+.amock-thread .body b{color:#fff}
+.amock-draft{
+  background:rgba(168,85,247,.08);
+  border:1px solid rgba(168,85,247,.3);
+  border-radius:10px;
+  padding:12px;
+  margin-top:12px;
+  font-size:12px;
+  position:relative;
+}
+.amock-draft::before{
+  content:"✦ AI DRAFT";
+  position:absolute;top:-8px;left:14px;
+  background:var(--grad-a);color:#fff;
+  font-size:8.5px;font-weight:700;letter-spacing:1px;
+  padding:3px 8px;border-radius:5px;
+}
+.amock-draft .typing{
+  color:var(--ink-1);line-height:1.6;margin-top:6px;
+  overflow:hidden;
+  white-space:normal;
+}
+.amock-draft .typing .cursor{
+  display:inline-block;width:8px;height:14px;
+  background:var(--purple-2);
+  vertical-align:middle;margin-left:2px;
+  animation:blink 1s step-end infinite;
+}
+@keyframes blink{50%{opacity:0}}
+
+/* Pane: Tracking mock */
+.tmock-card{
+  background:rgba(255,255,255,.02);
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:16px;
+  font-size:12px;
+}
+.tmock-num{font-family:'Space Grotesk',monospace;font-size:14px;color:#fff;font-weight:700;margin-bottom:4px}
+.tmock-courier{font-size:10px;color:var(--ink-3);margin-bottom:18px}
+.tmock-stages{
+  display:grid;grid-template-columns:repeat(5,1fr);gap:0;
+  position:relative;
+  padding:0 4px;
+}
+.tmock-line{
+  position:absolute;top:11px;left:18px;right:18px;height:2px;
+  background:rgba(255,255,255,.08);
+  border-radius:100px;
+  overflow:hidden;
+}
+.tmock-line::after{
+  content:"";position:absolute;left:0;top:0;height:100%;
+  background:linear-gradient(90deg,var(--green),var(--cyan));
+  width:75%;
+  animation:tProg 2.5s ease-out;
+}
+@keyframes tProg{from{width:0}}
+.tmock-stage{display:flex;flex-direction:column;align-items:center;gap:6px;position:relative;z-index:1}
+.tmock-stage .dot{
+  width:22px;height:22px;border-radius:50%;
+  background:rgba(255,255,255,.06);
+  border:2px solid var(--ink-3);
+  display:grid;place-items:center;
+  font-size:10px;color:var(--ink-3);
+}
+.tmock-stage.done .dot{background:var(--green);border-color:var(--green);color:#fff;box-shadow:0 0 10px var(--green)}
+.tmock-stage.active .dot{background:rgba(34,211,238,.2);border-color:var(--cyan);color:var(--cyan);animation:pulseDot 1.5s ease-in-out infinite}
+@keyframes pulseDot{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+.tmock-stage .lbl{font-size:8.5px;color:var(--ink-2);text-align:center;font-weight:600}
+.tmock-stage.done .lbl,.tmock-stage.active .lbl{color:#fff}
+
+.tmock-meta{
+  display:grid;grid-template-columns:repeat(2,1fr);gap:8px;
+  margin-top:18px;font-size:10px;
+  padding-top:14px;border-top:1px solid var(--line);
+}
+.tmock-meta div span{display:block;color:var(--ink-3);font-size:9px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px}
+.tmock-meta div b{color:#fff;font-size:11px;font-weight:600}
+
+/* Pane: Email Template mock */
+.emock-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.emock-card{
+  background:rgba(255,255,255,.02);
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:14px;
+  font-size:11px;
+  transition:all .3s;
+  cursor:pointer;
+}
+.emock-card:hover{border-color:var(--purple);transform:translateY(-2px)}
+.emock-card.default{border-color:rgba(168,85,247,.4);background:rgba(168,85,247,.06)}
+.emock-card .tag{
+  font-size:8.5px;font-weight:700;
+  color:var(--purple-2);
+  text-transform:uppercase;letter-spacing:.6px;
+  margin-bottom:6px;
+}
+.emock-card .name{color:#fff;font-weight:600;font-size:12px;margin-bottom:8px}
+.emock-card .preview{font-size:10px;color:var(--ink-3);line-height:1.4}
+.emock-card .badge-default{
+  display:inline-block;
+  margin-top:10px;
+  font-size:8px;font-weight:700;
+  padding:2px 6px;border-radius:4px;
+  background:rgba(16,185,129,.15);color:var(--green);
+  text-transform:uppercase;letter-spacing:.5px;
+}
+
+/* ---------- How It Works → Animated Pipeline ---------- */
+.pipeline{
+  position:relative;
+  padding:60px 30px 40px;
+  background:linear-gradient(145deg,rgba(255,255,255,.03),rgba(255,255,255,.005));
+  border:1px solid var(--line-2);
+  border-radius:24px;
+  overflow:hidden;
+}
+.pipeline::before{
+  content:"";position:absolute;inset:0;
+  background:
+    radial-gradient(ellipse at top,rgba(168,85,247,.12),transparent 60%),
+    radial-gradient(ellipse at bottom right,rgba(34,211,238,.08),transparent 50%);
+  pointer-events:none;
+}
+.pipe-track{
+  position:relative;
+  display:grid;grid-template-columns:repeat(5,1fr);
+  gap:0;
+  z-index:1;
+}
+.pipe-rail{
+  position:absolute;top:42px;left:8%;right:8%;
+  height:3px;
+  background:rgba(255,255,255,.08);
+  border-radius:100px;
+  overflow:hidden;
+}
+.pipe-rail::after{
+  content:"";position:absolute;left:0;top:0;height:100%;width:100%;
+  background:linear-gradient(90deg,var(--indigo),var(--purple),var(--cyan));
+  background-size:200% 100%;
+  animation:railFlow 3s linear infinite;
+}
+@keyframes railFlow{from{background-position:0 0}to{background-position:200% 0}}
+
+/* The traveling package */
+.pipe-package{
+  position:absolute;top:24px;
+  width:42px;height:42px;border-radius:12px;
+  background:linear-gradient(145deg,#fff,#e6e8f0);
+  display:grid;place-items:center;
+  font-size:20px;
+  box-shadow:0 8px 20px rgba(168,85,247,.4),0 0 30px rgba(168,85,247,.5);
+  z-index:3;
+  animation:packageMove 8s cubic-bezier(.6,.05,.4,.95) infinite;
+}
+@keyframes packageMove{
+  0%   { left: 8%; transform: scale(1) rotate(0deg) }
+  19%  { left: 28%; transform: scale(1.05) rotate(-5deg) }
+  20%,22% { transform: scale(1.15) rotate(0deg) }
+  39%  { left: 48%; transform: scale(1.05) rotate(5deg) }
+  40%,42% { transform: scale(1.15) rotate(0deg) }
+  59%  { left: 68%; transform: scale(1.05) rotate(-5deg) }
+  60%,62% { transform: scale(1.15) rotate(0deg) }
+  79%  { left: 88%; transform: scale(1.05) rotate(5deg) }
+  80%,82% { transform: scale(1.15) rotate(0deg) }
+  100% { left: 92%; transform: scale(1) rotate(0deg) }
+}
+
+.pipe-station{
+  position:relative;z-index:2;
+  display:flex;flex-direction:column;align-items:center;gap:14px;
+  padding-top:14px;
+}
+.pipe-circle{
+  width:56px;height:56px;border-radius:18px;
+  background:rgba(20,22,45,.95);
+  border:2px solid var(--line-2);
+  display:grid;place-items:center;
+  font-size:22px;
+  position:relative;
+  transition:all .3s ease;
+}
+.pipe-circle::after{
+  content:"";position:absolute;inset:-3px;border-radius:21px;
+  background:var(--grad-a);
+  z-index:-1;opacity:0;
+  filter:blur(8px);
+  transition:opacity .3s;
+}
+.pipe-station.active .pipe-circle{
+  border-color:transparent;
+  background:var(--grad-a);
+  transform:scale(1.1);
+}
+.pipe-station.active .pipe-circle::after{opacity:.7}
+
+.pipe-num{
+  position:absolute;top:-8px;right:-8px;
+  width:22px;height:22px;border-radius:50%;
+  background:#fff;color:#000;
+  display:grid;place-items:center;
+  font-size:11px;font-weight:800;
+  border:2px solid var(--bg-1);
+}
+.pipe-info{text-align:center;max-width:160px}
+.pipe-info h4{font-size:14px;font-weight:700;color:#fff;margin-bottom:6px;letter-spacing:-.2px}
+.pipe-info p{font-size:12px;color:var(--ink-2);line-height:1.5}
+
+/* Live status ticker below pipeline */
+.pipe-status{
+  margin-top:36px;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 22px;
+  background:rgba(0,0,0,.3);
+  border:1px solid var(--line);
+  border-radius:14px;
+  font-size:13px;
+}
+.pipe-status-left{display:flex;align-items:center;gap:10px;color:var(--ink-1)}
+.pipe-status-left .live-dot{margin:0}
+.pipe-status-left b{color:#fff}
+.pipe-status-right{font-size:12px;color:var(--ink-3);font-family:'Space Grotesk',monospace}
+
+/* ---------- Pricing Toggle ---------- */
+.billing-toggle{
+  display:flex;align-items:center;justify-content:center;
+  gap:14px;
+  margin:0 auto 50px;
+  width:fit-content;
+  padding:6px 8px;
+  background:rgba(255,255,255,.03);
+  border:1px solid var(--line-2);
+  border-radius:100px;
+  position:relative;
+}
+.billing-toggle button{
+  font-family:inherit;
+  background:transparent;border:none;
+  color:var(--ink-2);
+  padding:10px 22px;
+  font-size:13px;font-weight:600;
+  border-radius:100px;
+  cursor:pointer;
+  transition:color .3s;
+  position:relative;z-index:1;
+}
+.billing-toggle button.active{color:#fff}
+.billing-toggle .pill{
+  position:absolute;
+  top:6px;bottom:6px;
+  background:var(--grad-a);
+  border-radius:100px;
+  z-index:0;
+  box-shadow:0 6px 16px -4px rgba(168,85,247,.5);
+  transition:left .4s cubic-bezier(.6,.05,.4,.95),width .4s cubic-bezier(.6,.05,.4,.95);
+}
+.save-badge{
+  display:inline-block;
+  margin-left:6px;
+  font-size:10px;font-weight:700;
+  background:rgba(16,185,129,.18);
+  color:var(--green);
+  padding:2px 8px;border-radius:100px;
+  letter-spacing:.5px;
+}
+
+.tier-price .amount{transition:opacity .3s}
+.tier-price .amount.morph{animation:priceMorph .5s cubic-bezier(.6,.05,.4,.95)}
+@keyframes priceMorph{
+  0%{transform:translateY(0);opacity:1}
+  40%{transform:translateY(-12px);opacity:0;filter:blur(4px)}
+  60%{transform:translateY(12px);opacity:0;filter:blur(4px)}
+  100%{transform:translateY(0);opacity:1;filter:blur(0)}
+}
+.tier-period{transition:opacity .3s}
+
+/* ---------- Portals: tabbed mockup ---------- */
+.portal-showcase{
+  background:linear-gradient(145deg,rgba(255,255,255,.04),rgba(255,255,255,.01));
+  border:1px solid var(--line-2);
+  border-radius:24px;
+  padding:30px;
+  margin-bottom:30px;
+  position:relative;overflow:hidden;
+}
+.portal-showcase::before{
+  content:"";position:absolute;inset:0;
+  background:radial-gradient(ellipse at top right,var(--currentGlow,rgba(99,102,241,.18)),transparent 60%);
+  pointer-events:none;
+  transition:background .5s;
+}
+.portal-showcase[data-portal="vendor"]::before{--currentGlow:rgba(168,85,247,.18)}
+.portal-showcase[data-portal="team"]::before{--currentGlow:rgba(34,211,238,.16)}
+
+.portal-tabs{
+  display:flex;gap:8px;
+  margin-bottom:24px;
+  position:relative;z-index:1;
+  flex-wrap:wrap;
+}
+.ptab{
+  font-family:inherit;
+  background:rgba(255,255,255,.03);
+  border:1px solid var(--line);
+  color:var(--ink-2);
+  padding:10px 18px;
+  border-radius:10px;
+  font-size:13px;font-weight:600;
+  cursor:pointer;
+  display:inline-flex;align-items:center;gap:10px;
+  transition:all .3s;
+}
+.ptab:hover{color:#fff;border-color:var(--line-2)}
+.ptab.active[data-pt="admin"]{background:rgba(99,102,241,.15);color:var(--indigo-2);border-color:rgba(99,102,241,.4)}
+.ptab.active[data-pt="vendor"]{background:rgba(168,85,247,.15);color:var(--purple-2);border-color:rgba(168,85,247,.4)}
+.ptab.active[data-pt="team"]{background:rgba(34,211,238,.15);color:var(--cyan-2);border-color:rgba(34,211,238,.4)}
+.ptab .dot{width:8px;height:8px;border-radius:50%}
+.ptab[data-pt="admin"] .dot{background:var(--indigo-2)}
+.ptab[data-pt="vendor"] .dot{background:var(--purple-2)}
+.ptab[data-pt="team"] .dot{background:var(--cyan-2)}
+
+.portal-screen{
+  background:rgba(0,0,0,.4);
+  border:1px solid var(--line);
+  border-radius:14px;
+  min-height:300px;
+  padding:18px 20px;
+  position:relative;z-index:1;
+  font-size:12px;
+}
+.pscreen{display:none;animation:paneIn .45s ease-out}
+.pscreen.active{display:block}
+.pscreen-header{
+  display:flex;justify-content:space-between;align-items:center;
+  padding-bottom:12px;border-bottom:1px solid var(--line);
+  margin-bottom:14px;
+}
+.pscreen-header h4{font-size:14px;font-weight:700;color:#fff}
+.pscreen-header .small{font-size:10px;color:var(--ink-3)}
+
+.psgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.pscell{
+  background:rgba(255,255,255,.02);
+  border:1px solid var(--line);
+  padding:10px;border-radius:8px;
+}
+.pscell .l{font-size:9px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.pscell .v{font-size:14px;font-weight:700;color:#fff}
+
+.pslist{display:flex;flex-direction:column;gap:6px}
+.psitem{
+  display:grid;grid-template-columns:auto 1fr auto;gap:10px;
+  align-items:center;
+  padding:8px 10px;border-radius:6px;
+  background:rgba(255,255,255,.02);
+  border:1px solid var(--line);
+  font-size:11px;
+}
+.psitem .av{
+  width:24px;height:24px;border-radius:50%;
+  display:grid;place-items:center;font-size:10px;font-weight:700;color:#fff;
+}
+.av.a1{background:linear-gradient(135deg,#6366f1,#a855f7)}
+.av.a2{background:linear-gradient(135deg,#22d3ee,#6366f1)}
+.av.a3{background:linear-gradient(135deg,#ec4899,#a855f7)}
+.av.a4{background:linear-gradient(135deg,#f59e0b,#ec4899)}
+.psitem .nm{color:#fff;font-weight:500}
+.psitem .nm span{display:block;color:var(--ink-3);font-size:9.5px;margin-top:1px;font-weight:400}
+
+/* ---------- FAQ ---------- */
+.faq{max-width:880px;margin:0 auto}
+.faq-item{
+  background:rgba(255,255,255,.02);
+  border:1px solid var(--line);
+  border-radius:14px;
+  margin-bottom:14px;
+  overflow:hidden;
+  transition:border-color .3s;
+}
+.faq-item:hover{border-color:var(--line-2)}
+.faq-q{
+  padding:22px 26px;
+  font-size:16px;font-weight:600;color:#fff;
+  cursor:pointer;
+  display:flex;justify-content:space-between;align-items:center;
+  user-select:none;
+  transition:color .25s;
+}
+.faq-q:hover{color:var(--purple-2)}
+.faq-q .plus{
+  width:28px;height:28px;border-radius:50%;
+  background:rgba(168,85,247,.15);
+  display:grid;place-items:center;
+  color:var(--purple-2);font-size:18px;font-weight:300;
+  transition:transform .3s;
+}
+.faq-item.open .faq-q .plus{transform:rotate(45deg)}
+.faq-a{
+  max-height:0;overflow:hidden;
+  transition:max-height .4s ease;
+}
+.faq-item.open .faq-a{max-height:300px}
+.faq-a-inner{padding:0 26px 22px;font-size:14.5px;color:var(--ink-2);line-height:1.7}
+
+/* ---------- Final CTA ---------- */
+.final-cta{
+  position:relative;
+  padding:90px 60px;
+  border-radius:32px;
+  overflow:hidden;
+  text-align:center;
+  background:
+    radial-gradient(ellipse at top left,rgba(168,85,247,.3),transparent 50%),
+    radial-gradient(ellipse at bottom right,rgba(34,211,238,.2),transparent 50%),
+    linear-gradient(145deg,rgba(99,102,241,.15),rgba(168,85,247,.05));
+  border:1px solid rgba(168,85,247,.3);
+}
+.final-cta::before{
+  content:"";position:absolute;inset:0;
+  background-image:
+    radial-gradient(circle at 20% 30%,rgba(255,255,255,.04) 1px,transparent 1px),
+    radial-gradient(circle at 70% 60%,rgba(255,255,255,.03) 1px,transparent 1px);
+  background-size:40px 40px,80px 80px;
+}
+.final-cta h2{
+  font-size:clamp(34px,5vw,58px);
+  font-weight:800;
+  color:#fff;letter-spacing:-1.5px;line-height:1.1;
+  margin-bottom:18px;
+  position:relative;z-index:1;
+}
+.final-cta p{
+  font-size:19px;color:var(--ink-1);
+  max-width:600px;margin:0 auto 36px;
+  position:relative;z-index:1;
+}
+.final-cta .cta-row{
+  display:flex;gap:14px;justify-content:center;flex-wrap:wrap;
+  position:relative;z-index:1;
+}
+.final-cta .btn-primary{padding:16px 32px;font-size:16px}
+.final-cta .btn-ghost{padding:16px 32px;font-size:16px}
+
+/* ---------- Footer ---------- */
+footer{
+  margin-top:120px;
+  padding:70px 0 30px;
+  border-top:1px solid var(--line);
+}
+.footer-grid{
+  display:grid;
+  grid-template-columns:2fr 1fr 1fr 1fr;
+  gap:48px;
+  margin-bottom:50px;
+}
+.footer-brand p{color:var(--ink-2);font-size:14px;margin-top:18px;max-width:340px;line-height:1.7}
+.footer-col h5{font-size:13px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:1px;margin-bottom:18px}
+.footer-col ul{list-style:none}
+.footer-col li{margin-bottom:10px}
+.footer-col a{color:var(--ink-2);font-size:14px;text-decoration:none;transition:color .25s}
+.footer-col a:hover{color:#fff}
+.footer-bottom{
+  display:flex;justify-content:space-between;align-items:center;
+  padding-top:30px;
+  border-top:1px solid var(--line);
+  font-size:13px;color:var(--ink-3);
+}
+
+/* ---------- Reveal animations ---------- */
+.reveal{opacity:0;transform:translateY(30px);transition:opacity .9s ease,transform .9s ease}
+.reveal.in{opacity:1;transform:translateY(0)}
+
+/* ---------- "See new modules" teaser strip ---------- */
+.new-strip{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:24px;flex-wrap:wrap;
+  margin-top:32px;
+  padding:20px 28px;
+  background:
+    linear-gradient(135deg,rgba(168,85,247,.12),rgba(99,102,241,.08),rgba(34,211,238,.08));
+  border:1px solid rgba(168,85,247,.28);
+  border-radius:18px;
+  text-decoration:none;
+  position:relative;
+  overflow:hidden;
+  transition:transform .35s cubic-bezier(.2,.8,.2,1),
+             border-color .3s,
+             box-shadow .35s;
+}
+.new-strip::before{
+  content:"";position:absolute;inset:0;
+  background:
+    radial-gradient(800px circle at 0% 50%,rgba(168,85,247,.18),transparent 50%),
+    radial-gradient(800px circle at 100% 50%,rgba(34,211,238,.14),transparent 50%);
+  opacity:.7;pointer-events:none;
+}
+.new-strip::after{
+  content:"";position:absolute;
+  top:0;left:-100%;
+  width:60%;height:100%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.08),transparent);
+  transition:left .8s ease;
+}
+.new-strip:hover{
+  transform:translateY(-3px);
+  border-color:rgba(168,85,247,.5);
+  box-shadow:0 20px 50px -16px rgba(168,85,247,.45);
+}
+.new-strip:hover::after{left:140%}
+
+.new-strip-left{
+  display:flex;align-items:center;gap:18px;
+  position:relative;z-index:1;
+  flex-wrap:wrap;
+}
+.new-strip-text b{
+  display:block;
+  color:#fff;font-size:15px;font-weight:700;
+  letter-spacing:-.2px;
+  margin-bottom:3px;
+}
+.new-strip-text span{
+  font-size:12.5px;
+  color:var(--ink-2);
+}
+.new-strip-right{
+  display:inline-flex;align-items:center;gap:10px;
+  font-size:13px;font-weight:600;
+  color:#fff;
+  position:relative;z-index:1;
+  padding:8px 18px;
+  border-radius:100px;
+  background:rgba(255,255,255,.05);
+  border:1px solid var(--line-2);
+  transition:background .25s,border-color .25s;
+}
+.new-strip:hover .new-strip-right{
+  background:rgba(255,255,255,.1);
+  border-color:rgba(255,255,255,.25);
+}
+.new-strip-right .arr{
+  font-size:16px;
+  transition:transform .35s cubic-bezier(.2,.8,.2,1);
+}
+.new-strip:hover .new-strip-right .arr{transform:translateX(5px)}
+
+/* ============================================================
+   ===========  WHAT'S NEW / JUST SHIPPED SECTION  ============
+   ============================================================ */
+.whats-new{position:relative;overflow:hidden}
+.whats-new::before{
+  content:"";position:absolute;inset:0;
+  background:
+    radial-gradient(ellipse at 10% 0%,rgba(34,211,238,.10),transparent 55%),
+    radial-gradient(ellipse at 90% 100%,rgba(168,85,247,.10),transparent 55%);
+  pointer-events:none;
+  z-index:-1;
+}
+
+/* Glowing NEW badge */
+.new-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:5px 12px;border-radius:6px;
+  background:var(--grad-a);
+  color:#fff;font-size:10px;font-weight:800;
+  letter-spacing:1.5px;text-transform:uppercase;
+  box-shadow:0 4px 14px -2px rgba(168,85,247,.5);
+  position:relative;
+}
+.new-badge::before{
+  content:"";position:absolute;inset:-2px;
+  border-radius:8px;
+  background:var(--grad-a);
+  filter:blur(10px);opacity:.6;z-index:-1;
+  animation:newGlow 2s ease-in-out infinite;
+}
+.new-badge::after{
+  content:"";width:6px;height:6px;border-radius:50%;
+  background:#fff;
+  box-shadow:0 0 8px #fff;
+  animation:pulse 1.4s ease-in-out infinite;
+}
+@keyframes newGlow{0%,100%{opacity:.4;transform:scale(1)}50%{opacity:.85;transform:scale(1.05)}}
+
+/* Inline new pill on feat card */
+.feat .new-pill{
+  position:absolute;top:18px;right:18px;
+  display:inline-flex;align-items:center;gap:5px;
+  padding:3px 9px;border-radius:100px;
+  background:linear-gradient(135deg,#ec4899,#a855f7);
+  color:#fff;
+  font-size:9px;font-weight:800;
+  letter-spacing:1px;text-transform:uppercase;
+  box-shadow:0 4px 12px -2px rgba(236,72,153,.5);
+  z-index:2;
+}
+.feat .new-pill::before{
+  content:"";width:5px;height:5px;border-radius:50%;
+  background:#fff;box-shadow:0 0 6px #fff;
+  animation:pulse 1.4s ease-in-out infinite;
+}
+
+/* Section heading row with badge */
+.wn-head-row{
+  display:flex;align-items:center;gap:14px;
+  justify-content:center;
+  flex-wrap:wrap;
+  margin-bottom:14px;
+}
+
+/* The 4-card grid */
+.whatsnew-grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:24px;
+}
+.wn-card{
+  position:relative;
+  background:linear-gradient(145deg,rgba(255,255,255,.04),rgba(255,255,255,.01));
+  border:1px solid var(--line-2);
+  border-radius:24px;
+  padding:30px;
+  overflow:hidden;
+  transition:transform .5s cubic-bezier(.2,.8,.2,1),
+             border-color .35s,
+             box-shadow .45s;
+  isolation:isolate;
+}
+.wn-card::before{
+  content:"";position:absolute;inset:0;
+  background:radial-gradient(700px circle at var(--mx,50%) var(--my,0%),var(--cardGlow,rgba(168,85,247,.20)),transparent 45%);
+  opacity:0;transition:opacity .55s;
+  pointer-events:none;
+  z-index:0;
+}
+.wn-card::after{
+  content:"";position:absolute;
+  top:-2px;left:-2px;right:-2px;
+  height:2px;
+  background:linear-gradient(90deg,transparent,var(--cardLine,var(--purple)),transparent);
+  opacity:.6;
+  transform:translateX(-100%);
+  transition:transform .8s ease;
+}
+.wn-card:hover::after{transform:translateX(100%)}
+.wn-card:hover{
+  transform:translateY(-10px);
+  border-color:var(--cardBorder,rgba(168,85,247,.45));
+  box-shadow:0 30px 70px -20px var(--cardShadow,rgba(168,85,247,.45));
+}
+.wn-card:hover::before{opacity:1}
+.wn-card > *{position:relative;z-index:1}
+
+/* per-card themed colors */
+.wn-card[data-c="chat"]  {--cardGlow:rgba(34,211,238,.28);--cardBorder:rgba(34,211,238,.55);--cardShadow:rgba(34,211,238,.4);--cardLine:var(--cyan)}
+.wn-card[data-c="stock"] {--cardGlow:rgba(245,158,11,.28);--cardBorder:rgba(245,158,11,.55);--cardShadow:rgba(245,158,11,.4);--cardLine:var(--amber)}
+.wn-card[data-c="task"]  {--cardGlow:rgba(168,85,247,.30);--cardBorder:rgba(168,85,247,.55);--cardShadow:rgba(168,85,247,.4);--cardLine:var(--purple)}
+.wn-card[data-c="mail"]  {--cardGlow:rgba(99,102,241,.28);--cardBorder:rgba(99,102,241,.55);--cardShadow:rgba(99,102,241,.4);--cardLine:var(--indigo)}
+
+.wn-head{
+  display:flex;align-items:flex-start;justify-content:space-between;
+  gap:16px;margin-bottom:18px;
+}
+.wn-icon{
+  width:56px;height:56px;border-radius:16px;
+  display:grid;place-items:center;
+  font-size:26px;
+  background:rgba(255,255,255,.04);
+  border:1px solid var(--line-2);
+  position:relative;
+  flex-shrink:0;
+  transition:transform .5s cubic-bezier(.2,.8,.2,1);
+}
+.wn-card:hover .wn-icon{transform:rotate(-8deg) scale(1.08)}
+.wn-icon::after{
+  content:"";position:absolute;inset:-3px;border-radius:19px;
+  z-index:-1;opacity:0;
+  filter:blur(14px);
+  transition:opacity .45s;
+}
+.wn-card:hover .wn-icon::after{opacity:.85}
+.wn-card[data-c="chat"]  .wn-icon{background:rgba(34,211,238,.12);border-color:rgba(34,211,238,.35);color:var(--cyan-2)}
+.wn-card[data-c="chat"]  .wn-icon::after{background:linear-gradient(135deg,var(--cyan),#0ea5e9)}
+.wn-card[data-c="stock"] .wn-icon{background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.35);color:var(--amber)}
+.wn-card[data-c="stock"] .wn-icon::after{background:linear-gradient(135deg,var(--amber),#f97316)}
+.wn-card[data-c="task"]  .wn-icon{background:rgba(168,85,247,.12);border-color:rgba(168,85,247,.35);color:var(--purple-2)}
+.wn-card[data-c="task"]  .wn-icon::after{background:linear-gradient(135deg,var(--purple),var(--pink))}
+.wn-card[data-c="mail"]  .wn-icon{background:rgba(99,102,241,.12);border-color:rgba(99,102,241,.35);color:var(--indigo-2)}
+.wn-card[data-c="mail"]  .wn-icon::after{background:linear-gradient(135deg,var(--indigo),var(--cyan))}
+
+.wn-title{flex:1;min-width:0}
+.wn-title h3{
+  font-size:22px;font-weight:800;color:#fff;
+  letter-spacing:-.5px;margin-bottom:6px;
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+}
+.wn-title h3 .new-badge{font-size:8.5px;padding:3px 8px}
+.wn-title p{font-size:14px;color:var(--ink-2);line-height:1.6}
+
+.wn-stage{
+  margin-top:18px;
+  background:rgba(0,0,0,.4);
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:18px;
+  position:relative;
+  min-height:240px;
+  overflow:hidden;
+  isolation:isolate;
+}
+.wn-stage-head{
+  display:flex;align-items:center;justify-content:space-between;
+  font-size:10px;color:var(--ink-3);
+  text-transform:uppercase;letter-spacing:.7px;
+  font-weight:700;
+  margin-bottom:14px;
+  padding-bottom:10px;
+  border-bottom:1px dashed var(--line);
+}
+.wn-stage-head .live-dot{margin:0}
+.wn-stage-head b{color:#fff;font-weight:700;letter-spacing:.4px}
+.wn-stage-head .pill-mini{
+  background:rgba(16,185,129,.15);color:var(--green);
+  padding:2px 8px;border-radius:100px;font-size:9px;
+  display:inline-flex;align-items:center;gap:5px;
+}
+.wn-stage-head .pill-mini::before{
+  content:"";width:5px;height:5px;border-radius:50%;
+  background:var(--green);box-shadow:0 0 6px var(--green);
+  animation:pulse 1.6s ease-in-out infinite;
+}
+
+.wn-foot{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:14px;margin-top:18px;
+  font-size:12px;color:var(--ink-2);
+}
+.wn-foot .feat-list{
+  display:flex;gap:6px;flex-wrap:wrap;
+}
+.wn-foot .feat-list span{
+  font-size:10px;font-weight:600;
+  padding:4px 9px;border-radius:100px;
+  background:rgba(255,255,255,.04);
+  border:1px solid var(--line);
+  color:var(--ink-2);
+}
+
+/* ===================== LIVE CHAT ===================== */
+.lc-thread{display:flex;flex-direction:column;gap:9px;position:relative}
+.lc-msg{
+  max-width:78%;
+  padding:9px 13px;
+  border-radius:13px;
+  font-size:12px;
+  line-height:1.45;
+  position:relative;
+  animation:msgIn .55s cubic-bezier(.2,.8,.2,1) backwards;
+}
+.lc-msg.left{
+  background:rgba(255,255,255,.06);
+  color:var(--ink-1);
+  border-bottom-left-radius:4px;
+  align-self:flex-start;
+  border:1px solid var(--line);
+}
+.lc-msg.right{
+  background:linear-gradient(135deg,#22d3ee,#0ea5e9);
+  color:#fff;font-weight:500;
+  border-bottom-right-radius:4px;
+  align-self:flex-end;
+  box-shadow:0 6px 18px -4px rgba(34,211,238,.6);
+}
+.lc-msg b{color:#fff;font-weight:600}
+.lc-msg .meta{font-size:9px;opacity:.6;margin-top:3px;display:block;letter-spacing:.3px}
+@keyframes msgIn{
+  from{opacity:0;transform:translateY(14px) scale(.92)}
+  to{opacity:1;transform:translateY(0) scale(1)}
+}
+.lc-msg:nth-child(1){animation-delay:.1s}
+.lc-msg:nth-child(2){animation-delay:.7s}
+.lc-msg:nth-child(3){animation-delay:1.4s}
+.lc-msg:nth-child(4){animation-delay:2.1s}
+
+.lc-typing{
+  align-self:flex-start;
+  background:rgba(255,255,255,.06);
+  padding:11px 14px;
+  border-radius:13px;
+  border-bottom-left-radius:4px;
+  display:inline-flex;gap:5px;
+  border:1px solid var(--line);
+  animation:msgIn .55s cubic-bezier(.2,.8,.2,1) 2.7s backwards;
+}
+.lc-typing span{
+  width:6px;height:6px;border-radius:50%;
+  background:var(--ink-2);
+  animation:lcDot 1.4s ease-in-out infinite;
+}
+.lc-typing span:nth-child(2){animation-delay:.2s}
+.lc-typing span:nth-child(3){animation-delay:.4s}
+@keyframes lcDot{
+  0%,60%,100%{transform:translateY(0);opacity:.4}
+  30%{transform:translateY(-6px);opacity:1;background:var(--cyan-2)}
+}
+
+.lc-people{
+  display:flex;align-items:center;gap:6px;
+}
+.lc-avatar{
+  width:22px;height:22px;border-radius:50%;
+  display:grid;place-items:center;
+  font-size:10px;font-weight:800;color:#fff;
+  position:relative;
+  flex-shrink:0;
+  border:1.5px solid var(--bg-1);
+  margin-left:-6px;
+}
+.lc-avatar:first-child{margin-left:0}
+.lc-avatar.ag1{background:linear-gradient(135deg,#22d3ee,#0ea5e9)}
+.lc-avatar.ag2{background:linear-gradient(135deg,#a855f7,#ec4899)}
+.lc-avatar.ag3{background:linear-gradient(135deg,#f59e0b,#f97316)}
+.lc-people-cnt{font-size:10px;color:var(--ink-2);margin-left:4px}
+.lc-online{color:var(--green)}
+
+/* ===================== STOCK ===================== */
+.sm-counter{
+  font-family:'Space Grotesk',monospace;
+  font-size:12px;
+  color:var(--amber);
+  font-weight:700;
+  display:inline-flex;align-items:center;gap:5px;
+}
+.sm-counter::before{
+  content:"";width:6px;height:6px;border-radius:50%;
+  background:var(--amber);
+  box-shadow:0 0 8px var(--amber);
+  animation:pulse 1.6s ease-in-out infinite;
+}
+
+.sm-rows{display:flex;flex-direction:column;gap:7px}
+.sm-row{
+  display:grid;grid-template-columns:auto 1fr auto;
+  gap:11px;align-items:center;
+  padding:9px 11px;
+  background:rgba(255,255,255,.025);
+  border:1px solid var(--line);
+  border-radius:10px;
+  font-size:11px;
+  animation:slideIn .55s ease-out backwards;
+  transition:transform .25s,border-color .25s;
+}
+.sm-row:hover{transform:translateX(3px)}
+.sm-row:nth-child(1){animation-delay:.1s}
+.sm-row:nth-child(2){animation-delay:.22s}
+.sm-row:nth-child(3){animation-delay:.34s}
+.sm-row:nth-child(4){animation-delay:.46s}
+.sm-row .sku{
+  font-family:'Space Grotesk',monospace;
+  font-size:9.5px;color:var(--ink-3);
+  background:rgba(255,255,255,.05);
+  padding:3px 7px;border-radius:5px;
+  flex-shrink:0;letter-spacing:.5px;
+}
+.sm-row .pname{color:#fff;font-weight:500;font-size:11.5px;min-width:0}
+.sm-row .pname b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sm-row .pname span{color:var(--ink-3);font-weight:400;display:block;font-size:9.5px;margin-top:2px}
+.sm-row .qty{
+  font-family:'Space Grotesk',monospace;
+  font-size:14px;font-weight:700;
+  color:#fff;
+  text-align:right;
+  min-width:54px;
+  line-height:1;
+}
+.sm-row .qty small{font-size:9px;color:var(--ink-3);font-weight:500;display:block;margin-top:2px;letter-spacing:.4px}
+.sm-row.low{border-color:rgba(239,68,68,.35);background:rgba(239,68,68,.06)}
+.sm-row.low .qty{color:var(--red);animation:lowFlash 1.4s ease-in-out infinite}
+@keyframes lowFlash{0%,100%{opacity:1}50%{opacity:.5}}
+.sm-row.warn{border-color:rgba(245,158,11,.32);background:rgba(245,158,11,.05)}
+.sm-row.warn .qty{color:var(--amber)}
+.sm-row.ok .qty{color:var(--green)}
+
+.sm-row .bar{
+  position:absolute;left:0;right:0;bottom:0;
+  height:2px;
+  background:rgba(255,255,255,.05);
+  overflow:hidden;
+}
+.sm-row{position:relative}
+.sm-row .bar::after{
+  content:"";position:absolute;left:0;top:0;height:100%;
+  background:var(--cur,var(--green));
+  animation:barFill 1.5s ease-out backwards;
+}
+.sm-row.ok   .bar::after{--cur:var(--green);width:78%}
+.sm-row.warn .bar::after{--cur:var(--amber);width:35%}
+.sm-row.low  .bar::after{--cur:var(--red);width:12%;animation:lowFlash 1.4s ease-in-out infinite}
+
+/* ===================== TASKS / KANBAN ===================== */
+.tk-board{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  gap:9px;
+}
+.tk-col{
+  background:rgba(255,255,255,.025);
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:10px 9px;
+  min-height:175px;
+  position:relative;
+}
+.tk-col-head{
+  display:flex;justify-content:space-between;align-items:center;
+  font-size:9px;
+  text-transform:uppercase;letter-spacing:.7px;font-weight:800;
+  margin-bottom:9px;
+  padding-bottom:7px;
+  border-bottom:1px dashed var(--line);
+}
+.tk-col-head .cnt{
+  background:rgba(255,255,255,.06);
+  padding:2px 7px;border-radius:100px;
+  font-size:8.5px;color:#fff;font-weight:700;
+  min-width:18px;text-align:center;
+}
+.tk-col[data-s="todo"] .tk-col-head{color:var(--ink-2)}
+.tk-col[data-s="prog"] .tk-col-head{color:var(--purple-2)}
+.tk-col[data-s="done"] .tk-col-head{color:var(--green)}
+.tk-col[data-s="prog"] .tk-col-head .cnt{background:rgba(168,85,247,.18);color:var(--purple-2)}
+.tk-col[data-s="done"] .tk-col-head .cnt{background:rgba(16,185,129,.18);color:var(--green)}
+
+.tk-card{
+  background:linear-gradient(145deg,rgba(20,22,45,.95),rgba(15,17,38,.95));
+  border:1px solid var(--line-2);
+  border-radius:8px;
+  padding:8px 10px;
+  margin-bottom:7px;
+  font-size:10.5px;
+  color:#fff;
+  font-weight:500;
+  position:relative;
+  cursor:default;
+  animation:tkCardIn .6s cubic-bezier(.2,.8,.2,1) backwards;
+  transition:transform .25s,border-color .25s,box-shadow .25s;
+}
+.tk-card:hover{
+  transform:translateX(2px) translateY(-1px);
+  border-color:var(--purple);
+  box-shadow:0 8px 20px -8px rgba(168,85,247,.5);
+}
+.tk-card:nth-child(1){animation-delay:.1s}
+.tk-card:nth-child(2){animation-delay:.22s}
+.tk-card:nth-child(3){animation-delay:.34s}
+.tk-card:nth-child(4){animation-delay:.46s}
+@keyframes tkCardIn{
+  from{opacity:0;transform:translateY(-10px) scale(.94)}
+  to{opacity:1;transform:translateY(0) scale(1)}
+}
+.tk-card .tag{
+  font-size:8px;font-weight:800;
+  text-transform:uppercase;letter-spacing:.6px;
+  margin-bottom:4px;display:inline-block;
+}
+.tk-card .tag.p1{color:var(--red)}
+.tk-card .tag.p2{color:var(--amber)}
+.tk-card .tag.p3{color:var(--cyan-2)}
+.tk-card .meta{
+  display:flex;justify-content:space-between;
+  margin-top:6px;align-items:center;
+}
+.tk-card .due{font-size:8.5px;color:var(--ink-3);font-family:'Space Grotesk',monospace}
+.tk-avatars{display:flex}
+.tk-avatars .av{
+  width:16px;height:16px;border-radius:50%;
+  border:1.5px solid #0a0c1f;
+  margin-left:-5px;
+  display:grid;place-items:center;
+  font-size:7.5px;font-weight:800;color:#fff;
+}
+.tk-avatars .av:first-child{margin-left:0}
+.tk-avatars .a1{background:linear-gradient(135deg,#22d3ee,#0ea5e9)}
+.tk-avatars .a2{background:linear-gradient(135deg,#a855f7,#ec4899)}
+.tk-avatars .a3{background:linear-gradient(135deg,#10b981,#059669)}
+.tk-avatars .a4{background:linear-gradient(135deg,#f59e0b,#f97316)}
+
+/* Floating moving card animation */
+.tk-card.fly{
+  position:absolute;
+  z-index:5;
+  animation:tkFly 6s cubic-bezier(.5,0,.25,1) infinite;
+  pointer-events:none;
+  box-shadow:0 14px 30px -8px rgba(168,85,247,.6);
+}
+@keyframes tkFly{
+  0%   {top:30px;left:6%;  transform:rotate(-2deg) scale(.95);opacity:0}
+  6%   {opacity:1}
+  18%  {top:30px;left:6%;  transform:rotate(-2deg) scale(1)}
+  30%  {top:30px;left:38%; transform:rotate(2deg) scale(1.04)}
+  42%  {top:30px;left:38%; transform:rotate(0deg) scale(1)}
+  54%  {top:30px;left:70%; transform:rotate(-2deg) scale(1.04)}
+  62%  {top:30px;left:70%; transform:rotate(0deg) scale(1);opacity:1}
+  70%  {opacity:0}
+  100% {top:30px;left:70%; transform:rotate(0deg) scale(1);opacity:0}
+}
+
+.tk-progress{
+  margin-top:14px;
+  display:flex;align-items:center;gap:10px;
+  font-size:10px;color:var(--ink-2);
+}
+.tk-progress b{color:#fff;font-weight:700}
+.tk-bar{
+  flex:1;height:5px;
+  background:rgba(255,255,255,.06);
+  border-radius:100px;overflow:hidden;
+  position:relative;
+}
+.tk-bar::after{
+  content:"";position:absolute;left:0;top:0;height:100%;
+  background:linear-gradient(90deg,var(--purple),var(--pink),var(--cyan));
+  background-size:200% 100%;
+  border-radius:100px;
+  width:64%;
+  animation:tkProg 5s ease-in-out infinite,railFlow 3s linear infinite;
+}
+@keyframes tkProg{
+  0%,100%{width:64%}
+  50%{width:82%}
+}
+
+/* ===================== EMAIL HUB ===================== */
+.eh-providers{
+  display:flex;gap:6px;flex-wrap:wrap;
+  margin-bottom:12px;
+}
+.eh-provider{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:5px 10px;
+  border-radius:100px;
+  font-size:10px;font-weight:700;
+  background:rgba(255,255,255,.04);
+  border:1px solid var(--line);
+  color:var(--ink-2);
+  letter-spacing:.3px;
+  transition:transform .25s;
+}
+.eh-provider:hover{transform:translateY(-2px)}
+.eh-provider .pdot{
+  width:6px;height:6px;border-radius:50%;
+  background:var(--green);
+  box-shadow:0 0 6px var(--green);
+}
+.eh-provider.gmail  {color:#ea4335;border-color:rgba(234,67,53,.35);background:rgba(234,67,53,.07)}
+.eh-provider.outlook{color:#0078d4;border-color:rgba(0,120,212,.4);background:rgba(0,120,212,.08)}
+.eh-provider.yahoo  {color:#a855f7;border-color:rgba(168,85,247,.35);background:rgba(168,85,247,.07)}
+.eh-provider.imap   {color:var(--ink-2)}
+
+.eh-inbox{display:flex;flex-direction:column;gap:6px;position:relative}
+.eh-mail{
+  display:grid;grid-template-columns:auto 1fr auto;
+  gap:10px;align-items:center;
+  padding:9px 11px;
+  background:rgba(255,255,255,.025);
+  border:1px solid var(--line);
+  border-radius:9px;
+  font-size:11px;
+  position:relative;
+  animation:slideIn .55s ease-out backwards;
+  transition:transform .25s,border-color .25s,background .25s;
+}
+.eh-mail:hover{transform:translateX(4px);border-color:var(--indigo);background:rgba(99,102,241,.04)}
+.eh-mail:nth-child(1){animation-delay:.1s}
+.eh-mail:nth-child(2){animation-delay:.24s}
+.eh-mail:nth-child(3){animation-delay:.38s}
+.eh-mail:nth-child(4){animation-delay:.52s}
+.eh-mail .src{
+  width:22px;height:22px;border-radius:50%;
+  display:grid;place-items:center;
+  font-size:9.5px;font-weight:800;color:#fff;
+  flex-shrink:0;
+}
+.eh-mail .src.g{background:#ea4335}
+.eh-mail .src.o{background:#0078d4}
+.eh-mail .src.y{background:#7B0099}
+.eh-mail .src.i{background:linear-gradient(135deg,#6366f1,#22d3ee)}
+.eh-mail .body{min-width:0}
+.eh-mail .body b{
+  color:#fff;font-weight:600;font-size:11.5px;
+  display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  letter-spacing:-.1px;
+}
+.eh-mail .body span{
+  color:var(--ink-3);font-size:10px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  display:block;margin-top:2px;
+}
+.eh-mail.unread{background:rgba(99,102,241,.06)}
+.eh-mail.unread .body b::after{
+  content:"";display:inline-block;
+  width:7px;height:7px;border-radius:50%;
+  background:var(--indigo-2);margin-left:7px;
+  vertical-align:middle;
+  box-shadow:0 0 8px var(--indigo-2);
+  animation:pulse 1.6s ease-in-out infinite;
+}
+.eh-mail .ts{font-size:9px;color:var(--ink-3);font-family:'Space Grotesk',monospace;flex-shrink:0;letter-spacing:.3px}
+
+.eh-compose{
+  position:absolute;bottom:14px;right:14px;
+  width:38px;height:38px;border-radius:50%;
+  background:var(--grad-a);
+  display:grid;place-items:center;
+  color:#fff;font-size:15px;
+  box-shadow:0 10px 24px -4px rgba(168,85,247,.65),inset 0 1px 0 rgba(255,255,255,.3);
+  cursor:pointer;
+  z-index:3;
+  animation:floatA 3.5s ease-in-out infinite;
+  transition:transform .3s;
+}
+.eh-compose:hover{transform:scale(1.12) rotate(15deg)}
+.eh-compose::before{
+  content:"";position:absolute;inset:-4px;border-radius:50%;
+  background:var(--grad-a);
+  z-index:-1;
+  filter:blur(10px);opacity:.6;
+  animation:newGlow 2s ease-in-out infinite;
+}
+
+/* Send/receive activity ticker line */
+.eh-ticker{
+  margin-top:10px;
+  font-size:9.5px;color:var(--ink-3);
+  font-family:'Space Grotesk',monospace;
+  letter-spacing:.4px;
+  display:flex;align-items:center;gap:8px;
+  padding-top:10px;
+  border-top:1px dashed var(--line);
+}
+.eh-ticker .arrow{
+  display:inline-block;color:var(--cyan-2);
+  animation:arrowSlide 1.6s ease-in-out infinite;
+}
+@keyframes arrowSlide{
+  0%,100%{transform:translateX(0)}
+  50%{transform:translateX(4px)}
+}
+.eh-ticker b{color:#fff;font-weight:700}
+
+/* ---------- Responsive ---------- */
+@media (max-width:1024px){
+  .hero-grid{grid-template-columns:1fr;gap:80px}
+  .hero-mock{max-width:560px;margin:0 auto}
+  .stats-grid{grid-template-columns:repeat(2,1fr)}
+  .feat,.feat.featured{grid-column:span 6}
+  .features-grid{grid-template-columns:repeat(6,1fr)}
+  .hiw-grid{grid-template-columns:repeat(2,1fr)}
+  .portals-grid,.pricing-grid{grid-template-columns:1fr}
+  .usp-grid{grid-template-columns:1fr}
+  .tech-grid{grid-template-columns:repeat(3,1fr)}
+  .footer-grid{grid-template-columns:1fr 1fr}
+  .tier.popular{transform:none}
+  .tier.popular:hover{transform:translateY(-8px)}
+  .showcase-stage{grid-template-columns:1fr;gap:24px}
+  .pipe-track{grid-template-columns:repeat(5,1fr);gap:8px}
+  .pipe-info h4{font-size:12px}
+  .pipe-info p{font-size:10.5px}
+  .psgrid{grid-template-columns:repeat(2,1fr)}
+  .whatsnew-grid{grid-template-columns:1fr}
+}
+@media (max-width:680px){
+  .nav-links{display:none}
+  .menu-toggle{display:block}
+  .stats-grid{grid-template-columns:1fr 1fr}
+  .feat,.feat.featured{grid-column:span 6}
+  .features-grid{grid-template-columns:repeat(6,1fr)}
+  .hiw-grid{grid-template-columns:1fr}
+  .tech-grid{grid-template-columns:repeat(2,1fr)}
+  .footer-grid{grid-template-columns:1fr}
+  .footer-bottom{flex-direction:column;gap:14px;text-align:center}
+  .float-card{display:none}
+  .hero{padding:130px 0 60px}
+  .section{padding:80px 0}
+  .final-cta{padding:60px 24px}
+  .pipeline{padding:40px 16px 30px}
+  .pipe-track{grid-template-columns:repeat(5,1fr);gap:4px}
+  .pipe-circle{width:42px;height:42px;font-size:18px;border-radius:14px}
+  .pipe-package{width:34px;height:34px;font-size:16px;top:18px}
+  .pipe-rail{top:34px}
+  .pipe-info h4{font-size:10px}
+  .pipe-info p{display:none}
+  .pipe-num{width:18px;height:18px;font-size:9px}
+  .showcase-wrap{padding:20px}
+  .pane-info h3{font-size:22px}
+  .wn-card{padding:22px}
+  .wn-stage{padding:14px}
+  .tk-board{grid-template-columns:1fr}
+  .tk-col{min-height:auto}
+  .tk-col:nth-child(2),.tk-col:nth-child(3){display:none}
+  .feat .new-pill{top:14px;right:14px}
+  .new-strip{padding:18px;flex-direction:column;align-items:flex-start;gap:14px}
+  .new-strip-right{align-self:stretch;justify-content:center}
+}
+</style>
+</head>
+<body>
+
+<div class="cosmic-bg"></div>
+<div class="orb o1"></div>
+<div class="orb o2"></div>
+<div class="orb o3"></div>
+
+<!-- ============== NAV ============== -->
+<nav id="nav">
+  <div class="container nav-inner">
+    <a href="#" class="logo">
+      <div class="logo-mark"><span>DS</span></div>
+      <div>
+        <div class="logo-text">Drop Sigma</div>
+        <small class="logo-sub">Ecommerce Operations OS</small>
+      </div>
+    </a>
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#whats-new" style="position:relative">What's New<span style="position:absolute;top:-7px;right:-22px;background:linear-gradient(135deg,#ec4899,#a855f7);color:#fff;font-size:8px;font-weight:800;padding:2px 6px;border-radius:100px;letter-spacing:.6px;box-shadow:0 4px 10px -2px rgba(236,72,153,.5)">NEW</span></a>
+      <a href="#how">How it Works</a>
+      <a href="#portals">Portals</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#faq">FAQ</a>
+    </div>
+    <div class="nav-cta">
+      <a href="/login/" class="btn btn-ghost">Log in</a>
+      <a href="/login/" class="btn btn-primary"><span>Access Dashboard →</span></a>
+      <button class="menu-toggle" aria-label="Menu">☰</button>
+    </div>
+  </div>
+</nav>
+
+<!-- ============== HERO ============== -->
+<section class="hero">
+  <div class="container hero-grid">
+    <div>
+      <div class="hero-badge">Live · WooCommerce + Shopify Sync</div>
+      <h1>The <span class="gradient-text">Operations OS</span> built for serious dropshippers.</h1>
+      <p class="lead">
+        Drop Sigma works alongside your Shopify store to bring Gmail, courier sites, WhatsApp groups and spreadsheets into one unified command center — orders, vendors, customer support, AI emails and live tracking, all in one tab.
+      </p>
+      <div class="hero-ctas">
+        <a href="/signup/" class="btn btn-primary"><span>Get Started →</span></a>
+        <a href="#features" class="btn btn-ghost">See Features</a>
+      </div>
+      <div class="hero-trust">
+        <div class="trust-item"><span class="check">✓</span> No credit card required</div>
+        <div class="trust-item"><span class="check">✓</span> Connect in under 2 minutes</div>
+        <div class="trust-item"><span class="check">✓</span> Cancel anytime</div>
+      </div>
+    </div>
+
+    <div class="hero-mock">
+      <div class="dashboard-card ops-hub">
+        <div class="ops-bar">
+          <div class="ops-bar-left"><span class="live-dot"></span>Operations Network · Live</div>
+          <div class="ops-bar-right" id="opsClock">00:00:00</div>
+        </div>
+
+        <svg class="network-svg" viewBox="0 0 480 480" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="hubGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#6366f1"/>
+              <stop offset="50%" stop-color="#a855f7"/>
+              <stop offset="100%" stop-color="#ec4899"/>
+            </linearGradient>
+            <linearGradient id="linkGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#6366f1" stop-opacity="0.1"/>
+              <stop offset="50%" stop-color="#a855f7" stop-opacity="0.8"/>
+              <stop offset="100%" stop-color="#22d3ee" stop-opacity="0.1"/>
+            </linearGradient>
+            <radialGradient id="ringGrad">
+              <stop offset="0%" stop-color="#a855f7" stop-opacity="0"/>
+              <stop offset="80%" stop-color="#a855f7" stop-opacity=".5"/>
+              <stop offset="100%" stop-color="#a855f7" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+
+          <!-- Connection paths -->
+          <path id="lnk1" class="net-link" d="M240,240 L240,80"/>
+          <path id="lnk2" class="net-link" d="M240,240 L378,160"/>
+          <path id="lnk3" class="net-link" d="M240,240 L378,320"/>
+          <path id="lnk4" class="net-link" d="M240,240 L240,400"/>
+          <path id="lnk5" class="net-link" d="M240,240 L102,320"/>
+          <path id="lnk6" class="net-link" d="M240,240 L102,160"/>
+
+          <!-- Particles flowing along links (incoming -> hub, then outgoing) -->
+          <circle class="net-particle" r="3" fill="#22d3ee">
+            <animateMotion dur="2.6s" repeatCount="indefinite" begin="0s">
+              <mpath href="#lnk1"/>
+            </animateMotion>
+          </circle>
+          <circle class="net-particle" r="2.5" fill="#22d3ee">
+            <animateMotion dur="2.6s" repeatCount="indefinite" begin="1.3s">
+              <mpath href="#lnk1"/>
+            </animateMotion>
+          </circle>
+          <circle class="net-particle purple" r="3" fill="#c084fc">
+            <animateMotion dur="3.2s" repeatCount="indefinite" begin=".4s" keyPoints="1;0" keyTimes="0;1" calcMode="linear">
+              <mpath href="#lnk2"/>
+            </animateMotion>
+          </circle>
+          <circle class="net-particle" r="2.5" fill="#22d3ee">
+            <animateMotion dur="3s" repeatCount="indefinite" begin="0s">
+              <mpath href="#lnk3"/>
+            </animateMotion>
+          </circle>
+          <circle class="net-particle purple" r="3" fill="#c084fc">
+            <animateMotion dur="3s" repeatCount="indefinite" begin="1.5s" keyPoints="1;0" keyTimes="0;1" calcMode="linear">
+              <mpath href="#lnk3"/>
+            </animateMotion>
+          </circle>
+          <circle class="net-particle purple" r="3" fill="#c084fc">
+            <animateMotion dur="2.8s" repeatCount="indefinite" begin=".8s" keyPoints="1;0" keyTimes="0;1" calcMode="linear">
+              <mpath href="#lnk4"/>
+            </animateMotion>
+          </circle>
+          <circle class="net-particle" r="2.5" fill="#22d3ee">
+            <animateMotion dur="3.4s" repeatCount="indefinite" begin=".2s">
+              <mpath href="#lnk5"/>
+            </animateMotion>
+          </circle>
+          <circle class="net-particle purple" r="3" fill="#c084fc">
+            <animateMotion dur="2.9s" repeatCount="indefinite" begin="1.1s" keyPoints="1;0" keyTimes="0;1" calcMode="linear">
+              <mpath href="#lnk6"/>
+            </animateMotion>
+          </circle>
+
+          <!-- Hub pulsing rings -->
+          <circle class="hub-ring r1" cx="240" cy="240"/>
+          <circle class="hub-ring r2" cx="240" cy="240"/>
+          <circle class="hub-ring r3" cx="240" cy="240"/>
+
+          <!-- Satellite nodes -->
+          <g class="sat" data-name="Stores" data-msg="New order from <b>Shopify · BoldStore</b>" data-ic="g">
+            <circle class="sat-bg" cx="240" cy="60" r="32"/>
+            <text class="sat-icon" x="240" y="60">🏪</text>
+            <text class="sat-label" x="240" y="108">Stores</text>
+            <text class="sat-count" x="240" y="120">3 connected</text>
+          </g>
+          <g class="sat" data-name="Vendors" data-msg="<b>Vendor 'Asia Hub'</b> assigned to #10248" data-ic="p">
+            <circle class="sat-bg" cx="378" cy="160" r="32"/>
+            <text class="sat-icon" x="378" y="160">🤝</text>
+            <text class="sat-label" x="378" y="208">Vendors</text>
+            <text class="sat-count" x="378" y="220">23 active</text>
+          </g>
+          <g class="sat" data-name="Customers" data-msg="<b>Sarah M.</b> received delivery confirmation" data-ic="c">
+            <circle class="sat-bg" cx="378" cy="320" r="32"/>
+            <text class="sat-icon" x="378" y="320">👥</text>
+            <text class="sat-label" x="378" y="368">Customers</text>
+            <text class="sat-count" x="378" y="380">2,481 served</text>
+          </g>
+          <g class="sat" data-name="Inbox" data-msg="<b>AI Draft</b> ready for new refund request" data-ic="p">
+            <circle class="sat-bg" cx="240" cy="420" r="32"/>
+            <text class="sat-icon" x="240" y="420">📧</text>
+            <text class="sat-label" x="240" y="468">Inbox</text>
+          </g>
+          <g class="sat" data-name="AI" data-msg="<b>AI</b> classified email as 'Refund'" data-ic="p">
+            <circle class="sat-bg" cx="102" cy="320" r="32"/>
+            <text class="sat-icon" x="102" y="320">✨</text>
+            <text class="sat-label" x="102" y="368">AI Engine</text>
+            <text class="sat-count" x="102" y="380">GPT + Claude</text>
+          </g>
+          <g class="sat" data-name="Tracking" data-msg="<b>Live tracking</b> · #10247 → Out for delivery" data-ic="a">
+            <circle class="sat-bg" cx="102" cy="160" r="32"/>
+            <text class="sat-icon" x="102" y="160">📡</text>
+            <text class="sat-label" x="102" y="208">Tracking</text>
+            <text class="sat-count" x="102" y="220">14 in transit</text>
+          </g>
+
+          <!-- Center hub -->
+          <circle class="hub-core" cx="240" cy="240" r="44"/>
+          <text class="hub-text" x="240" y="238">DS</text>
+          <text class="hub-sub" x="240" y="256">DROP SIGMA</text>
+        </svg>
+
+        <div class="ops-feed">
+          <div class="ops-feed-head">
+            <span>Live activity feed</span>
+            <span class="pill-mini">streaming</span>
+          </div>
+          <div class="feed-list" id="feedList">
+            <div class="feed-row"><div class="ic g">✓</div><div class="msg">Order <b>#10248</b> synced from Shopify</div><div class="ts">just now</div></div>
+            <div class="feed-row"><div class="ic p">✦</div><div class="msg"><b>AI Draft</b> generated for Sarah's email</div><div class="ts">2s ago</div></div>
+            <div class="feed-row"><div class="ic a">📡</div><div class="msg"><b>Tracking</b> → Out for delivery</div><div class="ts">5s ago</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="float-card fc1">
+        <div class="ic green">✓</div>
+        <div>
+          <strong>Tracking Approved</strong>
+          <span>Order #10245 · Auto-updated to WooCommerce</span>
+        </div>
+      </div>
+      <div class="float-card fc2">
+        <div class="ic purple">✦</div>
+        <div>
+          <strong>AI Draft Ready</strong>
+          <span>Reply suggested for Sarah's email</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============== MARQUEE ============== -->
+<div class="marquee">
+  <div class="marquee-track">
+    <span class="marquee-item">Multi-Store Sync<span class="dot"></span></span>
+    <span class="marquee-item">Live Tracking<span class="dot"></span></span>
+    <span class="marquee-item">AI Email Drafts<span class="dot"></span></span>
+    <span class="marquee-item">Vendor Portal<span class="dot"></span></span>
+    <span class="marquee-item">Auto Status Update<span class="dot"></span></span>
+    <span class="marquee-item">Tracking Approval Queue<span class="dot"></span></span>
+    <span class="marquee-item">Gmail Inbox<span class="dot"></span></span>
+    <span class="marquee-item">Team Roles<span class="dot"></span></span>
+    <span class="marquee-item">KPI Dashboard<span class="dot"></span></span>
+    <span class="marquee-item">Email Templates<span class="dot"></span></span>
+    <span class="marquee-item">Multi-Store Sync<span class="dot"></span></span>
+    <span class="marquee-item">Live Tracking<span class="dot"></span></span>
+    <span class="marquee-item">AI Email Drafts<span class="dot"></span></span>
+    <span class="marquee-item">Vendor Portal<span class="dot"></span></span>
+    <span class="marquee-item">Auto Status Update<span class="dot"></span></span>
+    <span class="marquee-item">Tracking Approval Queue<span class="dot"></span></span>
+    <span class="marquee-item">Gmail Inbox<span class="dot"></span></span>
+    <span class="marquee-item">Team Roles<span class="dot"></span></span>
+    <span class="marquee-item">KPI Dashboard<span class="dot"></span></span>
+    <span class="marquee-item">Email Templates<span class="dot"></span></span>
+  </div>
+</div>
+
+<!-- ============== STATS ============== -->
+<section class="section">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow">Built to scale</span>
+      <h2 class="section-title">Everything your dropshipping store actually needs.</h2>
+      <p class="section-sub">Twelve modules, three portals, infinite vendors and stores — built into a single dashboard that gets out of your way.</p>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card reveal">
+        <div class="stat-num" data-count="12">0</div>
+        <div class="stat-label">Core Modules</div>
+      </div>
+      <div class="stat-card reveal">
+        <div class="stat-num" data-count="3">0</div>
+        <div class="stat-label">User Portals</div>
+      </div>
+      <div class="stat-card reveal">
+        <div class="stat-num" data-count="40"><small>+</small></div>
+        <div class="stat-label">Permission Toggles</div>
+      </div>
+      <div class="stat-card reveal">
+        <div class="stat-num" data-count="30"><small>d</small></div>
+        <div class="stat-label">Persistent Sessions</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============== FEATURES ============== -->
+<section class="section" id="features">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow">12 powerful modules · + 4 just shipped</span>
+      <h2 class="section-title">Every operation, in <span class="gradient-text">one tab.</span></h2>
+      <p class="section-sub">Bring your Shopify store, Gmail, courier sites and WhatsApp into one polished interface — Drop Sigma fuses your entire operation alongside the platforms you already use.</p>
+    </div>
+
+    <div class="features-grid">
+      <div class="feat featured reveal">
+        <div class="feat-icon">📡</div>
+        <h3>Live Tracking Sync</h3>
+        <p>Once your vendor submits a tracking number, Drop Sigma silently polls the courier's website using a headless browser, scrapes the live status, and auto-updates your WooCommerce order — no manual checking, no copy-paste.</p>
+        <span class="pill star">Industry-rare feature</span>
+        <div class="live-track-anim">
+          <div class="track-line"></div>
+          <div class="track-step active"><span class="dot"></span><span>Received</span></div>
+          <div class="track-step active"><span class="dot"></span><span>Processing</span></div>
+          <div class="track-step active"><span class="dot"></span><span>Shipped</span></div>
+          <div class="track-step active"><span class="dot"></span><span>Out for Delivery</span></div>
+          <div class="track-step active"><span class="dot"></span><span>Delivered</span></div>
+        </div>
+      </div>
+
+      <div class="feat reveal">
+        <div class="feat-icon">🏪</div>
+        <h3>Multi-Store Management</h3>
+        <p>Connect WooCommerce or Shopify stores via API. Live webhook sync keeps every order flowing in real time. Switch stores from the sidebar — data is fully isolated per store.</p>
+      </div>
+
+      <div class="feat reveal">
+        <div class="feat-icon">📦</div>
+        <h3>Order Management</h3>
+        <p>Unified table for every order across every store. Smart filters, bulk actions, full activity timeline, real-time polling every 30 seconds.</p>
+      </div>
+
+      <div class="feat reveal">
+        <div class="feat-icon">🤝</div>
+        <h3>Vendor Management</h3>
+        <p>Create vendor accounts, assign by store or product, control granular permissions, and lock products to specific vendors so new orders auto-route forever.</p>
+      </div>
+
+      <div class="feat reveal">
+        <div class="feat-icon">✅</div>
+        <h3>Tracking Approval Queue</h3>
+        <p>Vendors submit tracking, admins approve, reject or auto-approve. Once approved, the tracking pushes straight to WooCommerce.</p>
+      </div>
+
+      <div class="feat reveal">
+        <div class="feat-icon">📧</div>
+        <h3>Gmail Inbox Integration</h3>
+        <p>One-click Google OAuth. Chat-style threads, folder views, categories, assignments, real-time sync. Reply, send and manage — all inside Drop Sigma.</p>
+      </div>
+
+      <div class="feat reveal">
+        <div class="feat-icon">✨</div>
+        <h3>AI Email Drafts</h3>
+        <p>Click "AI Draft" — the model reads the email + the linked order and writes a perfect reply in your tone and language. Order context built-in.</p>
+      </div>
+
+      <div class="feat reveal">
+        <div class="feat-icon">📨</div>
+        <h3>Automated Email Templates</h3>
+        <p>Drag-and-drop visual builder. 10+ pre-built designs. Trigger on order placed, tracking added, delivery, payment failed and more. Dynamic variables baked in.</p>
+      </div>
+
+      <div class="feat reveal">
+        <div class="feat-icon">👥</div>
+        <h3>Team Management</h3>
+        <p>Five roles, 40+ permission toggles, workload view, status (Available / Busy / Offline). Members log in via the dedicated Employee Portal.</p>
+      </div>
+
+      <div class="feat reveal">
+        <div class="feat-icon">📊</div>
+        <h3>Revenue & KPI Dashboard</h3>
+        <p>Today's orders, revenue, active vendors, unread emails, store health, top vendors, 7-day chart, recent orders & emails — all on one screen.</p>
+      </div>
+
+      <div class="feat reveal">
+        <div class="feat-icon">🔒</div>
+        <h3>Permanent Product Routing</h3>
+        <p>Lock a SKU to a vendor permanently. Every future order for that product auto-routes — zero manual work, zero mistakes.</p>
+      </div>
+
+      <div class="feat reveal">
+        <div class="feat-icon">💚</div>
+        <h3>Store Health Monitor</h3>
+        <p>Real-time API connection check across all your connected stores. Alerts the moment a store goes offline or a webhook misfires.</p>
+      </div>
+    </div>
+
+    <!-- See-new-modules teaser strip -->
+    <a href="#whats-new" class="new-strip reveal">
+      <div class="new-strip-left">
+        <span class="new-badge">Just Shipped</span>
+        <div class="new-strip-text">
+          <b>4 brand-new modules</b>
+          <span>Live Chat · Personal Stock · Team Tasks · Unified Email Hub</span>
+        </div>
+      </div>
+      <div class="new-strip-right">
+        <span>See them live</span>
+        <span class="arr">→</span>
+      </div>
+    </a>
+  </div>
+</section>
+
+<!-- ============== WHAT'S NEW · JUST SHIPPED ============== -->
+<section class="section whats-new" id="whats-new">
+  <div class="container">
+    <div class="section-head reveal">
+      <div class="wn-head-row">
+        <span class="new-badge">Just Shipped</span>
+        <span class="eyebrow" style="margin:0">v2.4 release · 4 new modules</span>
+      </div>
+      <h2 class="section-title">Four new superpowers, <span class="gradient-text">live now.</span></h2>
+      <p class="section-sub">We just shipped the four most-requested modules. Hover any card to see them animate live — straight from the actual UI.</p>
+    </div>
+
+    <div class="whatsnew-grid">
+
+      <!-- ========== LIVE CHAT ========== -->
+      <div class="wn-card reveal" data-c="chat">
+        <div class="wn-head">
+          <div class="wn-icon">💬</div>
+          <div class="wn-title">
+            <h3>Live Chat <span class="new-badge">New</span></h3>
+            <p>Real-time messaging between admins, vendors and your team — built right into Drop Sigma. Typing indicators, presence, file drops, all live.</p>
+          </div>
+        </div>
+        <div class="wn-stage">
+          <div class="wn-stage-head">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span class="live-dot"></span>
+              <span><b>#order-10247</b> · 3 online</span>
+            </div>
+            <div class="lc-people">
+              <span class="lc-avatar ag1">AK</span>
+              <span class="lc-avatar ag2">SM</span>
+              <span class="lc-avatar ag3">JR</span>
+              <span class="lc-people-cnt lc-online">3 online</span>
+            </div>
+          </div>
+          <div class="lc-thread">
+            <div class="lc-msg left"><b>Sarah · Asia Hub</b><br>Tracking submitted for #10247 ✅<span class="meta">11:42 AM</span></div>
+            <div class="lc-msg right">Approved — pushing to WooCommerce now.<span class="meta">11:43 AM</span></div>
+            <div class="lc-msg left">Customer also asked about delivery ETA.<span class="meta">11:44 AM</span></div>
+            <div class="lc-msg right">Got it — I'll AI-draft a reply.<span class="meta">11:44 AM</span></div>
+            <div class="lc-typing"><span></span><span></span><span></span></div>
+          </div>
+        </div>
+        <div class="wn-foot">
+          <div class="feat-list">
+            <span>● Online presence</span>
+            <span>✦ Typing indicators</span>
+            <span>📎 File drops</span>
+            <span>🔔 Mentions</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========== STOCK ========== -->
+      <div class="wn-card reveal" data-c="stock">
+        <div class="wn-head">
+          <div class="wn-icon">📦</div>
+          <div class="wn-title">
+            <h3>Personal Stock Management <span class="new-badge">New</span></h3>
+            <p>SKU-level inventory with low-stock alerts, vendor binding and full audit history. Stock auto-decrements on every order placed.</p>
+          </div>
+        </div>
+        <div class="wn-stage">
+          <div class="wn-stage-head">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span class="live-dot"></span>
+              <span><b>Inventory</b> · 4 SKUs in view</span>
+            </div>
+            <span class="sm-counter">2 low-stock alerts</span>
+          </div>
+          <div class="sm-rows">
+            <div class="sm-row ok">
+              <span class="sku">EAR-PRO-04</span>
+              <div class="pname"><b>Wireless Earbuds Pro</b><span>Bound: Asia Hub</span></div>
+              <div class="qty">184<small>in stock</small></div>
+              <div class="bar"></div>
+            </div>
+            <div class="sm-row warn">
+              <span class="sku">SWX-3-BLK</span>
+              <div class="pname"><b>Smart Watch X3 — Black</b><span>Bound: EU Direct</span></div>
+              <div class="qty">23<small>reorder soon</small></div>
+              <div class="bar"></div>
+            </div>
+            <div class="sm-row low">
+              <span class="sku">DRN-MNI-K2</span>
+              <div class="pname"><b>Mini Drone Kit v2</b><span>Bound: Global Co.</span></div>
+              <div class="qty">4<small>low stock!</small></div>
+              <div class="bar"></div>
+            </div>
+            <div class="sm-row ok">
+              <span class="sku">USB-C-HUB</span>
+              <div class="pname"><b>USB-C 7-in-1 Hub</b><span>Bound: Pacific Sup.</span></div>
+              <div class="qty">312<small>in stock</small></div>
+              <div class="bar"></div>
+            </div>
+          </div>
+        </div>
+        <div class="wn-foot">
+          <div class="feat-list">
+            <span>🔔 Low-stock alerts</span>
+            <span>🔗 Vendor binding</span>
+            <span>📈 Auto-decrement</span>
+            <span>🕒 Full history</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========== TEAM TASKS ========== -->
+      <div class="wn-card reveal" data-c="task">
+        <div class="wn-head">
+          <div class="wn-icon">🗂️</div>
+          <div class="wn-title">
+            <h3>Team Task Assignment <span class="new-badge">New</span></h3>
+            <p>Drag-and-drop Kanban board to assign work across your team. Priorities, due dates, watchers and live status sync — all baked in.</p>
+          </div>
+        </div>
+        <div class="wn-stage">
+          <div class="wn-stage-head">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span class="live-dot"></span>
+              <span><b>Sprint board</b> · 4 members</span>
+            </div>
+            <span class="pill-mini">Live sync</span>
+          </div>
+          <div class="tk-board">
+            <div class="tk-col" data-s="todo">
+              <div class="tk-col-head"><span>To Do</span><span class="cnt">2</span></div>
+              <div class="tk-card">
+                <span class="tag p1">High</span>
+                <div>Investigate refund #10231</div>
+                <div class="meta"><span class="due">Today</span><div class="tk-avatars"><span class="av a1">AK</span></div></div>
+              </div>
+              <div class="tk-card">
+                <span class="tag p3">Low</span>
+                <div>Update SOP doc</div>
+                <div class="meta"><span class="due">Fri</span><div class="tk-avatars"><span class="av a4">JR</span></div></div>
+              </div>
+            </div>
+            <div class="tk-col" data-s="prog">
+              <div class="tk-col-head"><span>In Progress</span><span class="cnt">2</span></div>
+              <div class="tk-card">
+                <span class="tag p2">Med</span>
+                <div>AI-draft reply for #10247</div>
+                <div class="meta"><span class="due">2h left</span><div class="tk-avatars"><span class="av a2">SM</span><span class="av a3">JL</span></div></div>
+              </div>
+              <div class="tk-card">
+                <span class="tag p1">High</span>
+                <div>Vendor onboarding · EU3</div>
+                <div class="meta"><span class="due">Tmrw</span><div class="tk-avatars"><span class="av a1">AK</span></div></div>
+              </div>
+            </div>
+            <div class="tk-col" data-s="done">
+              <div class="tk-col-head"><span>Done</span><span class="cnt">3</span></div>
+              <div class="tk-card">
+                <span class="tag p3">Low</span>
+                <div>Push tracking #10245</div>
+                <div class="meta"><span class="due">Done</span><div class="tk-avatars"><span class="av a3">JL</span></div></div>
+              </div>
+              <div class="tk-card">
+                <span class="tag p2">Med</span>
+                <div>Stock reorder · DRN-MNI</div>
+                <div class="meta"><span class="due">Done</span><div class="tk-avatars"><span class="av a2">SM</span></div></div>
+              </div>
+            </div>
+            <div class="tk-card fly">
+              <span class="tag p2">Med</span>
+              <div>Reassigning task…</div>
+              <div class="meta"><span class="due">Live</span><div class="tk-avatars"><span class="av a4">JR</span></div></div>
+            </div>
+          </div>
+          <div class="tk-progress">
+            <span><b>Sprint</b> 64% complete</span>
+            <div class="tk-bar"></div>
+            <span>14 / 22</span>
+          </div>
+        </div>
+        <div class="wn-foot">
+          <div class="feat-list">
+            <span>↔ Drag &amp; drop</span>
+            <span>🏷️ Priorities</span>
+            <span>👥 Watchers</span>
+            <span>📅 Due dates</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========== EMAIL HUB ========== -->
+      <div class="wn-card reveal" data-c="mail">
+        <div class="wn-head">
+          <div class="wn-icon">📨</div>
+          <div class="wn-title">
+            <h3>Unified Email Hub <span class="new-badge">New</span></h3>
+            <p>Connect Gmail, Outlook, Yahoo and any IMAP server. Send and receive every email from a single inbox — never switch tabs again.</p>
+          </div>
+        </div>
+        <div class="wn-stage">
+          <div class="wn-stage-head">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span class="live-dot"></span>
+              <span><b>4 inboxes</b> · 12 unread</span>
+            </div>
+            <span class="pill-mini">All synced</span>
+          </div>
+          <div class="eh-providers">
+            <span class="eh-provider gmail"><span class="pdot"></span>Gmail</span>
+            <span class="eh-provider outlook"><span class="pdot"></span>Outlook</span>
+            <span class="eh-provider yahoo"><span class="pdot"></span>Yahoo</span>
+            <span class="eh-provider imap"><span class="pdot"></span>IMAP</span>
+          </div>
+          <div class="eh-inbox">
+            <div class="eh-mail unread">
+              <span class="src g">G</span>
+              <div class="body"><b>Sarah Mitchell</b><span>Re: Order #10248 — earbud not charging</span></div>
+              <span class="ts">2m</span>
+            </div>
+            <div class="eh-mail unread">
+              <span class="src o">O</span>
+              <div class="body"><b>Asia Hub Logistics</b><span>Tracking submitted · #10247 · DPD-9847…</span></div>
+              <span class="ts">8m</span>
+            </div>
+            <div class="eh-mail">
+              <span class="src y">Y</span>
+              <div class="body"><b>Maria Garcia</b><span>Order #10246 — when will it ship?</span></div>
+              <span class="ts">22m</span>
+            </div>
+            <div class="eh-mail">
+              <span class="src i">I</span>
+              <div class="body"><b>support@store.com</b><span>Daily digest · 14 orders, 2 failed payments</span></div>
+              <span class="ts">1h</span>
+            </div>
+          </div>
+          <div class="eh-ticker">
+            <span class="arrow">→</span>
+            <span>Sent <b>3</b> · Received <b>14</b> · Live sync every <b>30s</b></span>
+          </div>
+          <button class="eh-compose" type="button" aria-label="Compose">✦</button>
+        </div>
+        <div class="wn-foot">
+          <div class="feat-list">
+            <span>📥 Multi-inbox</span>
+            <span>📤 Send from any</span>
+            <span>🤖 AI replies</span>
+            <span>🔄 30s sync</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============== USP / WHY ============== -->
+<section class="section">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow">Why Drop Sigma</span>
+      <h2 class="section-title">Seven reasons teams switch.</h2>
+      <p class="section-sub">The features that put us in a different category from generic ecommerce tools.</p>
+    </div>
+    <div class="usp-grid">
+      <div class="usp-card reveal">
+        <div class="usp-icon">🌌</div>
+        <div>
+          <h4>Everything in one tab</h4>
+          <p>No more switching between Gmail, courier websites, and WhatsApp. Every operation lives inside Drop Sigma, alongside your Shopify store.</p>
+        </div>
+      </div>
+      <div class="usp-card reveal">
+        <div class="usp-icon">📡</div>
+        <div>
+          <h4>Live Tracking Sync</h4>
+          <p>An industry-rare capability: we poll courier sites live and auto-update WooCommerce status without you lifting a finger.</p>
+        </div>
+      </div>
+      <div class="usp-card reveal">
+        <div class="usp-icon">🤝</div>
+        <div>
+          <h4>Vendor Portal</h4>
+          <p>Vendors get their own login, submit tracking, never see customer emails or order amounts unless you allow it.</p>
+        </div>
+      </div>
+      <div class="usp-card reveal">
+        <div class="usp-icon">✨</div>
+        <div>
+          <h4>AI that knows your orders</h4>
+          <p>Unlike generic AI tools, our AI reads the actual order data — number, product, status, tracking — when drafting replies.</p>
+        </div>
+      </div>
+      <div class="usp-card reveal">
+        <div class="usp-icon">⚡</div>
+        <div>
+          <h4>Auto Email Machine</h4>
+          <p>One toggle, every status change triggers a fully branded customer email automatically. Set it once, forget it forever.</p>
+        </div>
+      </div>
+      <div class="usp-card reveal">
+        <div class="usp-icon">📈</div>
+        <div>
+          <h4>Built for scale</h4>
+          <p>Works for 1 store or 10 stores, 1 vendor or 100 vendors — same interface, no degradation, no extra setup.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============== MODULE SHOWCASE (NEW) ============== -->
+<section class="section" id="showcase">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow">See it in action</span>
+      <h2 class="section-title">Click any module. <span class="gradient-text">Watch it work.</span></h2>
+      <p class="section-sub">A live, interactive look at the modules you'll use every day. Each tab auto-advances — or click to drive yourself.</p>
+    </div>
+
+    <div class="showcase-wrap reveal">
+      <div class="showcase-tabs" role="tablist">
+        <button class="tab-btn active" data-pane="orders"><span class="icon">📦</span> Orders</button>
+        <button class="tab-btn" data-pane="vendors"><span class="icon">🤝</span> Vendors</button>
+        <button class="tab-btn" data-pane="ai"><span class="icon">✨</span> AI Email Drafts</button>
+        <button class="tab-btn" data-pane="tracking"><span class="icon">📡</span> Live Tracking</button>
+        <button class="tab-btn" data-pane="templates"><span class="icon">📨</span> Email Templates</button>
+      </div>
+
+      <div class="showcase-stage">
+        <!-- ORDERS -->
+        <div class="showcase-pane active" data-pane="orders">
+          <div class="pane-info">
+            <h3>One inbox for every order.</h3>
+            <p>Every order from every store flows into one beautiful, searchable table — with smart filters, bulk actions, and a complete activity timeline per order.</p>
+            <ul>
+              <li>Real-time sync from WooCommerce + Shopify</li>
+              <li>Bulk vendor assignment in one click</li>
+              <li>Filter by status, date, vendor, product</li>
+              <li>Per-order activity log + audit trail</li>
+            </ul>
+          </div>
+          <div class="pane-mock">
+            <div class="pmock-head"><div class="dots"><span></span><span></span><span></span></div>Orders · 2,481 total · 47 today</div>
+            <div class="pmock-body">
+              <div class="mock-table-row">
+                <div class="cust">Sarah Mitchell <span>#10248 · Wireless Earbuds Pro</span></div>
+                <span class="vend">Asia Hub</span>
+                <span class="badge success">Delivered</span>
+                <span class="price">$89</span>
+              </div>
+              <div class="mock-table-row">
+                <div class="cust">Ahmed Khan <span>#10247 · Smart Watch X3</span></div>
+                <span class="vend">Asia Hub</span>
+                <span class="badge warn">In Transit</span>
+                <span class="price">$129</span>
+              </div>
+              <div class="mock-table-row">
+                <div class="cust">Maria Garcia <span>#10246 · LED Strip Light</span></div>
+                <span class="vend">EU Direct</span>
+                <span class="badge info">Processing</span>
+                <span class="price">$34</span>
+              </div>
+              <div class="mock-table-row">
+                <div class="cust">Liam O'Connor <span>#10245 · Mini Drone Kit</span></div>
+                <span class="vend">Global Co.</span>
+                <span class="badge success">Delivered</span>
+                <span class="price">$199</span>
+              </div>
+              <div class="mock-table-row">
+                <div class="cust">Yuki Tanaka <span>#10244 · USB-C Hub</span></div>
+                <span class="vend">Asia Hub</span>
+                <span class="badge info">Processing</span>
+                <span class="price">$48</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- VENDORS -->
+        <div class="showcase-pane" data-pane="vendors">
+          <div class="pane-info">
+            <h3>Vendors that route themselves.</h3>
+            <p>Lock products to specific vendors permanently. Every future order auto-routes the moment it arrives. No spreadsheets, no copy-paste, no mistakes.</p>
+            <ul>
+              <li>Permanent product → vendor binding</li>
+              <li>Per-vendor permission toggles (40+)</li>
+              <li>Workload tracking across all vendors</li>
+              <li>Vendor portal for tracking submission</li>
+            </ul>
+          </div>
+          <div class="pane-mock">
+            <div class="pmock-head"><div class="dots"><span></span><span></span><span></span></div>Vendor Workload · 23 active</div>
+            <div class="pmock-body">
+              <div class="vmock-card">
+                <div class="top"><div class="name">Asia Hub</div><span class="stat">Active</span></div>
+                <div class="vmock-bar"><div class="vmock-bar-fill" style="width:82%;animation-delay:.1s"></div></div>
+                <div class="vmock-meta"><span>184 orders · 12 today</span><span style="color:var(--green)">82% capacity</span></div>
+              </div>
+              <div class="vmock-card">
+                <div class="top"><div class="name">EU Direct Logistics</div><span class="stat">Active</span></div>
+                <div class="vmock-bar"><div class="vmock-bar-fill" style="width:54%;animation-delay:.2s"></div></div>
+                <div class="vmock-meta"><span>96 orders · 7 today</span><span style="color:var(--cyan)">54% capacity</span></div>
+              </div>
+              <div class="vmock-card">
+                <div class="top"><div class="name">Global Co.</div><span class="stat">Active</span></div>
+                <div class="vmock-bar"><div class="vmock-bar-fill" style="width:38%;animation-delay:.3s"></div></div>
+                <div class="vmock-meta"><span>48 orders · 3 today</span><span style="color:var(--ink-2)">38% capacity</span></div>
+              </div>
+              <div class="vmock-card">
+                <div class="top"><div class="name">Pacific Suppliers</div><span class="stat">Active</span></div>
+                <div class="vmock-bar"><div class="vmock-bar-fill" style="width:67%;animation-delay:.4s"></div></div>
+                <div class="vmock-meta"><span>112 orders · 9 today</span><span style="color:var(--green)">67% capacity</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- AI EMAIL -->
+        <div class="showcase-pane" data-pane="ai">
+          <div class="pane-info">
+            <h3>An AI that knows your orders.</h3>
+            <p>Click "AI Draft" — the model reads the customer's email <em>and</em> the linked order (number, product, status, tracking) and writes the perfect reply in your tone.</p>
+            <ul>
+              <li>Reads order context automatically</li>
+              <li>Tone: Friendly · Professional · Formal</li>
+              <li>Multi-language: EN · FR · AR · ES</li>
+              <li>Powered by GPT-4 + Claude</li>
+            </ul>
+          </div>
+          <div class="pane-mock">
+            <div class="pmock-head"><div class="dots"><span></span><span></span><span></span></div>Inbox · sarah@gmail.com</div>
+            <div class="pmock-body">
+              <div class="amock-thread">
+                <div class="from">From: Sarah Mitchell · 2 minutes ago</div>
+                <div class="body">Hi! I just got my <b>Wireless Earbuds</b> order #<b>10248</b>, but the left earbud isn't charging. Can you help? Thanks!</div>
+              </div>
+              <div class="amock-draft">
+                <div class="typing" id="aiTyping"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TRACKING -->
+        <div class="showcase-pane" data-pane="tracking">
+          <div class="pane-info">
+            <h3>Tracking that updates itself.</h3>
+            <p>Once a tracking number is approved, Drop Sigma quietly polls the courier's website live, parses the status, and writes it straight back to your WooCommerce order.</p>
+            <ul>
+              <li>Headless browser polls courier sites</li>
+              <li>Auto-maps status keywords to order states</li>
+              <li>Sends customer email on each milestone</li>
+              <li>Records delivery timestamp automatically</li>
+            </ul>
+          </div>
+          <div class="pane-mock">
+            <div class="pmock-head"><div class="dots"><span></span><span></span><span></span></div>Tracking · #10247 · Smart Watch X3</div>
+            <div class="pmock-body">
+              <div class="tmock-card">
+                <div class="tmock-num">DPD-9847-2841-3387</div>
+                <div class="tmock-courier">Courier: DPD · Last poll: 8s ago</div>
+                <div class="tmock-stages">
+                  <div class="tmock-line"></div>
+                  <div class="tmock-stage done"><div class="dot">✓</div><div class="lbl">Received</div></div>
+                  <div class="tmock-stage done"><div class="dot">✓</div><div class="lbl">Picked Up</div></div>
+                  <div class="tmock-stage done"><div class="dot">✓</div><div class="lbl">In Transit</div></div>
+                  <div class="tmock-stage active"><div class="dot">●</div><div class="lbl">Out for Delivery</div></div>
+                  <div class="tmock-stage"><div class="dot">·</div><div class="lbl">Delivered</div></div>
+                </div>
+                <div class="tmock-meta">
+                  <div><span>Status</span><b style="color:var(--cyan-2)">Out for Delivery</b></div>
+                  <div><span>Auto-synced to</span><b>WooCommerce ✓</b></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TEMPLATES -->
+        <div class="showcase-pane" data-pane="templates">
+          <div class="pane-info">
+            <h3>Branded emails on autopilot.</h3>
+            <p>Build once, send forever. Every order milestone — placed, shipped, delivered, failed — fires a beautiful, branded email automatically. Set the default and forget it.</p>
+            <ul>
+              <li>10+ pre-built designs out of the box</li>
+              <li>Dynamic variables: {{customer_name}}, {{tracking}} ...</li>
+              <li>One toggle for full auto-emailing</li>
+              <li>Per-category default template selection</li>
+            </ul>
+          </div>
+          <div class="pane-mock">
+            <div class="pmock-head"><div class="dots"><span></span><span></span><span></span></div>Email Templates · Shipping</div>
+            <div class="pmock-body">
+              <div class="emock-grid">
+                <div class="emock-card default">
+                  <div class="tag">Shipping</div>
+                  <div class="name">Modern Minimal</div>
+                  <div class="preview">Your order is on its way! Track here →</div>
+                  <div class="badge-default">Default</div>
+                </div>
+                <div class="emock-card">
+                  <div class="tag">Shipping</div>
+                  <div class="name">Bold &amp; Branded</div>
+                  <div class="preview">Hey {{name}}, your package shipped...</div>
+                </div>
+                <div class="emock-card">
+                  <div class="tag">Shipping</div>
+                  <div class="name">Friendly Casual</div>
+                  <div class="preview">Good news! Your order #{{order}} is...</div>
+                </div>
+                <div class="emock-card">
+                  <div class="tag">Shipping</div>
+                  <div class="name">Premium Card</div>
+                  <div class="preview">Dear {{customer}}, we have shipped your...</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============== HOW IT WORKS — Animated Pipeline ============== -->
+<section class="section" id="how">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow">How it works</span>
+      <h2 class="section-title">Watch an order travel through <span class="gradient-text">Drop Sigma.</span></h2>
+      <p class="section-sub">Live, looping animation. Connect once and Drop Sigma carries every order from store to customer doorstep on autopilot.</p>
+    </div>
+
+    <div class="pipeline reveal">
+      <div class="pipe-track" id="pipeTrack">
+        <div class="pipe-rail"></div>
+        <div class="pipe-package">📦</div>
+
+        <div class="pipe-station" data-stage="0">
+          <div class="pipe-circle">🏪<span class="pipe-num">1</span></div>
+          <div class="pipe-info"><h4>Connect Store</h4><p>Plug in WooCommerce or Shopify in under 2 minutes.</p></div>
+        </div>
+        <div class="pipe-station" data-stage="1">
+          <div class="pipe-circle">⚡<span class="pipe-num">2</span></div>
+          <div class="pipe-info"><h4>Order Syncs</h4><p>Webhook fires the instant a customer places an order.</p></div>
+        </div>
+        <div class="pipe-station" data-stage="2">
+          <div class="pipe-circle">🤝<span class="pipe-num">3</span></div>
+          <div class="pipe-info"><h4>Vendor Assigned</h4><p>Auto-route by product or assign in one click.</p></div>
+        </div>
+        <div class="pipe-station" data-stage="3">
+          <div class="pipe-circle">📡<span class="pipe-num">4</span></div>
+          <div class="pipe-info"><h4>Tracking Live</h4><p>Vendor submits tracking · live courier sync starts.</p></div>
+        </div>
+        <div class="pipe-station" data-stage="4">
+          <div class="pipe-circle">✓<span class="pipe-num">5</span></div>
+          <div class="pipe-info"><h4>Customer Notified</h4><p>Branded emails fire automatically on every milestone.</p></div>
+        </div>
+      </div>
+
+      <div class="pipe-status">
+        <div class="pipe-status-left">
+          <span class="live-dot"></span>
+          Stage: <b id="pipeLabel">Connect Store</b> · Order <b id="pipeOrd">#10248</b>
+        </div>
+        <div class="pipe-status-right" id="pipeRT">processed in 0.42s</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============== PORTALS ============== -->
+<section class="section" id="portals">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow">Three portals · One platform</span>
+      <h2 class="section-title">Right access for every role.</h2>
+      <p class="section-sub">Admin, vendor, and team-member portals — with strict, per-role permissions baked in by design. Click below to peek at each.</p>
+    </div>
+
+    <div class="portal-showcase reveal" data-portal="admin" id="portalShowcase">
+      <div class="portal-tabs">
+        <button class="ptab active" data-pt="admin"><span class="dot"></span>Admin Dashboard <span style="opacity:.6;font-size:11px;margin-left:4px">/dashboard/</span></button>
+        <button class="ptab" data-pt="vendor"><span class="dot"></span>Vendor Portal <span style="opacity:.6;font-size:11px;margin-left:4px">/vendor/dashboard/</span></button>
+        <button class="ptab" data-pt="team"><span class="dot"></span>Employee Portal <span style="opacity:.6;font-size:11px;margin-left:4px">/employee/dashboard/</span></button>
+      </div>
+
+      <div class="portal-screen">
+        <!-- ADMIN -->
+        <div class="pscreen active" data-pt="admin">
+          <div class="pscreen-header">
+            <h4>Admin · Full Operations View</h4>
+            <span class="small">Logged in as Owner</span>
+          </div>
+          <div class="psgrid">
+            <div class="pscell"><div class="l">Total Orders</div><div class="v">2,481</div></div>
+            <div class="pscell"><div class="l">Revenue</div><div class="v">$184k</div></div>
+            <div class="pscell"><div class="l">Vendors</div><div class="v">23</div></div>
+            <div class="pscell"><div class="l">Need Attention</div><div class="v" style="color:var(--amber)">7</div></div>
+          </div>
+          <div class="pslist">
+            <div class="psitem"><div class="av a1">SM</div><div class="nm">Sarah Mitchell <span>#10248 · Wireless Earbuds Pro</span></div><span class="badge success">Delivered</span></div>
+            <div class="psitem"><div class="av a2">AK</div><div class="nm">Ahmed Khan <span>#10247 · Smart Watch X3</span></div><span class="badge warn">In Transit</span></div>
+            <div class="psitem"><div class="av a3">MG</div><div class="nm">Maria Garcia <span>#10246 · LED Strip Light</span></div><span class="badge info">Processing</span></div>
+          </div>
+        </div>
+
+        <!-- VENDOR -->
+        <div class="pscreen" data-pt="vendor">
+          <div class="pscreen-header">
+            <h4>Vendor · Asia Hub Logistics</h4>
+            <span class="small">Limited view · 12 assigned orders</span>
+          </div>
+          <div class="psgrid">
+            <div class="pscell"><div class="l">Assigned</div><div class="v">12</div></div>
+            <div class="pscell"><div class="l">Tracking Pending</div><div class="v" style="color:var(--amber)">4</div></div>
+            <div class="pscell"><div class="l">Completed</div><div class="v" style="color:var(--green)">182</div></div>
+            <div class="pscell"><div class="l">Approval Rate</div><div class="v">98%</div></div>
+          </div>
+          <div class="pslist">
+            <div class="psitem"><div class="av a4">📦</div><div class="nm">Wireless Earbuds Pro <span>#10248 · Awaiting tracking</span></div><span class="badge warn">Action needed</span></div>
+            <div class="psitem"><div class="av a4">📦</div><div class="nm">Smart Watch X3 <span>#10247 · Tracking submitted</span></div><span class="badge info">Pending review</span></div>
+            <div class="psitem"><div class="av a4">📦</div><div class="nm">USB-C Hub <span>#10244 · Tracking approved</span></div><span class="badge success">Approved</span></div>
+          </div>
+          <div style="margin-top:12px;padding:10px;background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.25);border-radius:8px;font-size:11px;color:var(--purple-2)"><b>Privacy:</b> Customer email & order amount hidden by admin permission</div>
+        </div>
+
+        <!-- TEAM -->
+        <div class="pscreen" data-pt="team">
+          <div class="pscreen-header">
+            <h4>Team · Hira Ahmed (Email Manager)</h4>
+            <span class="small">Status: <span style="color:var(--green)">● Available</span></span>
+          </div>
+          <div class="psgrid">
+            <div class="pscell"><div class="l">Assigned Orders</div><div class="v">31</div></div>
+            <div class="pscell"><div class="l">Inbox Threads</div><div class="v">14</div></div>
+            <div class="pscell"><div class="l">Resolved Today</div><div class="v" style="color:var(--green)">12</div></div>
+            <div class="pscell"><div class="l">Permissions</div><div class="v">22/40</div></div>
+          </div>
+          <div class="pslist">
+            <div class="psitem"><div class="av a1">SM</div><div class="nm">Sarah Mitchell <span>Refund request · #10248 · 2m ago</span></div><span class="badge info">New</span></div>
+            <div class="psitem"><div class="av a2">AK</div><div class="nm">Ahmed Khan <span>Shipping question · #10247 · 14m ago</span></div><span class="badge warn">Open</span></div>
+            <div class="psitem"><div class="av a3">LO</div><div class="nm">Liam O'Connor <span>Thank you note · #10245 · 1h ago</span></div><span class="badge success">Resolved</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="portals-grid">
+      <div class="portal admin reveal">
+        <span class="portal-tag">Admin Dashboard</span>
+        <h3>The Owner Cockpit</h3>
+        <code class="url">/dashboard/</code>
+        <ul>
+          <li>Full access to every module</li>
+          <li>Connect & manage stores</li>
+          <li>Approve tracking submissions</li>
+          <li>Build email templates</li>
+          <li>Invite team & vendors</li>
+          <li>View all KPIs and revenue</li>
+        </ul>
+      </div>
+      <div class="portal vendor reveal">
+        <span class="portal-tag">Vendor Portal</span>
+        <h3>For Your Suppliers</h3>
+        <code class="url">/vendor/dashboard/</code>
+        <ul>
+          <li>See only assigned orders</li>
+          <li>Submit tracking numbers</li>
+          <li>Hide customer details by toggle</li>
+          <li>Hide order amounts by toggle</li>
+          <li>Independent vendor login</li>
+          <li>Activity log per submission</li>
+        </ul>
+      </div>
+      <div class="portal team reveal">
+        <span class="portal-tag">Employee Portal</span>
+        <h3>For Your Team</h3>
+        <code class="url">/employee/dashboard/</code>
+        <ul>
+          <li>Role-based access (5 roles)</li>
+          <li>40+ permission toggles</li>
+          <li>Assigned orders & emails</li>
+          <li>Status indicator (Available/Busy)</li>
+          <li>Workload visibility</li>
+          <li>Separate, secure login</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============== PRICING ============== -->
+<section class="section" id="pricing">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow">One plan. Everything included.</span>
+      <h2 class="section-title">Simple, honest <span class="gradient-text">pricing.</span></h2>
+      <p class="section-sub">3 stores, 2 email accounts, unlimited vendors and all features — no tiers, no limits, no hidden costs.</p>
+    </div>
+
+    <div style="max-width:520px;margin:0 auto;" class="reveal">
+      <div class="tier popular" style="transform:none;">
+        <div class="popular-badge">★ All Features Included</div>
+        <div class="tier-name">Drop Sigma Pro</div>
+        <div class="tier-for">Everything you need to run a full dropshipping operation</div>
+        <div class="tier-price">
+          <span class="currency">$</span><span class="amount">99</span>
+        </div>
+        <div class="tier-period">per month, billed monthly · cancel anytime</div>
+        <a href="/signup/" class="btn btn-primary tier-cta"><span>Get Started →</span></a>
+        <ul class="tier-features">
+          <li><span class="ic yes">✓</span><span><strong>3 Stores</strong> (WooCommerce or Shopify)</span></li>
+          <li><span class="ic yes">✓</span><span><strong>2 Email Accounts</strong> (Gmail Integration)</span></li>
+          <li><span class="ic yes">✓</span><span><strong>Unlimited Vendors</strong> + Vendor Portal</span></li>
+          <li><span class="ic yes">✓</span><span>Unlimited Orders & Order Management</span></li>
+          <li><span class="ic yes">✓</span><span>Permanent Product-Vendor Assignment</span></li>
+          <li><span class="ic yes">✓</span><span><strong>Unlimited Team Members</strong> + Role-Based Permissions</span></li>
+          <li><span class="ic yes">✓</span><span>Live Tracking Sync (Auto Status Update)</span></li>
+          <li><span class="ic yes">✓</span><span>Tracking Approval Queue</span></li>
+          <li><span class="ic yes">✓</span><span>Unlimited Email Templates</span></li>
+          <li><span class="ic yes">✓</span><span>Auto Email on Status Change</span></li>
+          <li><span class="ic yes">✓</span><span><strong>AI Email Drafts</strong> (GPT + Claude powered)</span></li>
+          <li><span class="ic yes">✓</span><span>Revenue & KPI Dashboard</span></li>
+          <li><span class="ic yes">✓</span><span>Store Health Monitor</span></li>
+          <li><span class="ic yes">✓</span><span>Bulk Order Actions</span></li>
+          <li><span class="ic yes">✓</span><span>Stock Management</span></li>
+          <li><span class="ic yes">✓</span><span>Team Chat</span></li>
+          <li><span class="ic yes">✓</span><span>Priority Support</span></li>
+        </ul>
+      </div>
+    </div>
+    <p style="max-width:520px;margin:18px auto 0;text-align:center;font-size:12.5px;color:var(--ink-3);line-height:1.6;font-style:italic;">
+      Subscriptions billed externally at <a href="https://dropsigma.com" style="color:var(--indigo-2);">dropsigma.com</a> via Stripe. Shopify App Store install is always free.
+    </p>
+  </div>
+</section>
+
+<!-- ============== FAQ ============== -->
+<section class="section" id="faq">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow">Frequently asked</span>
+      <h2 class="section-title">Questions, answered.</h2>
+    </div>
+    <div class="faq">
+      <div class="faq-item">
+        <div class="faq-q">How long does it take to connect my store? <span class="plus">+</span></div>
+        <div class="faq-a"><div class="faq-a-inner">Under 2 minutes. Paste your WooCommerce or Shopify API key and secret, hit save, and Drop Sigma fetches your existing orders + sets up live webhooks for new orders automatically.</div></div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Does Drop Sigma really update WooCommerce status automatically? <span class="plus">+</span></div>
+        <div class="faq-a"><div class="faq-a-inner">Yes. Once a tracking number is approved, our headless browser polls the courier's site, parses the live status, and writes the update straight back to your WooCommerce order. Status keywords like "delivered", "in transit", and "out for delivery" are detected and mapped automatically.</div></div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Can vendors see my customers' email addresses? <span class="plus">+</span></div>
+        <div class="faq-a"><div class="faq-a-inner">Only if you let them. Each vendor has granular permission toggles for customer email, order amount, store URL, assigned team member, and more. Defaults are privacy-first.</div></div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Does the AI Email Draft actually understand my orders? <span class="plus">+</span></div>
+        <div class="faq-a"><div class="faq-a-inner">Yes — that's the point. When you click "AI Draft", we feed the model the linked order details (number, product, status, tracking) along with your tone/language settings. The reply that comes back is tailored to that specific situation.</div></div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">What if I have more than 3 stores? <span class="plus">+</span></div>
+        <div class="faq-a"><div class="faq-a-inner">Drop Sigma Pro includes 3 stores and unlimited team members. If you need additional stores beyond the 3 included, reach out to us — we can accommodate larger setups.</div></div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Are there any discounts? <span class="plus">+</span></div>
+        <div class="faq-a"><div class="faq-a-inner">We offer coupon codes for discounts. Sign up, and if you have a coupon code you can apply it at checkout to reduce or eliminate the first month's cost.</div></div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Can I cancel anytime? <span class="plus">+</span></div>
+        <div class="faq-a"><div class="faq-a-inner">Yes. There's no contract. Cancel from your billing settings any time and you keep access until the end of your billing cycle.</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============== FINAL CTA ============== -->
+<section class="section">
+  <div class="container">
+    <div class="final-cta reveal">
+      <h2>Start managing <span class="gradient-text">smarter.</span></h2>
+      <p>Stop drowning in tabs and spreadsheets. Bring your entire dropshipping operation into one beautiful, fast, AI-powered command center.</p>
+      <div class="cta-row">
+        <a href="/login/" class="btn btn-primary"><span>Access Dashboard →</span></a>
+        <a href="#features" class="btn btn-ghost">Explore Features</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============== FOOTER ============== -->
+<footer>
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a href="#" class="logo">
+          <div class="logo-mark"><span>DS</span></div>
+          <div>
+            <div class="logo-text">Drop Sigma</div>
+            <small class="logo-sub">Ecommerce Operations OS</small>
+          </div>
+        </a>
+        <p>The complete operations platform for serious dropshipping businesses. Multi-store, multi-vendor, AI-powered, beautifully built.</p>
+      </div>
+      <div class="footer-col">
+        <h5>Product</h5>
+        <ul>
+          <li><a href="/features/">Features</a></li>
+          <li><a href="/pricing/">Pricing</a></li>
+          <li><a href="/docs/">Documentation</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h5>Company</h5>
+        <ul>
+          <li><a href="/about/">About</a></li>
+          <li><a href="/contact/">Contact</a></li>
+          <li><a href="/support/">Support</a></li>
+          <li><a href="/login/">Log in</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h5>Legal</h5>
+        <ul>
+          <li><a href="/terms/">Terms of Service</a></li>
+          <li><a href="/privacy/">Privacy Policy</a></li>
+          <li><a href="/cookies/">Cookie Policy</a></li>
+          <li><a href="/refund/">Refund Policy</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <div>© 2026 Drop Sigma · dropsigma.com</div>
+      <div>Built for dropshippers who refuse to live in browser tabs.</div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Sticky nav shrink
+  const nav = document.getElementById('nav');
+  window.addEventListener('scroll', () => {
+    if (window.scrollY > 30) nav.classList.add('scrolled');
+    else nav.classList.remove('scrolled');
+  });
+
+  // Reveal on scroll
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('in');
+        io.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.12 });
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+  // Counter animation
+  const counters = document.querySelectorAll('[data-count]');
+  const counterIO = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        const el = e.target;
+        const target = parseInt(el.dataset.count, 10);
+        const small = el.querySelector('small');
+        const smallText = small ? small.outerHTML : '';
+        let current = 0;
+        const steps = 50;
+        const inc = target / steps;
+        const interval = setInterval(() => {
+          current += inc;
+          if (current >= target) {
+            current = target;
+            clearInterval(interval);
+          }
+          el.innerHTML = Math.floor(current) + smallText;
+        }, 24);
+        counterIO.unobserve(el);
+      }
+    });
+  }, { threshold: 0.4 });
+  counters.forEach(c => counterIO.observe(c));
+
+  // FAQ toggle
+  document.querySelectorAll('.faq-q').forEach(q => {
+    q.addEventListener('click', () => {
+      q.parentElement.classList.toggle('open');
+    });
+  });
+
+  // Feature card spotlight
+  document.querySelectorAll('.feat, .wn-card').forEach(card => {
+    card.addEventListener('mousemove', (e) => {
+      const r = card.getBoundingClientRect();
+      card.style.setProperty('--mx', (e.clientX - r.left) + 'px');
+      card.style.setProperty('--my', (e.clientY - r.top) + 'px');
+    });
+  });
+
+  // ===== Live Chat: keep "typing" then drop a final new bubble forever =====
+  (function liveChatLoop(){
+    const thread = document.querySelector('.wn-card[data-c="chat"] .lc-thread');
+    if (!thread) return;
+    const msgs = [
+      {side:'right', who:'You', text:'AI draft is ready — sending in 3s ✨'},
+      {side:'left',  who:'Sarah · Asia Hub', text:'Customer just replied — happy with ETA 👌'},
+      {side:'right', who:'You', text:'Awesome — closing the ticket.'},
+      {side:'left',  who:'JR · Support', text:'Stock for SWX-3 reordered with EU Direct.'},
+    ];
+    let i = 0;
+    function loop(){
+      const m = msgs[i % msgs.length];
+      const el = document.createElement('div');
+      el.className = 'lc-msg ' + m.side;
+      el.style.animation = 'msgIn .55s cubic-bezier(.2,.8,.2,1) backwards';
+      el.innerHTML = (m.side === 'left' ? '<b>'+m.who+'</b><br>' : '') + m.text +
+        '<span class="meta">just now</span>';
+      // Insert before the typing indicator
+      const typing = thread.querySelector('.lc-typing');
+      if (typing) thread.insertBefore(el, typing); else thread.appendChild(el);
+      // Keep thread length manageable
+      const all = thread.querySelectorAll('.lc-msg');
+      if (all.length > 6) all[0].remove();
+      i++;
+      setTimeout(loop, 3200);
+    }
+    setTimeout(loop, 4500);
+  })();
+
+  // ===== Stock: tick down an SKU randomly =====
+  (function stockTickLoop(){
+    const rows = document.querySelectorAll('.wn-card[data-c="stock"] .sm-row .qty');
+    if (!rows.length) return;
+    const initial = Array.from(rows).map(q => parseInt(q.firstChild.textContent.trim(), 10));
+    let counts = initial.slice();
+    function pad(n){return n}
+    function tick(){
+      const idx = Math.floor(Math.random() * rows.length);
+      // never tick down past 1 for low row
+      if (counts[idx] > 1) counts[idx] -= Math.ceil(Math.random()*2);
+      const q = rows[idx];
+      const small = q.querySelector('small');
+      const newNum = counts[idx];
+      q.innerHTML = newNum + (small ? small.outerHTML : '');
+      // brief flash
+      q.style.transition = 'color .25s, transform .35s cubic-bezier(.2,.8,.2,1)';
+      q.style.transform = 'scale(1.18)';
+      setTimeout(()=>{ q.style.transform = 'scale(1)'; }, 280);
+      // reset counts periodically
+      if (Math.random() < 0.15) counts = initial.slice();
+      setTimeout(tick, 2200 + Math.random()*1500);
+    }
+    setTimeout(tick, 3000);
+  })();
+
+  // ===== Email Hub: rotate "received" counter & ping a new mail occasionally =====
+  (function emailHubLoop(){
+    const ticker = document.querySelector('.wn-card[data-c="mail"] .eh-ticker');
+    if (!ticker) return;
+    let sent = 3, recv = 14;
+    function tick(){
+      const r = Math.random();
+      if (r < 0.6) recv += 1;
+      else sent += 1;
+      const html = '<span class="arrow">→</span> Sent <b>'+sent+'</b> · Received <b>'+recv+'</b> · Live sync every <b>30s</b>';
+      ticker.innerHTML = html;
+      setTimeout(tick, 2400 + Math.random()*1800);
+    }
+    setTimeout(tick, 2200);
+  })();
+
+  // ===== LIVE OPERATIONS NETWORK =====
+  (function opsNetwork(){
+    const feedList = document.getElementById('feedList');
+    const opsClock = document.getElementById('opsClock');
+    const sats = document.querySelectorAll('.sat');
+    if (!feedList) return;
+
+    // Live ticking clock
+    function pad(n){return String(n).padStart(2,'0')}
+    function updateClock(){
+      const d = new Date();
+      opsClock.textContent = pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());
+    }
+    updateClock();
+    setInterval(updateClock, 1000);
+
+    // Pool of realistic events keyed by satellite
+    const events = [
+      { ic:'g', msg:'Order <b>#%ORD%</b> synced from <b>Shopify · BoldStore</b>', sat:'Stores' },
+      { ic:'g', msg:'Order <b>#%ORD%</b> received via <b>WooCommerce</b> webhook', sat:'Stores' },
+      { ic:'p', msg:'Vendor <b>Asia Hub</b> assigned to #<b>%ORD%</b>', sat:'Vendors' },
+      { ic:'p', msg:'<b>Permanent routing</b> matched · vendor auto-assigned', sat:'Vendors' },
+      { ic:'p', msg:'<b>AI Draft</b> generated for refund email', sat:'AI' },
+      { ic:'p', msg:'<b>AI</b> classified email as <b>Refund</b> · 96% conf.', sat:'AI' },
+      { ic:'p', msg:'<b>AI Draft</b> ready · tone: <b>Friendly</b>', sat:'AI' },
+      { ic:'a', msg:'<b>Live tracking</b> #<b>%ORD%</b> → Out for delivery', sat:'Tracking' },
+      { ic:'a', msg:'Tracking sync · #<b>%ORD%</b> → <b>Delivered</b>', sat:'Tracking' },
+      { ic:'a', msg:'Courier polled · <b>14 packages</b> in transit', sat:'Tracking' },
+      { ic:'c', msg:'<b>Sarah M.</b> opened delivery email', sat:'Customers' },
+      { ic:'c', msg:'<b>Ahmed K.</b> replied to support thread', sat:'Customers' },
+      { ic:'g', msg:'<b>Auto email</b> sent · Order Shipped template', sat:'Inbox' },
+      { ic:'p', msg:'New thread assigned to <b>Hira</b> (Order Mgr)', sat:'Inbox' },
+    ];
+
+    function nextOrderNum(){ return 10240 + Math.floor(Math.random()*60); }
+
+    function pushEvent(ev){
+      const row = document.createElement('div');
+      row.className = 'feed-row';
+      const msg = ev.msg.replace('%ORD%', nextOrderNum());
+      row.innerHTML = '<div class="ic '+ev.ic+'">'+iconFor(ev.ic)+'</div>'
+                    + '<div class="msg">'+msg+'</div>'
+                    + '<div class="ts">just now</div>';
+      feedList.insertBefore(row, feedList.firstChild);
+
+      // Update timestamps on existing rows
+      Array.from(feedList.children).forEach((r,i) => {
+        if (i === 0) return;
+        const ts = r.querySelector('.ts');
+        if (!ts) return;
+        const sec = i * 2 + Math.floor(Math.random()*3);
+        ts.textContent = sec + 's ago';
+      });
+
+      // Trim list
+      while (feedList.children.length > 4){
+        const last = feedList.lastChild;
+        last.classList.add('fade');
+        setTimeout(() => last.remove(), 450);
+        break;
+      }
+
+      // Highlight the corresponding satellite
+      const sat = Array.from(sats).find(s => s.dataset.name === ev.sat);
+      if (sat){
+        sat.classList.add('active');
+        setTimeout(() => sat.classList.remove('active'), 900);
+      }
+    }
+
+    function iconFor(t){
+      return ({g:'✓', p:'✦', a:'📡', c:'👤'})[t] || '•';
+    }
+
+    // Periodic event firing
+    function fire(){
+      const ev = events[Math.floor(Math.random()*events.length)];
+      pushEvent(ev);
+    }
+    setInterval(fire, 2200 + Math.random()*1200);
+
+    // Click any satellite to inject its custom event
+    sats.forEach(sat => {
+      sat.addEventListener('click', () => {
+        const ic = sat.dataset.ic || 'g';
+        const msg = sat.dataset.msg || ('Event from <b>'+sat.dataset.name+'</b>');
+        pushEvent({ ic, msg, sat: sat.dataset.name });
+      });
+    });
+  })();
+
+  // ===== MODULE SHOWCASE: tabbed pane switcher + auto-cycle + AI typing =====
+  (function showcase(){
+    const tabs = document.querySelectorAll('.showcase-tabs .tab-btn');
+    const panes = document.querySelectorAll('.showcase-pane');
+    const aiTarget = document.getElementById('aiTyping');
+    if (!tabs.length) return;
+
+    let autoTimer;
+    let userInteracted = false;
+
+    function activate(name){
+      tabs.forEach(t => t.classList.toggle('active', t.dataset.pane === name));
+      panes.forEach(p => p.classList.toggle('active', p.dataset.pane === name));
+      if (name === 'ai') startAITyping();
+    }
+
+    tabs.forEach(t => t.addEventListener('click', () => {
+      userInteracted = true;
+      clearInterval(autoTimer);
+      activate(t.dataset.pane);
+    }));
+
+    // Auto-cycle every 5s until user interacts
+    const order = ['orders','vendors','ai','tracking','templates'];
+    let idx = 0;
+    autoTimer = setInterval(() => {
+      if (userInteracted) return;
+      idx = (idx + 1) % order.length;
+      activate(order[idx]);
+    }, 5000);
+
+    // AI typing effect
+    let typingTimer;
+    function startAITyping(){
+      if (!aiTarget) return;
+      clearTimeout(typingTimer);
+      const text = "Hi Sarah, sorry about the trouble! I've checked order #10248 — the left earbud should be fully charging. Let me ship you a replacement right away — you'll receive a tracking email within 2 hours. No need to return the original. Thanks for your patience!";
+      aiTarget.innerHTML = '';
+      let i = 0;
+      function step(){
+        if (i <= text.length){
+          aiTarget.innerHTML = text.slice(0,i) + '<span class="cursor"></span>';
+          i += 2;
+          typingTimer = setTimeout(step, 18);
+        }
+      }
+      step();
+    }
+    // Kick off typing initially in case user lands on AI tab
+  })();
+
+  // ===== HOW IT WORKS — Pipeline stage syncing =====
+  (function pipeline(){
+    const stations = document.querySelectorAll('.pipe-station');
+    const label = document.getElementById('pipeLabel');
+    const ord = document.getElementById('pipeOrd');
+    const rt = document.getElementById('pipeRT');
+    if (!stations.length) return;
+
+    const labels = ['Connect Store','Order Syncs','Vendor Assigned','Tracking Live','Customer Notified'];
+    let stage = 0;
+    let orderNum = 10248;
+
+    function update(){
+      stations.forEach((s,i) => s.classList.toggle('active', i === stage));
+      if (label) label.textContent = labels[stage];
+      if (rt) rt.textContent = 'processed in ' + (0.3 + Math.random()*0.6).toFixed(2) + 's';
+    }
+    update();
+
+    // Sync to package animation (8s loop, 5 stages → ~1.6s per)
+    setInterval(() => {
+      stage = (stage + 1) % 5;
+      if (stage === 0){
+        orderNum++;
+        if (ord) ord.textContent = '#' + orderNum;
+      }
+      update();
+    }, 1600);
+  })();
+
+  // ===== PRICING — billing toggle =====
+  (function billing(){
+    const wrap = document.getElementById('billingToggle');
+    if (!wrap) return;
+    const buttons = wrap.querySelectorAll('button');
+    const pill = document.getElementById('togglePill');
+    const amounts = document.querySelectorAll('.tier-price .amount');
+    const periods = document.querySelectorAll('.tier-period');
+
+    function movePill(activeBtn){
+      const r = activeBtn.getBoundingClientRect();
+      const wr = wrap.getBoundingClientRect();
+      pill.style.left = (r.left - wr.left) + 'px';
+      pill.style.width = r.width + 'px';
+    }
+
+    function setMode(mode){
+      buttons.forEach(b => b.classList.toggle('active', b.dataset.billing === mode));
+      const active = wrap.querySelector('button.active');
+      movePill(active);
+
+      amounts.forEach(a => {
+        a.classList.remove('morph');
+        void a.offsetWidth;
+        a.classList.add('morph');
+        // Update value mid-animation for the morph effect
+        setTimeout(() => {
+          a.textContent = a.dataset[mode];
+        }, 200);
+      });
+      periods.forEach(p => p.textContent = p.dataset[mode]);
+    }
+
+    buttons.forEach(b => b.addEventListener('click', () => setMode(b.dataset.billing)));
+
+    // Init pill position once layout is ready
+    requestAnimationFrame(() => movePill(wrap.querySelector('button.active')));
+    window.addEventListener('resize', () => movePill(wrap.querySelector('button.active')));
+  })();
+
+  // ===== PORTALS — tabbed showcase =====
+  (function portalShowcase(){
+    const wrap = document.getElementById('portalShowcase');
+    if (!wrap) return;
+    const tabs = wrap.querySelectorAll('.ptab');
+    const screens = wrap.querySelectorAll('.pscreen');
+    let userClicked = false;
+
+    function show(name){
+      tabs.forEach(t => t.classList.toggle('active', t.dataset.pt === name));
+      screens.forEach(s => s.classList.toggle('active', s.dataset.pt === name));
+      wrap.dataset.portal = name;
+    }
+    tabs.forEach(t => t.addEventListener('click', () => {
+      userClicked = true;
+      show(t.dataset.pt);
+    }));
+
+    const order = ['admin','vendor','team'];
+    let i = 0;
+    setInterval(() => {
+      if (userClicked) return;
+      i = (i + 1) % order.length;
+      show(order[i]);
+    }, 4500);
+  })();
+
+  // ===== MOBILE MENU =====
+  (function mobileMenu(){
+    const toggle = document.querySelector('.menu-toggle');
+    const links = document.querySelector('.nav-links');
+    if (!toggle || !links) return;
+    let open = false;
+    toggle.addEventListener('click', () => {
+      open = !open;
+      links.style.cssText = open
+        ? 'display:flex;flex-direction:column;position:absolute;top:100%;left:0;right:0;background:rgba(5,6,15,.97);padding:20px 24px;border-bottom:1px solid rgba(255,255,255,.08);gap:14px;z-index:99;'
+        : '';
+      toggle.textContent = open ? '✕' : '☰';
+    });
+    links.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
+      open = false; links.style.cssText = ''; toggle.textContent = '☰';
+    }));
+  })();
+
+  // Smooth anchor offset for fixed nav
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', (e) => {
+      const id = a.getAttribute('href');
+      if (id.length > 1) {
+        const target = document.querySelector(id);
+        if (target) {
+          e.preventDefault();
+          window.scrollTo({ top: target.offsetTop - 80, behavior: 'smooth' });
+        }
+      }
+    });
+  });
+</script>
+
+</body>
+</html>
