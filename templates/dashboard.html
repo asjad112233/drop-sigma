@@ -2126,9 +2126,9 @@ body{font-family:Inter,Arial,sans-serif!important;background:var(--vf-gradient)!
 .sidebar-project-wrap{flex-shrink:0;margin-top:0!important;}
 #profileWrap{flex-shrink:0;padding-bottom:10px;}
 .sidebar::-webkit-scrollbar,.main::-webkit-scrollbar,.table-scroll::-webkit-scrollbar,.premium-orders-table-wrap::-webkit-scrollbar{width:8px;height:8px}.sidebar::-webkit-scrollbar-thumb,.main::-webkit-scrollbar-thumb,.table-scroll::-webkit-scrollbar-thumb,.premium-orders-table-wrap::-webkit-scrollbar-thumb{background:rgba(148,163,184,.55);border-radius:999px}
-.main{height:100vh!important;overflow-y:auto!important;overflow-x:hidden!important;display:block!important;padding:24px!important;box-sizing:border-box!important;background:transparent!important;scroll-behavior:smooth!important;}
+.main{height:100vh!important;overflow-y:auto!important;overflow-x:hidden!important;display:block!important;padding:24px 24px calc(24px + var(--ds-ref-h,0px))!important;box-sizing:border-box!important;background:transparent!important;scroll-behavior:smooth!important;}
 .main.orders-mode{overflow:hidden!important;}
-.section{display:none!important;min-height:calc(100vh - 48px)!important;padding-bottom:70px!important;overflow:visible!important;animation:vfFade .24s ease both;}.section.active{display:block!important}@keyframes vfFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.section{display:none!important;min-height:calc(100vh - 48px - var(--ds-ref-h,0px))!important;padding-bottom:70px!important;overflow:visible!important;animation:vfFade .24s ease both;}.section.active{display:block!important}@keyframes vfFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 .global-store-switcher{position:sticky!important;top:0!important;z-index:60!important;margin:-8px 0 18px!important;padding:8px 0!important;background:linear-gradient(to bottom,var(--vf-app-bg),rgba(255,255,255,0))!important;}body.vf-dark-mode .global-store-switcher{background:linear-gradient(to bottom,#050712,rgba(5,7,18,0))!important}.global-store-switcher-inner{border-radius:22px!important;padding:11px!important;box-shadow:var(--vf-shadow)!important;backdrop-filter:blur(18px)!important}#projectSwitcher,.global-store-switcher .btn{height:46px!important;border-radius:15px!important;}
 .sidebar h2{position:relative!important;font-size:21px!important;line-height:1.1!important;margin:0 0 34px 0!important;padding-left:58px!important;color:var(--vf-text)!important;letter-spacing:-.4px!important}.sidebar h2:before{content:'DS';position:absolute;left:0;top:-4px;width:46px;height:46px;border-radius:14px;background:linear-gradient(135deg,#6366F1,#06B6D4);display:grid;place-items:center;color:#fff;font-weight:950;font-size:18px;letter-spacing:-.5px;box-shadow:0 8px 24px rgba(99,102,241,.45),inset 0 1px 0 rgba(255,255,255,.3)}.sidebar h2:after{content:'Customer Suite';display:block;font-size:12px;font-weight:600;color:var(--vf-muted);margin-top:5px;letter-spacing:0}
 .sidebar button[id^='nav']{height:auto!important;border:0!important;border-radius:10px!important;margin-bottom:2px!important;padding:8px 10px!important;display:flex!important;align-items:center!important;gap:9px!important;font-weight:600!important;font-size:13px!important;transition:.12s!important;color:var(--vf-muted,#475569)!important;background:none!important;box-shadow:none!important;transform:none!important;}.sidebar button[id^='nav']:hover{background:var(--vf-surface-2,#f1f5f9)!important;color:var(--vf-text,#0f172a)!important;transform:none!important;box-shadow:none!important;border-color:transparent!important;}.sidebar button[id^='nav'].active{background:#eff6ff!important;color:#2563eb!important;transform:none!important;box-shadow:none!important;border-color:transparent!important;}body.vf-dark-mode .sidebar button[id^='nav'].active{background:rgba(37,99,235,.18)!important;color:#93c5fd!important;}
@@ -2954,8 +2954,12 @@ body.vf-dark-mode{background:#eef7ff!important;color:#0f172a!important;}
 .pox-toolbar-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;}
 
 /* Compact toolbar: search + chips + refine dropdowns all on one line.
-   Wraps gracefully if window narrows. */
-.pox-toolbar-row.pox-toolbar-compact{background:var(--vf-surface);border:1px solid var(--vf-line);border-radius:12px;padding:7px 12px;margin-bottom:10px;gap:8px;box-shadow:0 1px 2px rgba(15,23,42,.03);}
+   Wraps gracefully if window narrows.
+   Sticky-top so the chip filters (All / Processing / No Tracking /
+   Unassigned / Assigned / Completed) stay reachable no matter where
+   the user scrolls. The `top` offset accounts for the referral banner
+   when it's showing (via --ds-ref-h on body). */
+.pox-toolbar-row.pox-toolbar-compact{background:var(--vf-surface);border:1px solid var(--vf-line);border-radius:12px;padding:7px 12px;margin-bottom:10px;gap:8px;box-shadow:0 1px 2px rgba(15,23,42,.03);position:sticky;top:calc(var(--ds-ref-h,0px));z-index:25;backdrop-filter:blur(8px);}
 .pox-toolbar-row.pox-toolbar-compact .pox-search-box{background:var(--vf-surface-2,#f8fafc);border:1px solid transparent;height:32px;padding:0 11px;min-width:200px;max-width:280px;border-radius:8px;}
 .pox-toolbar-row.pox-toolbar-compact .pox-search-box:focus-within{background:var(--vf-surface);border-color:#6366f1;}
 .pox-toolbar-refine{display:inline-flex;align-items:center;gap:6px;margin-left:auto;}
@@ -6705,6 +6709,13 @@ document.addEventListener("DOMContentLoaded", () => {
         </button>
       </div>
       <style>
+        /* Referral-bar reservation: every section that does its own
+           viewport-math (sticky bars, full-height layouts, scroll-fill
+           backgrounds) reads --ds-ref-h to subtract the live banner
+           height. The JS toggles --ds-ref-h on <body> when the banner
+           shows/hides — so any new section we add later can just use
+           the variable instead of hard-coding the offset. */
+        :root{--ds-ref-h:0px;}
         .ds-ref{
           position:relative;overflow:hidden;
           margin:0 0 12px;padding:8px 14px 8px 12px;
@@ -6898,13 +6909,39 @@ document.addEventListener("DOMContentLoaded", () => {
       var DS_REF = { code:'', share_url:'', total:0, qualified:0, target:3, unlocked:false };
       var _dsRefPollTimer = null;
 
+      /* Publish the live banner height as --ds-ref-h on <body> so any
+         section that does viewport math (sticky bottom bars, 100vh
+         backgrounds, etc.) can subtract it instead of hard-coding the
+         offset. Re-measured on resize and whenever the banner shows /
+         hides / collapses. */
+      function dsRefSyncHeight(){
+        var bar = document.getElementById('dsReferralBar');
+        var px  = 0;
+        if (bar && bar.offsetParent !== null){
+          // Include the bottom margin so the next element doesn't sit
+          // on top of the banner.
+          var cs = window.getComputedStyle(bar);
+          px = bar.offsetHeight + parseFloat(cs.marginBottom || 0) + parseFloat(cs.marginTop || 0);
+        }
+        document.body.style.setProperty('--ds-ref-h', Math.round(px) + 'px');
+        document.body.classList.toggle('has-ds-ref', px > 0);
+      }
+      window.addEventListener('resize', dsRefSyncHeight);
+
       (function(){
         var bar = document.getElementById('dsReferralBar');
         if (!bar) return;
         try {
-          if (localStorage.getItem('ds_referral_bar_dismissed_v1') === '1'){ bar.style.display='none'; return; }
+          if (localStorage.getItem('ds_referral_bar_dismissed_v1') === '1'){
+            bar.style.display='none';
+            dsRefSyncHeight();
+            return;
+          }
         } catch(_){}
         bar.style.display = 'flex';
+        // Measure now and once more after the fade-in animation settles.
+        dsRefSyncHeight();
+        setTimeout(dsRefSyncHeight, 400);
         dsReferralFetchProgress();
         // Poll every 60s while the dashboard is open so a freshly-qualified
         // referral lights up the bar without a manual refresh.
@@ -6917,6 +6954,7 @@ document.addEventListener("DOMContentLoaded", () => {
         var bar = document.getElementById('dsReferralBar');
         if (bar) bar.style.display = 'none';
         try { localStorage.setItem('ds_referral_bar_dismissed_v1', '1'); } catch(_){}
+        dsRefSyncHeight();
       }
 
       async function dsReferralFetchProgress(){
@@ -12346,9 +12384,18 @@ document.addEventListener("DOMContentLoaded", () => {
         #sourcingPartnersSection .sp-pill.renegotiation_requested{background:#fde68a;color:#a16207;}
 
         /* Orders table */
+        /* Filter chips stay sticky-pinned to the top of the scroll area
+           so they remain reachable while the user scrolls long order
+           lists. The `top` offset accounts for the referral banner when
+           it's showing — that height lives on body as --ds-ref-h, set
+           by dsRefSyncHeight(). */
         #sourcingPartnersSection .sp-orders-filters{
           display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;
           align-items:center;justify-content:space-between;
+          position:sticky;top:calc(var(--ds-ref-h,0px));z-index:25;
+          background:rgba(255,255,255,.92);backdrop-filter:blur(10px);
+          padding:8px 4px;margin-left:-4px;margin-right:-4px;
+          border-radius:10px;
         }
         #sourcingPartnersSection .sp-orders-filters-main{
           display:flex;gap:6px;flex-wrap:wrap;flex:1;min-width:0;
