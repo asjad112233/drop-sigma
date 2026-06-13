@@ -1178,36 +1178,26 @@ footer{
   .ph-num{font-size:15px;}
 }
 
-/* ════════════════ Typing tagline (hero) ════════════════ */
-.hero-tagline{
-  display:inline-flex;align-items:baseline;gap:2px;
-  font-family:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;
-  font-size:clamp(13px,1.55vw,18px);
-  font-weight:800;letter-spacing:.005em;
-  margin:6px 0 22px;
-  animation:fadeUp .8s .05s both;
-  min-height:1.4em;
-  white-space:nowrap;
-  max-width:100%;
+/* ════════════════ Hero typing caret (big H1) ════════════════ */
+.hero-title{min-height:1.05em;}
+.hero-title #dsTaglineText{
+  /* Reserve enough height while the H1 is mid-typing so the layout
+     doesn't shuffle the sub paragraph and CTAs upward. */
+  display:inline;
 }
-.hero-tagline .tag-prefix{
-  color:var(--ink-4);font-weight:700;margin-right:6px;
+.hero-caret{
+  display:inline-block;
+  width:.06em;height:.92em;
+  margin-left:.04em;
+  vertical-align:-.10em;
+  border-radius:2px;
+  background:linear-gradient(180deg,var(--indigo),var(--purple));
+  animation:heroCaret .85s steps(2,end) infinite;
+  box-shadow:0 0 12px rgba(99,102,241,.55);
 }
-.hero-tagline .tag-text{
-  background:linear-gradient(120deg,var(--indigo) 0%,var(--purple) 45%,var(--cyan) 100%);
-  background-size:220% 100%;
-  -webkit-background-clip:text;background-clip:text;color:transparent;
-  animation:gradShift 6s ease infinite;
-}
-.hero-tagline .tag-caret{
-  display:inline-block;width:2px;height:1em;
-  margin-left:3px;background:var(--indigo);
-  vertical-align:-.12em;border-radius:1px;
-  animation:tagCaret .85s steps(2,end) infinite;
-}
-@keyframes tagCaret{50%{opacity:0;}}
-@media(max-width:520px){
-  .hero-tagline{font-size:12px;white-space:normal;}
+@keyframes heroCaret{50%{opacity:0;}}
+@media (prefers-reduced-motion: reduce){
+  .hero-caret{display:none;}
 }
 
 /* ════════════════ btn-gold (sourcing CTA) ════════════════ */
@@ -1391,13 +1381,8 @@ footer{
       <span class="live-dot"></span>
       <strong>200+ verified suppliers</strong> · Now live in 47 countries
     </span>
-    <div class="hero-tagline" aria-label="Fully Automated Ecommerce Setup">
-      <span class="tag-prefix">&gt;_</span><span class="tag-text" id="dsTaglineText"></span><span class="tag-caret" aria-hidden="true"></span>
-    </div>
-    <h1 class="hero-title">
-      Full <span class="grad-i">automation</span>. <br>
-      Verified <span class="grad-g">suppliers</span>. <br>
-      <span class="grad">One platform.</span>
+    <h1 class="hero-title" aria-label="Fully Automated Ecommerce Setup">
+      <span class="grad" id="dsTaglineText">Fully Automated Ecommerce Setup</span><span class="hero-caret" aria-hidden="true"></span>
     </h1>
     <p class="hero-sub">
       Drop Sigma <b>auto-replies every customer query 24/7</b>, syncs orders in real-time, and pushes carrier events to your branded tracking page — while your <b>dedicated sourcing manager + 200+ verified suppliers</b> handle your entire supply chain. Zero busywork. One login.
@@ -2276,39 +2261,41 @@ footer{
   els.forEach(el => io.observe(el));
 })();
 
-/* ═══════════════ Hero tagline typewriter ═══════════════ */
+/* ═══════════════ Hero H1 typewriter ═══════════════ */
 (function(){
   const target = document.getElementById('dsTaglineText');
   if (!target) return;
-  const phrase = 'Fully Automated Ecommerce Setup';
-  // Respect reduced-motion: render the phrase immediately, no animation
+  const phrase = (target.textContent || '').trim() || 'Fully Automated Ecommerce Setup';
+  // Respect reduced-motion: render the phrase as-is, no typing animation
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches){
     target.textContent = phrase;
     return;
   }
+  // Wipe immediately so the user doesn't see the full string flash before typing begins
+  target.textContent = '';
   let i = 0;
   let mode = 'typing'; // typing → holding → deleting → resting → typing
   function tick(){
     if (mode === 'typing'){
       i++;
       target.textContent = phrase.substring(0, i);
-      if (i >= phrase.length){ mode = 'holding'; setTimeout(tick, 2600); return; }
-      setTimeout(tick, 70);
+      if (i >= phrase.length){ mode = 'holding'; setTimeout(tick, 2800); return; }
+      setTimeout(tick, 75);
     } else if (mode === 'holding'){
       mode = 'deleting';
       setTimeout(tick, 0);
     } else if (mode === 'deleting'){
       i--;
       target.textContent = phrase.substring(0, i);
-      if (i <= 0){ mode = 'resting'; setTimeout(tick, 700); return; }
+      if (i <= 0){ mode = 'resting'; setTimeout(tick, 600); return; }
       setTimeout(tick, 32);
     } else { // resting
       mode = 'typing';
       setTimeout(tick, 0);
     }
   }
-  // Kick off shortly after load so the user notices the typing
-  setTimeout(tick, 400);
+  // Kick off shortly after load so users see the typing happen
+  setTimeout(tick, 350);
 })();
 
 /* ═══════════════ AI typing effect ═══════════════ */
