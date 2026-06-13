@@ -6664,7 +6664,124 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         @media (prefers-reduced-motion: reduce){.ds-ref{animation:none;}}
       </style>
+      {# Modal for the "Get my link" CTA. Holds the share URL + copy. #}
+      <div id="dsRefModal" class="ds-ref-modal" style="display:none;" onclick="if(event.target===this)dsReferralCloseModal()">
+        <div class="ds-ref-card" role="dialog" aria-modal="true" aria-labelledby="dsRefModalTitle">
+          <div class="ds-ref-modal-head">
+            <div class="ds-ref-modal-sigil"><i class="fa-solid fa-gift"></i></div>
+            <div style="flex:1;min-width:0;">
+              <h2 id="dsRefModalTitle">Your invite link</h2>
+              <p>Share this link. Every friend who signs up AND pays counts toward your <b>3 months free</b>.</p>
+            </div>
+            <button class="ds-ref-modal-x" onclick="dsReferralCloseModal()" aria-label="Close">×</button>
+          </div>
+          <div class="ds-ref-modal-body">
+            <div class="ds-ref-link-row">
+              <input type="text" id="dsRefShareInput" readonly placeholder="Loading…" onclick="this.select()">
+              <button id="dsRefCopyBtn" onclick="dsReferralCopy()"><i class="fa-solid fa-copy"></i> Copy</button>
+            </div>
+            <div class="ds-ref-progress-block">
+              <div class="ds-ref-progress-row">
+                <span><b id="dsRefModalQ">0</b> / <b id="dsRefModalT">3</b> qualified</span>
+                <span class="ds-ref-progress-meta" id="dsRefModalMeta">Get your friends to subscribe to start the counter.</span>
+              </div>
+              <div class="ds-ref-progress-track-lg"><div class="ds-ref-progress-fill-lg" id="dsRefModalFill"></div></div>
+            </div>
+            <div class="ds-ref-share-grid">
+              <button onclick="dsReferralShareTo('whatsapp')"><i class="fa-brands fa-whatsapp"></i> WhatsApp</button>
+              <button onclick="dsReferralShareTo('email')"><i class="fa-solid fa-envelope"></i> Email</button>
+              <button onclick="dsReferralShareTo('twitter')"><i class="fa-brands fa-x-twitter"></i> X</button>
+              <button onclick="dsReferralShareTo('linkedin')"><i class="fa-brands fa-linkedin"></i> LinkedIn</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <style>
+        /* Modal */
+        .ds-ref-modal{
+          position:fixed;inset:0;z-index:2147483500;
+          background:rgba(2,6,23,.55);
+          display:flex;align-items:center;justify-content:center;padding:24px;
+          backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+        }
+        .ds-ref-card{
+          width:100%;max-width:520px;background:#fff;border-radius:18px;
+          box-shadow:0 30px 70px rgba(2,6,23,.45),0 0 0 1px rgba(99,102,241,.10);
+          font-family:'Inter',system-ui,sans-serif;
+          animation:dsRefCardIn .32s cubic-bezier(.2,.7,.2,1.05);
+        }
+        @keyframes dsRefCardIn{from{opacity:0;transform:translateY(14px) scale(.97);}to{opacity:1;transform:translateY(0) scale(1);}}
+        .ds-ref-modal-head{
+          display:flex;align-items:flex-start;gap:14px;padding:18px 22px 14px;
+          background:linear-gradient(180deg,#fafbff,#f4f5ff);
+          border-bottom:1px solid rgba(99,102,241,.10);
+        }
+        .ds-ref-modal-sigil{
+          flex-shrink:0;width:42px;height:42px;border-radius:13px;color:#0b1224;
+          background:linear-gradient(135deg,#fde047,#fbbf24);
+          display:flex;align-items:center;justify-content:center;font-size:18px;
+          box-shadow:inset 0 0 0 1px rgba(255,255,255,.3),0 6px 16px rgba(251,191,36,.35);
+        }
+        .ds-ref-modal-head h2{margin:0;font-size:16.5px;font-weight:900;color:#0f172a;letter-spacing:-.01em;}
+        .ds-ref-modal-head p{margin:4px 0 0;font-size:12px;font-weight:600;color:#64748b;line-height:1.5;}
+        .ds-ref-modal-x{background:transparent;border:0;color:#94a3b8;font-size:22px;cursor:pointer;padding:0 6px;border-radius:8px;}
+        .ds-ref-modal-x:hover{background:#eef2ff;color:#0f172a;}
+        .ds-ref-modal-body{padding:18px 22px 22px;}
+        .ds-ref-link-row{
+          display:flex;gap:8px;align-items:stretch;margin-bottom:16px;
+        }
+        .ds-ref-link-row input{
+          flex:1;min-width:0;padding:11px 14px;border:1.5px solid #e2e8f0;border-radius:10px;
+          font-family:'SF Mono',Menlo,monospace;font-size:13px;font-weight:700;color:#0f172a;
+          background:#f8fafc;outline:none;
+        }
+        .ds-ref-link-row input:focus{border-color:#6366f1;background:#fff;}
+        .ds-ref-link-row button{
+          flex-shrink:0;padding:11px 18px;border:0;border-radius:10px;cursor:pointer;
+          font-weight:800;font-size:12.5px;letter-spacing:.005em;color:#fff;font-family:inherit;
+          background:linear-gradient(135deg,#6366f1,#a855f7);
+          box-shadow:0 6px 14px rgba(99,102,241,.32);transition:all .15s;
+          display:inline-flex;align-items:center;gap:6px;
+        }
+        .ds-ref-link-row button:hover{transform:translateY(-1px);box-shadow:0 10px 22px rgba(99,102,241,.42);}
+        .ds-ref-progress-block{
+          background:linear-gradient(180deg,#f8fafc,#f1f5f9);
+          border:1px solid #e2e8f0;border-radius:12px;padding:12px 14px;margin-bottom:14px;
+        }
+        .ds-ref-progress-row{
+          display:flex;justify-content:space-between;align-items:baseline;
+          font-size:13px;color:#0f172a;font-weight:700;gap:14px;
+        }
+        .ds-ref-progress-row b{color:#0f172a;}
+        .ds-ref-progress-meta{font-size:11.5px;color:#64748b;font-weight:600;max-width:60%;text-align:right;}
+        .ds-ref-progress-track-lg{margin-top:10px;height:6px;border-radius:999px;background:rgba(99,102,241,.10);overflow:hidden;}
+        .ds-ref-progress-fill-lg{
+          height:100%;width:0%;border-radius:999px;
+          background:linear-gradient(90deg,#10b981,#34d399 50%,#fbbf24);
+          transition:width .4s ease;
+        }
+        .ds-ref-share-grid{
+          display:grid;grid-template-columns:repeat(4,1fr);gap:8px;
+        }
+        .ds-ref-share-grid button{
+          padding:10px 8px;border:1px solid #e2e8f0;border-radius:10px;cursor:pointer;
+          background:#fff;color:#475569;font-weight:800;font-size:11.5px;font-family:inherit;
+          display:inline-flex;align-items:center;justify-content:center;gap:6px;
+          transition:all .15s;
+        }
+        .ds-ref-share-grid button:hover{border-color:#6366f1;color:#4338ca;background:#fafbff;}
+        @media (max-width:480px){
+          .ds-ref-share-grid{grid-template-columns:repeat(2,1fr);}
+        }
+        @media (prefers-reduced-motion: reduce){
+          .ds-ref-card{animation:none;}
+        }
+      </style>
       <script>
+      /* ═══ Referral state — fetched from /api/referrals/ ══════════════ */
+      var DS_REF = { code:'', share_url:'', total:0, qualified:0, target:3, unlocked:false };
+      var _dsRefPollTimer = null;
+
       (function(){
         var bar = document.getElementById('dsReferralBar');
         if (!bar) return;
@@ -6672,58 +6789,138 @@ document.addEventListener("DOMContentLoaded", () => {
           if (localStorage.getItem('ds_referral_bar_dismissed_v1') === '1'){ bar.style.display='none'; return; }
         } catch(_){}
         bar.style.display = 'flex';
-        try { dsReferralRefreshProgress(); } catch(_){}
+        dsReferralFetchProgress();
+        // Poll every 60s while the dashboard is open so a freshly-qualified
+        // referral lights up the bar without a manual refresh.
+        _dsRefPollTimer = setInterval(function(){
+          if (!document.hidden) dsReferralFetchProgress();
+        }, 60000);
       })();
+
       function dsReferralDismiss(){
         var bar = document.getElementById('dsReferralBar');
         if (bar) bar.style.display = 'none';
         try { localStorage.setItem('ds_referral_bar_dismissed_v1', '1'); } catch(_){}
       }
-      function dsReferralOpen(){
-        var msg = 'Referral flow coming soon — local preview only.';
-        if (typeof spvToast === 'function') { try { spvToast(msg, 'info'); return; } catch(_){} }
-        if (typeof toast === 'function')    { try { toast(msg, 'info');    return; } catch(_){} }
-        try { console.log('[referral]', msg); } catch(_){}
+
+      async function dsReferralFetchProgress(){
+        try {
+          var resp = await fetch('/api/referrals/progress/', {credentials:'same-origin'});
+          if (!resp.ok) return;
+          var d = await resp.json();
+          if (!d || !d.ok) return;
+          DS_REF.code        = d.code || '';
+          DS_REF.share_url   = d.share_url || '';
+          DS_REF.total       = +d.total_signups || 0;
+          DS_REF.qualified   = +d.qualified_signups || 0;
+          DS_REF.target      = +d.target || 3;
+          DS_REF.unlocked    = !!d.unlocked;
+          dsReferralRenderBar();
+        } catch (_){}
       }
-      /* Repaint the dots + fill + count. Stub: reads progress from
-         localStorage so the local QA loop can simulate joins by typing
-         `dsReferralSet(2)` in the console. Real backend wire-up lands
-         when the referral endpoints exist. */
-      function dsReferralRefreshProgress(){
+
+      function dsReferralRenderBar(){
         var bar = document.getElementById('dsReferralBar');
         if (!bar) return;
-        var target = +(bar.getAttribute('data-target') || 3);
-        var joined = 0;
-        try { joined = +(localStorage.getItem('ds_referral_joined') || 0); } catch(_){}
-        if (joined < 0) joined = 0;
-        if (joined > target) joined = target;
+        var target = DS_REF.target || 3;
+        var joined = Math.min(DS_REF.qualified, target);
         bar.setAttribute('data-joined', String(joined));
         var dots = document.getElementById('dsRefDots');
         if (dots){
           var html = '';
-          for (var i = 0; i < target; i++){
-            html += '<i class="' + (i < joined ? 'on' : '') + '"></i>';
-          }
+          for (var i = 0; i < target; i++) html += '<i class="' + (i < joined ? 'on' : '') + '"></i>';
           dots.innerHTML = html;
         }
         var fill = document.getElementById('dsRefFill');
         if (fill) fill.style.width = ((joined / target) * 100) + '%';
         var count = document.getElementById('dsRefCount');
         if (count){
-          if (joined >= target){
-            count.textContent = '🎉 Unlocked — 3 months free';
+          if (DS_REF.unlocked){
+            count.textContent = '🎉 Unlocked — 3 months added';
             count.style.color = '#fde047';
           } else {
-            count.textContent = joined + ' / ' + target + ' joined';
+            count.textContent = joined + ' / ' + target + ' qualified';
+            count.style.color = '';
           }
         }
         var prog = document.getElementById('dsRefProgress');
-        if (prog) prog.title = joined + ' of ' + target + ' joined';
+        if (prog) prog.title = joined + ' of ' + target + ' qualified · ' + DS_REF.total + ' signed up so far';
       }
-      // Dev helper: dsReferralSet(2) in the console bumps progress.
-      function dsReferralSet(n){
-        try { localStorage.setItem('ds_referral_joined', String(Math.max(0, +n || 0))); } catch(_){}
-        dsReferralRefreshProgress();
+
+      async function dsReferralOpen(){
+        var modal = document.getElementById('dsRefModal');
+        if (!modal) return;
+        modal.style.display = 'flex';
+        // Fetch the link now (lazy-create on first open).
+        if (!DS_REF.share_url){
+          try {
+            var resp = await fetch('/api/referrals/my-link/', {credentials:'same-origin'});
+            if (resp.ok){
+              var d = await resp.json();
+              if (d && d.ok){
+                DS_REF.code = d.code || '';
+                DS_REF.share_url = d.share_url || '';
+              }
+            }
+          } catch(_){}
+        }
+        // Always re-fetch progress so the modal's numbers are current.
+        await dsReferralFetchProgress();
+        var inp = document.getElementById('dsRefShareInput');
+        if (inp) inp.value = DS_REF.share_url || '';
+        var q = document.getElementById('dsRefModalQ');
+        if (q) q.textContent = String(DS_REF.qualified);
+        var t = document.getElementById('dsRefModalT');
+        if (t) t.textContent = String(DS_REF.target);
+        var fill = document.getElementById('dsRefModalFill');
+        if (fill) fill.style.width = ((Math.min(DS_REF.qualified, DS_REF.target) / DS_REF.target) * 100) + '%';
+        var meta = document.getElementById('dsRefModalMeta');
+        if (meta){
+          if (DS_REF.unlocked){
+            meta.textContent = '🎉 You unlocked the 3-month extension.';
+            meta.style.color = '#10b981';
+          } else if (DS_REF.qualified === 0){
+            meta.textContent = 'Get your friends to subscribe to start the counter.';
+          } else {
+            var left = Math.max(0, DS_REF.target - DS_REF.qualified);
+            meta.textContent = left + ' more to unlock 3 months free.';
+          }
+        }
+      }
+      function dsReferralCloseModal(){
+        var modal = document.getElementById('dsRefModal');
+        if (modal) modal.style.display = 'none';
+      }
+
+      async function dsReferralCopy(){
+        var url = DS_REF.share_url || (document.getElementById('dsRefShareInput')||{}).value || '';
+        if (!url) return;
+        try {
+          await navigator.clipboard.writeText(url);
+        } catch(_){
+          var inp = document.getElementById('dsRefShareInput');
+          if (inp){ inp.select(); document.execCommand('copy'); }
+        }
+        var btn = document.getElementById('dsRefCopyBtn');
+        if (btn){
+          var orig = btn.innerHTML;
+          btn.innerHTML = '<i class="fa-solid fa-check"></i> Copied';
+          setTimeout(function(){ btn.innerHTML = orig; }, 1400);
+        }
+      }
+
+      function dsReferralShareTo(channel){
+        var url = encodeURIComponent(DS_REF.share_url || '');
+        var msg = encodeURIComponent('Join me on Drop Sigma — the logistics intelligence platform. ');
+        var dest;
+        switch (channel){
+          case 'whatsapp': dest = 'https://wa.me/?text=' + msg + url; break;
+          case 'email':    dest = 'mailto:?subject=' + encodeURIComponent('Try Drop Sigma') + '&body=' + msg + url; break;
+          case 'twitter':  dest = 'https://twitter.com/intent/tweet?text=' + msg + '&url=' + url; break;
+          case 'linkedin': dest = 'https://www.linkedin.com/sharing/share-offsite/?url=' + url; break;
+          default: return;
+        }
+        window.open(dest, '_blank', 'noopener,noreferrer');
       }
       </script>
     {% endif %}

@@ -74,6 +74,9 @@ urlpatterns = [
     path("rma/", include("rma.urls")),
     path("r/",   include("rma.urls_customer")),
 
+    # Referrals — public /invite/<code>/ + tenant-side /api/referrals/*
+    path("",     include("referrals.urls")),
+
     # DropSigma Sourcing Partners — verified vendors tenants can chat with
     path("sourcing-partners/", include("sourcing_partners.urls")),
     # Short alias for the dedicated-manager endpoint (consumed by the

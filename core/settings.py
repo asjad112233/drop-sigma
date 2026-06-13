@@ -89,6 +89,7 @@ INSTALLED_APPS = [
     'sourcing_partners',
     'sourcing_ops',
     'tracking_public',
+    'referrals',
 ]
 
 ASGI_APPLICATION = 'core.asgi.application'

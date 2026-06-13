@@ -613,6 +613,32 @@ def signup_view(request):
                 # Send verification email via Resend API
                 _send_verification_email(email, name, link)
 
+                # ── Referral attribution ──────────────────────────────
+                # If they arrived via /invite/<code>/, the session
+                # carries the referrer's code. Record the attribution
+                # NOW so the count shows up on the referrer's dashboard
+                # immediately. Qualification (= reward eligibility)
+                # happens later when the new user actually pays —
+                # that's hooked in stripe_checkout_complete /
+                # paypal_capture_order below.
+                try:
+                    from referrals.services import attribute_signup
+                    from referrals.models import ReferralCode
+                    from referrals.views import REFERRAL_SESSION_KEY
+                    code = request.session.get(REFERRAL_SESSION_KEY) or request.POST.get("ref") or ""
+                    if code:
+                        rc = ReferralCode.objects.filter(code=str(code).strip().upper()).first()
+                        if rc and rc.user_id != user.id:
+                            attribute_signup(rc.user, user, code_snapshot=rc.code)
+                    # One-shot — don't keep the code around for re-use.
+                    try: request.session.pop(REFERRAL_SESSION_KEY, None)
+                    except Exception: pass
+                except Exception:
+                    # Referrals must never break signup.
+                    import logging
+                    logging.getLogger(__name__).warning(
+                        "Referral attribution failed during signup", exc_info=True)
+
                 return redirect(f"/signup/email-sent/?email={email}")
 
     return render(request, "signup.html", {"error": error})
@@ -1064,6 +1090,19 @@ def subscribe_view(request):
         action=f"Subscribed to {plan_data['name']} plan (${price}/mo){coupon_label}",
         action_type="plan",
     )
+
+    # ── Referral qualification ──────────────────────────────────────
+    # If this user was referred, this is the moment their attribution
+    # flips to qualified — and if the referrer hits 3, the +3-month
+    # reward lands on their subscription. Idempotent — a re-paid
+    # subscription doesn't double-count.
+    try:
+        from referrals.services import qualify_referral
+        qualify_referral(request.user, event="subscription_paid", plan=tenant_plan)
+    except Exception:
+        import logging
+        logging.getLogger(__name__).warning(
+            "Referral qualify_referral failed after payment", exc_info=True)
 
     return redirect("/dashboard/")
 
