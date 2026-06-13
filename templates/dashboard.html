@@ -6685,8 +6685,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   <main class="main">
 
-    {# Local-only referral bar — see commit message for details. #}
-    {% if "localhost" in request.get_host or "127.0.0.1" in request.get_host %}
+    {# Referral bar — live on every host. Suppressed inside the email iframe via body[data-embed] CSS rule below. #}
+    {% if 1 %}
       <div id="dsReferralBar" class="ds-ref" style="display:none;" data-joined="0" data-target="3">
         <span class="ds-ref-ic"><i class="fa-solid fa-gift"></i></span>
         <span class="ds-ref-msg">
@@ -6717,11 +6717,6 @@ document.addEventListener("DOMContentLoaded", () => {
           animation:dsRefIn .35s cubic-bezier(.2,.7,.2,1.05);
         }
         @keyframes dsRefIn{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:translateY(0);}}
-        .ds-ref::before{
-          content:"LOCAL";position:absolute;top:4px;right:10px;
-          font-size:8px;font-weight:900;letter-spacing:.18em;color:rgba(255,255,255,.28);
-          pointer-events:none;
-        }
         .ds-ref-ic{
           flex-shrink:0;width:26px;height:26px;border-radius:8px;
           display:inline-flex;align-items:center;justify-content:center;
