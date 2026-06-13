@@ -2130,66 +2130,73 @@ body{font-family:Inter,Arial,sans-serif!important;background:var(--vf-gradient)!
 .main.orders-mode{overflow:hidden!important;}
 .section{display:none!important;min-height:calc(100vh - 48px - var(--ds-ref-h,0px))!important;padding-bottom:70px!important;overflow:visible!important;animation:vfFade .24s ease both;}.section.active{display:block!important}@keyframes vfFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 
-/* ═══════════════ UNIVERSAL STICKY FILTER BAR ═══════════════
-   The user asked for the order filter pills to be present and reachable
-   EVERYWHERE in the orders section ("orders seccttion ma b her jaga
-   add krna haaaaaaa"). Instead of touching each section's CSS one by
-   one, this single rule pins every known filter / chip / tab bar to
-   the top of the scroll viewport, offset by --ds-ref-h so it sits
-   right below the referral banner when that's visible. Adding a new
-   filter bar later? Either give it the .ds-sticky-filters class or add
-   its selector here once. Then the bar is automatically reachable from
-   any scroll position. */
-.section .ds-sticky-filters,
-.section .pox-toolbar-row.pox-toolbar-compact,
-.section .sp-orders-filters,
-.section .tq-controls,
-.section .rma-tabs,
-.section .rma-filter-tabs,
-.section .em-nav-chips,
-.section .vc-filter-chips,
-.section .mp2-chips,
-.section .sk-tabs-bar,
-.section .sk-filter-row,
-.section .dsm-toppill{
-  position:sticky!important;
-  top:calc(var(--ds-ref-h,0px))!important;
-  z-index:25!important;
-  backdrop-filter:blur(8px);
-  -webkit-backdrop-filter:blur(8px);
-}
-/* Sticky bars need an opaque-ish background so rows scrolling
-   underneath stay legible. Only set this if the existing bar doesn't
-   already have a strong background (these rules use the lowest-specificity
-   tag so per-section overrides win). */
-.section .ds-sticky-filters,
-.section .rma-tabs,
-.section .rma-filter-tabs,
-.section .em-nav-chips,
-.section .vc-filter-chips,
-.section .mp2-chips,
-.section .sk-filter-row,
-.section .dsm-toppill{
-  background:rgba(255,255,255,.92);
-  border-radius:10px;
-  padding:8px 6px;
-}
-body.vf-dark-mode .section .ds-sticky-filters,
-body.vf-dark-mode .section .rma-tabs,
-body.vf-dark-mode .section .rma-filter-tabs,
-body.vf-dark-mode .section .em-nav-chips,
-body.vf-dark-mode .section .vc-filter-chips,
-body.vf-dark-mode .section .mp2-chips,
-body.vf-dark-mode .section .sk-filter-row,
-body.vf-dark-mode .section .dsm-toppill{
-  background:rgba(15,23,42,.86);
-}
-/* The bulk-bar buffer at the bottom also needs to clear the referral
-   banner — without this, on shorter viewports the bulk-pay confirm bar
-   can land beneath the banner when the user scrolls all the way down. */
+/* The sticky bulk-pay confirm bar at the bottom of SPV uses
+   `position:sticky; bottom:18px`. When the referral banner is showing
+   it would otherwise land BEHIND the banner on short viewports, so add
+   the banner height to its bottom offset. (The filter-chip sticky-top
+   rules previously here were reverted — user only wanted the bottom
+   pager to be reachable, not the top filters pinned.) */
 #sourcingPartnersSection .sp-bulk-bar{
   bottom:calc(18px + var(--ds-ref-h,0px))!important;
 }
+
+/* ═══════════════ Drop Sigma pager — shared design ═══════════════
+   The SPV view (.ds-pager inside #sourcingPartnersSection) already
+   ships with this design — numbered page buttons + "To page X /
+   Confirm" jump + "total N items" + items/page selector. The Orders
+   tab now reuses the same look via .ds-pager-host on its pager
+   container. The selectors below are scoped to .ds-pager-host so
+   they only fire outside the SPV section (which keeps its own
+   ID-scoped rules). User asked for the pager to be present "her
+   jaga" in the orders flow — wire any new order list's pager via
+   the same .ds-pager-host wrapper and you get this design for free. */
+.ds-pager-host .ds-pager{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  padding:10px 14px;border-radius:12px;
+  background:#fff;border:1px solid #e2e8f0;
+  font-size:12.5px;color:#475569;font-weight:700;
+  box-shadow:0 1px 2px rgba(15,23,42,.04);margin-top:16px;
+}
+.ds-pager-host .ds-pager-btn{
+  width:32px;height:32px;border-radius:8px;border:0;
+  background:#f8fafc;color:#475569;font-size:13px;font-weight:800;
+  cursor:pointer;transition:all .12s;display:inline-flex;
+  align-items:center;justify-content:center;
+  font-family:inherit;
+}
+.ds-pager-host .ds-pager-btn:hover:not(:disabled){background:#eef2ff;color:#4338ca;}
+.ds-pager-host .ds-pager-btn:disabled{opacity:.35;cursor:not-allowed;}
+.ds-pager-host .ds-pager-btn.active{
+  background:linear-gradient(135deg,#6366f1,#a855f7);color:#fff;
+  box-shadow:0 6px 14px rgba(99,102,241,.30);
+}
+.ds-pager-host .ds-pager-btn.active:hover{color:#fff;}
+.ds-pager-host .ds-pager-ellipsis{padding:0 4px;color:#94a3b8;font-weight:700;letter-spacing:.04em;}
+.ds-pager-host .ds-pager-divider{width:1px;height:20px;background:#e2e8f0;margin:0 6px;}
+.ds-pager-host .ds-pager-jump{display:inline-flex;align-items:center;gap:6px;}
+.ds-pager-host .ds-pager-jump input{
+  width:50px;height:28px;border-radius:7px;border:1.5px solid #e2e8f0;
+  padding:0 7px;font-size:12.5px;font-weight:800;color:#0f172a;
+  text-align:center;font-family:inherit;
+}
+.ds-pager-host .ds-pager-jump input:focus{outline:0;border-color:#6366f1;
+  box-shadow:0 0 0 3px rgba(99,102,241,.14);}
+.ds-pager-host .ds-pager-jump button{
+  height:28px;padding:0 11px;border-radius:7px;border:1px solid #e2e8f0;
+  background:#fff;color:#475569;font-size:11.5px;font-weight:800;cursor:pointer;
+  font-family:inherit;
+}
+.ds-pager-host .ds-pager-jump button:hover{
+  background:#eef2ff;color:#4338ca;border-color:#c7d2fe;
+}
+.ds-pager-host .ds-pager-total{color:#64748b;font-weight:700;}
+.ds-pager-host .ds-pager-total b{color:#0f172a;font-weight:900;}
+.ds-pager-host .ds-pager-size select{
+  height:28px;padding:0 8px;border-radius:7px;border:1.5px solid #e2e8f0;
+  font-size:12px;font-weight:800;color:#0f172a;background:#fff;
+  cursor:pointer;font-family:inherit;
+}
+.ds-pager-host .ds-pager-size select:focus{outline:0;border-color:#6366f1;}
 .global-store-switcher{position:sticky!important;top:0!important;z-index:60!important;margin:-8px 0 18px!important;padding:8px 0!important;background:linear-gradient(to bottom,var(--vf-app-bg),rgba(255,255,255,0))!important;}body.vf-dark-mode .global-store-switcher{background:linear-gradient(to bottom,#050712,rgba(5,7,18,0))!important}.global-store-switcher-inner{border-radius:22px!important;padding:11px!important;box-shadow:var(--vf-shadow)!important;backdrop-filter:blur(18px)!important}#projectSwitcher,.global-store-switcher .btn{height:46px!important;border-radius:15px!important;}
 .sidebar h2{position:relative!important;font-size:21px!important;line-height:1.1!important;margin:0 0 34px 0!important;padding-left:58px!important;color:var(--vf-text)!important;letter-spacing:-.4px!important}.sidebar h2:before{content:'DS';position:absolute;left:0;top:-4px;width:46px;height:46px;border-radius:14px;background:linear-gradient(135deg,#6366F1,#06B6D4);display:grid;place-items:center;color:#fff;font-weight:950;font-size:18px;letter-spacing:-.5px;box-shadow:0 8px 24px rgba(99,102,241,.45),inset 0 1px 0 rgba(255,255,255,.3)}.sidebar h2:after{content:'Customer Suite';display:block;font-size:12px;font-weight:600;color:var(--vf-muted);margin-top:5px;letter-spacing:0}
 .sidebar button[id^='nav']{height:auto!important;border:0!important;border-radius:10px!important;margin-bottom:2px!important;padding:8px 10px!important;display:flex!important;align-items:center!important;gap:9px!important;font-weight:600!important;font-size:13px!important;transition:.12s!important;color:var(--vf-muted,#475569)!important;background:none!important;box-shadow:none!important;transform:none!important;}.sidebar button[id^='nav']:hover{background:var(--vf-surface-2,#f1f5f9)!important;color:var(--vf-text,#0f172a)!important;transform:none!important;box-shadow:none!important;border-color:transparent!important;}.sidebar button[id^='nav'].active{background:#eff6ff!important;color:#2563eb!important;transform:none!important;box-shadow:none!important;border-color:transparent!important;}body.vf-dark-mode .sidebar button[id^='nav'].active{background:rgba(37,99,235,.18)!important;color:#93c5fd!important;}
@@ -3015,12 +3022,8 @@ body.vf-dark-mode{background:#eef7ff!important;color:#0f172a!important;}
 .pox-toolbar-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;}
 
 /* Compact toolbar: search + chips + refine dropdowns all on one line.
-   Wraps gracefully if window narrows.
-   Sticky-top so the chip filters (All / Processing / No Tracking /
-   Unassigned / Assigned / Completed) stay reachable no matter where
-   the user scrolls. The `top` offset accounts for the referral banner
-   when it's showing (via --ds-ref-h on body). */
-.pox-toolbar-row.pox-toolbar-compact{background:var(--vf-surface);border:1px solid var(--vf-line);border-radius:12px;padding:7px 12px;margin-bottom:10px;gap:8px;box-shadow:0 1px 2px rgba(15,23,42,.03);position:sticky;top:calc(var(--ds-ref-h,0px));z-index:25;backdrop-filter:blur(8px);}
+   Wraps gracefully if window narrows. */
+.pox-toolbar-row.pox-toolbar-compact{background:var(--vf-surface);border:1px solid var(--vf-line);border-radius:12px;padding:7px 12px;margin-bottom:10px;gap:8px;box-shadow:0 1px 2px rgba(15,23,42,.03);}
 .pox-toolbar-row.pox-toolbar-compact .pox-search-box{background:var(--vf-surface-2,#f8fafc);border:1px solid transparent;height:32px;padding:0 11px;min-width:200px;max-width:280px;border-radius:8px;}
 .pox-toolbar-row.pox-toolbar-compact .pox-search-box:focus-within{background:var(--vf-surface);border-color:#6366f1;}
 .pox-toolbar-refine{display:inline-flex;align-items:center;gap:6px;margin-left:auto;}
@@ -7974,7 +7977,7 @@ document.addEventListener("DOMContentLoaded", () => {
       <div class="pox-toolbar-row pox-toolbar-compact">
         <div class="pox-search-box">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="13" height="13" style="opacity:.55;flex-shrink:0;color:var(--vf-muted);"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input id="orderSearchInput" placeholder="Search order, customer, product…" oninput="renderPremiumOrders()">
+          <input id="orderSearchInput" placeholder="Search order, customer, product…" oninput="_resetOrdersPage();renderPremiumOrders()">
         </div>
         <div class="pox-chips">
           <div class="pox-chip pox-chip-active" data-filter="all" onclick="poxSetChipFilter(this,'all')"><span class="pox-chip-dot" style="background:#94a3b8;"></span>All <span class="pox-chip-count" id="chipCountAll">0</span></div>
@@ -7985,7 +7988,7 @@ document.addEventListener("DOMContentLoaded", () => {
           <div class="pox-chip" data-filter="completed" onclick="poxSetChipFilter(this,'completed')"><span class="pox-chip-dot" style="background:#10b981;"></span>Completed <span class="pox-chip-count" id="chipCountCompleted">0</span></div>
         </div>
         <div class="pox-toolbar-refine">
-          <select id="orderStatusFilter" class="pox-refine-select-inline" onchange="renderPremiumOrders()">
+          <select id="orderStatusFilter" class="pox-refine-select-inline" onchange="_resetOrdersPage();renderPremiumOrders()">
             <option value="all">All Statuses</option>
             <option value="pending">Pending</option>
             <option value="paid">Paid</option>
@@ -7994,7 +7997,7 @@ document.addEventListener("DOMContentLoaded", () => {
             <option value="cancelled">Cancelled</option>
             <option value="failed">Failed</option>
           </select>
-          <select id="orderVendorFilter" class="pox-refine-select-inline" onchange="renderPremiumOrders()"><option value="all">All Vendors</option></select>
+          <select id="orderVendorFilter" class="pox-refine-select-inline" onchange="_resetOrdersPage();renderPremiumOrders()"><option value="all">All Vendors</option></select>
         </div>
       </div>
 
@@ -8038,6 +8041,11 @@ document.addEventListener("DOMContentLoaded", () => {
             <tbody id="ordersTable"><tr><td colspan="11">Loading...</td></tr></tbody>
           </table>
         </div>
+        <!-- Pagination — same design as SPV: numbered pages + "To page X /
+             Confirm" jump + total items count + items/page selector. Populated
+             by renderPremiumOrders() via ordersPagerHTML(). Hidden when the
+             result set fits on one page. -->
+        <div id="ordersPager" class="ds-pager-host"></div>
       </div>
 
       <!-- Vendor Assign Popover -->
@@ -12453,18 +12461,9 @@ document.addEventListener("DOMContentLoaded", () => {
         #sourcingPartnersSection .sp-pill.renegotiation_requested{background:#fde68a;color:#a16207;}
 
         /* Orders table */
-        /* Filter chips stay sticky-pinned to the top of the scroll area
-           so they remain reachable while the user scrolls long order
-           lists. The `top` offset accounts for the referral banner when
-           it's showing — that height lives on body as --ds-ref-h, set
-           by dsRefSyncHeight(). */
         #sourcingPartnersSection .sp-orders-filters{
           display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;
           align-items:center;justify-content:space-between;
-          position:sticky;top:calc(var(--ds-ref-h,0px));z-index:25;
-          background:rgba(255,255,255,.92);backdrop-filter:blur(10px);
-          padding:8px 4px;margin-left:-4px;margin-right:-4px;
-          border-radius:10px;
         }
         #sourcingPartnersSection .sp-orders-filters-main{
           display:flex;gap:6px;flex-wrap:wrap;flex:1;min-width:0;
@@ -22022,10 +22021,109 @@ function poxGetPortalClass(o){
   return "pox-portal-awaiting";
 }
 function poxGetAvatarClass(initials){const c=(initials.charCodeAt(0)||65)+(initials.charCodeAt(1)||65);return`pox-av${(c%7)+1}`;}
+/* ─── Orders tab pagination state ──────────────────────────────────
+   Mirrors the SPV pager so the user sees the same UX in both views.
+   Defaults: 25 rows/page (a sensible middle ground between SPV's 10
+   default and the old "render everything" behavior). When filters,
+   search, or sort change, _resetOrdersPage() is called so the user
+   isn't stuck on page 8 of a new filter that only has 2 pages. */
+window._ordersPage = window._ordersPage || 1;
+window._ordersPageSize = window._ordersPageSize || 25;
+function _resetOrdersPage(){ window._ordersPage = 1; }
+
+/* Shared pager renderer — same shape and chip vocabulary as
+   spvPagerHTML(). Hidden when total fits in a single page. */
+function ordersPagerHTML(state){
+  const { page, total_pages, total, page_size } = state;
+  if (total <= 0) return '';
+  if (total <= page_size && total_pages <= 1) return '';
+  const pages = [];
+  pages.push(1);
+  let lastShown = 1;
+  for (let i = page - 1; i <= page + 1; i++){
+    if (i < 2 || i > total_pages - 1) continue;
+    if (i > lastShown + 1) pages.push('…');
+    pages.push(i);
+    lastShown = i;
+  }
+  if (total_pages > 1){
+    if (total_pages > lastShown + 1) pages.push('…');
+    pages.push(total_pages);
+  }
+  const chips = pages.map(p =>
+    p === '…'
+      ? '<span class="ds-pager-ellipsis">…</span>'
+      : `<button class="ds-pager-btn ${p===page?'active':''}" data-ordp-page="${p}">${p}</button>`
+  ).join('');
+  const sizes = [10, 25, 50, 100].map(s =>
+    `<option value="${s}" ${s===page_size?'selected':''}>${s} items/page</option>`
+  ).join('');
+  return `
+    <div class="ds-pager">
+      <button class="ds-pager-btn" data-ordp-prev ${page<=1?'disabled':''}>‹</button>
+      ${chips}
+      <button class="ds-pager-btn" data-ordp-next ${page>=total_pages?'disabled':''}>›</button>
+      <div class="ds-pager-divider"></div>
+      <div class="ds-pager-jump">
+        To page <input type="number" min="1" max="${total_pages}" value="${page}" data-ordp-jump>
+        page <button data-ordp-jump-go>Confirm</button>
+      </div>
+      <div class="ds-pager-divider"></div>
+      <span class="ds-pager-total">total <b>${total}</b> items</span>
+      <div class="ds-pager-size"><select data-ordp-size>${sizes}</select></div>
+    </div>`;
+}
+function ordersBindPager(host, state){
+  if (!host) return;
+  host.querySelectorAll('[data-ordp-page]').forEach(b =>
+    b.addEventListener('click', () => { window._ordersPage = +b.dataset.ordpPage; renderPremiumOrders(); _scrollOrdersTopSoft(); }));
+  const prev = host.querySelector('[data-ordp-prev]');
+  if (prev) prev.addEventListener('click', () => { if (state.page > 1){ window._ordersPage = state.page - 1; renderPremiumOrders(); _scrollOrdersTopSoft(); }});
+  const next = host.querySelector('[data-ordp-next]');
+  if (next) next.addEventListener('click', () => { if (state.page < state.total_pages){ window._ordersPage = state.page + 1; renderPremiumOrders(); _scrollOrdersTopSoft(); }});
+  const jump = host.querySelector('[data-ordp-jump]');
+  const go = () => {
+    const v = Math.max(1, Math.min(state.total_pages, parseInt(jump.value, 10) || 1));
+    window._ordersPage = v; renderPremiumOrders(); _scrollOrdersTopSoft();
+  };
+  const goBtn = host.querySelector('[data-ordp-jump-go]');
+  if (goBtn) goBtn.addEventListener('click', go);
+  if (jump) jump.addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
+  const sz = host.querySelector('[data-ordp-size]');
+  if (sz) sz.addEventListener('change', e => { window._ordersPageSize = +e.target.value; window._ordersPage = 1; renderPremiumOrders(); _scrollOrdersTopSoft(); });
+}
+function _scrollOrdersTopSoft(){
+  const ord = document.getElementById('ordersSection');
+  if (ord) ord.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
 function renderPremiumOrders(){
   const table=document.getElementById("ordersTable"); if(!table)return;
-  const orders=getFilteredOrders(); renderPremiumOrderStats();
-  if(!orders.length){table.innerHTML=`<tr><td colspan="11" style="text-align:center;padding:32px;color:var(--vf-muted);">No matching orders found</td></tr>`;return;}
+  const allOrders=getFilteredOrders(); renderPremiumOrderStats();
+  if(!allOrders.length){
+    table.innerHTML=`<tr><td colspan="11" style="text-align:center;padding:32px;color:var(--vf-muted);">No matching orders found</td></tr>`;
+    const pagerHost = document.getElementById('ordersPager');
+    if (pagerHost) pagerHost.innerHTML = '';
+    return;
+  }
+  /* Page the filtered orders BEFORE we build the row HTML so we never
+     ship 200+ <tr> nodes to the DOM. Page-size + page live on window so
+     filter/search/sort handlers can reset them without prop-drilling. */
+  const total = allOrders.length;
+  const pageSize = window._ordersPageSize || 25;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  if (window._ordersPage > totalPages) window._ordersPage = totalPages;
+  if (window._ordersPage < 1) window._ordersPage = 1;
+  const page = window._ordersPage;
+  const startIdx = (page - 1) * pageSize;
+  const orders = allOrders.slice(startIdx, startIdx + pageSize);
+  /* Render the pager into its host. Same design as SPV. */
+  const pagerHost = document.getElementById('ordersPager');
+  if (pagerHost){
+    const state = { page, total_pages: totalPages, total, page_size: pageSize };
+    pagerHost.innerHTML = ordersPagerHTML(state);
+    ordersBindPager(pagerHost, state);
+  }
   table.innerHTML=orders.map(order=>{
     const initials=String(order.customer_name||"NA").split(" ").map(x=>x[0]).join("").slice(0,2).toUpperCase();
     const avClass=poxGetAvatarClass(initials);
@@ -22210,16 +22308,19 @@ function poxSyncFilterUI(filter){
 function setOrderKpiFilter(filter, card){
   window.currentOrderQuickFilter = filter || "all";
   poxSyncFilterUI(filter||"all");
+  _resetOrdersPage();
   renderPremiumOrders();
 }
 function setOrderQuickFilter(btn,filter){
   window.currentOrderQuickFilter = filter || "all";
   poxSyncFilterUI(filter||"all");
+  _resetOrdersPage();
   renderPremiumOrders();
 }
 function poxSetChipFilter(btn,filter){
   window.currentOrderQuickFilter = filter || "all";
   poxSyncFilterUI(filter||"all");
+  _resetOrdersPage();
   renderPremiumOrders();
 }
 function poxSwitchView(el){
