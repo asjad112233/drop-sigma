@@ -116,6 +116,170 @@ body{font-family:'Inter',system-ui,sans-serif;background:#f4f6fb;color:#0f172a;-
 ::-webkit-scrollbar{width:5px;}
 ::-webkit-scrollbar-track{background:transparent;}
 ::-webkit-scrollbar-thumb{background:#e2e8f0;border-radius:99px;}
+
+/* ─────────── Refer & Earn (profile tab) ─────────── */
+.prof-ref-nav-badge{
+  margin-left:auto;font-size:9.5px;font-weight:900;letter-spacing:.04em;
+  padding:2px 7px;border-radius:999px;
+  background:linear-gradient(135deg,#fde047,#fbbf24);color:#0b1224;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.3);
+  font-variant-numeric:tabular-nums;
+}
+.prof-ref-nav-badge.unlocked{
+  background:linear-gradient(135deg,#10b981,#34d399);color:#fff;
+}
+.prof-ref-hero{
+  display:flex;align-items:center;gap:18px;
+  padding:18px 22px;border-radius:16px;margin-bottom:18px;
+  color:#fff;position:relative;overflow:hidden;
+  background:
+    radial-gradient(ellipse at 0% 100%, rgba(251,191,36,.32) 0%, transparent 55%),
+    radial-gradient(ellipse at 100% 0%,  rgba(168,85,247,.45) 0%, transparent 55%),
+    linear-gradient(135deg,#0b1224 0%, #1e1b4b 45%, #312e81 100%);
+  box-shadow:0 18px 38px -22px rgba(168,85,247,.55),inset 0 1px 0 rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.06);
+}
+.prof-ref-hero-ic{
+  width:54px;height:54px;flex-shrink:0;border-radius:15px;
+  background:linear-gradient(135deg,#fde047 0%,#fbbf24 50%,#d4af37 100%);
+  display:flex;align-items:center;justify-content:center;font-size:26px;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.28),0 8px 22px rgba(251,191,36,.45);
+}
+.prof-ref-hero-body{flex:1;min-width:0;}
+.prof-ref-hero-title{
+  font-size:18px;font-weight:900;letter-spacing:-.015em;line-height:1.25;
+}
+.prof-ref-hero-prize{
+  background:linear-gradient(135deg,#fde047 0%, #fbbf24 50%, #fde047 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;font-weight:900;
+}
+.prof-ref-hero-sub{
+  margin-top:6px;font-size:12.5px;font-weight:600;color:rgba(255,255,255,.74);line-height:1.5;
+}
+.prof-ref-hero-sub b{color:#fff;font-weight:800;}
+.prof-ref-hero-stat{
+  flex-shrink:0;text-align:right;
+  padding:10px 16px;border-radius:13px;
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);
+  min-width:104px;
+}
+.prof-ref-hero-stat-n{
+  font-size:19px;font-weight:900;color:#fff;letter-spacing:-.01em;font-variant-numeric:tabular-nums;
+}
+.prof-ref-hero-stat-l{
+  font-size:10px;font-weight:800;color:rgba(255,255,255,.55);
+  text-transform:uppercase;letter-spacing:.12em;margin-top:2px;
+}
+
+.prof-ref-link-row{
+  display:flex;gap:10px;align-items:stretch;
+}
+.prof-ref-link-row input{
+  flex:1;min-width:0;
+  padding:11px 14px;border-radius:11px;
+  background:#f8fafc;border:1.5px solid #e2e8f0;
+  font-family:'SF Mono',Menlo,monospace;font-size:13px;font-weight:700;color:#0f172a;
+  outline:none;letter-spacing:.005em;
+}
+.prof-ref-link-row input:focus{border-color:#6366f1;background:#fff;}
+.prof-ref-link-row button{
+  flex-shrink:0;padding:11px 18px;border:0;border-radius:11px;cursor:pointer;
+  background:linear-gradient(135deg,#6366f1,#a855f7);color:#fff;
+  font-family:inherit;font-weight:800;font-size:12.5px;letter-spacing:.005em;
+  display:inline-flex;align-items:center;gap:7px;
+  box-shadow:0 6px 14px rgba(99,102,241,.32);transition:all .15s;
+}
+.prof-ref-link-row button:hover{transform:translateY(-1px);box-shadow:0 10px 22px rgba(99,102,241,.42);}
+
+.prof-ref-share-row{
+  display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap;
+}
+.prof-ref-share-lbl{
+  font-size:10.5px;font-weight:800;color:#94a3b8;
+  text-transform:uppercase;letter-spacing:.10em;
+}
+.prof-ref-share{
+  padding:7px 13px;border:1px solid #e2e8f0;border-radius:9px;cursor:pointer;
+  background:#fff;color:#475569;font-family:inherit;font-weight:800;font-size:11.5px;
+  transition:all .15s;
+}
+.prof-ref-share:hover{border-color:#6366f1;color:#4338ca;background:#fafbff;transform:translateY(-1px);}
+.prof-ref-share.whatsapp:hover{border-color:#25d366;color:#128c4f;}
+.prof-ref-share.email:hover{border-color:#64748b;color:#0f172a;}
+.prof-ref-share.x:hover{border-color:#0f172a;color:#0f172a;}
+.prof-ref-share.linkedin:hover{border-color:#0a66c2;color:#0a66c2;}
+
+.prof-ref-progress{margin:4px 0 16px;}
+.prof-ref-track{
+  height:8px;border-radius:999px;
+  background:#eef2ff;overflow:hidden;
+  box-shadow:inset 0 1px 2px rgba(99,102,241,.08);
+}
+.prof-ref-fill{
+  height:100%;width:0%;border-radius:999px;
+  background:linear-gradient(90deg,#10b981 0%,#34d399 50%,#fbbf24 100%);
+  transition:width .4s ease;
+}
+.prof-ref-progress-meta{
+  margin-top:10px;font-size:13px;font-weight:600;color:#475569;letter-spacing:-.005em;
+}
+.prof-ref-progress-meta b{color:#0f172a;font-weight:900;}
+.prof-ref-progress-meta.unlocked{color:#10b981;font-weight:700;}
+.prof-ref-progress-meta.unlocked b{color:#065f46;}
+
+.prof-ref-steps{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:4px;
+}
+.prof-ref-step{
+  padding:12px 14px;border-radius:11px;border:1px solid #e2e8f0;background:#fafbff;
+  transition:all .2s;
+}
+.prof-ref-step.on{
+  background:linear-gradient(135deg,#ecfdf5,#d1fae5);border-color:#a7f3d0;
+}
+.prof-ref-step.next{
+  background:linear-gradient(135deg,#fefce8,#fef3c7);border-color:#fcd34d;
+}
+.prof-ref-step-ic{
+  width:26px;height:26px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:900;color:#94a3b8;
+  background:#fff;border:1px solid #e2e8f0;margin-bottom:8px;
+}
+.prof-ref-step.on  .prof-ref-step-ic{background:linear-gradient(135deg,#10b981,#34d399);color:#fff;border-color:#10b981;box-shadow:0 4px 10px rgba(16,185,129,.32);}
+.prof-ref-step.next .prof-ref-step-ic{background:linear-gradient(135deg,#fbbf24,#d4af37);color:#0b1224;border-color:#fbbf24;}
+.prof-ref-step-l{font-size:12.5px;font-weight:900;color:#0f172a;letter-spacing:-.005em;}
+.prof-ref-step-s{font-size:10.5px;font-weight:700;color:#64748b;margin-top:2px;text-transform:uppercase;letter-spacing:.06em;}
+.prof-ref-step.on  .prof-ref-step-s{color:#10b981;}
+.prof-ref-step.next .prof-ref-step-s{color:#b45309;}
+
+.prof-ref-how{
+  list-style:none;padding:0;margin:0;
+  counter-reset:howstep;
+}
+.prof-ref-how li{
+  position:relative;padding:10px 0 10px 36px;font-size:13px;color:#475569;line-height:1.55;
+  border-bottom:1px solid #f1f5f9;
+}
+.prof-ref-how li:last-child{border-bottom:0;}
+.prof-ref-how li b{color:#0f172a;font-weight:800;}
+.prof-ref-how li::before{
+  counter-increment:howstep;content:counter(howstep);
+  position:absolute;left:0;top:11px;
+  width:22px;height:22px;border-radius:7px;
+  background:linear-gradient(135deg,#6366f1,#a855f7);color:#fff;
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:900;letter-spacing:-.005em;
+  box-shadow:0 3px 8px rgba(99,102,241,.32);
+}
+
+@media (max-width:680px){
+  .prof-ref-hero{flex-wrap:wrap;}
+  .prof-ref-hero-stat{margin-left:auto;}
+  .prof-ref-steps{grid-template-columns:1fr;}
+  .prof-ref-share-row{gap:6px;}
+  .prof-ref-share{flex:1;text-align:center;padding:7px 8px;}
+}
 </style>
 </head>
 <body>
@@ -165,6 +329,11 @@ body{font-family:'Inter',system-ui,sans-serif;background:#f4f6fb;color:#0f172a;-
     <div onclick="switchTab('subscription')" class="nav-item" id="tab-subscription">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.56 5.82 22 7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
       Subscription
+    </div>
+    <div onclick="switchTab('referrals')" class="nav-item" id="tab-referrals">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
+      Refer &amp; Earn
+      <span class="prof-ref-nav-badge" id="profRefNavBadge" style="display:none;">3 mo</span>
     </div>
 
     <div class="divider"></div>
@@ -333,18 +502,230 @@ body{font-family:'Inter',system-ui,sans-serif;background:#f4f6fb;color:#0f172a;-
       {% endif %}
     </div>
 
+    <!-- ════════════ Referrals ════════════ -->
+    <div class="sec" id="sec-referrals">
+      <div class="sec-title">Refer &amp; Earn</div>
+      <div class="sec-sub">Invite 3 friends. Once they subscribe, your plan gets 3 months added — automatically.</div>
+
+      <div class="prof-ref-hero">
+        <div class="prof-ref-hero-ic">🎁</div>
+        <div class="prof-ref-hero-body">
+          <div class="prof-ref-hero-title">Get <span class="prof-ref-hero-prize">3 months free</span></div>
+          <div class="prof-ref-hero-sub">Every friend who signs up via your link <b>and</b> subscribes counts toward the reward.</div>
+        </div>
+        <div class="prof-ref-hero-stat">
+          <div class="prof-ref-hero-stat-n" id="profRefHeroN">— / 3</div>
+          <div class="prof-ref-hero-stat-l">qualified</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          Your invite link
+        </div>
+        <div class="prof-ref-link-row">
+          <input type="text" id="profRefLink" readonly placeholder="Loading your unique link…" onclick="this.select()">
+          <button type="button" id="profRefCopyBtn" onclick="profileCopyRefLink()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            Copy
+          </button>
+        </div>
+        <div class="prof-ref-share-row">
+          <span class="prof-ref-share-lbl">Share to</span>
+          <button onclick="profileShareRef('whatsapp')" type="button" class="prof-ref-share whatsapp">WhatsApp</button>
+          <button onclick="profileShareRef('email')"    type="button" class="prof-ref-share email">Email</button>
+          <button onclick="profileShareRef('twitter')"  type="button" class="prof-ref-share x">X</button>
+          <button onclick="profileShareRef('linkedin')" type="button" class="prof-ref-share linkedin">LinkedIn</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 17l4-4 4 4 6-8"/></svg>
+          Progress
+        </div>
+        <div class="prof-ref-progress">
+          <div class="prof-ref-track"><div class="prof-ref-fill" id="profRefFill"></div></div>
+          <div class="prof-ref-progress-meta" id="profRefMeta">Loading your referral progress…</div>
+        </div>
+        <div class="prof-ref-steps" id="profRefSteps">
+          <!-- 3 step cards injected by JS -->
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          How it works
+        </div>
+        <ol class="prof-ref-how">
+          <li><b>Share your link.</b> Send it via WhatsApp, email, X, LinkedIn, or paste it anywhere.</li>
+          <li><b>They sign up.</b> Anyone who creates a Drop Sigma account through your link is attributed to you.</li>
+          <li><b>They subscribe.</b> When they pay for any plan, the referral becomes <em>qualified</em> and your counter ticks up.</li>
+          <li><b>You get 3 months free.</b> The day your 3rd qualified referral lands, your subscription renewal date jumps forward 90 days automatically.</li>
+        </ol>
+      </div>
+    </div>
+
   </div><!-- /content -->
 </div><!-- /layout -->
 
 <script>
 function switchTab(name){
-  ['personal','account','subscription'].forEach(t=>{
-    document.getElementById('sec-'+t).classList.remove('active');
-    document.getElementById('tab-'+t).classList.remove('active');
+  ['personal','account','subscription','referrals'].forEach(t=>{
+    var sec = document.getElementById('sec-'+t);
+    var tab = document.getElementById('tab-'+t);
+    if (sec) sec.classList.remove('active');
+    if (tab) tab.classList.remove('active');
   });
-  document.getElementById('sec-'+name).classList.add('active');
-  document.getElementById('tab-'+name).classList.add('active');
+  var s = document.getElementById('sec-'+name);
+  var t = document.getElementById('tab-'+name);
+  if (s) s.classList.add('active');
+  if (t) t.classList.add('active');
+  // Hydrate referral data the first time the tab opens so we don't
+  // hit /api/referrals/* until the user actually shows interest. The
+  // hash also gets updated so direct-link to ?#referrals works on
+  // refresh.
+  if (name === 'referrals'){
+    try { profileLoadReferral(); } catch(_){}
+    try { window.history.replaceState({}, '', '#referrals'); } catch(_){}
+  }
 }
+
+/* Refer & Earn — pulls from /api/referrals/{my-link,progress}/, the
+   same endpoints the dashboard banner uses, so the two surfaces are
+   always in lockstep. */
+var PROF_REF = { share_url:'', total:0, qualified:0, target:3, unlocked:false };
+async function profileLoadReferral(){
+  // 1. Get-or-create the share link.
+  try {
+    var r1 = await fetch('/api/referrals/my-link/', {credentials:'same-origin'});
+    if (r1.ok){
+      var d1 = await r1.json();
+      if (d1 && d1.ok) PROF_REF.share_url = d1.share_url || '';
+    }
+  } catch(_){}
+  var inp = document.getElementById('profRefLink');
+  if (inp) inp.value = PROF_REF.share_url || '';
+
+  // 2. Pull progress.
+  try {
+    var r2 = await fetch('/api/referrals/progress/', {credentials:'same-origin'});
+    if (!r2.ok) throw 0;
+    var p = await r2.json();
+    if (!p || !p.ok) throw 0;
+    PROF_REF.total     = +p.total_signups || 0;
+    PROF_REF.qualified = +p.qualified_signups || 0;
+    PROF_REF.target    = +p.target || 3;
+    PROF_REF.unlocked  = !!p.unlocked;
+  } catch(_){}
+
+  profileRenderReferral();
+}
+function profileRenderReferral(){
+  var q = Math.min(PROF_REF.qualified, PROF_REF.target);
+  var t = PROF_REF.target;
+  var pct = (q / t) * 100;
+
+  // Hero card numbers
+  var heroN = document.getElementById('profRefHeroN');
+  if (heroN){
+    heroN.textContent = (PROF_REF.unlocked ? '✓ Unlocked' : (q + ' / ' + t));
+    heroN.style.color = PROF_REF.unlocked ? '#10b981' : '';
+  }
+
+  // Sidebar nav badge — only show once the user has at least one qualified
+  // signup, so the badge is a positive signal not noise.
+  var navBadge = document.getElementById('profRefNavBadge');
+  if (navBadge){
+    if (PROF_REF.unlocked){
+      navBadge.textContent = '✓';
+      navBadge.classList.add('unlocked');
+      navBadge.style.display = '';
+    } else if (q > 0){
+      navBadge.textContent = q + '/' + t;
+      navBadge.classList.remove('unlocked');
+      navBadge.style.display = '';
+    } else {
+      navBadge.style.display = 'none';
+    }
+  }
+
+  // Progress bar
+  var fill = document.getElementById('profRefFill');
+  if (fill) fill.style.width = pct + '%';
+  var meta = document.getElementById('profRefMeta');
+  if (meta){
+    if (PROF_REF.unlocked){
+      meta.innerHTML = '🎉 <b>Unlocked.</b> 3 months were added to your subscription. Keep sharing — earn another 3 once 3 more qualify.';
+      meta.classList.add('unlocked');
+    } else if (q === 0){
+      meta.innerHTML = (PROF_REF.total > 0
+        ? '<b>'+PROF_REF.total+'</b> signed up so far · waiting for them to subscribe.'
+        : 'Share your link to start the counter — your friends complete signup &amp; subscribe to qualify.');
+      meta.classList.remove('unlocked');
+    } else {
+      var left = Math.max(0, t - q);
+      meta.innerHTML = '<b>'+q+'</b> qualified · '+left+' more to unlock <b>3 months free</b>.';
+      meta.classList.remove('unlocked');
+    }
+  }
+
+  // Step cards (one per slot)
+  var steps = document.getElementById('profRefSteps');
+  if (steps){
+    var html = '';
+    for (var i = 0; i < t; i++){
+      var state = (i < q) ? 'on' : (i === q && !PROF_REF.unlocked ? 'next' : 'off');
+      var icon  = state === 'on' ? '✓' : (state === 'next' ? '•' : (i+1));
+      var label = state === 'on'   ? 'Qualified'
+                : state === 'next' ? 'Up next'
+                : 'Open';
+      html += '<div class="prof-ref-step ' + state + '">'
+            +   '<div class="prof-ref-step-ic">' + icon + '</div>'
+            +   '<div class="prof-ref-step-l">Referral ' + (i+1) + '</div>'
+            +   '<div class="prof-ref-step-s">' + label + '</div>'
+            + '</div>';
+    }
+    steps.innerHTML = html;
+  }
+}
+async function profileCopyRefLink(){
+  var inp = document.getElementById('profRefLink');
+  if (!inp || !inp.value) return;
+  try { await navigator.clipboard.writeText(inp.value); }
+  catch(_){ inp.select(); try { document.execCommand('copy'); } catch(__){} }
+  var btn = document.getElementById('profRefCopyBtn');
+  if (btn){
+    var orig = btn.innerHTML;
+    btn.innerHTML = '✓ Copied';
+    setTimeout(function(){ btn.innerHTML = orig; }, 1400);
+  }
+}
+function profileShareRef(channel){
+  var url = encodeURIComponent(PROF_REF.share_url || '');
+  if (!url) return;
+  var msg = encodeURIComponent('Join me on Drop Sigma — the logistics intelligence platform. ');
+  var dest;
+  switch (channel){
+    case 'whatsapp': dest = 'https://wa.me/?text=' + msg + url; break;
+    case 'email':    dest = 'mailto:?subject=' + encodeURIComponent('Try Drop Sigma') + '&body=' + msg + url; break;
+    case 'twitter':  dest = 'https://twitter.com/intent/tweet?text=' + msg + '&url=' + url; break;
+    case 'linkedin': dest = 'https://www.linkedin.com/sharing/share-offsite/?url=' + url; break;
+    default: return;
+  }
+  window.open(dest, '_blank', 'noopener,noreferrer');
+}
+// Boot: light-touch lookup so the sidebar nav-badge can light up
+// before the user actually opens the Referrals tab. Also honours
+// /profile/#referrals deep-link.
+document.addEventListener('DOMContentLoaded', function(){
+  try { profileLoadReferral(); } catch(_){}
+  if (window.location.hash === '#referrals'){
+    try { switchTab('referrals'); } catch(_){}
+  }
+});
 
 async function saveProfile(e){
   e.preventDefault();
