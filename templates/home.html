@@ -1178,6 +1178,173 @@ footer{
   .ph-num{font-size:15px;}
 }
 
+/* ════════════════ Typing tagline (hero) ════════════════ */
+.hero-tagline{
+  display:inline-flex;align-items:baseline;gap:2px;
+  font-family:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;
+  font-size:clamp(13px,1.55vw,18px);
+  font-weight:800;letter-spacing:.005em;
+  margin:6px 0 22px;
+  animation:fadeUp .8s .05s both;
+  min-height:1.4em;
+  white-space:nowrap;
+  max-width:100%;
+}
+.hero-tagline .tag-prefix{
+  color:var(--ink-4);font-weight:700;margin-right:6px;
+}
+.hero-tagline .tag-text{
+  background:linear-gradient(120deg,var(--indigo) 0%,var(--purple) 45%,var(--cyan) 100%);
+  background-size:220% 100%;
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  animation:gradShift 6s ease infinite;
+}
+.hero-tagline .tag-caret{
+  display:inline-block;width:2px;height:1em;
+  margin-left:3px;background:var(--indigo);
+  vertical-align:-.12em;border-radius:1px;
+  animation:tagCaret .85s steps(2,end) infinite;
+}
+@keyframes tagCaret{50%{opacity:0;}}
+@media(max-width:520px){
+  .hero-tagline{font-size:12px;white-space:normal;}
+}
+
+/* ════════════════ btn-gold (sourcing CTA) ════════════════ */
+.btn-gold{
+  background:linear-gradient(135deg,var(--gold-2),var(--gold));color:#0B1224;
+  box-shadow:0 10px 24px -8px rgba(212,175,55,.55), inset 0 1px 0 rgba(255,255,255,.32);
+  position:relative;overflow:hidden;
+}
+.btn-gold::before{
+  content:"";position:absolute;inset:0;
+  background:linear-gradient(120deg,transparent 30%, rgba(255,255,255,.5) 50%, transparent 70%);
+  transform:translateX(-100%);transition:transform .6s;
+}
+.btn-gold:hover{transform:translateY(-1px);box-shadow:0 16px 30px -8px rgba(212,175,55,.65);}
+.btn-gold:hover::before{transform:translateX(100%);}
+
+/* ════════════════ Suppliers Setup (Section #2) ════════════════ */
+.supp-setup{
+  position:relative;padding:96px 0 100px;overflow:hidden;
+  background:
+    radial-gradient(ellipse at 20% 0%,rgba(212,175,55,.10),transparent 55%),
+    radial-gradient(ellipse at 80% 100%,rgba(251,191,36,.08),transparent 55%),
+    var(--bg);
+}
+.supp-setup::before{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background-image:
+    linear-gradient(rgba(212,175,55,.05) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(212,175,55,.05) 1px,transparent 1px);
+  background-size:48px 48px;
+  mask-image:radial-gradient(80% 60% at 50% 0%, #000 30%, transparent 80%);
+  -webkit-mask-image:radial-gradient(80% 60% at 50% 0%, #000 30%, transparent 80%);
+}
+.supp-setup .container{position:relative;z-index:1;}
+
+.supp-setup-head{text-align:center;max-width:760px;margin:0 auto 56px;}
+.supp-eyebrow{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:6px 14px;border-radius:999px;
+  background:linear-gradient(135deg,rgba(212,175,55,.14),rgba(251,191,36,.10));
+  border:1px solid rgba(212,175,55,.32);
+  font-size:11px;font-weight:900;letter-spacing:.10em;text-transform:uppercase;
+  color:#7a5a00;margin-bottom:18px;
+  box-shadow:0 6px 18px -8px rgba(212,175,55,.45);
+}
+.supp-eyebrow i{color:var(--gold);}
+.supp-title{
+  font-size:clamp(30px,4.6vw,52px);font-weight:900;
+  letter-spacing:-.028em;line-height:1.05;margin-bottom:14px;color:var(--ink);
+}
+.supp-title .grad-g{
+  background:linear-gradient(120deg,var(--gold-2),var(--gold),#B8860B);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.supp-sub{font-size:17px;color:var(--ink-3);line-height:1.6;max-width:640px;margin:0 auto;}
+.supp-sub b{color:var(--ink);font-weight:700;}
+
+.supp-flow{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:18px;
+  max-width:1180px;margin:0 auto;position:relative;
+}
+.supp-flow::after{
+  /* Connector line behind cards (desktop only) */
+  content:"";position:absolute;top:50%;left:6%;right:6%;height:2px;
+  background:linear-gradient(90deg,transparent 0%, rgba(212,175,55,.35) 15%, rgba(212,175,55,.35) 85%, transparent 100%);
+  z-index:0;pointer-events:none;
+}
+.supp-step{
+  position:relative;z-index:1;
+  background:rgba(255,255,255,.96);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border:1px solid var(--border);
+  border-radius:18px;padding:34px 22px 22px;
+  box-shadow:var(--shadow);
+  transition:transform .25s,box-shadow .25s,border-color .25s;
+}
+.supp-step::before{
+  content:"";position:absolute;top:0;left:0;right:0;height:3px;
+  background:linear-gradient(90deg,var(--gold-2),var(--gold));
+  border-radius:18px 18px 0 0;
+}
+.supp-step:hover{transform:translateY(-5px);border-color:rgba(212,175,55,.32);box-shadow:0 26px 50px -22px rgba(212,175,55,.45);}
+
+.supp-step-num{
+  position:absolute;top:-16px;left:22px;
+  width:40px;height:40px;border-radius:12px;
+  background:linear-gradient(135deg,var(--gold-2),var(--gold));color:#0B1224;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:900;font-size:16px;
+  box-shadow:0 12px 26px -8px rgba(212,175,55,.55),inset 0 0 0 2px #fff;
+}
+.supp-step-ic{
+  width:48px;height:48px;border-radius:13px;
+  background:linear-gradient(135deg,rgba(212,175,55,.14),rgba(251,191,36,.08));
+  border:1px solid rgba(212,175,55,.28);
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;color:#7a5a00;
+  margin:8px 0 14px;
+}
+.supp-step h4{font-size:16px;font-weight:900;color:var(--ink);letter-spacing:-.012em;line-height:1.2;margin-bottom:8px;}
+.supp-step p{font-size:13.5px;color:var(--ink-3);line-height:1.55;margin-bottom:14px;}
+.supp-step p b{color:var(--ink);font-weight:700;}
+.supp-step .who{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:5px 10px;border-radius:999px;
+  font-size:10.5px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;
+}
+.supp-step .who.you{background:rgba(99,102,241,.08);color:var(--indigo-2);border:1px solid rgba(99,102,241,.22);}
+.supp-step .who.us{background:linear-gradient(135deg,rgba(212,175,55,.14),rgba(251,191,36,.10));color:#7a5a00;border:1px solid rgba(212,175,55,.30);}
+.supp-step .who.auto{background:linear-gradient(135deg,rgba(6,182,212,.10),rgba(99,102,241,.08));color:var(--indigo-2);border:1px solid rgba(99,102,241,.22);}
+
+.supp-cta{
+  margin:48px auto 0;max-width:880px;
+  display:flex;align-items:center;justify-content:center;gap:20px;
+  padding:24px 28px;border-radius:20px;
+  background:linear-gradient(135deg,rgba(212,175,55,.10),rgba(251,191,36,.06));
+  border:1px solid rgba(212,175,55,.28);
+  box-shadow:0 22px 50px -28px rgba(212,175,55,.45);
+  flex-wrap:wrap;
+}
+.supp-cta .txt{flex:1;min-width:220px;}
+.supp-cta .txt strong{display:block;font-size:15.5px;font-weight:900;color:var(--ink);margin-bottom:4px;letter-spacing:-.012em;}
+.supp-cta .txt span{font-size:13.5px;color:var(--ink-3);}
+.supp-cta .btn{flex-shrink:0;}
+
+@media(max-width:980px){
+  .supp-flow{grid-template-columns:repeat(2,1fr);}
+  .supp-flow::after{display:none;}
+}
+@media(max-width:560px){
+  .supp-flow{grid-template-columns:1fr;gap:18px;}
+  .supp-setup{padding:64px 0 72px;}
+  .supp-cta{padding:18px;gap:14px;flex-direction:column;text-align:center;}
+  .supp-cta .btn{width:100%;justify-content:center;}
+  .supp-title{font-size:28px;}
+}
+
 @media (prefers-reduced-motion: reduce){
   *{animation-duration:0.001s !important;animation-iteration-count:1 !important;transition:none !important;}
 }
@@ -1224,6 +1391,9 @@ footer{
       <span class="live-dot"></span>
       <strong>200+ verified suppliers</strong> · Now live in 47 countries
     </span>
+    <div class="hero-tagline" aria-label="Fully Automated Ecommerce Setup">
+      <span class="tag-prefix">&gt;_</span><span class="tag-text" id="dsTaglineText"></span><span class="tag-caret" aria-hidden="true"></span>
+    </div>
     <h1 class="hero-title">
       Full <span class="grad-i">automation</span>. <br>
       Verified <span class="grad-g">suppliers</span>. <br>
@@ -1288,7 +1458,60 @@ footer{
   </div>
 </section>
 
-<!-- ═════════════ 2. WHY MONTHLY (AUTOMATION VALUE) ═════════════ -->
+<!-- ═════════════ 2. SUPPLIERS SETUP — DONE FOR YOU ═════════════ -->
+<section class="supp-setup" id="suppliers-setup">
+  <div class="container">
+    <div class="supp-setup-head">
+      <div class="supp-eyebrow"><i class="fa-solid fa-shield-halved"></i> Your suppliers setup — done for you</div>
+      <h2 class="supp-title">From niche pick to <span class="grad-g">first shipment</span> — fully managed.</h2>
+      <p class="supp-sub">Tell us what you sell. Your <b>dedicated sourcing manager</b> takes it from there — sourcing, vetting, samples, QC, fulfillment. <b>You never email a supplier.</b></p>
+    </div>
+
+    <div class="supp-flow">
+      <div class="supp-step">
+        <div class="supp-step-num">1</div>
+        <div class="supp-step-ic"><i class="fa-solid fa-bullseye"></i></div>
+        <h4>Tell us what you sell</h4>
+        <p>Share your niche, target margin, and product list. We assign your <b>dedicated sourcing manager</b> within 24 hours.</p>
+        <span class="who you"><i class="fa-solid fa-user"></i> You · 5 min</span>
+      </div>
+
+      <div class="supp-step">
+        <div class="supp-step-num">2</div>
+        <div class="supp-step-ic"><i class="fa-solid fa-magnifying-glass"></i></div>
+        <h4>Manager curates suppliers</h4>
+        <p>Your manager hand-picks <b>3–5 verified suppliers per product</b> from our 200+ network — based on price, lead time, and QC history.</p>
+        <span class="who us"><i class="fa-solid fa-shield-halved"></i> We handle · 1–3 days</span>
+      </div>
+
+      <div class="supp-step">
+        <div class="supp-step-num">3</div>
+        <div class="supp-step-ic"><i class="fa-solid fa-vial-circle-check"></i></div>
+        <h4>Samples + QC, in the background</h4>
+        <p>Samples ship to our QC team. Photos, weight, packaging — all checked before you ever see a unit. <b>You only see the winners.</b></p>
+        <span class="who us"><i class="fa-solid fa-shield-halved"></i> We handle · ongoing</span>
+      </div>
+
+      <div class="supp-step">
+        <div class="supp-step-num">4</div>
+        <div class="supp-step-ic"><i class="fa-solid fa-truck-fast"></i></div>
+        <h4>Orders flow → supplier ships</h4>
+        <p>Orders sync from Shopify/WooCommerce → routed to the right supplier → tracking pushed to your branded page. <b>Zero touches.</b></p>
+        <span class="who auto"><i class="fa-solid fa-bolt"></i> Auto · 24/7</span>
+      </div>
+    </div>
+
+    <div class="supp-cta">
+      <div class="txt">
+        <strong>Skip freight forwarders. Skip 1688. Skip Alibaba DMs.</strong>
+        <span>Your manager + 200+ verified suppliers handle the entire supply chain.</span>
+      </div>
+      <a href="/signup/" class="btn btn-gold btn-lg">Get my sourcing manager <i class="fa-solid fa-arrow-right"></i></a>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════════ 3. WHY MONTHLY (AUTOMATION VALUE) ═════════════ -->
 <section class="sec why" id="why">
   <div class="container">
     <div class="sec-head">
@@ -2051,6 +2274,41 @@ footer{
     });
   }, { threshold: 0.3 });
   els.forEach(el => io.observe(el));
+})();
+
+/* ═══════════════ Hero tagline typewriter ═══════════════ */
+(function(){
+  const target = document.getElementById('dsTaglineText');
+  if (!target) return;
+  const phrase = 'Fully Automated Ecommerce Setup';
+  // Respect reduced-motion: render the phrase immediately, no animation
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+    target.textContent = phrase;
+    return;
+  }
+  let i = 0;
+  let mode = 'typing'; // typing → holding → deleting → resting → typing
+  function tick(){
+    if (mode === 'typing'){
+      i++;
+      target.textContent = phrase.substring(0, i);
+      if (i >= phrase.length){ mode = 'holding'; setTimeout(tick, 2600); return; }
+      setTimeout(tick, 70);
+    } else if (mode === 'holding'){
+      mode = 'deleting';
+      setTimeout(tick, 0);
+    } else if (mode === 'deleting'){
+      i--;
+      target.textContent = phrase.substring(0, i);
+      if (i <= 0){ mode = 'resting'; setTimeout(tick, 700); return; }
+      setTimeout(tick, 32);
+    } else { // resting
+      mode = 'typing';
+      setTimeout(tick, 0);
+    }
+  }
+  // Kick off shortly after load so the user notices the typing
+  setTimeout(tick, 400);
 })();
 
 /* ═══════════════ AI typing effect ═══════════════ */
