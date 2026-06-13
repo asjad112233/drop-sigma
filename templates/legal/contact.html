@@ -3,53 +3,58 @@
 {% block description %}Get in touch with the Drop Sigma team. Sales, support, partnerships, press — we're here to help.{% endblock %}
 
 {% block extra_css %}
-.contact-hero{padding:80px 0 30px;text-align:center;}
-.contact-hero h1{font-size:clamp(38px,5.5vw,60px);line-height:1.05;letter-spacing:-1.5px;font-weight:800;color:#fff;margin-bottom:16px;}
-.contact-hero p{font-size:18px;color:var(--ink-2);max-width:620px;margin:0 auto;line-height:1.7;}
+.contact-hero{padding:72px 0 28px;text-align:center;}
+.contact-hero h1{font-size:clamp(36px,5.5vw,58px);line-height:1.05;letter-spacing:-.026em;font-weight:900;color:var(--ink);margin-bottom:16px;}
+.contact-hero p{font-size:17px;color:var(--ink-3);max-width:620px;margin:0 auto;line-height:1.7;font-weight:500;}
 
 .contact-grid{
-  display:grid;grid-template-columns:1.1fr 1fr;gap:36px;
-  max-width:1080px;margin:56px auto 0;
+  display:grid;grid-template-columns:1.1fr 1fr;gap:32px;
+  max-width:1080px;margin:48px auto 0;
 }
 @media(max-width:880px){.contact-grid{grid-template-columns:1fr;}}
 
 .form-card{
-  background:linear-gradient(145deg,rgba(20,22,45,.75),rgba(10,12,30,.75));
-  border:1px solid var(--line);border-radius:18px;
-  padding:32px;
+  background:rgba(255,255,255,.94);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border:1px solid var(--border);border-radius:20px;
+  padding:30px;
+  box-shadow:0 24px 60px -28px rgba(15,23,42,.18),0 0 0 1px rgba(99,102,241,.04);
 }
-.form-card h2{font-size:22px;font-weight:800;color:#fff;letter-spacing:-.4px;margin-bottom:20px;}
-.field{margin-bottom:16px;}
-.field label{display:block;font-size:12.5px;font-weight:600;color:var(--ink-2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;}
+.form-card h2{font-size:21px;font-weight:900;color:var(--ink);letter-spacing:-.018em;margin-bottom:18px;}
+.field{margin-bottom:14px;}
+.field label{display:block;font-size:11px;font-weight:800;color:var(--ink-3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;}
 .field input,.field select,.field textarea{
-  width:100%;padding:12px 14px;
-  background:rgba(255,255,255,.03);
-  border:1px solid var(--line-2);
-  border-radius:10px;color:var(--ink-0);
-  font-family:inherit;font-size:14px;
-  transition:border-color .2s,background .2s;
+  width:100%;padding:11px 13px;
+  background:#FAFBFD;
+  border:1.5px solid var(--border);
+  border-radius:11px;color:var(--ink);
+  font-family:inherit;font-size:14px;font-weight:600;
+  transition:border-color .15s,background .15s,box-shadow .15s;
 }
-.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--indigo);background:rgba(255,255,255,.05);}
+.field input::placeholder,.field textarea::placeholder{color:var(--ink-4);font-weight:500;}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--indigo);background:#fff;box-shadow:0 0 0 4px rgba(99,102,241,.10);}
 .field textarea{min-height:130px;resize:vertical;}
 .form-card .btn{width:100%;justify-content:center;margin-top:6px;}
-.form-status{margin-top:12px;font-size:13px;display:none;}
-.form-status.ok{color:var(--green);display:block;}
-.form-status.err{color:var(--red);display:block;}
+.form-status{margin-top:12px;font-size:13px;display:none;font-weight:600;}
+.form-status.ok{color:#065f46;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.30);padding:9px 12px;border-radius:10px;display:block;}
+.form-status.err{color:#991b1b;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.28);padding:9px 12px;border-radius:10px;display:block;}
 
-.contact-side{display:flex;flex-direction:column;gap:18px;}
+.contact-side{display:flex;flex-direction:column;gap:16px;}
 .contact-box{
-  background:linear-gradient(145deg,rgba(20,22,45,.6),rgba(10,12,30,.6));
-  border:1px solid var(--line);border-radius:14px;
-  padding:22px 24px;
+  background:rgba(255,255,255,.92);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border:1px solid var(--border);border-radius:16px;
+  padding:20px 22px;
+  box-shadow:0 4px 14px -8px rgba(15,23,42,.06);
+  transition:transform .25s,border-color .25s,box-shadow .25s;
 }
-.contact-box h3{font-size:13px;color:var(--ink-2);text-transform:uppercase;letter-spacing:.7px;font-weight:700;margin-bottom:10px;}
-.contact-box a{font-size:15.5px;color:#fff;font-weight:600;display:block;margin-bottom:4px;}
-.contact-box a:hover{color:var(--indigo-2);}
-.contact-box p{font-size:13.5px;color:var(--ink-2);line-height:1.6;margin:0;}
+.contact-box:hover{transform:translateY(-2px);border-color:rgba(99,102,241,.22);box-shadow:0 16px 32px -16px rgba(99,102,241,.18);}
+.contact-box h3{font-size:11px;color:var(--ink-4);text-transform:uppercase;letter-spacing:.09em;font-weight:800;margin-bottom:8px;}
+.contact-box a{font-size:15px;color:var(--ink);font-weight:800;display:block;margin-bottom:4px;text-decoration:none;}
+.contact-box a:hover{color:var(--indigo-3);}
+.contact-box p{font-size:13px;color:var(--ink-3);line-height:1.6;margin:0;font-weight:500;}
 
 .contact-box.gradient{
-  background:linear-gradient(135deg,rgba(99,102,241,.18),rgba(168,85,247,.14));
-  border-color:rgba(168,85,247,.32);
+  background:linear-gradient(135deg,rgba(99,102,241,.08),rgba(168,85,247,.05));
+  border-color:rgba(168,85,247,.22);
 }
 {% endblock %}
 
