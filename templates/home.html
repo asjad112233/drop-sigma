@@ -976,6 +976,27 @@ h2.sec-title .grad{
 
 /* ════════════════ Pricing ════════════════ */
 .price-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}
+.price-grid.solo{grid-template-columns:1fr;max-width:540px;margin:0 auto;}
+.solo-tier{padding:44px 38px;}
+.solo-tier::before{content:"ONE SIMPLE PLAN · EVERYTHING INCLUDED";}
+.solo-tier .tier-name{
+  background:linear-gradient(135deg,var(--indigo),var(--purple));
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  font-size:14px;letter-spacing:.12em;
+}
+.solo-tier .tier-price .n{font-size:60px;}
+.solo-tier .tier-price{margin-top:6px;}
+.solo-tier .tier-list{gap:11px;}
+.solo-tier .tier-cta{padding:15px;font-size:14.5px;letter-spacing:.005em;}
+.price-foot{
+  text-align:center;margin-top:22px;
+  font-size:13px;color:var(--ink-3);font-weight:600;
+}
+.price-foot b{color:var(--ink);font-weight:800;}
+@media(max-width:560px){
+  .solo-tier{padding:34px 24px;}
+  .solo-tier .tier-price .n{font-size:46px;}
+}
 .tier{
   position:relative;background:#fff;
   border:1px solid var(--border);border-radius:22px;
@@ -2069,54 +2090,25 @@ footer{
       <h2 class="sec-title">Pay for the platform. <span class="grad">Sourcing is included.</span></h2>
       <p class="sec-sub">Drop Sigma's fee on sourcing is <b>$0 — for life</b>. Pay the supplier, pay the shipping, keep the margin. We make money on the SaaS, not on your supply chain.</p>
     </div>
-    <div class="price-grid">
-
-      <div class="tier">
-        <div class="tier-name">Starter</div>
-        <div class="tier-price"><span class="n">$49</span><span class="per">/month</span></div>
-        <div class="tier-tag">Single-store operators getting their AI live.</div>
+    <div class="price-grid solo">
+      <div class="tier featured solo-tier">
+        <div class="tier-name">Drop Sigma · One plan</div>
+        <div class="tier-price"><span class="n">$99</span><span class="per">/month · all-in</span></div>
+        <div class="tier-tag">Everything you need to run a fully automated store — sourcing, support, tracking, returns, vendors. One price, no add-ons.</div>
         <ul class="tier-list">
-          <li><span class="c"><i class="fa-solid fa-check"></i></span>1 store · 1 email inbox</li>
-          <li><span class="c"><i class="fa-solid fa-check"></i></span>AI customer support + auto-reply</li>
-          <li><span class="c"><i class="fa-solid fa-check"></i></span>Auto order sync (Shopify + WC)</li>
-          <li><span class="c"><i class="fa-solid fa-check"></i></span>Branded tracking page</li>
-          <li><span class="c"><i class="fa-solid fa-check"></i></span>Returns desk</li>
-          <li><span class="c"><i class="fa-solid fa-check"></i></span>Sourcing network access</li>
+          <li><span class="c"><i class="fa-solid fa-check"></i></span><b>3 connected stores</b> — Shopify + WooCommerce</li>
+          <li><span class="c"><i class="fa-solid fa-check"></i></span><b>Unlimited orders</b> + real-time sync</li>
+          <li><span class="c"><i class="fa-solid fa-check"></i></span><b>AI auto-replies, 24/7</b> — in your tone</li>
+          <li><span class="c"><i class="fa-solid fa-check"></i></span><b>Branded tracking</b> + AI returns desk</li>
+          <li><span class="c"><i class="fa-solid fa-check"></i></span><b>5 team members</b>, unlimited vendor portals</li>
+          <li><span class="c"><i class="fa-solid fa-check"></i></span><b>Dedicated sourcing manager</b> included</li>
+          <li><span class="c"><i class="fa-solid fa-check"></i></span><b>200+ verified suppliers</b> · $0 markup, forever</li>
+          <li><span class="c"><i class="fa-solid fa-check"></i></span><b>30-day money-back guarantee</b></li>
         </ul>
-        <a href="/signup/?plan=starter" class="tier-cta">Subscribe to Starter</a>
+        <a href="/signup/" class="tier-cta">Get started — $99/mo</a>
       </div>
-
-      <div class="tier featured">
-        <div class="tier-name"><span class="em">★ Pro</span></div>
-        <div class="tier-price"><span class="n">$99</span><span class="per">/month</span></div>
-        <div class="tier-tag">For brands scaling sourcing + multi-store ops.</div>
-        <ul class="tier-list">
-          <li><span class="c"><i class="fa-solid fa-check"></i></span><b>3 stores · 3 inboxes</b></li>
-          <li><span class="c"><i class="fa-solid fa-check"></i></span>Everything in Starter</li>
-          <li><span class="c"><i class="fa-solid fa-check"></i></span><b>Dedicated sourcing manager</b></li>
-          <li><span class="c"><i class="fa-solid fa-check"></i></span>Priority QC + 24/7 chat</li>
-          <li><span class="c"><i class="fa-solid fa-check"></i></span>Team seats (3 included)</li>
-          <li><span class="c"><i class="fa-solid fa-check"></i></span>Custom tracking domain</li>
-        </ul>
-        <a href="/signup/?plan=pro" class="tier-cta">Subscribe to Pro</a>
-      </div>
-
-      <div class="tier">
-        <div class="tier-name">Scale</div>
-        <div class="tier-price"><span class="n">$299</span><span class="per">/month</span></div>
-        <div class="tier-tag">Multi-brand operators with custom SLAs.</div>
-        <ul class="tier-list">
-          <li><span class="c"><i class="fa-solid fa-check"></i></span>Unlimited stores + inboxes</li>
-          <li><span class="c"><i class="fa-solid fa-check"></i></span>Everything in Pro</li>
-          <li><span class="c"><i class="fa-solid fa-check"></i></span>Custom supplier onboarding</li>
-          <li><span class="c"><i class="fa-solid fa-check"></i></span>SSO, audit log, SOC2 docs</li>
-          <li><span class="c"><i class="fa-solid fa-check"></i></span>Account manager + SLAs</li>
-          <li><span class="c"><i class="fa-solid fa-check"></i></span>API access + webhooks</li>
-        </ul>
-        <a href="/signup/?plan=scale" class="tier-cta">Talk to sales</a>
-      </div>
-
     </div>
+    <p class="price-foot">Month-to-month · cancel anytime · <b>30-day money-back guarantee</b> on your first month.</p>
   </div>
 </section>
 
@@ -2150,7 +2142,7 @@ footer{
       </details>
       <details class="faq-item">
         <summary class="faq-q">Does the branded tracking work on my domain?<i class="fa-solid fa-plus"></i></summary>
-        <div class="faq-a">On Starter: tracks via <b>track.dropsigma.com/{your-tracking-id}</b>. On Pro and Scale: white-label CNAME — <b>track.yourbrand.com</b>. Setup takes one DNS record.</div>
+        <div class="faq-a">Yes — every plan ships with a white-label CNAME: <b>track.yourbrand.com</b>. Setup takes one DNS record. Until you set it up, your customers see <b>track.dropsigma.com/{your-tracking-id}</b>.</div>
       </details>
     </div>
   </div>

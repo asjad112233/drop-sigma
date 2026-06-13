@@ -8,11 +8,9 @@
 .pricing-hero p{font-size:17px;color:var(--ink-3);max-width:640px;margin:0 auto;line-height:1.7;font-weight:500;}
 
 .plans{
-  display:grid;grid-template-columns:repeat(4,1fr);gap:18px;
-  margin:52px auto 0;
+  display:grid;grid-template-columns:1fr;gap:18px;
+  max-width:540px;margin:52px auto 0;
 }
-@media(max-width:1000px){.plans{grid-template-columns:repeat(2,1fr);}}
-@media(max-width:560px){.plans{grid-template-columns:1fr;}}
 
 .plan{
   background:rgba(255,255,255,.94);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
@@ -35,10 +33,11 @@
   padding:5px 14px;border-radius:100px;text-transform:uppercase;
   box-shadow:0 8px 20px -6px rgba(168,85,247,.55);
 }
-.plan-name{font-size:11px;color:var(--ink-4);text-transform:uppercase;letter-spacing:.1em;font-weight:800;margin-bottom:10px;}
-.plan-price{font-size:40px;font-weight:900;color:var(--ink);letter-spacing:-.028em;line-height:1;}
-.plan-price small{font-size:13.5px;font-weight:600;color:var(--ink-4);margin-left:4px;}
-.plan-desc{font-size:13px;color:var(--ink-3);margin:10px 0 20px;line-height:1.5;min-height:38px;font-weight:500;}
+.plan{padding:38px 32px;}
+.plan-name{font-size:12px;color:var(--ink-4);text-transform:uppercase;letter-spacing:.12em;font-weight:900;margin-bottom:14px;}
+.plan-price{font-size:56px;font-weight:900;color:var(--ink);letter-spacing:-.028em;line-height:1;}
+.plan-price small{font-size:14px;font-weight:600;color:var(--ink-4);margin-left:6px;}
+.plan-desc{font-size:14px;color:var(--ink-3);margin:14px 0 22px;line-height:1.55;min-height:auto;font-weight:500;}
 .plan-features{list-style:none;padding:0;margin:0 0 22px;flex:1;}
 .plan-features li{
   display:flex;align-items:flex-start;gap:9px;
@@ -102,88 +101,62 @@
 
 {% block content %}
 <section class="pricing-hero container">
-  <h1>Pricing that <span class="gradient-text">scales with you</span></h1>
-  <p>Free to install. Cancel anytime. Plans are billed monthly in USD — no surprise fees, ever.</p>
+  <h1>One plan. <span class="gradient-text">Everything included.</span></h1>
+  <p>No starter tier. No enterprise upsell. One price covers sourcing, support, tracking, returns, vendors — the whole platform.</p>
 
   <div class="billing-notice" role="note" aria-label="External billing notice">
     <div class="billing-notice-icon" aria-hidden="true">💳</div>
     <div class="billing-notice-body">
       <strong>Billing Notice</strong>
-      <p>Drop Sigma subscriptions are billed directly at <a href="https://dropsigma.com">dropsigma.com</a> using Stripe — <em>not</em> through Shopify's in-app billing. You'll manage your plan, payment method, and cancellations from your DropSigma account. Shopify App Store install is free; paid plans are optional and purchased separately here.</p>
+      <p>Drop Sigma subscriptions are billed directly at <a href="https://dropsigma.com">dropsigma.com</a> using Stripe — <em>not</em> through Shopify's in-app billing. You'll manage your plan, payment method, and cancellations from your DropSigma account. Shopify App Store install is free; the $99/mo plan is purchased separately here.</p>
     </div>
   </div>
 
   <div class="plans">
     <div class="plan popular">
-      <div class="popular-badge">Most popular</div>
-      <div class="plan-name">Growth</div>
-      <div class="plan-price">$49<small>/mo</small></div>
-      <div class="plan-desc">Perfect for solo merchants and small teams getting started.</div>
+      <div class="popular-badge">One simple plan</div>
+      <div class="plan-name">Drop Sigma</div>
+      <div class="plan-price">$99<small>/mo · all-in</small></div>
+      <div class="plan-desc">Everything you need to run a fully automated store. No add-ons, no tiers, no per-order fees.</div>
       <ul class="plan-features">
-        <li>Up to 500 orders/month</li>
-        <li>1 connected store</li>
-        <li>3 team members</li>
-        <li>AI email drafting</li>
-        <li>Vendor portal (3 vendors)</li>
-        <li>Real-time order sync</li>
+        <li><strong>3 connected stores</strong> — Shopify + WooCommerce</li>
+        <li><strong>Unlimited orders</strong> + real-time sync</li>
+        <li><strong>AI auto-replies, 24/7</strong> — in your tone</li>
+        <li><strong>Branded tracking</strong> + AI returns desk</li>
+        <li><strong>5 team members</strong>, unlimited vendor portals</li>
+        <li><strong>Dedicated sourcing manager</strong> included</li>
+        <li><strong>200+ verified suppliers</strong> · $0 markup, forever</li>
+        <li><strong>30-day money-back guarantee</strong></li>
       </ul>
-      <a href="/signup/" class="btn btn-primary">Get started</a>
-    </div>
-
-    <div class="plan">
-      <div class="plan-name">Scale</div>
-      <div class="plan-price">$149<small>/mo</small></div>
-      <div class="plan-desc">For growing brands juggling multiple stores and vendors.</div>
-      <ul class="plan-features">
-        <li>Up to 5,000 orders/month</li>
-        <li>5 connected stores</li>
-        <li>10 team members</li>
-        <li>AI auto-reply rules</li>
-        <li>Unlimited vendors</li>
-        <li>Live tracking (1500+ couriers)</li>
-        <li>Priority email support</li>
-      </ul>
-      <a href="/signup/" class="btn btn-ghost">Choose Scale</a>
-    </div>
-
-    <div class="plan">
-      <div class="plan-name">Plus</div>
-      <div class="plan-price">$399<small>/mo</small></div>
-      <div class="plan-desc">Enterprise-grade for high-volume operators.</div>
-      <ul class="plan-features">
-        <li>Unlimited orders</li>
-        <li>Unlimited stores</li>
-        <li>Unlimited team members</li>
-        <li>SSO &amp; advanced RBAC</li>
-        <li>Dedicated CSM</li>
-        <li>Custom integrations</li>
-        <li>99.9% SLA</li>
-      </ul>
-      <a href="/contact/" class="btn btn-ghost">Contact sales</a>
+      <a href="/signup/" class="btn btn-primary">Get started — $99/mo</a>
     </div>
   </div>
 
-  <p class="compare-note">All plans include GDPR-compliant data isolation, 24/7 monitoring, and free product updates. <a href="/features/">Compare all features →</a></p>
+  <p class="compare-note">Includes GDPR-compliant data isolation, 24/7 monitoring, and free product updates. <a href="/features/">See every feature →</a></p>
 </section>
 
 <section class="faq-section container">
   <h2>Frequently asked questions</h2>
   <div class="faq-list">
     <div class="faq-item">
-      <h4>Can I change plans later?</h4>
-      <p>Yes, upgrade or downgrade at any time from your account settings. Upgrades are prorated; downgrades take effect at the next billing cycle.</p>
+      <h4>Why only one plan?</h4>
+      <p>Because tier-shopping is a tax on your time. We picked the price and feature set that works for almost every dropshipping operation — 3 stores, unlimited orders, sourcing manager included — and skipped the per-feature upsell.</p>
     </div>
     <div class="faq-item">
-      <h4>What happens if I exceed my order limit?</h4>
-      <p>We'll never block your store. Instead, we email you with a soft warning at 90% usage. Continued overages are billed at $0.05 per extra order, with the option to auto-upgrade if it makes sense.</p>
+      <h4>What if I need more than 3 stores?</h4>
+      <p>Email <a href="mailto:support@dropsigma.com">support@dropsigma.com</a> — we'll set up additional stores on a per-store add-on. The base plan covers the vast majority of merchants.</p>
+    </div>
+    <div class="faq-item">
+      <h4>Are there per-order fees?</h4>
+      <p>No. The $99/mo covers <strong>unlimited orders</strong>. We don't bill per order, per ticket, or per AI reply — flat fee, every month.</p>
     </div>
     <div class="faq-item">
       <h4>Which payment methods do you accept?</h4>
-      <p>All major credit cards (Visa, Mastercard, Amex), Apple Pay, and PayPal via Stripe. Enterprise customers can also pay by wire transfer or annual invoice.</p>
+      <p>All major credit cards (Visa, Mastercard, Amex), Apple Pay, and PayPal via Stripe.</p>
     </div>
     <div class="faq-item">
-      <h4>Do you offer annual discounts?</h4>
-      <p>Yes — pay annually and save 20% on any plan. Contact sales for custom multi-year discounts on the Plus plan.</p>
+      <h4>Do you offer annual billing?</h4>
+      <p>Yes — pay annually and save 20% (works out to $79/mo, billed yearly). Email <a href="mailto:support@dropsigma.com">support@dropsigma.com</a> to switch to annual.</p>
     </div>
     <div class="faq-item">
       <h4>Is there a setup fee?</h4>
