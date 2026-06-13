@@ -11999,6 +11999,14 @@ document.addEventListener("DOMContentLoaded", () => {
         body[data-active-section="sourcingPartners"] #sourcingPartnersSection.section.active > .sp-workspace{
           flex:1 1 0%;min-width:0;
           overflow-y:auto;overflow-x:hidden;
+          /* The base .sp-workspace rule below sets min-height:100vh —
+             but the active section is already height: calc(100vh -
+             var(--ds-ref-h)), so a 100vh-min-height child overflows
+             and shows an empty white strip below the orders list.
+             Force min-height:0 + height:100% so the workspace fills
+             its flex parent exactly, no taller, no shorter. */
+          min-height:0!important;
+          height:100%!important;
         }
         .sp-rail{display:none;}
         body[data-active-section="sourcingPartners"] .sp-rail{
@@ -12197,6 +12205,13 @@ document.addEventListener("DOMContentLoaded", () => {
         #sourcingPartnersSection .sp-tab-body{
           flex:1;padding:24px 28px;
           overflow-y:auto;
+          /* min-height:0 unlocks flex-child shrinking — without it the
+             body refuses to shrink below its content size, which on
+             short order lists leaves an empty white strip at the bottom
+             of the workspace. With min-height:0 the body fits exactly
+             inside the workspace, scrolls when content overflows, and
+             the pager always lands flush with the bottom. */
+          min-height:0;
         }
         #sourcingPartnersSection .sp-tab-body.no-pad{padding:0;}
         #sourcingPartnersSection .sp-loading{
@@ -22036,7 +22051,21 @@ function _resetOrdersPage(){ window._ordersPage = 1; }
 function ordersPagerHTML(state){
   const { page, total_pages, total, page_size } = state;
   if (total <= 0) return '';
-  if (total <= page_size && total_pages <= 1) return '';
+  // ALWAYS render the pager (matches the SPV behavior) — user wants
+  // the bottom counting strip visible everywhere, including on
+  // single-page result sets. Single-page mode keeps the "total N
+  // items · items/page selector" without the unnecessary nav buttons.
+  const sizes = [10, 25, 50, 100].map(s =>
+    `<option value="${s}" ${s===page_size?'selected':''}>${s} items/page</option>`
+  ).join('');
+  if (total <= page_size && total_pages <= 1){
+    return `
+      <div class="ds-pager">
+        <span class="ds-pager-total">total <b>${total}</b> items</span>
+        <div class="ds-pager-divider"></div>
+        <div class="ds-pager-size"><select data-ordp-size>${sizes}</select></div>
+      </div>`;
+  }
   const pages = [];
   pages.push(1);
   let lastShown = 1;
@@ -22054,9 +22083,6 @@ function ordersPagerHTML(state){
     p === '…'
       ? '<span class="ds-pager-ellipsis">…</span>'
       : `<button class="ds-pager-btn ${p===page?'active':''}" data-ordp-page="${p}">${p}</button>`
-  ).join('');
-  const sizes = [10, 25, 50, 100].map(s =>
-    `<option value="${s}" ${s===page_size?'selected':''}>${s} items/page</option>`
   ).join('');
   return `
     <div class="ds-pager">
@@ -41109,12 +41135,25 @@ function spvSkeletonHTML(n){
 function spvPagerHTML(state){
   const { page, total_pages, total, page_size } = state;
   if (total <= 0) return '';
-  // Single-page result sets don't need a pager — the chip count above
-  // already tells the user how many items they're looking at, and a
-  // pager that only shows "1 ... total N items" with no navigation is
-  // just visual noise. Drop Sigma rule: only show the pager once the
-  // user actually has somewhere to page TO.
-  if (total <= page_size && total_pages <= 1) return '';
+  // ALWAYS render the pager when there's any data — user explicitly
+  // asked for "neechy show hony waly counting" (the bottom counting
+  // strip) to be visible everywhere, even on small/single-page result
+  // sets. The pager doubles as a "total X items · Y per page" summary
+  // so the user always knows the size of the dataset they're looking
+  // at. Single-page mode: skip the navigation buttons (nothing to
+  // navigate to) but keep the items count and page-size selector.
+  const isSinglePage = (total <= page_size && total_pages <= 1);
+  const sizes = [10, 25, 50, 100].map(s =>
+    `<option value="${s}" ${s===page_size?'selected':''}>${s} items/page</option>`
+  ).join('');
+  if (isSinglePage){
+    return `
+      <div class="ds-pager">
+        <span class="ds-pager-total">total <b>${total}</b> items</span>
+        <div class="ds-pager-divider"></div>
+        <div class="ds-pager-size"><select data-spvp-size>${sizes}</select></div>
+      </div>`;
+  }
   const pages = [];
   pages.push(1);
   let lastShown = 1;
@@ -41132,9 +41171,6 @@ function spvPagerHTML(state){
     p === '…'
       ? '<span class="ds-pager-ellipsis">…</span>'
       : `<button class="ds-pager-btn ${p===page?'active':''}" data-spvp-page="${p}">${p}</button>`
-  ).join('');
-  const sizes = [10, 25, 50, 100].map(s =>
-    `<option value="${s}" ${s===page_size?'selected':''}>${s} items/page</option>`
   ).join('');
   return `
     <div class="ds-pager">
