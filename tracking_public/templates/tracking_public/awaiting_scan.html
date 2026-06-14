@@ -5,6 +5,15 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
 <title>{{ page_title }}</title>
 <meta name="robots" content="noindex,nofollow">
+{# See detail.html: prefer the seller's brand favicon, fall back to
+   Drop Sigma's mark when no store brand is in context. #}
+{% if brand.logo_url %}
+<link rel="icon" href="{{ brand.logo_url }}">
+<link rel="apple-touch-icon" href="{{ brand.logo_url }}">
+{% else %}
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="apple-touch-icon" href="/static/favicon.svg">
+{% endif %}
 <style>
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
   html,body{height:100%;}

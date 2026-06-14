@@ -5,6 +5,20 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
 <title>{{ page_title }}</title>
 <meta name="robots" content="noindex,nofollow">
+{# Browser-tab favicon. Prefer the seller's own logo (Google favicon
+   service URL is already in brand.logo_url) so the tab matches the
+   page chrome — Drop Sigma is the platform behind the page, the tab
+   should show the merchant's brand. Falls back to Drop Sigma's mark
+   when no store brand is available. Both <link rel="icon"> and
+   apple-touch-icon are set so iOS share-sheet / home-screen icons
+   pick up the same image. #}
+{% if brand.logo_url %}
+<link rel="icon" href="{{ brand.logo_url }}">
+<link rel="apple-touch-icon" href="{{ brand.logo_url }}">
+{% else %}
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="apple-touch-icon" href="/static/favicon.svg">
+{% endif %}
 <style>
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
   html,body{height:100%;}
