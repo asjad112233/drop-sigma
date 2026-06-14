@@ -226,39 +226,51 @@ def _build_yuntrack_stages(order) -> dict:
     ui_events.sort(key=lambda e: e["ts"])
 
     # ── Determine active stage ───────────────────────────────────
-    active_key = carrier_stage if carrier_stage in stage_keys else ""
-    if not active_key:
-        # Fall back: derive from events using the YunExpress
-        # classifier. Use the HIGHEST-REACHED classifier rather than
-        # "latest event's class" — if the most recent event happens
-        # to be an unclassified status message, the latest-only pass
-        # would walk further back and lock the bar to an OLDER
-        # stage's event (eg. "Departed from origin"), causing the
-        # progress bar to visibly regress. The highest-reached
-        # variant scans every event and pins the bar to the furthest
-        # stage any of them implies.
+    # Two candidates feed the active-stage decision:
+    #   (a) order.tracking_carrier_stage — the carrier_stage value the
+    #       LAST scraper run persisted to the DB. Can be STALE: if the
+    #       scraper ran before we expanded the classifier vocabulary,
+    #       this field still holds the old (lower) stage and a fresh
+    #       page load would otherwise show a regressed bar.
+    #   (b) live classification of the current events list using the
+    #       latest _YUNEXPRESS_KEYWORDS — the highest-reached stage
+    #       any event implies.
+    # We pick whichever is FURTHER ALONG in the stepper. That way:
+    #   • Brand-new orders (no carrier_stage yet) still resolve.
+    #   • Stale carrier_stage never holds the bar back — the live
+    #     classifier wins when events have advanced past it.
+    #   • A momentarily-unrecognised event can't drag the bar
+    #     backwards either, because the live classifier already
+    #     scans every event for the highest reached.
+    candidates = []
+    if carrier_stage in stage_keys:
+        candidates.append(carrier_stage)
+    try:
+        from orders.yuntrack_scraper import (
+            classify_yunexpress_stage,
+            _active_stage_from_events as _yt_highest_reached,
+        )
+        live_classified = ""
         try:
-            from orders.yuntrack_scraper import (
-                classify_yunexpress_stage,
-                _active_stage_from_events as _yt_highest_reached,
-            )
-            classified = ""
-            try:
-                classified = _yt_highest_reached(events_raw) or ""
-            except Exception:
-                # Defensive: if the helper signature changes upstream,
-                # fall back to the inline latest-classified scan so
-                # the page still renders something useful.
-                for ev in reversed(events_raw):
-                    c = classify_yunexpress_stage((ev.get("raw") or ""))
-                    if c:
-                        classified = c
-                        break
-            if classified in stage_keys:
-                active_key = classified
+            live_classified = _yt_highest_reached(events_raw) or ""
         except Exception:
-            pass
-    if not active_key:
+            # Defensive: if the helper signature changes upstream,
+            # fall back to inline latest-classified scan so the page
+            # still renders something useful.
+            for ev in reversed(events_raw):
+                c = classify_yunexpress_stage((ev.get("raw") or ""))
+                if c:
+                    live_classified = c
+                    break
+        if live_classified in stage_keys:
+            candidates.append(live_classified)
+    except Exception:
+        pass
+
+    if candidates:
+        # Pick the candidate furthest along the stepper.
+        active_key = max(candidates, key=lambda k: stage_keys.index(k))
+    else:
         # Last resort: shipment_created (we at least know we have a
         # tracking number).
         active_key = "shipment_created"
