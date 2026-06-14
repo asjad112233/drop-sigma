@@ -211,6 +211,28 @@ _YUNEXPRESS_KEYWORDS = [
         "last mile carrier", "last-mile",
         "transferred to last-mile", "transferred to last mile",
         "arrived at delivery facility", "loaded for last-mile",
+        # ── NEW: last-mile handoff events YunExpress + partners report ──
+        # Yuntrack itself shows "Local carrier on the way" the moment
+        # one of these fires. Intelcom / Dragonfly / Canada Post all
+        # use "received from prior carrier" when picking up the parcel
+        # from the international leg. Adding the literal phrases is
+        # what unblocks the user's stuck progress bar.
+        "received from prior carrier",
+        "from prior carrier",
+        "prior carrier",
+        "arrived at terminal",
+        "arrived terminal",
+        "received at terminal",
+        "terminal location",
+        "with local carrier",
+        "local carrier on the way",
+        "local courier",
+        "handed off to local",
+        "transferred to local",
+        "transferred to last mile carrier",
+        "with the local carrier",
+        "destination delivery branch",
+        "delivery branch",
     )),
     ("arrived_destination", (
         "arrived at destination country", "arrived at the destination",
@@ -218,6 +240,26 @@ _YUNEXPRESS_KEYWORDS = [
         "destination sortation", "customs clearance",
         "import customs", "released by customs",
         "cleared destination", "arrived in country",
+        # ── NEW: the literal flight-arrival + customs-entry events ──
+        # Yuntrack uses "International flight has arrived" the second
+        # the plane lands at the destination country — before customs.
+        # That's the user-visible signal for "Arrived at destination".
+        "international flight has arrived",
+        "international flight arrived",
+        "flight has arrived",
+        "flight arrived",
+        "arrived at destination international airport",
+        "arrived at destination airport",
+        "arrived at the destination airport",
+        "arrived in destination",
+        "arrived in the destination",
+        "customs cleared",
+        "import clearance",
+        "import clearance complete",
+        "import clearance completed",
+        "released from customs",
+        "released by customs",
+        "available for pickup",
     )),
     ("departed_origin", (
         "departed from origin", "departed origin",

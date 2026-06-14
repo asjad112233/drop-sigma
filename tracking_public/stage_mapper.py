@@ -228,19 +228,34 @@ def _build_yuntrack_stages(order) -> dict:
     # ── Determine active stage ───────────────────────────────────
     active_key = carrier_stage if carrier_stage in stage_keys else ""
     if not active_key:
-        # Fall back: derive from latest event using the YunExpress
-        # classifier (kept off the hot path import to avoid pulling
-        # Playwright machinery just to render).
+        # Fall back: derive from events using the YunExpress
+        # classifier. Use the HIGHEST-REACHED classifier rather than
+        # "latest event's class" — if the most recent event happens
+        # to be an unclassified status message, the latest-only pass
+        # would walk further back and lock the bar to an OLDER
+        # stage's event (eg. "Departed from origin"), causing the
+        # progress bar to visibly regress. The highest-reached
+        # variant scans every event and pins the bar to the furthest
+        # stage any of them implies.
         try:
-            from orders.yuntrack_scraper import classify_yunexpress_stage
-            latest_classified = ""
-            for ev in reversed(events_raw):
-                c = classify_yunexpress_stage((ev.get("raw") or ""))
-                if c:
-                    latest_classified = c
-                    break
-            if latest_classified in stage_keys:
-                active_key = latest_classified
+            from orders.yuntrack_scraper import (
+                classify_yunexpress_stage,
+                _active_stage_from_events as _yt_highest_reached,
+            )
+            classified = ""
+            try:
+                classified = _yt_highest_reached(events_raw) or ""
+            except Exception:
+                # Defensive: if the helper signature changes upstream,
+                # fall back to the inline latest-classified scan so
+                # the page still renders something useful.
+                for ev in reversed(events_raw):
+                    c = classify_yunexpress_stage((ev.get("raw") or ""))
+                    if c:
+                        classified = c
+                        break
+            if classified in stage_keys:
+                active_key = classified
         except Exception:
             pass
     if not active_key:
@@ -275,11 +290,39 @@ def _build_yuntrack_stages(order) -> dict:
         "arrived at destination", "destination customs",
         "destination facility", "arrived in country",
         "released by customs", "cleared destination",
+        # ── NEW: keep in lock-step with the classifier keywords in
+        # orders/yuntrack_scraper.py. The plane-landing event is the
+        # honest first signal that the parcel is in the destination
+        # country, even if customs hasn't released it yet.
+        "international flight has arrived",
+        "international flight arrived",
+        "flight has arrived", "flight arrived",
+        "arrived at destination international airport",
+        "arrived at destination airport",
+        "arrived at the destination airport",
+        "arrived in destination", "arrived in the destination",
+        "customs cleared", "import clearance",
+        "import clearance complete", "import clearance completed",
+        "released from customs", "available for pickup",
     ))
     local_carrier_ts     = _earliest_event_ts(events_raw, (
         "out for delivery", "loaded for delivery",
         "transferred to local carrier", "last mile",
         "last-mile", "with delivery driver",
+        # ── NEW: last-mile handoff events. Locked to the same
+        # vocabulary used by orders/yuntrack_scraper.py so the
+        # progress bar advances the moment any of these arrive
+        # (typical for Intelcom / Dragonfly / Canada Post handoff).
+        "received from prior carrier", "from prior carrier",
+        "prior carrier",
+        "arrived at terminal", "arrived terminal",
+        "received at terminal", "terminal location",
+        "with local carrier", "with the local carrier",
+        "local carrier on the way",
+        "local courier",
+        "handed off to local", "transferred to local",
+        "transferred to last mile carrier",
+        "destination delivery branch", "delivery branch",
     ))
     delivered_ts         = _earliest_event_ts(events_raw, (
         "delivered to recipient", "successfully delivered",
