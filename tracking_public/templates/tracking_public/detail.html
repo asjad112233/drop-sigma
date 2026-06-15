@@ -5,13 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
 <title>{{ page_title }}</title>
 <meta name="robots" content="noindex,nofollow">
-{# Browser-tab favicon. Prefer the seller's own logo (Google favicon
-   service URL is already in brand.logo_url) so the tab matches the
-   page chrome — Drop Sigma is the platform behind the page, the tab
-   should show the merchant's brand. Falls back to Drop Sigma's mark
-   when no store brand is available. Both <link rel="icon"> and
-   apple-touch-icon are set so iOS share-sheet / home-screen icons
-   pick up the same image. #}
+{# Browser-tab favicon: prefer the seller's brand logo (brand.logo_url), fall back to Drop Sigma's mark. Both icon + apple-touch-icon set. #}
 {% if brand.logo_url %}
 <link rel="icon" href="{{ brand.logo_url }}">
 <link rel="apple-touch-icon" href="{{ brand.logo_url }}">
@@ -289,15 +283,17 @@
   <div class="topbar fade-up d-1">
     <div class="brand-mark">
       {% if brand.logo_url %}
-        {# Render the seller's own favicon/logo, the same way the
-           Stores dashboard card does. Three-tier fallback chain:
-             1. Clearbit logo (best quality, transparent crop)
-             2. Google favicon service (covers anything Clearbit misses)
-             3. Two-letter initials (when both lookups 404)
-           The img keeps an onerror handler instead of nested <picture>
-           sources so the chain works without modern-browser feature
-           support — every page hit is a customer who might be on an
-           older browser or low-bandwidth network. #}
+        {% comment %}
+          Render the seller's own favicon/logo, the same way the
+          Stores dashboard card does. Three-tier fallback chain:
+            1. Clearbit logo (best quality, transparent crop)
+            2. Google favicon service (covers anything Clearbit misses)
+            3. Two-letter initials (when both lookups 404)
+          The img keeps an onerror handler instead of nested <picture>
+          sources so the chain works without modern-browser feature
+          support — every page hit is a customer who might be on an
+          older browser or low-bandwidth network.
+        {% endcomment %}
         <img class="brand-mark-img"
              src="{{ brand.logo_url }}"
              alt="{{ brand.name }}"
