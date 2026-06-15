@@ -17722,7 +17722,7 @@ function rmaTriageOpenView(emailId){
   const isHtmlBody = /<\/?[a-z][\s\S]*>/i.test(bodyText);
   const safeBody = isHtmlBody
     ? `<iframe srcdoc="${rmaEsc(bodyText).replace(/"/g,'&quot;')}" sandbox="" style="width:100%;min-height:340px;border:0;background:#fff;border-radius:8px;"></iframe>`
-    : `<pre style="white-space:pre-wrap;word-wrap:break-word;font:13px/1.55 'Inter',system-ui,sans-serif;color:#0f172a;margin:0;background:#fff;padding:16px;border-radius:8px;border:1px solid #eef1f6;">${rmaEsc(bodyText) || '<span style=\\'color:#94a3b8;\\'>(empty body)</span>'}</pre>`;
+    : `<pre style="white-space:pre-wrap;word-wrap:break-word;font:13px/1.55 Inter,system-ui,sans-serif;color:#0f172a;margin:0;background:#fff;padding:16px;border-radius:8px;border:1px solid #eef1f6;">${rmaEsc(bodyText) || '(empty body)'}</pre>`;
   host.innerHTML = `
     <div class="modal" style="max-width:780px;width:96%;">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:6px;">
