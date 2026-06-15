@@ -17706,51 +17706,86 @@ async function rmaLoadTriage(){
 function rmaTriageOpenView(emailId){
   const e = (window._rmaTriageCache || {})[emailId];
   if (!e) return;
+
+  // Build / re-use the overlay. Inline styles only — no dependence on
+  // an external modal class (a previous version referenced .mo which
+  // doesn't exist in this stylesheet, leaving the modal invisible).
   let host = document.getElementById('rmaTriageViewer');
   if (!host){
     host = document.createElement('div');
     host.id = 'rmaTriageViewer';
-    host.className = 'mo';
-    host.onclick = (ev) => { if (ev.target === host) rmaTriageCloseView(); };
+    host.onclick = function(ev){ if (ev.target === host) rmaTriageCloseView(); };
     document.body.appendChild(host);
   }
-  // Body might be HTML — render INSIDE an iframe-style sandbox using
-  // srcdoc so customer-supplied HTML can't escape and run scripts in
-  // the dashboard's privileged context. Falls back to plain-text
-  // rendering when the body has no HTML tags.
-  const bodyText = String(e.body || e.preview || '').trim();
-  const isHtmlBody = /<\/?[a-z][\s\S]*>/i.test(bodyText);
-  const safeBody = isHtmlBody
-    ? `<iframe srcdoc="${rmaEsc(bodyText).replace(/"/g,'&quot;')}" sandbox="" style="width:100%;min-height:340px;border:0;background:#fff;border-radius:8px;"></iframe>`
-    : `<pre style="white-space:pre-wrap;word-wrap:break-word;font:13px/1.55 Inter,system-ui,sans-serif;color:#0f172a;margin:0;background:#fff;padding:16px;border-radius:8px;border:1px solid #eef1f6;">${rmaEsc(bodyText) || '(empty body)'}</pre>`;
-  host.innerHTML = `
-    <div class="modal" style="max-width:780px;width:96%;">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:6px;">
-        <div style="flex:1;min-width:0;">
-          <div style="font-size:11px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;">From</div>
-          <div style="font-size:14.5px;font-weight:800;color:#0f172a;word-break:break-all;">${rmaEsc(e.from || '—')}</div>
-        </div>
-        <button class="btn btn-ghost" onclick="rmaTriageCloseView()" style="font-size:18px;padding:4px 10px;line-height:1;">×</button>
-      </div>
-      <div style="margin:10px 0 14px;padding:10px 12px;background:#f8fafc;border-radius:9px;border:1px solid #eef1f6;">
-        <div style="font-size:11px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;">Subject</div>
-        <div style="font-size:14px;font-weight:700;color:#0f172a;">${rmaEsc(e.subject || '(no subject)')}</div>
-        <div style="font-size:11.5px;color:#64748b;margin-top:4px;">${rmaEsc(e.ts_display || '')}</div>
-      </div>
-      ${safeBody}
-      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;">
-        <button class="btn btn-ghost" onclick="rmaTriageCloseView()">Close</button>
-        <button class="btn" onclick="rmaTriageCloseView(); rmaTriageDismiss(${e.id});" style="background:#fff;border:1px solid #fecaca;color:#b91c1c;font-weight:800;">Dismiss</button>
-        <button class="btn btn-primary" onclick="rmaTriageCloseView(); rmaTriageStart(${e.id});"><i class="fa-solid fa-play"></i> Start Return</button>
-      </div>
-    </div>`;
-  host.style.display = 'flex';
-  requestAnimationFrame(() => host.classList.add('show'));
+  host.setAttribute('style',
+    'position:fixed;inset:0;z-index:99999;'
+    + 'background:rgba(15,23,42,.55);backdrop-filter:blur(3px);'
+    + '-webkit-backdrop-filter:blur(3px);'
+    + 'display:flex;align-items:flex-start;justify-content:center;'
+    + 'padding:42px 20px 20px;overflow-y:auto;'
+  );
+
+  const fromText    = rmaEsc(e.from       || '—');
+  const subjectText = rmaEsc(e.subject    || '(no subject)');
+  const tsText      = rmaEsc(e.ts_display || '');
+  const bodyText    = String(e.body || e.preview || '').trim();
+  const isHtmlBody  = /<\/?[a-z][\s\S]*>/i.test(bodyText);
+
+  // Body section: HTML emails render inside a sandboxed iframe so any
+  // customer-supplied HTML / styles / scripts can't reach into the
+  // dashboard's privileged context. Plain-text bodies render in a
+  // <pre> with wrapping. Both branches use safe srcdoc/text content
+  // and never let raw email markup land on the parent DOM.
+  let bodyBlock;
+  if (isHtmlBody){
+    const srcdocSafe = rmaEsc(bodyText).replace(/"/g, '&quot;');
+    bodyBlock = '<iframe srcdoc="' + srcdocSafe + '" sandbox=""'
+      + ' style="width:100%;min-height:340px;border:0;background:#fff;border-radius:10px;"></iframe>';
+  } else {
+    const text = rmaEsc(bodyText) || '(empty body)';
+    bodyBlock = '<pre style="white-space:pre-wrap;word-wrap:break-word;'
+      + 'font:13px/1.55 Inter,system-ui,sans-serif;color:#0f172a;'
+      + 'margin:0;background:#fff;padding:16px;border-radius:10px;'
+      + 'border:1px solid #eef1f6;max-height:60vh;overflow:auto;">'
+      + text + '</pre>';
+  }
+
+  const modalCard =
+      '<div style="background:#fff;border-radius:18px;'
+    + 'box-shadow:0 30px 80px rgba(15,23,42,.30);'
+    + 'max-width:780px;width:96%;padding:22px 22px 18px;'
+    + 'max-height:calc(100vh - 84px);overflow-y:auto;'
+    + 'animation:odsPopIn .18s ease-out;">'
+    +   '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:6px;">'
+    +     '<div style="flex:1;min-width:0;">'
+    +       '<div style="font-size:11px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;">From</div>'
+    +       '<div style="font-size:14.5px;font-weight:800;color:#0f172a;word-break:break-all;">' + fromText + '</div>'
+    +     '</div>'
+    +     '<button type="button" onclick="rmaTriageCloseView()"'
+    +       ' style="font-size:22px;line-height:1;padding:4px 11px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:10px;cursor:pointer;color:#475569;">&times;</button>'
+    +   '</div>'
+    +   '<div style="margin:10px 0 14px;padding:10px 12px;background:#f8fafc;border-radius:9px;border:1px solid #eef1f6;">'
+    +     '<div style="font-size:11px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;">Subject</div>'
+    +     '<div style="font-size:14px;font-weight:700;color:#0f172a;">' + subjectText + '</div>'
+    +     '<div style="font-size:11.5px;color:#64748b;margin-top:4px;">' + tsText + '</div>'
+    +   '</div>'
+    +   bodyBlock
+    +   '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;">'
+    +     '<button type="button" onclick="rmaTriageCloseView()"'
+    +       ' style="padding:10px 16px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:10px;cursor:pointer;font-weight:700;color:#475569;">Close</button>'
+    +     '<button type="button" onclick="rmaTriageCloseView(); rmaTriageDismiss(' + e.id + ');"'
+    +       ' style="padding:10px 16px;background:#fff;border:1px solid #fecaca;color:#b91c1c;border-radius:10px;cursor:pointer;font-weight:800;">Dismiss</button>'
+    +     '<button type="button" onclick="rmaTriageCloseView(); rmaTriageStart(' + e.id + ');"'
+    +       ' style="padding:10px 18px;background:linear-gradient(135deg,#22c55e,#15803d);color:#fff;border:0;border-radius:10px;cursor:pointer;font-weight:800;">'
+    +       '<i class="fa-solid fa-play" style="margin-right:6px;"></i>Start Return</button>'
+    +   '</div>'
+    + '</div>';
+
+  host.innerHTML = modalCard;
 }
 function rmaTriageCloseView(){
   const host = document.getElementById('rmaTriageViewer');
   if (!host) return;
-  host.classList.remove('show');
   host.style.display = 'none';
 }
 
