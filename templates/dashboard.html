@@ -17669,16 +17669,22 @@ async function rmaLoadTriage(){
     return;
   }
 
+  // Stash the full email payloads on a window-scoped cache so the
+  // row-click viewer can read the FULL body (including HTML body)
+  // without making a second API call. Keyed by email id.
+  window._rmaTriageCache = {};
+  data.emails.forEach(e => { window._rmaTriageCache[e.id] = e; });
+
   list.innerHTML = `
     <table class="rma-tbl">
       <thead><tr><th>From</th><th>Subject</th><th>Preview</th><th>Received</th><th></th></tr></thead>
       <tbody>${data.emails.map(e => `
-        <tr>
+        <tr class="click rma-triage-row" data-rma-eid="${e.id}" onclick="rmaTriageOpenView(${e.id})" title="Click to read the full email">
           <td><div style="font-weight:700;font-size:13px;">${rmaEsc(e.from || '—')}</div></td>
           <td><div style="font-weight:600;font-size:13px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${rmaEsc(e.subject || '(no subject)')}</div></td>
           <td><div style="font-size:12px;color:#64748b;max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${rmaEsc(e.preview)}</div></td>
           <td><div style="font-size:11.5px;color:#64748b;">${rmaEsc(e.ts_display || '')}</div></td>
-          <td>
+          <td onclick="event.stopPropagation();">
             <div style="display:flex;gap:6px;justify-content:flex-end;">
               <button class="rma-rowact green" onclick="rmaTriageStart(${e.id})"><i class="fa-solid fa-play"></i> Start Return</button>
               <button class="rma-rowact" onclick="rmaTriageDismiss(${e.id})">Dismiss</button>
@@ -17686,6 +17692,66 @@ async function rmaLoadTriage(){
           </td>
         </tr>`).join('')}</tbody>
     </table>`;
+}
+
+/* ─── Triage row viewer modal ───────────────────────────────────────
+   Clicking a triage row opens this modal so the user can read the
+   ENTIRE email before deciding Start Return / Dismiss. Without this,
+   the user could only see the truncated preview snippet — they had
+   to either start the return blind or dismiss without context.
+
+   The action buttons inside the modal call the same rmaTriageStart /
+   rmaTriageDismiss handlers the row's inline buttons use, so the
+   workflow is identical from either entry point. */
+function rmaTriageOpenView(emailId){
+  const e = (window._rmaTriageCache || {})[emailId];
+  if (!e) return;
+  let host = document.getElementById('rmaTriageViewer');
+  if (!host){
+    host = document.createElement('div');
+    host.id = 'rmaTriageViewer';
+    host.className = 'mo';
+    host.onclick = (ev) => { if (ev.target === host) rmaTriageCloseView(); };
+    document.body.appendChild(host);
+  }
+  // Body might be HTML — render INSIDE an iframe-style sandbox using
+  // srcdoc so customer-supplied HTML can't escape and run scripts in
+  // the dashboard's privileged context. Falls back to plain-text
+  // rendering when the body has no HTML tags.
+  const bodyText = String(e.body || e.preview || '').trim();
+  const isHtmlBody = /<\/?[a-z][\s\S]*>/i.test(bodyText);
+  const safeBody = isHtmlBody
+    ? `<iframe srcdoc="${rmaEsc(bodyText).replace(/"/g,'&quot;')}" sandbox="" style="width:100%;min-height:340px;border:0;background:#fff;border-radius:8px;"></iframe>`
+    : `<pre style="white-space:pre-wrap;word-wrap:break-word;font:13px/1.55 'Inter',system-ui,sans-serif;color:#0f172a;margin:0;background:#fff;padding:16px;border-radius:8px;border:1px solid #eef1f6;">${rmaEsc(bodyText) || '<span style=\\'color:#94a3b8;\\'>(empty body)</span>'}</pre>`;
+  host.innerHTML = `
+    <div class="modal" style="max-width:780px;width:96%;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:6px;">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:11px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;">From</div>
+          <div style="font-size:14.5px;font-weight:800;color:#0f172a;word-break:break-all;">${rmaEsc(e.from || '—')}</div>
+        </div>
+        <button class="btn btn-ghost" onclick="rmaTriageCloseView()" style="font-size:18px;padding:4px 10px;line-height:1;">×</button>
+      </div>
+      <div style="margin:10px 0 14px;padding:10px 12px;background:#f8fafc;border-radius:9px;border:1px solid #eef1f6;">
+        <div style="font-size:11px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;">Subject</div>
+        <div style="font-size:14px;font-weight:700;color:#0f172a;">${rmaEsc(e.subject || '(no subject)')}</div>
+        <div style="font-size:11.5px;color:#64748b;margin-top:4px;">${rmaEsc(e.ts_display || '')}</div>
+      </div>
+      ${safeBody}
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;">
+        <button class="btn btn-ghost" onclick="rmaTriageCloseView()">Close</button>
+        <button class="btn" onclick="rmaTriageCloseView(); rmaTriageDismiss(${e.id});" style="background:#fff;border:1px solid #fecaca;color:#b91c1c;font-weight:800;">Dismiss</button>
+        <button class="btn btn-primary" onclick="rmaTriageCloseView(); rmaTriageStart(${e.id});"><i class="fa-solid fa-play"></i> Start Return</button>
+      </div>
+    </div>`;
+  host.style.display = 'flex';
+  requestAnimationFrame(() => host.classList.add('show'));
+}
+function rmaTriageCloseView(){
+  const host = document.getElementById('rmaTriageViewer');
+  if (!host) return;
+  host.classList.remove('show');
+  host.style.display = 'none';
 }
 
 async function rmaTriageStart(emailId){

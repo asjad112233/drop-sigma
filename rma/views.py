@@ -1322,6 +1322,14 @@ def api_triage_list(request):
             "to":         getattr(em, "recipient", "") or "",
             "subject":    em.subject or "",
             "preview":    (em.body or "")[:200],
+            # Full body (capped at 50 KB so the response stays cheap even
+            # when a tenant has 200 emails in triage; an email much
+            # longer than this is almost always an HTML newsletter
+            # signature, not return-form content the user needs to
+            # read). Surfaced so the row-click viewer modal in the
+            # dashboard can show the whole conversation without a
+            # second API round-trip.
+            "body":       (em.body or "")[:50_000],
             "created_at": em.created_at.isoformat() if getattr(em, "created_at", None) else "",
             "ts_display": em.created_at.strftime("%b %-d · %-I:%M %p") if getattr(em, "created_at", None) else "",
         })
