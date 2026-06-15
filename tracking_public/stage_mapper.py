@@ -107,6 +107,23 @@ _CARRIER_NAMES_WIPE = (
     "royal mail",
     "evri", "hermes",
     "intelcom", "dragonfly",
+    # ── NEW: more last-mile carriers whose names were leaking into
+    # the customer-facing event text. GOFO Express in particular
+    # appends "Contact GOFO at +1 949 688-6032 or cs@mail.gofo.com"
+    # to every delivered event, which broke the white-label promise
+    # on the public tracking page.
+    "gofo express", "gofo logistics", "gofoexpress", "gofo",
+    "lasership", "lso", "ontrac",
+    "amazon logistics", "amazon shipping",
+    "canada post", "canadapost",
+    "purolator",
+    "australia post", "auspost",
+    "asendia",
+    "speedpost",
+    "parcelforce",
+    "pos malaysia",
+    "j&t", "j and t",
+    "jne",
 )
 
 _ORIGIN_LOCATIONS_REDACT = (
@@ -121,6 +138,37 @@ def _sanitize_text(s: str) -> str:
     if not s:
         return ""
     text = s
+    import re as _re
+
+    # ── Pre-pass: strip "For Delivery Issues … Contact … at … or …"
+    # boilerplate that last-mile carriers (GOFO, lasership, etc.)
+    # append to every event. Cut at the first occurrence of any of
+    # these markers — everything after them is carrier contact info
+    # the customer should never see on the white-label page. #
+    for marker in (
+        "for delivery issues",
+        "for tracking support",
+        "contact ",          # "Contact GOFO at …"
+        "please contact ",
+        "for more information",
+        "for assistance",
+        "hotline:",
+        "working hours",
+        "customer service:",
+        "cs@",               # email prefix
+    ):
+        low = text.lower()
+        pos = low.find(marker)
+        if pos > 0:                     # only cut if there's content before it
+            text = text[:pos].rstrip(" ,.;:-/|·") + "."
+            break                        # one cut is enough
+
+    # ── Strip phone numbers (E.164-ish), emails, and URLs that the
+    # carrier sometimes leaves in the description even after the
+    # marker cut above (defensive). ──
+    text = _re.sub(r"\+?\d[\d\s().\-]{7,}\d", "", text)          # phone numbers
+    text = _re.sub(r"[\w._%+-]+@[\w.-]+\.[A-Za-z]{2,}", "", text) # emails
+    text = _re.sub(r"https?://\S+|www\.\S+", "", text)            # URLs
 
     for name in sorted(_CARRIER_NAMES_WIPE, key=len, reverse=True):
         idx = 0
@@ -146,7 +194,6 @@ def _sanitize_text(s: str) -> str:
     text = " ".join(text.split())
     text = text.replace(" ,", ",").replace(", ,", ",").replace(" .", ".")
 
-    import re as _re
     text = _re.sub(
         r"\bthe origin facility(?:[\s,/|·\-:;]+the origin facility)+",
         "the origin facility",
@@ -156,6 +203,9 @@ def _sanitize_text(s: str) -> str:
     text = _re.sub(r"[|/·]{1,}\s*$", "", text)
     text = _re.sub(r"\s*[|/·]\s*[|/·]\s*", " ", text)
     text = _re.sub(r":\s*$", "", text)
+    # Collapse residual " at ." / " at $" left behind by phone/contact strips
+    text = _re.sub(r"\bat\s*[.,]?\s*$", "", text, flags=_re.IGNORECASE)
+    text = _re.sub(r"\bor\s*[.,]?\s*$", "", text, flags=_re.IGNORECASE)
     text = " ".join(text.split())
     text = text.strip(" ,.|/·:-")
     return text
@@ -340,6 +390,29 @@ def _build_yuntrack_stages(order) -> dict:
         "delivered to recipient", "successfully delivered",
         "package delivered", "delivery completed",
         "signed by", "signed for",
+        # ── NEW: keep in lock-step with the classifier keywords in
+        # orders/yuntrack_scraper.py — "Delivered, Door/Yard…" and
+        # similar last-mile final-delivery phrasings. The leading
+        # "delivered, " substring catches the standard format used by
+        # virtually every last-mile carrier.
+        "delivered, ",
+        "delivered at door", "delivered at front door",
+        "delivered to door", "delivered to front door",
+        "delivered to address", "delivered to consignee",
+        "delivered to receiver", "delivered to mailbox",
+        "delivered to neighbor",
+        "delivered, door", "delivered, yard",
+        "delivered, front door", "delivered, back door",
+        "delivered, mailbox", "delivered, mailroom",
+        "delivered, neighbor", "delivered, reception",
+        "delivered, porch", "delivered, garage",
+        "delivered, secure location",
+        "shipment delivered", "parcel delivered",
+        "left at door", "left at front door", "left at back door",
+        "left at porch", "left at residence", "left at reception",
+        "left with neighbor", "left with concierge",
+        "left in mailbox", "left in safe place",
+        "proof of delivery",
     ))
     stage_ts = {
         "order_placed":        created_at,
@@ -381,6 +454,13 @@ def _build_yuntrack_stages(order) -> dict:
     if ui_events:
         latest = ui_events[-1]
         headline = latest["clean"]
+        # When the parcel is delivered, override the latest-event text
+        # with a clean, branded headline — the sanitiser strips carrier
+        # contact info but the residual phrasing (e.g. "Delivered, Door
+        # /Yard.") is still terse and clinical. Customers deserve a
+        # confident "Delivered ✓" instead.
+        if active_key == "delivered":
+            headline = "Delivered ✓"
         # Match against the active stage's description as subline.
         for sdef in stage_defs:
             if sdef["key"] == active_key:

@@ -21950,6 +21950,14 @@ function poxGetPortalLabel(o){
   const ful=String(o.fulfillment_status||"").toLowerCase();
   const tn =String(o.tracking_number||"").toLowerCase();
   const hasTracking = tn && tn!=="pending" && !tn.includes("no tracking");
+  // ─── DELIVERED carrier-confirmed wins over EVERYTHING else ───
+  //   When the live carrier feed has reported the parcel as delivered
+  //   (carrier_tracking.refresh_order_tracking_events sets delivered_at
+  //   based on the latest "Delivered, Door/Yard…" style event), the
+  //   order is REALLY delivered — the Shopify/WooCommerce fulfillment
+  //   status is just stale. Customer Q&A and dashboard sorting both
+  //   depend on the displayed status matching the tracking truth.
+  if (o.delivered_at)                                return "Delivered";
   // 🔥 Explicit fulfillment statuses set by the user via the dropdown
   //    take priority over the heuristic derivation below.
   if (ful.includes("dispute"))                       return "Dispute";
@@ -22031,6 +22039,9 @@ function poxGetPortalClass(o){
   const ful=String(o.fulfillment_status||"").toLowerCase();
   const tn =String(o.tracking_number||"").toLowerCase();
   const hasTracking = tn && tn!=="pending" && !tn.includes("no tracking");
+  // Carrier-confirmed delivered wins over Shopify/WooCommerce status
+  // (see poxGetPortalLabel for rationale).
+  if (o.delivered_at)                                return "pox-portal-delivered";
   // 🔥 Explicit fulfillment statuses set by the user via the dropdown
   //    take priority over the heuristic derivation below.
   if (ful.includes("dispute"))                       return "pox-portal-dispute";

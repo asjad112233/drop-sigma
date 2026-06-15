@@ -203,6 +203,35 @@ _YUNEXPRESS_KEYWORDS = [
         "delivered to recipient", "successfully delivered",
         "package delivered", "signed by", "signed for",
         "delivery completed",
+        # ── NEW: last-mile final-delivery event variations ──
+        # Carriers like GOFO, USPS, UPS, FedEx, Intelcom etc. all
+        # write the final-delivery event as "Delivered, <location>"
+        # or "Delivered to/at <somewhere>". The substring "delivered,"
+        # (with the comma) and "left at door" style phrases cover
+        # virtually every last-mile carrier without false-matching
+        # the "Delivered to local carrier" handoff event (which has
+        # no comma and is explicitly guarded against in the shortcut
+        # below).
+        "delivered, ",
+        "delivered at door", "delivered at front door",
+        "delivered at the door", "delivered at the front door",
+        "delivered to door", "delivered to front door",
+        "delivered to address", "delivered to consignee",
+        "delivered to receiver", "delivered to mailbox",
+        "delivered to neighbor", "delivered to safe place",
+        "delivered, door", "delivered, yard",
+        "delivered, front door", "delivered, back door",
+        "delivered, mailbox", "delivered, mailroom",
+        "delivered, neighbor", "delivered, reception",
+        "delivered, porch", "delivered, garage",
+        "delivered, secure location",
+        "shipment delivered", "parcel delivered",
+        "left at door", "left at front door", "left at back door",
+        "left at porch", "left at residence", "left at reception",
+        "left with neighbor", "left with concierge",
+        "left in mailbox", "left in safe place",
+        "left in secure location",
+        "proof of delivery",
     )),
     ("local_carrier", (
         "out for delivery", "loaded for delivery",
@@ -289,6 +318,30 @@ def classify_yunexpress_stage(raw_text: str) -> str:
     if not raw_text:
         return ""
     low = raw_text.lower().strip()
+
+    # ── Structural shortcut: events that START with "delivered "
+    # followed by a location/qualifier are unambiguously the FINAL
+    # delivery event across virtually every last-mile carrier
+    # ("Delivered, Door/Yard…", "Delivered to recipient at…",
+    # "Delivered at front door"). Catches arbitrary location-suffix
+    # variations without needing to enumerate every carrier's exact
+    # wording in _YUNEXPRESS_KEYWORDS.
+    #
+    # IMPORTANT guard: "Delivered to local carrier", "Delivered to
+    # next carrier", "Delivered to prior carrier" are CARRIER-HANDOFF
+    # events, NOT final delivery — never shortcut those to delivered.
+    if (low.startswith("delivered, ")
+            or low.startswith("delivered to ")
+            or low.startswith("delivered at ")
+            or low.startswith("delivered in ")
+            or low == "delivered"
+            or low.startswith("delivered.")):
+        if ("local carrier"  not in low
+                and "next carrier"   not in low
+                and "prior carrier"  not in low
+                and "another carrier" not in low):
+            return "delivered"
+
     for stage_key, keywords in _YUNEXPRESS_KEYWORDS:
         for kw in keywords:
             if kw in low:

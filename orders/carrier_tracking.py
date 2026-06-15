@@ -103,6 +103,16 @@ _DELIVERED_PATTERNS = (
     re.compile(r"\bdelivered\s*[\.\!]?\s*$", re.I),
     re.compile(r"\bdelivered\s+(to|at|on)\b", re.I),
     re.compile(r"\bpackage\s+(was|has\s+been)\s+delivered\b", re.I),
+    # ── NEW: catches "Delivered, Door/Yard…" / "Delivered, Front Door…"
+    # — the standard last-mile final-delivery format used by GOFO,
+    # USPS, UPS, FedEx, Intelcom, etc. The comma is the signal that
+    # what follows is a delivery LOCATION, not a destination carrier.
+    re.compile(r"^\s*delivered\s*,", re.I),
+    # Explicit final-delivery phrasings
+    re.compile(r"\bshipment\s+delivered\b", re.I),
+    re.compile(r"\bparcel\s+delivered\b", re.I),
+    re.compile(r"\bproof\s+of\s+delivery\b", re.I),
+    re.compile(r"\bleft\s+(at|with|in)\s+", re.I),
 )
 
 
@@ -115,10 +125,24 @@ def classify_event_to_stage(raw_text: str) -> str:
         return ""
     low = raw_text.lower().strip()
 
+    # Handoff events like "Delivered to local carrier" / "Delivered to
+    # next carrier" are carrier-to-carrier transitions, NOT final
+    # delivery. The `\bdelivered\s+(to|at|on)\b` pattern below would
+    # otherwise match them and prematurely stamp delivered_at on the
+    # order while the parcel is still in transit. Skip the delivered
+    # patterns entirely when this signal is present.
+    is_handoff = (
+        "local carrier"   in low
+        or "next carrier"    in low
+        or "prior carrier"   in low
+        or "another carrier" in low
+    )
+
     # Hard-evidence delivered (most specific)
-    for pat in _DELIVERED_PATTERNS:
-        if pat.search(raw_text):
-            return "destination"
+    if not is_handoff:
+        for pat in _DELIVERED_PATTERNS:
+            if pat.search(raw_text):
+                return "destination"
 
     for stage, keywords in _STAGE_KEYWORDS:
         for kw in keywords:
