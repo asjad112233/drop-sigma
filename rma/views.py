@@ -1287,6 +1287,107 @@ def api_settings_get(request):
 # so tenants can Start Return or Dismiss in one click.
 # ──────────────────────────────────────────────────────────────────────
 
+import re as _re_quotes
+
+# Reply-history delimiters. The fresh message content is everything
+# BEFORE the earliest match of any of these patterns. Ordered roughly
+# from most-specific to least-specific so a stricter match wins.
+_RMA_REPLY_DELIMITERS = (
+    # Gmail / generic: "On Mon, May 18, 2026, 2:51 AM Team Foo wrote:"
+    _re_quotes.compile(
+        r"On\s+(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)[a-z]*,?\s+"
+        r"(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{1,2}.*?wrote\s*:",
+        _re_quotes.IGNORECASE | _re_quotes.DOTALL,
+    ),
+    # Gmail short: "On May 18, 2026 at 2:51 AM, X wrote:"
+    _re_quotes.compile(
+        r"On\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{1,2}.*?wrote\s*:",
+        _re_quotes.IGNORECASE | _re_quotes.DOTALL,
+    ),
+    # Numeric date: "On 18/05/2026, X wrote:" / "On 2026-05-18 at 02:51"
+    _re_quotes.compile(
+        r"On\s+\d{1,2}[/\-]\d{1,2}[/\-]\d{2,4}.*?wrote\s*:",
+        _re_quotes.IGNORECASE | _re_quotes.DOTALL,
+    ),
+    _re_quotes.compile(
+        r"On\s+\d{4}[/\-]\d{1,2}[/\-]\d{1,2}.*?wrote\s*:",
+        _re_quotes.IGNORECASE | _re_quotes.DOTALL,
+    ),
+    # Outlook
+    _re_quotes.compile(r"-{2,}\s*Original\s+Message\s*-{2,}", _re_quotes.IGNORECASE),
+    _re_quotes.compile(r"-{2,}\s*Forwarded\s+Message\s*-{2,}", _re_quotes.IGNORECASE),
+    # Outlook header block: "From: …\nSent: …" or "From: …\nDate: …"
+    _re_quotes.compile(
+        r"\n\s*From:\s*[^\n]+\n\s*(?:Sent|Date):\s*[^\n]+",
+        _re_quotes.IGNORECASE,
+    ),
+    # Apple Mail: trailer signature followed by quoted thread
+    _re_quotes.compile(
+        r"\n\s*Sent from my (?:iPhone|iPad|Android|mobile|phone)",
+        _re_quotes.IGNORECASE,
+    ),
+    # Heavy flattened-thread markers (no newlines, single line of >>>>)
+    _re_quotes.compile(r"(?:>\s*){4,}"),
+)
+
+
+def _strip_email_quotes(body: str) -> str:
+    """Return ONLY the freshest message — strip the quoted reply
+    history that customer replies invariably carry forward.
+
+    Detection cascade:
+      1. Earliest "On <date>, <name> wrote:" / Outlook "Original
+         Message" / Apple Mail signature → slice everything before.
+      2. Strip RFC 2822 ">"-prefixed lines, and everything after the
+         first one (a contiguous quoted block always continues to the
+         end on a real reply).
+      3. Strip flattened ">>>>" nested markers.
+      4. Final whitespace cleanup.
+
+    If the stripped body would be empty (the entire message was
+    quoted text), fall back to the original body so the UI shows
+    something rather than nothing.
+    """
+    if not body:
+        return body or ""
+
+    text = body
+
+    # 1) earliest reply-delimiter wins
+    earliest = len(text)
+    for pat in _RMA_REPLY_DELIMITERS:
+        m = pat.search(text)
+        if m and m.start() < earliest:
+            earliest = m.start()
+    if earliest < len(text):
+        text = text[:earliest]
+
+    # 2) line-prefix ">" stripping — first quoted line and everything
+    #    below it gets dropped (real replies don't interleave new and
+    #    quoted content; one block of quotes follows the new content)
+    keep = []
+    for line in text.splitlines():
+        if line.lstrip().startswith(">"):
+            break
+        keep.append(line)
+    text = "\n".join(keep)
+
+    # 3) defensive: if the body was flattened to a single line with
+    #    >>>> markers, cut at the first cluster
+    idx = text.find(">>>>")
+    if idx > 40:
+        text = text[:idx]
+    elif idx == 0:
+        text = ""
+
+    # 4) tidy up
+    text = text.strip()
+    # Collapse runs of >2 blank lines
+    text = _re_quotes.sub(r"\n{3,}", "\n\n", text)
+
+    return text or (body or "").strip()
+
+
 def _tenant_email_qs(user):
     """Return EmailMessage queryset scoped to this tenant's stores."""
     from emails.models import EmailMessage
@@ -1316,20 +1417,26 @@ def api_triage_list(request):
     for em in qs:
         if str(em.id) in dismissed or str(em.id) in started_email_ids:
             continue
+        # Strip the quoted reply history from the body BEFORE we
+        # surface it to the dashboard. Customers reply over half a
+        # dozen previous emails on every message and the support agent
+        # only ever needs the freshest paragraph — the rest is noise
+        # that pushed the actually-relevant text below the fold of the
+        # viewer modal. Both list-row preview AND modal body use the
+        # cleaned version so what the agent sees matches what's
+        # actually new.
+        cleaned_body = _strip_email_quotes(em.body or "")
         items.append({
             "id":         em.id,
             "from":       getattr(em, "sender", "") or "",
             "to":         getattr(em, "recipient", "") or "",
             "subject":    em.subject or "",
-            "preview":    (em.body or "")[:200],
-            # Full body (capped at 50 KB so the response stays cheap even
-            # when a tenant has 200 emails in triage; an email much
-            # longer than this is almost always an HTML newsletter
-            # signature, not return-form content the user needs to
-            # read). Surfaced so the row-click viewer modal in the
-            # dashboard can show the whole conversation without a
-            # second API round-trip.
-            "body":       (em.body or "")[:50_000],
+            "preview":    cleaned_body[:200],
+            # Full cleaned body (capped at 50 KB so the response stays
+            # cheap even with 200 emails in triage). Surfaced so the
+            # row-click viewer modal in the dashboard can show the
+            # whole conversation without a second API round-trip.
+            "body":       cleaned_body[:50_000],
             "created_at": em.created_at.isoformat() if getattr(em, "created_at", None) else "",
             "ts_display": em.created_at.strftime("%b %-d · %-I:%M %p") if getattr(em, "created_at", None) else "",
         })
