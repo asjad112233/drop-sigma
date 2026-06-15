@@ -707,6 +707,12 @@
   window.opsLoadQueue = async function(){
     if (!document.getElementById('opsQueueRoot')) return;
     if (OQ.rendering) return;
+    // Reset items-per-page (and current page) to defaults on every
+    // entry to the Queue. Last-pick is intentionally NOT persisted —
+    // a user who bumped to 100 to bulk-scan shouldn't be stuck on
+    // 100 every time they re-enter the section.
+    OQ.page = 1;
+    OQ.page_size = 25;
     OQ.rendering = true;
     try {
       renderShell();

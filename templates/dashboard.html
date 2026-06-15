@@ -17434,6 +17434,13 @@ function showSection(section){
   if(section === "orders"){
     document.getElementById("ordersSection").classList.add("active");
     document.getElementById("navOrders").classList.add("active");
+    // Reset the items-per-page selector to the default (25) on every
+    // entry to the Orders section. Last-pick is intentionally NOT
+    // persisted: a user who jumps to 50/100 to bulk-scan something
+    // shouldn't be stuck paying that scroll cost on every subsequent
+    // visit. Hard refresh already resets these (JS globals reinit) —
+    // this line covers soft section navigation within the SPA too.
+    try { window._ordersPageSize = 25; window._ordersPage = 1; } catch(_){}
     loadOrders();
     _startOrdersPolling();
     setTimeout(_fixOrdersWrapHeight, 80);
@@ -17519,6 +17526,10 @@ function showSection(section){
     document.getElementById("navSourcingPartners").classList.add("active");
     // Trigger sidebar-swap CSS (mirrors emails section behaviour).
     document.body.setAttribute('data-active-section', 'sourcingPartners');
+    // Reset the SPV pagination to defaults on every section entry —
+    // same reason as the Orders block above: page-size + current
+    // page shouldn't leak between visits.
+    try { if (window.SPV){ SPV.ordersPageSize = 25; SPV.ordersPage = 1; } } catch(_){}
     if (typeof spvInitWorkspace === 'function') spvInitWorkspace();
   }
 
@@ -40045,6 +40056,14 @@ function spvSwitchView(view){
   // list without a refresh. Stops the moment they leave.
   if (SPV.view === 'orders' && view !== 'orders'){
     try { spvStopOrdersAutoSync(); } catch(_){}
+  }
+  // Re-entering Orders view → reset items-per-page back to the 25
+  // default. Same rationale as the outer showSection('sourcingPartners')
+  // reset: last-pick shouldn't leak between visits — a user who
+  // bumped to 100 to scan something shouldn't be paying that scroll
+  // cost on the next visit to Orders.
+  if (view === 'orders' && SPV.view !== 'orders'){
+    try { SPV.ordersPageSize = 25; SPV.ordersPage = 1; } catch(_){}
   }
   SPV.view = view;
   document.querySelectorAll('#spvNavList .sp-nav-item').forEach(el => {
