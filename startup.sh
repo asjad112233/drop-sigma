@@ -39,9 +39,21 @@ timeout 15 python manage.py ensure_superuser || echo "WARNING: ensure_superuser 
 echo "=== ensure_superuser done ==="
 
 echo "=== Starting gunicorn on port ${PORT:-8080} ==="
+# Worker model — why gthread + 2 workers:
+#   The app makes synchronous outbound calls to merchant stores (WooCommerce
+#   REST, webhook setup, order sync). When a store's host WAF-blocks us, those
+#   calls run a slow multi-strategy SSL retry that can take tens of seconds.
+#   With a SINGLE sync worker, ONE such call blocked the entire site — the
+#   homepage hung ("upstream error" / infinite loading). gthread lets a blocked
+#   call release the GIL so other threads keep serving; 2 separate worker
+#   PROCESSES also survive CPU-bound TLS-fingerprinting bursts that would pin a
+#   single process. 2 x 8 = 16 concurrent request slots; a handful stuck on a
+#   dead store still leaves plenty free for real traffic.
 exec gunicorn core.wsgi \
     --bind "0.0.0.0:${PORT:-8080}" \
-    --workers 1 \
+    --workers 2 \
+    --threads 8 \
+    --worker-class gthread \
     --timeout 120 \
     --log-level info \
     --access-logfile - \
