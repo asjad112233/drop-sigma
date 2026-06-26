@@ -1315,6 +1315,29 @@ def store_health_api(request, store_id):
         return Response({"success": False, "message": "Authentication required"}, status=401)
     # Per-user scope: only diagnose stores the requester actually owns.
     store = get_object_or_404(Store, id=store_id, user=request.user)
+
+    # Fast-fail for stores whose host is actively WAF-blocking us. Re-probing
+    # runs the slow multi-strategy SSL retry storm in-request; the Stores page
+    # health-checks EVERY store at once, so for blocked stores that storm pins
+    # the workers and can take the whole site down. If the sentinel's pull
+    # breaker is in backoff, the host is unreachable right now — return the
+    # cached firewall diagnosis instantly instead of probing again. An explicit
+    # user-initiated ?heal=1 / ?force=1 still does the full live probe.
+    if request.GET.get("heal") != "1" and request.GET.get("force") != "1":
+        try:
+            from orders.webhook_sentinel import (
+                order_pull_in_backoff, get_status_snapshot,
+            )
+            if order_pull_in_backoff(store.id):
+                return Response({
+                    "success": True,
+                    "backed_off": True,
+                    "webhook": get_status_snapshot(store.id),
+                    **_firewall_block_response(store),
+                })
+        except Exception:
+            pass
+
     result = _diagnose_store(store)
 
     # Webhook check only runs if the API is reachable — no point asking
