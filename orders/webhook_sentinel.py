@@ -167,6 +167,97 @@ _sweeper_started = False
 _heal_semaphore = threading.BoundedSemaphore(_MAX_CONCURRENT_HEALS)
 
 
+# ─── Failure circuit-breaker ────────────────────────────────────────────────
+# A store sitting behind a hosting WAF that blocks our egress IP — Cloudflare
+# "Just a moment…", SiteGround sgcaptcha redirect, or an outright SSL
+# handshake refusal — will FAIL every probe no matter how many times we try,
+# and each WooCommerce probe runs a slow 13-strategy curl_cffi retry storm
+# (see services.py). Without backoff the poll path (every ~10s while a tab is
+# open) and the background sweeper (every 60s, in EVERY gunicorn worker)
+# re-run that storm forever. The synchronous SSL handshakes pin worker CPU,
+# starve ordinary requests, and the whole site "loads forever" / Railway
+# returns "upstream error". (Root cause of the 2026-06-24 homepage outage.)
+#
+# The breaker makes a freshly-failed store skip probing for an exponentially
+# growing cooldown (2m → 4m → 8m → … capped at 30m), so a permanent WAF block
+# costs ~one probe per 30 min instead of one every 10 seconds, while a
+# genuinely transient outage still recovers automatically within a couple of
+# minutes — and a user clicking Refresh/Diagnose (force=True) bypasses the
+# breaker entirely and retries immediately.
+_FAIL_BACKOFF_BASE_SECONDS = 120      # first cooldown after a failure (2 min)
+_FAIL_BACKOFF_CAP_SECONDS  = 1800     # never wait more than 30 min between retries
+
+
+class _Breaker:
+    """Per-store exponential-backoff gate. Thread-safe.
+
+    `in_backoff(id)`  → True while the store is cooling down (skip the probe).
+    `note_failure(id)`→ record a failure, grow the cooldown, return its length.
+    `note_success(id)`→ clear all backoff state for the store.
+    """
+    def __init__(self, base: float, cap: float):
+        self._base = base
+        self._cap = cap
+        self._until: dict[int, float] = {}
+        self._count: dict[int, int] = {}
+        self._lock = threading.RLock()
+
+    def in_backoff(self, store_id: int) -> bool:
+        with self._lock:
+            return time.time() < self._until.get(store_id, 0)
+
+    def note_failure(self, store_id: int) -> float:
+        with self._lock:
+            n = self._count.get(store_id, 0) + 1
+            self._count[store_id] = n
+            delay = min(self._base * (2 ** (n - 1)), self._cap)
+            self._until[store_id] = time.time() + delay
+            return delay
+
+    def note_success(self, store_id: int) -> None:
+        with self._lock:
+            self._count.pop(store_id, None)
+            self._until.pop(store_id, None)
+
+    def reset(self, store_id: Optional[int] = None) -> None:
+        with self._lock:
+            if store_id is None:
+                self._count.clear()
+                self._until.clear()
+            else:
+                self._count.pop(store_id, None)
+                self._until.pop(store_id, None)
+
+
+# One breaker for webhook registration probes (ensure_webhook), one shared by
+# the order-pull paths (freshness pull + the poll endpoint's active pull).
+_webhook_breaker = _Breaker(_FAIL_BACKOFF_BASE_SECONDS, _FAIL_BACKOFF_CAP_SECONDS)
+_pull_breaker = _Breaker(_FAIL_BACKOFF_BASE_SECONDS, _FAIL_BACKOFF_CAP_SECONDS)
+
+
+def order_pull_in_backoff(store_id: int) -> bool:
+    """True while order-pulls for this store are cooling down after a failure.
+    Consulted by the poll endpoint's active-pull so a WAF-blocked store can't
+    re-run the retry storm on every 10s poll."""
+    return _pull_breaker.in_backoff(store_id)
+
+
+def note_order_pull_failure(store_id: int) -> float:
+    """Record an order-pull failure (host unreachable / WAF) and grow backoff."""
+    delay = _pull_breaker.note_failure(store_id)
+    log.info(
+        "webhook sentinel: order-pull for store %s failed — backing off %.0fs "
+        "(store host likely unreachable / WAF-blocking our IP)",
+        store_id, delay,
+    )
+    return delay
+
+
+def note_order_pull_success(store_id: int) -> None:
+    """Clear order-pull backoff after a successful pull."""
+    _pull_breaker.note_success(store_id)
+
+
 # ─── Public API ────────────────────────────────────────────────────────────
 
 def ensure_webhook(store, request=None, *, force: bool = False) -> dict:
@@ -195,6 +286,22 @@ def ensure_webhook(store, request=None, *, force: bool = False) -> dict:
     with _STATE_LOCK:
         prev_status = _last_status.get(store_id)
     was_broken = (prev_status is None) or (not prev_status.get("ok"))
+
+    # Circuit-breaker: a store that just failed a probe is skipped for an
+    # exponentially-growing cooldown so a permanently WAF-blocked store can't
+    # pin the workers re-running the 13-strategy retry storm every poll/sweep
+    # (root cause of the homepage "loads forever" / "upstream error" outage).
+    # force=True (user clicked Refresh / Diagnose) bypasses the breaker and
+    # retries immediately; the automated sweeper and the 10s poll do NOT force,
+    # so they honour the cooldown.
+    if not force and _webhook_breaker.in_backoff(store_id):
+        with _STATE_LOCK:
+            cached = _last_status.get(store_id)
+        return cached or {
+            "ok": False, "delivery_url": "", "registered": [], "errors": [],
+            "message": "Verification backed off — store host unreachable; "
+                       "will retry automatically shortly.",
+        }
 
     if not force:
         with _STATE_LOCK:
@@ -230,8 +337,22 @@ def ensure_webhook(store, request=None, *, force: bool = False) -> dict:
         if result.get("ok"):
             _last_verified[store_id] = time.time()
         else:
-            # Don't cache a failure — we want the very next call to retry.
+            # Don't cache a *success* timestamp for a failure — but DO arm the
+            # circuit-breaker below so we back off instead of retrying the
+            # expensive WAF storm on the very next poll/sweep.
             _last_verified.pop(store_id, None)
+
+    # Arm / disarm the failure breaker based on this probe's outcome.
+    if result.get("ok"):
+        _webhook_breaker.note_success(store_id)
+    else:
+        delay = _webhook_breaker.note_failure(store_id)
+        log.info(
+            "webhook sentinel: store %s (%s) webhook probe failed — backing "
+            "off %.0fs before the next automated retry (Refresh/Diagnose still "
+            "retries immediately)",
+            store_id, getattr(store, "name", "?"), delay,
+        )
 
     # ── Catch-up sync on transition broken → ok ───────────────────────────
     # The store may have received orders while its webhook was dead.
@@ -300,6 +421,13 @@ def _maybe_freshness_pull(store) -> bool:
     _FRESHNESS_PULL_INTERVAL seconds (5 min by default). For 100 active
     stores that's ~20 calls/min total → negligible."""
     now_ts = time.time()
+
+    # Circuit-breaker: a store whose host is WAF-blocking / refusing us will
+    # fail every pull and each pull runs the slow 13-strategy retry storm.
+    # Skip while cooling down so a permanently-blocked store can't pin workers.
+    if _pull_breaker.in_backoff(store.id):
+        return False
+
     with _STATE_LOCK:
         last_recv = _last_delivery.get(store.id)
         last_pull = _last_freshness.get(store.id, 0)
@@ -327,6 +455,8 @@ def _maybe_freshness_pull(store) -> bool:
                 count = sync_shopify_orders(store, after=after_iso)
             else:
                 return
+            # Pull succeeded (store reachable) → clear any failure backoff.
+            note_order_pull_success(store.id)
             if count:
                 log.info(
                     "webhook sentinel freshness-pull: store %s (%s) — pulled "
@@ -335,6 +465,9 @@ def _maybe_freshness_pull(store) -> bool:
                     f"{int(now_ts - last_recv)}s" if last_recv else "forever",
                 )
         except Exception as e:
+            # Store unreachable / WAF-blocking → arm the breaker so we stop
+            # hammering it (and stop starving the web workers).
+            note_order_pull_failure(store.id)
             log.warning(
                 "webhook sentinel freshness-pull failed for store %s (%s): %s",
                 store.id, store.name, e,
@@ -382,6 +515,9 @@ def clear_cache(store_id: Optional[int] = None) -> None:
             _last_status.pop(store_id, None)
             _last_delivery.pop(store_id, None)
             _last_freshness.pop(store_id, None)
+    # Drop circuit-breaker state too so a reconnected/cleared store starts fresh.
+    _webhook_breaker.reset(store_id)
+    _pull_breaker.reset(store_id)
 
 
 # ─── Background sweeper ────────────────────────────────────────────────────
@@ -443,8 +579,18 @@ def _sweep_once() -> None:
             skipped += 1
             continue
 
+        # Skip stores in the failure cooldown — re-probing a WAF-blocked store
+        # every 60s is exactly what melts the workers. The breaker retries on
+        # its own exponential schedule; a user Refresh/Diagnose retries sooner.
+        if _webhook_breaker.in_backoff(store.id):
+            skipped += 1
+            continue
+
         try:
-            res = ensure_webhook(store, request=None, force=True)
+            # NOTE: no force=True — the sweeper must honour the failure
+            # circuit-breaker (force bypasses it). The success-cache short
+            # circuit above already prevents redundant probes of healthy stores.
+            res = ensure_webhook(store, request=None)
             if res.get("ok"):
                 healed += 1
             else:
