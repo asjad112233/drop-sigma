@@ -157,7 +157,16 @@ def orders_poll_api(request):
                 now_ts = time.time()
                 last_pull = _ACTIVE_PULL_CACHE.get(store_id, 0)
                 stale = (last_delivery is None) or (last_delivery > 90)
-                if stale and (now_ts - last_pull) > 30:
+                # Skip the pull while this store is in the failure cooldown —
+                # a WAF-blocked store fails every pull and each pull runs the
+                # slow 13-strategy retry storm; hammering it on every 10s poll
+                # is what starves the web workers (homepage "loads forever").
+                from .webhook_sentinel import (
+                    order_pull_in_backoff, note_order_pull_failure,
+                    note_order_pull_success,
+                )
+                if stale and (now_ts - last_pull) > 30 and \
+                   not order_pull_in_backoff(store.id):
                     _ACTIVE_PULL_CACHE[store_id] = now_ts
                     try:
                         from datetime import datetime as _dt, timedelta as _td
@@ -168,8 +177,9 @@ def orders_poll_api(request):
                         elif store.platform == "shopify":
                             from .services import sync_shopify_orders
                             pulled_now = sync_shopify_orders(store, after=after_iso) or 0
+                        note_order_pull_success(store.id)
                     except Exception:
-                        pass
+                        note_order_pull_failure(store.id)
         except Exception:
             pass
 
