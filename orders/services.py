@@ -141,6 +141,23 @@ def _looks_like_challenge_response(response) -> bool:
         ctype = (response.headers.get("Content-Type") or "").lower()
     except Exception:
         return False
+    # ── HIGHEST-PRIORITY RULE: Cloudflare `cf-mitigated` header. ────────
+    # Cloudflare stamps `cf-mitigated: challenge` on EVERY managed-
+    # challenge / Turnstile response — INCLUDING the 401/403 variants it
+    # returns to API clients that send `Authorization` + `Accept:
+    # application/json` (in which case the body is JSON, not the classic
+    # "Just a moment" HTML). WooCommerce itself NEVER sets this header,
+    # so its presence unambiguously means "edge challenge, not a real WC
+    # response" → escalate to the curl_cffi Chrome-fingerprint ladder
+    # (which sails past the challenge) instead of trusting the JSON body
+    # below and surfacing a bogus "invalid credentials" error.
+    # (Real example: breathedivinity.ca challenges chrome110/cloudscraper
+    # fingerprints but lets chrome131 through with a clean 200.)
+    try:
+        if "challenge" in (response.headers.get("cf-mitigated") or "").lower():
+            return True
+    except Exception:
+        pass
     # JSON Content-Type → trust it, no further escalation. This is
     # critical for letting genuine 401/403 WC errors propagate so
     # callers can show "invalid credentials" instead of looping.

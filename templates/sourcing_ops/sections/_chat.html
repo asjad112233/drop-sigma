@@ -1705,6 +1705,18 @@
     mergeValidTokens(r.data.valid_tokens);
     // Append new message + refresh list preview
     state.msgs.push(r.data.message);
+    // Keep the poll dedup in sync. pollThread() queries ?after=lastMsgId
+    // and skips ids already in seenMsgIds; if we don't register the
+    // just-sent message here, the very next poll re-fetches it (its id is
+    // > the stale lastMsgId AND missing from seenMsgIds) and appends a
+    // second identical bubble. Registering it makes the send idempotent
+    // against the poll.
+    const _sent = r.data.message;
+    if (_sent && _sent.id != null){
+      state.seenMsgIds = state.seenMsgIds || new Set();
+      state.seenMsgIds.add(_sent.id);
+      if (_sent.id > (state.lastMsgId || 0)) state.lastMsgId = _sent.id;
+    }
     const conv = state.convs.find(x => x.id === state.activeId);
     if (conv){
       const previewText = r.data.message.body

@@ -873,6 +873,62 @@ def _firewall_block_response(store):
     }
 
 
+# Issues that are prone to FALSE positives — a managed host (Kinsta, WP Engine,
+# Cloudways…) intermittently drops our datacenter IP, so a single probe can
+# time out / reset even while the store is demonstrably syncing orders through
+# the full evasion ladder. We never want one of these to flip an actively-
+# selling store to a scary red "Offline" card. (auth/dns/not_found/server_error
+# are NOT here — those are real, persistent, and the merchant must act.)
+_SOFT_ISSUE_TYPES = ("firewall", "offline", "ssl", "unexpected", "unknown")
+
+# How recently we must have proof of reachability to treat a failed probe as a
+# false alarm. Observed healthy stores can go ~17h between synced orders, so we
+# keep a margin above that; a store with zero activity beyond this window falls
+# back to the real probe result.
+_HEALTH_TRUST_HOURS = 24
+
+
+def _store_recently_reachable(store, hours=_HEALTH_TRUST_HOURS):
+    """True if we have RECENT, persistent proof the store API is reachable for
+    this tenant — i.e. an order landed in our DB or a webhook was delivered
+    within `hours`. Order.created_at is auto_now_add (insertion time), so a
+    fresh row means the store→Drop Sigma pipeline is alive right now.
+
+    Used to suppress false 'firewall/offline' cards for stores that are clearly
+    working, WITHOUT running the slow multi-strategy probe ladder (which, run
+    across every store on the Stores page at once, can pin the workers)."""
+    from django.utils import timezone
+    from datetime import timedelta
+    cutoff = timezone.now() - timedelta(hours=hours)
+    try:
+        if store.order_set.filter(created_at__gte=cutoff).exists():
+            return True
+    except Exception:
+        pass
+    try:
+        from orders.webhook_sentinel import get_last_delivery_age
+        age = get_last_delivery_age(store.id)
+        if age is not None and age < hours * 3600:
+            return True
+    except Exception:
+        pass
+    return False
+
+
+def _store_online_via_evidence(store):
+    """Shared 'online' payload used when we trust recent sync evidence over a
+    failed/blocked live probe."""
+    return {
+        "online": True,
+        "issue": None,
+        "title": "Store Online",
+        "message": ("Store is syncing normally — verified by recent order "
+                    "activity. (A periodic API health-ping was dropped by your "
+                    "host's firewall, but live order sync is getting through.)"),
+        "fix": "",
+    }
+
+
 def _diagnose_store(store):
     """
     Attempt to reach the store API and return a detailed diagnosis dict.
@@ -963,14 +1019,32 @@ def _diagnose_store(store):
             return {"online": True, "issue": None, "title": "Store Online",
                     "message": "Store API is reachable and responding correctly.", "fix": ""}
 
-        # 401 is ALWAYS a real auth failure — WAFs return 403, not 401,
-        # so 401 means the request reached WordPress and WP rejected
-        # the credentials. Surface the auth message regardless of body.
+        # 401 is USUALLY a real auth failure — but NOT always. Cloudflare's
+        # managed challenge returns HTTP 401 (not just 403) to API clients
+        # that send an `Authorization` header, and it can wrap that 401 in
+        # a JSON-ish body / `cf-mitigated: challenge` header. Blindly
+        # calling every 401 "Invalid API Credentials" sent merchants to
+        # regenerate keys that were actually fine (e.g. breathedivinity.ca,
+        # whose keys return live orders via the chrome131 strategy ladder).
+        # So mirror the 403 logic: only a GENUINE WooCommerce JSON auth
+        # error (woocommerce_rest_authentication_error) counts as bad
+        # credentials; an HTML / challenge 401 is an edge block → show the
+        # firewall card with whitelisting steps instead.
         if status_code == 401:
-            return {"online": False, "issue": "auth",
-                    "title": "Invalid API Credentials",
-                    "message": f"The store responded with HTTP {status_code}. Your API key or secret is incorrect or has been revoked.",
-                    "fix": "Go to your store's admin panel and regenerate API keys, then update them here."}
+            cf_challenge = False
+            try:
+                cf_challenge = "challenge" in (
+                    (response.headers.get("cf-mitigated") or "").lower()
+                    if response is not None else ""
+                )
+            except Exception:
+                cf_challenge = False
+            if (not cf_challenge) and _is_real_wc_error_body(response):
+                return {"online": False, "issue": "auth",
+                        "title": "Invalid API Credentials",
+                        "message": f"The store responded with HTTP {status_code}. Your API key or secret is incorrect or has been revoked.",
+                        "fix": "Go to your store's admin panel and regenerate API keys, then update them here."}
+            return _firewall_block_response(store)
 
         # 403 is the ambiguous one:
         #   • JSON body → genuine WC permission error (key lacks scope
@@ -1329,6 +1403,17 @@ def store_health_api(request, store_id):
                 order_pull_in_backoff, get_status_snapshot,
             )
             if order_pull_in_backoff(store.id):
+                # The breaker is cooling down after some background pulls failed
+                # — but that does NOT mean the store is down for the tenant. If
+                # orders are still landing (proof the store is reachable), show
+                # it ONLINE instead of a scary firewall card. Only a store with
+                # NO recent activity gets the firewall diagnosis.
+                if _store_recently_reachable(store):
+                    return Response({
+                        "success": True,
+                        "webhook": get_status_snapshot(store.id),
+                        **_store_online_via_evidence(store),
+                    })
                 return Response({
                     "success": True,
                     "backed_off": True,
@@ -1339,6 +1424,18 @@ def store_health_api(request, store_id):
             pass
 
     result = _diagnose_store(store)
+
+    # A live probe can still be dropped by an intermittent host firewall even
+    # while order sync (which walks the full evasion ladder) gets through. Don't
+    # flip an actively-selling store to a red "Offline" card over one unlucky
+    # ping — if we have recent proof of reachability, trust it. Genuine,
+    # persistent failures (auth/dns/404/5xx) are NOT softened: they stay loud.
+    if (not result.get("online")
+            and result.get("issue") in _SOFT_ISSUE_TYPES
+            and request.GET.get("force") != "1"
+            and request.GET.get("heal") != "1"
+            and _store_recently_reachable(store)):
+        result = _store_online_via_evidence(store)
 
     # Webhook check only runs if the API is reachable — no point asking
     # WC about webhooks when the store is down.

@@ -5602,13 +5602,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     <div class="sb-divider"></div>
 
-    <!-- ── SOURCING (Dedicated Manager) ── -->
-    <div class="sb-section-label">Sourcing</div>
-    <button id="navSourcing" data-tip="Your Sourcing Manager" onclick="showSection('sourcing')">
-      <svg class="sb-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg>
-      My Manager
-    </button>
-
     <!-- ── TOOLS ── -->
     <div class="sb-section-label">Tools</div>
     <button id="navStock" data-tip="Stock" onclick="showSection('stock')">
@@ -13275,6 +13268,7 @@ document.addEventListener("DOMContentLoaded", () => {
         #sourcingPartnersSection .sp-topup-or::after{content:"";flex:1;height:1px;background:#eef0f4;}
         #sourcingPartnersSection .sp-topup-or span{padding:0 12px;font-size:11.5px;font-weight:700;color:#94a3b8;}
         #sourcingPartnersSection .sp-paypal-wrap{min-height:46px;transition:opacity .15s;}
+        #sourcingPartnersSection .sp-card-wrap{min-height:46px;transition:opacity .15s;}
         #sourcingPartnersSection .sp-topup-secure{font-size:11px;color:#94a3b8;margin-top:16px;text-align:center;line-height:1.5;}
 
         /* Chips — refined */
@@ -14754,13 +14748,11 @@ document.addEventListener("DOMContentLoaded", () => {
             <div id="spvTopupHint" class="sp-topup-hint">Minimum $5, maximum $50,000.</div>
 
             <div class="sp-topup-methods">
-              <button id="spvTopupCardBtn" class="sp-topup-card" onclick="spvTopupViaCard()" disabled>
-                💳&nbsp; Pay with card
-              </button>
-              <div class="sp-topup-or"><span>or</span></div>
               <div id="spvPaypalWrap" class="sp-paypal-wrap" style="opacity:.45;pointer-events:none;"></div>
+              <div class="sp-topup-or"><span>or pay by card</span></div>
+              <div id="spvCardWrap" class="sp-card-wrap" style="opacity:.45;pointer-events:none;"></div>
             </div>
-            <div class="sp-topup-secure">🔒 Payments are processed securely by Stripe &amp; PayPal. Drop Sigma never stores your card details.</div>
+            <div class="sp-topup-secure">🔒 Payments are processed securely by PayPal — pay with your PayPal balance or any debit/credit card. Drop Sigma never stores your card details.</div>
           </div>
         </div>
       </div>
@@ -42887,69 +42879,88 @@ function spvSyncTopupState(){
   else if (_spvTopupAmount < 5){ hint.textContent = 'Minimum top-up is $5.'; hint.className = 'sp-topup-hint err'; }
   else if (_spvTopupAmount > 50000){ hint.textContent = 'Maximum top-up is $50,000.'; hint.className = 'sp-topup-hint err'; }
   else { hint.textContent = `You'll add ${spvUSD(_spvTopupAmount)} to your wallet.`; hint.className = 'sp-topup-hint ok'; }
-  const cardBtn = document.getElementById('spvTopupCardBtn');
-  cardBtn.disabled = !valid;
-  // PayPal buttons gate themselves via the createOrder validation.
-  const ppWrap = document.getElementById('spvPaypalWrap');
-  ppWrap.style.opacity = valid ? '1' : '0.45';
-  ppWrap.style.pointerEvents = valid ? 'auto' : 'none';
-}
-
-async function spvTopupViaCard(){
-  if (!(_spvTopupAmount >= 5 && _spvTopupAmount <= 50000)) return;
-  const btn = document.getElementById('spvTopupCardBtn');
-  btn.disabled = true; btn.textContent = 'Redirecting to secure checkout…';
-  const {ok, data} = await spvFetch('/sourcing-partners/api/wallet/topup/stripe/', {
-    method:'POST', body:{ amount: _spvTopupAmount },
+  // Both rails (PayPal balance + debit/credit card) run through PayPal's SDK;
+  // they validate the amount in createOrder, so we just gate them visually.
+  ['spvPaypalWrap', 'spvCardWrap'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.style.opacity = valid ? '1' : '0.45';
+    el.style.pointerEvents = valid ? 'auto' : 'none';
   });
-  if (ok && data.url){ window.location.href = data.url; return; }
-  btn.disabled = false; btn.textContent = '💳  Pay with card';
-  spvToast((data && data.error) || 'Could not start card checkout.', 'error');
 }
 
 function spvMountPaypalButtons(){
-  const wrap = document.getElementById('spvPaypalWrap');
+  const ppWrap   = document.getElementById('spvPaypalWrap');
+  const cardWrap = document.getElementById('spvCardWrap');
   if (!SPV_WALLET_PAYPAL_CID){
-    wrap.innerHTML = '<div class="sp-topup-hint">PayPal isn\'t configured.</div>';
+    ppWrap.innerHTML = '<div class="sp-topup-hint">Payments aren\'t configured yet.</div>';
+    if (cardWrap) cardWrap.innerHTML = '';
     return;
   }
   if (_spvPaypalRendered) return;  // render once; SDK buttons persist
+
+  // Shared order create/approve handlers — identical for the PayPal-balance
+  // button and the debit/credit-card button (PayPal captures both the same way).
+  const handlers = () => ({
+    createOrder: async () => {
+      const {ok, data} = await spvFetch('/sourcing-partners/api/wallet/topup/paypal/create/', {
+        method:'POST', body:{ amount: _spvTopupAmount },
+      });
+      if (!ok || !data.id){ spvToast((data && data.error) || 'Could not start payment.', 'error'); throw new Error('create failed'); }
+      return data.id;
+    },
+    onApprove: async (d) => {
+      const {ok, data} = await spvFetch('/sourcing-partners/api/wallet/topup/paypal/capture/', {
+        method:'POST', body:{ order_id: d.orderID },
+      });
+      if (ok){
+        spvCloseModal('spvTopupModal');
+        spvToast('Wallet topped up successfully.', 'success');
+        spvLoadWallet();
+      } else {
+        spvToast((data && data.error) || 'Payment failed.', 'error');
+      }
+    },
+    onError: (err) => { console.error(err); spvToast('Payment error. Please try again.', 'error'); },
+  });
+
   const start = () => {
     if (!(window.paypal && window.paypal.Buttons)){ return; }
     _spvPaypalRendered = true;
-    wrap.innerHTML = '';
-    window.paypal.Buttons({
-      style:{ layout:'horizontal', color:'gold', shape:'pill', label:'paypal', height:44, tagline:false },
-      createOrder: async () => {
-        const {ok, data} = await spvFetch('/sourcing-partners/api/wallet/topup/paypal/create/', {
-          method:'POST', body:{ amount: _spvTopupAmount },
-        });
-        if (!ok || !data.id){ spvToast((data && data.error) || 'PayPal order failed.', 'error'); throw new Error('create failed'); }
-        return data.id;
-      },
-      onApprove: async (d) => {
-        const {ok, data} = await spvFetch('/sourcing-partners/api/wallet/topup/paypal/capture/', {
-          method:'POST', body:{ order_id: d.orderID },
-        });
-        if (ok){
-          spvCloseModal('spvTopupModal');
-          spvToast('Wallet topped up via PayPal.', 'success');
-          spvLoadWallet();
-        } else {
-          spvToast((data && data.error) || 'PayPal payment failed.', 'error');
-        }
-      },
-      onError: (err) => { console.error(err); spvToast('PayPal error. Please try again.', 'error'); },
-    }).render('#spvPaypalWrap');
+    const FUNDING = window.paypal.FUNDING || {};
+
+    // 1) PayPal-balance button (gold).
+    ppWrap.innerHTML = '';
+    window.paypal.Buttons(Object.assign({
+      fundingSource: FUNDING.PAYPAL,
+      style:{ layout:'vertical', color:'gold', shape:'pill', label:'paypal', height:44, tagline:false },
+    }, handlers())).render('#spvPaypalWrap');
+
+    // 2) Debit / credit card button (black) — processed by PayPal's guest
+    //    checkout, no PayPal account required, card details never touch us.
+    if (cardWrap){
+      cardWrap.innerHTML = '';
+      let cardBtns = null;
+      try { cardBtns = window.paypal.Buttons(Object.assign({
+        fundingSource: FUNDING.CARD,
+        style:{ layout:'vertical', color:'black', shape:'pill', height:44 },
+      }, handlers())); } catch(e){ cardBtns = null; }
+      if (cardBtns && cardBtns.isEligible && cardBtns.isEligible()){
+        cardBtns.render('#spvCardWrap');
+      } else {
+        cardWrap.innerHTML = '<div class="sp-topup-hint">Use the PayPal button above — it also accepts debit &amp; credit cards.</div>';
+      }
+    }
   };
+
   if (window.paypal && window.paypal.Buttons){ start(); return; }
-  // Lazy-load the SDK once.
+  // Lazy-load the SDK once, enabling the standalone card funding source.
   if (!document.getElementById('spvPaypalSdk')){
     const s = document.createElement('script');
     s.id = 'spvPaypalSdk';
-    s.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(SPV_WALLET_PAYPAL_CID)}&currency=USD`;
+    s.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(SPV_WALLET_PAYPAL_CID)}&currency=USD&enable-funding=card`;
     s.onload = start;
-    s.onerror = () => { wrap.innerHTML = '<div class="sp-topup-hint err">Could not load PayPal.</div>'; };
+    s.onerror = () => { ppWrap.innerHTML = '<div class="sp-topup-hint err">Could not load PayPal.</div>'; };
     document.head.appendChild(s);
   } else {
     document.getElementById('spvPaypalSdk').addEventListener('load', start);
