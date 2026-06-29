@@ -178,14 +178,24 @@ class SentinelPublicAPITests(TestCase):
         self.assertTrue(third["ok"])
         webhook_sentinel.clear_cache(store.id)
 
-    def test_ensure_webhook_does_not_cache_failures(self):
-        """A failed heal must be retried on the next call, not cached
-        for the TTL — otherwise a transient WC outage looks permanent."""
+    def test_ensure_webhook_backs_off_repeated_failures(self):
+        """A failed heal must NOT be re-probed on every poll/sweep — a store
+        behind a WAF that blocks our IP fails every probe, and each probe runs
+        the slow 13-strategy retry storm. Hammering it every 10s starves the
+        web workers (root cause of the homepage "loads forever" outage).
+
+        New contract (circuit-breaker):
+          - 1st automated call probes and fails → breaker arms.
+          - Immediate 2nd automated call (force=False) is backed off → NO probe.
+          - A user-initiated retry (force=True, i.e. Refresh/Diagnose) bypasses
+            the breaker and probes immediately, so transient outages still
+            recover the instant the user asks."""
         from orders import webhook_sentinel
 
         store = MagicMock()
         store.id = 90002
         store.platform = "woocommerce"
+        store.name = "WAF Blocked Store"
         webhook_sentinel.clear_cache(store.id)
 
         with patch("stores.views._register_webhook_for_store") as mock_reg:
@@ -193,11 +203,21 @@ class SentinelPublicAPITests(TestCase):
                 "ok": False, "delivery_url": "", "registered": [], "errors": [],
                 "message": "fail",
             }
-            webhook_sentinel.ensure_webhook(store)
-            webhook_sentinel.ensure_webhook(store)
+            webhook_sentinel.ensure_webhook(store)          # probes, fails, arms breaker
+            webhook_sentinel.ensure_webhook(store)          # backed off → no probe
+            self.assertEqual(
+                mock_reg.call_count, 1,
+                "A failed store must be backed off, not re-probed every poll — "
+                "the retry storm is what melts the web workers.",
+            )
 
-        self.assertEqual(mock_reg.call_count, 2,
-                         "Failed ensure_webhook must NOT be cached, or transient errors stick.")
+            webhook_sentinel.ensure_webhook(store, force=True)  # user retry → bypasses breaker
+            self.assertEqual(
+                mock_reg.call_count, 2,
+                "force=True (Refresh/Diagnose) must bypass the breaker so a "
+                "user can always retry immediately.",
+            )
+
         webhook_sentinel.clear_cache(store.id)
 
     def test_ensure_webhook_triggers_catchup_on_broken_to_ok_transition(self):

@@ -43,6 +43,39 @@ def _manager_full_name(m):
             or "Your Sourcing Manager")
 
 
+def ensure_workspace_membership(member, tenant_user):
+    """Surface `tenant_user` in `member`'s OPS workspace inbox.
+
+    Two independent mappings drive the manager relationship:
+      • TenantManagerAssignment — powers the tenant-side chat header
+        ("your manager is X"). Created by ensure_tenant_manager.
+      • OpsWorkspaceTenant — powers the OPS-side chat inbox visibility
+        (scoping.conversation_qs_visible_to). Without a row here, the
+        assigned manager is workspace-scoped and NEVER SEES the new
+        tenant's chat thread.
+
+    Historically only the first was created on auto-assignment, so new
+    tenants landed on a manager who couldn't see them until a superadmin
+    manually assigned the tenant to the workspace. This bridges the gap.
+
+    No-op when the manager has no workspace (legacy/global ops user —
+    already sees every tenant). Idempotent and best-effort.
+    """
+    try:
+        ws_id = getattr(member, "workspace_id", None)
+        if not ws_id or not tenant_user:
+            return
+        from .models import OpsWorkspaceTenant
+        OpsWorkspaceTenant.objects.get_or_create(
+            workspace_id=ws_id,
+            tenant=tenant_user,
+            defaults={"note": "Auto: dedicated-manager assignment"},
+        )
+    except Exception:
+        # Visibility bridging is best-effort; never break assignment.
+        pass
+
+
 def _format_welcome(assignment):
     """Return a list of (body, role) tuples for the welcome sequence.
 
@@ -179,6 +212,10 @@ def ensure_tenant_manager(tenant_user):
                 send_manager_welcome_message(existing)
             except Exception:
                 pass
+        # Backfill the workspace mapping for tenants assigned before this
+        # bridge existed (or whose manager moved workspace) so the manager
+        # can actually see them in the ops inbox.
+        ensure_workspace_membership(existing.manager, tenant_user)
         return existing
 
     # Race-safe creation: lock the row(s) we touch.
@@ -226,6 +263,12 @@ def ensure_tenant_manager(tenant_user):
         # Welcome is best-effort; never break assignment on chat hiccup.
         pass
 
+    # Bridge OPS-side visibility: drop the tenant into the manager's
+    # workspace so the assigned manager sees the chat the moment the
+    # tenant lands. Without this the new tenant is invisible in the ops
+    # inbox even though the tenant-side header shows the manager.
+    ensure_workspace_membership(assignment.manager, tenant_user)
+
     return assignment
 
 
@@ -258,6 +301,10 @@ def reassign_tenant_manager(*, assignment, new_manager,
             "previous_manager", "manager", "reassigned_at",
             "reassignment_reason", "assigned_via",
         ])
+
+    # Bridge OPS-side visibility to the NEW manager's workspace so they
+    # can see the chat immediately after the reassignment.
+    ensure_workspace_membership(new_manager, assignment.tenant)
 
     # System-style announcement message in tenant's chat thread.
     try:
